@@ -322,43 +322,45 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
       </div>
 
       {!isDemo() && (
-      <ScoreDots
-        score={score}
-        scoring={scoring}
-        onScore={handleScore}
-        onClear={handleDeleteScore}
-        size={isMobile ? 20 : 16}
-      />
+        <ScoreDots
+          score={score}
+          scoring={scoring}
+          onScore={handleScore}
+          onClear={handleDeleteScore}
+          size={isMobile ? 20 : 16}
+        />
       )}
 
       {!isDemo() && (
-      <TooltipProvider>
-        <TooltipRoot>
-          <TooltipTrigger
-            render={
-              <Button
-                variant={metadata.shareID ? "secondary" : "ghost"}
-                size="icon-sm"
-                onClick={() => setShareOpen(true)}
-                className={[
-                  "size-10",
-                  metadata.shareID ? "text-primary" : "text-foreground/70 hover:text-foreground",
-                ].join(" ")}
-                aria-label={
-                  metadata.shareID
-                    ? t("session_detail.manage_share_aria")
-                    : t("session_detail.share_aria")
-                }
-              >
-                <Share2 className="size-5" />
-              </Button>
-            }
-          />
-          <TooltipContent side="top">
-            {metadata.shareID ? t("session_detail.shared_title") : t("session_detail.share_title")}
-          </TooltipContent>
-        </TooltipRoot>
-      </TooltipProvider>
+        <TooltipProvider>
+          <TooltipRoot>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant={metadata.shareID ? "secondary" : "ghost"}
+                  size="icon-sm"
+                  onClick={() => setShareOpen(true)}
+                  className={[
+                    "size-10",
+                    metadata.shareID ? "text-primary" : "text-foreground/70 hover:text-foreground",
+                  ].join(" ")}
+                  aria-label={
+                    metadata.shareID
+                      ? t("session_detail.manage_share_aria")
+                      : t("session_detail.share_aria")
+                  }
+                >
+                  <Share2 className="size-5" />
+                </Button>
+              }
+            />
+            <TooltipContent side="top">
+              {metadata.shareID
+                ? t("session_detail.shared_title")
+                : t("session_detail.share_title")}
+            </TooltipContent>
+          </TooltipRoot>
+        </TooltipProvider>
       )}
 
       <TooltipProvider>

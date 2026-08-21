@@ -262,132 +262,132 @@ export default function MonitorPage() {
 
   return (
     <PermissionGuard module="monitor">
-    <div className="space-y-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
-            {t("monitor.title")}
-          </h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">{t("monitor.subtitle")}</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="relative flex size-2">
-              <span className="absolute inline-flex size-full animate-ping rounded-full opacity-60 bg-[#4A9E7D]" />
-              <span className="relative inline-flex size-2 rounded-full bg-[#4A9E7D]" />
-            </span>
-            <span className="font-mono tabular-nums">5s · {lastUpdated}</span>
+      <div className="space-y-8">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
+              {t("monitor.title")}
+            </h1>
+            <p className="mt-1.5 text-sm text-muted-foreground">{t("monitor.subtitle")}</p>
           </div>
-          <div className="flex items-center gap-0.5 rounded-lg bg-muted p-0.5">
-            {RANGE_KEYS.map((key) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setRange(key)}
-                className={cn(
-                  "inline-flex h-8 items-center justify-center rounded-md px-3 text-xs font-medium transition-colors",
-                  range === key
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {key}
-              </button>
-            ))}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="relative flex size-2">
+                <span className="absolute inline-flex size-full animate-ping rounded-full opacity-60 bg-[#4A9E7D]" />
+                <span className="relative inline-flex size-2 rounded-full bg-[#4A9E7D]" />
+              </span>
+              <span className="font-mono tabular-nums">5s · {lastUpdated}</span>
+            </div>
+            <div className="flex items-center gap-0.5 rounded-lg bg-muted p-0.5">
+              {RANGE_KEYS.map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setRange(key)}
+                  className={cn(
+                    "inline-flex h-8 items-center justify-center rounded-md px-3 text-xs font-medium transition-colors",
+                    range === key
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {key}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <RuntimeGaugeCard
-          label={t("monitor.goroutines")}
-          value={goroutinesTotal}
-          icon={<Activity className="size-4" />}
-          tone="primary"
-          loading={loading}
-        />
-        <RuntimeGaugeCard
-          label={t("monitor.heap")}
-          value={heapTotal}
-          unit="MB"
-          icon={<MemoryStick className="size-4" />}
-          tone="blue"
-          loading={loading}
-        />
-        <RuntimeGaugeCard
-          label={t("monitor.sse_active")}
-          value={sseTotal}
-          icon={<Radio className="size-4" />}
-          tone="violet"
-          loading={loading}
-        />
-      </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <RuntimeGaugeCard
+            label={t("monitor.goroutines")}
+            value={goroutinesTotal}
+            icon={<Activity className="size-4" />}
+            tone="primary"
+            loading={loading}
+          />
+          <RuntimeGaugeCard
+            label={t("monitor.heap")}
+            value={heapTotal}
+            unit="MB"
+            icon={<MemoryStick className="size-4" />}
+            tone="blue"
+            loading={loading}
+          />
+          <RuntimeGaugeCard
+            label={t("monitor.sse_active")}
+            value={sseTotal}
+            icon={<Radio className="size-4" />}
+            tone="violet"
+            loading={loading}
+          />
+        </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <RuntimeChart
-          title={t("monitor.request_qps")}
-          data={toChartData(state.qps)}
-          series={[{ key: "value", label: t("monitor.request_qps"), color: seriesColors[3] }]}
-          unit=" req/s"
-          rangeKey={range}
-          emptyLabel={t("monitor.collecting")}
-        />
-        <RuntimeChart
-          title={t("monitor.request_tps")}
-          data={tpsData}
-          series={tpsSeries}
-          unit=" tok/s"
-          rangeKey={range}
-          emptyLabel={t("monitor.collecting")}
-        />
-        <RuntimeChart
-          title={t("monitor.sse_active")}
-          data={sseChartData(state.sseActive)}
-          series={sseSeries}
-          rangeKey={range}
-          emptyLabel={t("monitor.collecting")}
-        />
-        <RuntimeChart
-          title={t("monitor.cpu_usage")}
-          data={podChartData(state.instances, "cpuPercent")}
-          series={podSeries}
-          unit="%"
-          rangeKey={range}
-          emptyLabel={t("monitor.collecting")}
-        />
-        <RuntimeChart
-          title={t("monitor.heap_memory")}
-          data={podChartData(state.instances, "heapMB")}
-          series={podSeries}
-          unit=" MB"
-          rangeKey={range}
-          emptyLabel={t("monitor.collecting")}
-        />
-        <RuntimeChart
-          title={t("monitor.goroutines_chart")}
-          data={podChartData(state.instances, "goroutines")}
-          series={podSeries}
-          rangeKey={range}
-          emptyLabel={t("monitor.collecting")}
-        />
-        <RuntimeChart
-          title={t("monitor.success_rate")}
-          data={toChartData(state.successRate)}
-          series={[{ key: "value", label: t("monitor.success_rate"), color: seriesColors[2] }]}
-          unit="%"
-          rangeKey={range}
-          emptyLabel={t("monitor.collecting")}
-        />
-        <RuntimeChart
-          title={t("monitor.latency_p95")}
-          data={toChartData(state.p95Ms)}
-          series={[{ key: "value", label: t("monitor.latency_p95"), color: seriesColors[2] }]}
-          unit=" ms"
-          rangeKey={range}
-          emptyLabel={t("monitor.collecting")}
-        />
+        <div className="grid gap-4 lg:grid-cols-3">
+          <RuntimeChart
+            title={t("monitor.request_qps")}
+            data={toChartData(state.qps)}
+            series={[{ key: "value", label: t("monitor.request_qps"), color: seriesColors[3] }]}
+            unit=" req/s"
+            rangeKey={range}
+            emptyLabel={t("monitor.collecting")}
+          />
+          <RuntimeChart
+            title={t("monitor.request_tps")}
+            data={tpsData}
+            series={tpsSeries}
+            unit=" tok/s"
+            rangeKey={range}
+            emptyLabel={t("monitor.collecting")}
+          />
+          <RuntimeChart
+            title={t("monitor.sse_active")}
+            data={sseChartData(state.sseActive)}
+            series={sseSeries}
+            rangeKey={range}
+            emptyLabel={t("monitor.collecting")}
+          />
+          <RuntimeChart
+            title={t("monitor.cpu_usage")}
+            data={podChartData(state.instances, "cpuPercent")}
+            series={podSeries}
+            unit="%"
+            rangeKey={range}
+            emptyLabel={t("monitor.collecting")}
+          />
+          <RuntimeChart
+            title={t("monitor.heap_memory")}
+            data={podChartData(state.instances, "heapMB")}
+            series={podSeries}
+            unit=" MB"
+            rangeKey={range}
+            emptyLabel={t("monitor.collecting")}
+          />
+          <RuntimeChart
+            title={t("monitor.goroutines_chart")}
+            data={podChartData(state.instances, "goroutines")}
+            series={podSeries}
+            rangeKey={range}
+            emptyLabel={t("monitor.collecting")}
+          />
+          <RuntimeChart
+            title={t("monitor.success_rate")}
+            data={toChartData(state.successRate)}
+            series={[{ key: "value", label: t("monitor.success_rate"), color: seriesColors[2] }]}
+            unit="%"
+            rangeKey={range}
+            emptyLabel={t("monitor.collecting")}
+          />
+          <RuntimeChart
+            title={t("monitor.latency_p95")}
+            data={toChartData(state.p95Ms)}
+            series={[{ key: "value", label: t("monitor.latency_p95"), color: seriesColors[2] }]}
+            unit=" ms"
+            rangeKey={range}
+            emptyLabel={t("monitor.collecting")}
+          />
+        </div>
       </div>
-    </div>
     </PermissionGuard>
   );
 }

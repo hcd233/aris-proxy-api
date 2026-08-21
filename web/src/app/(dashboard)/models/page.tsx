@@ -167,19 +167,18 @@ interface TokenPresetPopoverProps {
   onSelect: (v: number) => void;
 }
 
-function TokenPresetPopover({ label, description, value, presets, onSelect }: TokenPresetPopoverProps) {
+function TokenPresetPopover({
+  label,
+  description,
+  value,
+  presets,
+  onSelect,
+}: TokenPresetPopoverProps) {
   const [open, setOpen] = useState(false);
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
-        render={
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            aria-label={label}
-          />
-        }
+        render={<Button type="button" variant="outline" size="icon" aria-label={label} />}
       >
         <SlidersHorizontal className="size-4" />
       </PopoverTrigger>
@@ -498,7 +497,11 @@ export default function ModelsPage() {
             <CardContent>
               {/* Search — faceted bar */}
               <div className="mb-4 flex">
-                <FilterBar {...filterBar} facets={[]} placeholder={t("models.search_placeholder")} />
+                <FilterBar
+                  {...filterBar}
+                  facets={[]}
+                  placeholder={t("models.search_placeholder")}
+                />
               </div>
               {filterBar.tokens.length > 0 && (
                 <p className="-mt-2 mb-3 text-xs text-muted-foreground">

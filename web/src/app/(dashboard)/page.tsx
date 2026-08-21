@@ -85,7 +85,9 @@ export default function DashboardPage() {
 
       const canListEndpoints = isAdmin() || isModuleOpen("endpoints");
       const canListModels = isAdmin() || isModuleOpen("models");
-      const endpointsRsp = canListEndpoints ? await api.listEndpoints(1, 1).catch(() => null) : null; // 仅探测是否存在 endpoint
+      const endpointsRsp = canListEndpoints
+        ? await api.listEndpoints(1, 1).catch(() => null)
+        : null; // 仅探测是否存在 endpoint
       const modelsRsp = canListModels ? await api.listModels(1, 1).catch(() => null) : null;
 
       setStats({
@@ -109,62 +111,62 @@ export default function DashboardPage() {
 
   return (
     <PermissionGuard module="dashboard">
-    <div className="space-y-8">
-      <div className="animate-rise">
-        <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
-          {t("dashboard.title")}
-        </h1>
-        <p className="mt-1.5 text-sm text-muted-foreground">{t("dashboard.overview")}</p>
-      </div>
+      <div className="space-y-8">
+        <div className="animate-rise">
+          <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
+            {t("dashboard.title")}
+          </h1>
+          <p className="mt-1.5 text-sm text-muted-foreground">{t("dashboard.overview")}</p>
+        </div>
 
-      <div className="stagger-rise grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {!isDemo() && (
+        <div className="stagger-rise grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {!isDemo() && (
+            <StatCard
+              title={t("apikeys.title")}
+              value={stats.apiKeys}
+              icon={<Key className="size-4" />}
+              loading={loading}
+            />
+          )}
           <StatCard
-            title={t("apikeys.title")}
-            value={stats.apiKeys}
-            icon={<Key className="size-4" />}
+            title={t("sessions.title")}
+            value={stats.sessions}
+            icon={<MessageSquare className="size-4" />}
             loading={loading}
           />
-        )}
-        <StatCard
-          title={t("sessions.title")}
-          value={stats.sessions}
-          icon={<MessageSquare className="size-4" />}
-          loading={loading}
-        />
-        {(isAdmin() || isModuleOpen("endpoints")) && (
-          <StatCard
-            title={t("endpoints.title")}
-            value={stats.endpoints}
-            icon={<Server className="size-4" />}
-            loading={loading}
-          />
-        )}
-        {(isAdmin() || isModuleOpen("models")) && (
-          <StatCard
-            title={t("models.title")}
-            value={stats.models}
-            icon={<Cpu className="size-4" />}
-            loading={loading}
-          />
-        )}
-      </div>
+          {(isAdmin() || isModuleOpen("endpoints")) && (
+            <StatCard
+              title={t("endpoints.title")}
+              value={stats.endpoints}
+              icon={<Server className="size-4" />}
+              loading={loading}
+            />
+          )}
+          {(isAdmin() || isModuleOpen("models")) && (
+            <StatCard
+              title={t("models.title")}
+              value={stats.models}
+              icon={<Cpu className="size-4" />}
+              loading={loading}
+            />
+          )}
+        </div>
 
-      <div className="stagger-rise grid gap-4 lg:grid-cols-2">
-        <ModelTrendChart />
-        <RequestRateChart />
-      </div>
+        <div className="stagger-rise grid gap-4 lg:grid-cols-2">
+          <ModelTrendChart />
+          <RequestRateChart />
+        </div>
 
-      <div className="stagger-rise grid gap-4 lg:grid-cols-2">
-        <TokenVolumeChart />
-        <ModelTokenBarChart />
-      </div>
+        <div className="stagger-rise grid gap-4 lg:grid-cols-2">
+          <TokenVolumeChart />
+          <ModelTokenBarChart />
+        </div>
 
-      <div className="stagger-rise grid gap-4 lg:grid-cols-2">
-        <FirstTokenLatencyChart />
-        <TokenRateChart />
+        <div className="stagger-rise grid gap-4 lg:grid-cols-2">
+          <FirstTokenLatencyChart />
+          <TokenRateChart />
+        </div>
       </div>
-    </div>
     </PermissionGuard>
   );
 }

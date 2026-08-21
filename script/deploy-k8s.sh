@@ -183,7 +183,8 @@ spec:
             memory: 512Mi
 EOF
 
-  if ! kubectl wait --for=condition=complete "job/${MIGRATION_JOB}" -n "${NAMESPACE}" --timeout=120s; then
+  # ghcr 冷拉镜像实测可达 5m+，超时过短会误报失败且跳过滚动重启，线上停留旧版
+  if ! kubectl wait --for=condition=complete "job/${MIGRATION_JOB}" -n "${NAMESPACE}" --timeout=600s; then
     kubectl logs "job/${MIGRATION_JOB}" -n "${NAMESPACE}" --tail=100 || true
     exit 1
   fi

@@ -26,7 +26,7 @@ env/
 config/
 
 # Build artifacts
-aris-proxy-api
+# 注意：根目录 aris-proxy-api 二进制不能排除——CI 的 binary-prebuilt 阶段需要 COPY 它
 coverage.out
 coverage.html
 

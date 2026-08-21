@@ -111,9 +111,7 @@ export function useFilterBar(opts: UseFilterBarOptions): UseFilterBarReturn {
   const addToken = useCallback(
     (token: FilterToken) => {
       setTokens((prev) => {
-        const facet = token.key
-          ? facetsRef.current.find((f) => f.key === token.key)
-          : undefined;
+        const facet = token.key ? facetsRef.current.find((f) => f.key === token.key) : undefined;
         // 自由文本与 single facet：同 key 替换而非追加
         const replace = token.key === null || facet?.single;
         const base = replace ? prev.filter((t) => t.key !== token.key) : prev;

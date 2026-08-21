@@ -7,13 +7,7 @@ import { showErrorToast } from "@/lib/api-error-handler";
 import { useI18n, useT } from "@/lib/i18n";
 import type { DemoSession, PageInfo, SessionSummary } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -175,9 +169,7 @@ function SessionListTable({
               <TableCell className="whitespace-nowrap text-muted-foreground">
                 {item.createdAt ? formatDateTime(item.createdAt) : "—"}
               </TableCell>
-              <TableCell className="max-w-[200px] truncate">
-                {summary(item)}
-              </TableCell>
+              <TableCell className="max-w-[200px] truncate">{summary(item)}</TableCell>
               <TableCell className="w-[160px]">
                 <div className="flex justify-center">
                   {item.score != null ? (
@@ -224,10 +216,7 @@ export function DemoSessionsManager() {
 
   // ─── 已选列表（demo 账户可见的 sessions） ─────────────────────────────────
   const [selectedSessions, setSelectedSessions] = useState<DemoSession[]>([]);
-  const [selectedPage, setSelectedPage] = usePersistentState(
-    "dashboard.demo.selected.page",
-    1,
-  );
+  const [selectedPage, setSelectedPage] = usePersistentState("dashboard.demo.selected.page", 1);
   const [selectedPageSize, setSelectedPageSize] = usePersistentState(
     "dashboard.demo.selected.pageSize",
     100,
@@ -272,10 +261,7 @@ export function DemoSessionsManager() {
   // ─── 选择器（候选 sessions） ─────────────────────────────────────────────
   const { locale } = useI18n();
   const [candidates, setCandidates] = useState<SessionSummary[]>([]);
-  const [candidatePage, setCandidatePage] = usePersistentState(
-    "dashboard.demo.candidates.page",
-    1,
-  );
+  const [candidatePage, setCandidatePage] = usePersistentState("dashboard.demo.candidates.page", 1);
   const [candidatePageSize, setCandidatePageSize] = usePersistentState(
     "dashboard.demo.candidates.pageSize",
     20,
@@ -536,11 +522,7 @@ export function DemoSessionsManager() {
                 });
               }}
             />
-            <FilterBar
-              {...filterBar}
-              facets={facets}
-              placeholder={t("demo.search_placeholder")}
-            />
+            <FilterBar {...filterBar} facets={facets} placeholder={t("demo.search_placeholder")} />
             {candidateIds.size > 0 && (
               <Button
                 size="sm"
@@ -574,9 +556,7 @@ export function DemoSessionsManager() {
 
           <PaginationBar
             pageInfo={candidatePageInfo}
-            onChange={(page, pageSize) =>
-              fetchCandidates({ page, pageSize, qp: queryParams })
-            }
+            onChange={(page, pageSize) => fetchCandidates({ page, pageSize, qp: queryParams })}
             totalLabel={t("pagination.sessions")}
           />
         </CardContent>

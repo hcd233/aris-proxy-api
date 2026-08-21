@@ -25,7 +25,12 @@ function GuardState({ title, description }: { title: string; description: string
   );
 }
 
-export function PermissionGuard({ children, adminOnly = false, module, allowDemo = false }: PermissionGuardProps) {
+export function PermissionGuard({
+  children,
+  adminOnly = false,
+  module,
+  allowDemo = false,
+}: PermissionGuardProps) {
   const { user, isLoading, isUser, isAdmin, isDemo, isModuleOpen } = useAuth();
   const t = useT();
 

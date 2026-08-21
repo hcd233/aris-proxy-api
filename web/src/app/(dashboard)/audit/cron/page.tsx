@@ -61,9 +61,7 @@ export default function CronAuditPage() {
     if (!metadata || Object.keys(metadata).length === 0) return "—";
     const entries = Object.entries(metadata).filter(([, val]) => val !== 0);
     if (entries.length === 0) return "—";
-    return entries
-      .map(([key, val]) => `${metadataLabelMap[key] ?? key}: ${val}`)
-      .join(" | ");
+    return entries.map(([key, val]) => `${metadataLabelMap[key] ?? key}: ${val}`).join(" | ");
   }
   const [persistedPage, setPersistedPage] = usePersistentState("dashboard.cronAudit.page", 1);
   const [persistedPageSize, setPersistedPageSize] = usePersistentState(

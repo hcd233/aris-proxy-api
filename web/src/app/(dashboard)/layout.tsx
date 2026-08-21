@@ -117,7 +117,12 @@ function getNavItems(): NavItem[] {
       demoModule: "monitor",
     },
     { labelKey: "nav.users", href: "/users/", icon: <Users className="size-4" />, adminOnly: true },
-    { labelKey: "nav.demo", href: "/demo/", icon: <Settings2 className="size-4" />, adminOnly: true },
+    {
+      labelKey: "nav.demo",
+      href: "/demo/",
+      icon: <Settings2 className="size-4" />,
+      adminOnly: true,
+    },
     { labelKey: "nav.dataset", href: "/dataset/", icon: <Database className="size-4" /> },
     { labelKey: "nav.trace", href: "/trace/", icon: <Radar className="size-4" /> },
     { labelKey: "nav.profile", href: "/profile/", icon: <User className="size-4" /> },

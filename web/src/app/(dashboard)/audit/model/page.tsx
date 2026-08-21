@@ -172,467 +172,478 @@ export default function AuditPage() {
 
   return (
     <PermissionGuard module="audit">
-    <div className="space-y-8">
-      <div>
-        <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
-          {t("audit.model_page_title")}
-        </h1>
-        <p className="mt-1.5 text-sm text-muted-foreground">{t("audit.model_page_subtitle")}</p>
-      </div>
+      <div className="space-y-8">
+        <div>
+          <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
+            {t("audit.model_page_title")}
+          </h1>
+          <p className="mt-1.5 text-sm text-muted-foreground">{t("audit.model_page_subtitle")}</p>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-display">{t("audit.logs_title")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {/* Filters — faceted bar */}
-          <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center">
-            <TimeRangePicker
-              value={timeRange}
-              customStart={customStart}
-              customEnd={customEnd}
-              onChange={(key, cs, ce) => {
-                setTimeRange(key);
-                setCustomStart(cs);
-                setCustomEnd(ce);
-                fetchLogs({ page: 1, pageSize: pageInfo.pageSize, range: key, cs, ce, qp: queryParams });
-              }}
-            />
-            <FilterBar
-              {...filterBar}
-              facets={facets}
-              placeholder={t("audit.search_placeholder")}
-            />
-          </div>
-          {filterBar.tokens.length > 0 && (
-            <p className="-mt-2 mb-3 text-xs text-muted-foreground">
-              {t("filter_bar.applied_count").replace("{count}", String(filterBar.tokens.length))}
-            </p>
-          )}
-
-          {/* List */}
-          {loading ? (
-            <div className="space-y-3">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-10 w-full" />
-              ))}
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-display">{t("audit.logs_title")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {/* Filters — faceted bar */}
+            <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center">
+              <TimeRangePicker
+                value={timeRange}
+                customStart={customStart}
+                customEnd={customEnd}
+                onChange={(key, cs, ce) => {
+                  setTimeRange(key);
+                  setCustomStart(cs);
+                  setCustomEnd(ce);
+                  fetchLogs({
+                    page: 1,
+                    pageSize: pageInfo.pageSize,
+                    range: key,
+                    cs,
+                    ce,
+                    qp: queryParams,
+                  });
+                }}
+              />
+              <FilterBar
+                {...filterBar}
+                facets={facets}
+                placeholder={t("audit.search_placeholder")}
+              />
             </div>
-          ) : logs.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <ScrollText className="mb-3 size-10 text-muted-foreground/50" />
-              <p className="text-sm text-muted-foreground">{t("audit.no_logs_range")}</p>
-            </div>
-          ) : isMobile ? (
-            <div className="space-y-3">
-              {logs.map((log) => {
-                const ok = log.upstreamStatusCode === 200;
-                const hasError = !!log.errorMessage;
-                const isExpanded = expandedId === log.id;
-                const cacheInfo = formatCacheTokens(
-                  log.cacheCreationInputTokens,
-                  log.cacheReadInputTokens,
-                );
+            {filterBar.tokens.length > 0 && (
+              <p className="-mt-2 mb-3 text-xs text-muted-foreground">
+                {t("filter_bar.applied_count").replace("{count}", String(filterBar.tokens.length))}
+              </p>
+            )}
 
-                return (
-                  <div
-                    key={log.id}
-                    className={`rounded-lg border border-border bg-card ${ok ? "" : "bg-destructive/5"}`}
-                  >
-                    <div
-                      className="cursor-pointer p-4"
-                      onClick={() => setExpandedId(isExpanded ? null : log.id)}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium">
-                            <span className="inline-flex items-center gap-1.5">
-                              <ProviderIcon protocol={log.modelId} size={14} />
-                              {log.modelId || "—"}
-                            </span>
-                          </p>
-                          <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                            {log.userName || "—"} · {log.apiKeyName || "—"}
-                          </p>
-                        </div>
-                        <div className="shrink-0 text-right">
-                          <Badge variant={ok ? "secondary" : "destructive"} className="text-xs">
-                            {log.upstreamStatusCode}
-                          </Badge>
-                          {hasError && (
-                            <p className="mt-1 max-w-[200px] truncate text-xs text-destructive">
-                              {log.errorMessage}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                        <span>{formatTokens(log.inputTokens, log.outputTokens)}</span>
-                        <span>I: {formatMs(log.firstTokenLatencyMs)}</span>
-                        {log.streamDurationMs > 0 && (
-                          <span>O: {formatMs(log.streamDurationMs)}</span>
-                        )}
-                        {cacheInfo && <span>{cacheInfo}</span>}
-                        <TooltipProvider>
-                          <TooltipRoot>
-                            <TooltipTrigger
-                              render={
-                                <span
-                                  className="cursor-pointer font-mono underline-offset-2 hover:underline"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleCopyTrace(log.traceId);
-                                  }}
-                                >
-                                  {log.traceId.slice(-6) || "—"}
-                                </span>
-                              }
-                            />
-                            <TooltipContent side="top">
-                              {t("audit.copy_traceid_title")}
-                            </TooltipContent>
-                          </TooltipRoot>
-                        </TooltipProvider>
-                      </div>
-                      <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground/70">
-                        <span>{formatTime(log.createdAt)}</span>
-                        <span
-                          className="inline-block transition-transform duration-200 motion-reduce:transition-none"
-                          style={{ transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }}
-                        >
-                          ▾
-                        </span>
-                      </div>
-                    </div>
-
-                    <div
-                      className="grid overflow-hidden transition-all duration-[250ms] ease-out motion-reduce:transition-none"
-                      style={{ gridTemplateRows: isExpanded ? "1fr" : "0fr" }}
-                    >
-                      <div className="min-h-0">
-                        <div className="border-t border-border px-4 pb-4 pt-3">
-                          {hasError && (
-                            <div className="mb-3 rounded-md bg-destructive/10 px-3 py-2 text-xs">
-                              <span className="font-medium text-destructive">
-                                {t("audit.error_label")}
-                              </span>
-                              <span className="text-destructive">{log.errorMessage}</span>
-                            </div>
-                          )}
-
-                          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
-                            <div>
-                              <span className="text-muted-foreground">
-                                {t("audit.input_tokens_label")}
-                              </span>
-                              <p>{log.inputTokens.toLocaleString()}</p>
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground">
-                                {t("audit.output_tokens_label")}
-                              </span>
-                              <p>{log.outputTokens.toLocaleString()}</p>
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground">
-                                {t("audit.cache_read_colon")}
-                              </span>
-                              <p>{log.cacheReadInputTokens.toLocaleString()}</p>
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground">
-                                {t("audit.cache_creation")}
-                              </span>
-                              <p>{log.cacheCreationInputTokens.toLocaleString()}</p>
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground">
-                                {t("audit.first_token_label")}
-                              </span>
-                              <p>{formatMs(log.firstTokenLatencyMs)}</p>
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground">
-                                {t("audit.stream_label")}
-                              </span>
-                              <p>
-                                {log.streamDurationMs > 0 ? formatMs(log.streamDurationMs) : "—"}
-                              </p>
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground">{t("audit.upstream")}</span>
-                              <p className="flex items-center gap-1.5">
-                                <ProviderIcon protocol={log.upstreamProtocol} size={14} />
-                                {formatProtocol(log.upstreamProtocol)}
-                              </p>
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground">
-                                {t("audit.endpoint_name")}
-                              </span>
-                              <p>{log.endpoint || "—"}</p>
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground">{t("audit.user_name")}</span>
-                              <p>{log.userName || "—"}</p>
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground">
-                                {t("audit.api_protocol")}
-                              </span>
-                              <p className="flex items-center gap-1.5">
-                                <ProviderIcon protocol={log.apiProtocol} size={14} />
-                                {formatProtocol(log.apiProtocol)}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="mt-3 border-t border-border pt-2 text-xs">
-                            <span className="text-muted-foreground">{t("audit.ua_label")}</span>
-                            <span className="break-all">{log.userAgent || "—"}</span>
-                          </div>
-
-                          <div className="mt-2 flex items-center justify-between border-t border-border pt-2 text-xs">
-                            <span className="text-muted-foreground">
-                              {formatTime(log.createdAt)}
-                            </span>
-                            <span
-                              className="cursor-pointer font-mono text-muted-foreground underline-offset-2 hover:underline"
-                              onClick={() => handleCopyTrace(log.traceId)}
-                            >
-                              {t("audit.copy_traceid")}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t("audit.time")}</TableHead>
-                  <TableHead>{t("audit.filter_model")}</TableHead>
-                  <TableHead>{t("audit.endpoint_name")}</TableHead>
-                  <TableHead>{t("audit.protocol")}</TableHead>
-                  <TableHead>{t("audit.user_name")}</TableHead>
-                  <TableHead>{t("audit.filter_status")}</TableHead>
-                  <TableHead>{t("audit.tokens")}</TableHead>
-                  <TableHead>{t("audit.latency")}</TableHead>
-                  <TableHead>{t("audit.useragent")}</TableHead>
-                  <TableHead>{t("audit.copy_traceid")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            {/* List */}
+            {loading ? (
+              <div className="space-y-3">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} className="h-10 w-full" />
+                ))}
+              </div>
+            ) : logs.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <ScrollText className="mb-3 size-10 text-muted-foreground/50" />
+                <p className="text-sm text-muted-foreground">{t("audit.no_logs_range")}</p>
+              </div>
+            ) : isMobile ? (
+              <div className="space-y-3">
                 {logs.map((log) => {
                   const ok = log.upstreamStatusCode === 200;
                   const hasError = !!log.errorMessage;
+                  const isExpanded = expandedId === log.id;
                   const cacheInfo = formatCacheTokens(
                     log.cacheCreationInputTokens,
                     log.cacheReadInputTokens,
                   );
-                  const uaShort = log.userAgent
-                    ? log.userAgent.slice(0, 30) + (log.userAgent.length > 30 ? "…" : "")
-                    : "—";
+
                   return (
-                    <TableRow key={log.id} className={ok ? "" : "bg-destructive/5"}>
-                      <TableCell className="whitespace-nowrap text-xs tabular-nums text-muted-foreground">
-                        {formatTime(log.createdAt)}
-                      </TableCell>
-                      <TableCell>
-                        <TooltipProvider>
-                          <TooltipRoot>
-                            <TooltipTrigger
-                              render={
-                                <button
-                                  type="button"
-                                  className="flex max-w-[130px] cursor-default items-center gap-1.5"
-                                >
-                                  <ProviderIcon protocol={log.modelId} size={14} />
-                                  <span className="min-w-0 truncate">{log.modelId || "—"}</span>
-                                </button>
-                              }
-                            />
-                            <TooltipContent side="top" className="max-w-xs">
-                              <span className="break-all">{log.modelId}</span>
-                            </TooltipContent>
-                          </TooltipRoot>
-                        </TooltipProvider>
-                      </TableCell>
-                      <TableCell>
-                        {log.endpoint ? (
-                          <TooltipProvider>
-                            <TooltipRoot>
-                              <TooltipTrigger
-                                render={
-                                  <button
-                                    type="button"
-                                    className="max-w-[100px] cursor-default truncate text-xs text-muted-foreground"
-                                  >
-                                    {log.endpoint}
-                                  </button>
-                                }
-                              />
-                              <TooltipContent side="top" className="max-w-xs">
-                                <span className="break-all">{log.endpoint}</span>
-                              </TooltipContent>
-                            </TooltipRoot>
-                          </TooltipProvider>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap text-muted-foreground">
-                        <div className="flex items-center gap-1.5 text-xs">
-                          <ProviderIcon protocol={log.apiProtocol} size={14} />
-                          {formatProtocol(log.apiProtocol)}
-                        </div>
-                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground/70">
-                          <ProviderIcon protocol={log.upstreamProtocol} size={14} />
-                          {formatProtocol(log.upstreamProtocol)}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          {log.userName ? (
-                            <TooltipProvider>
-                              <TooltipRoot>
-                                <TooltipTrigger
-                                  render={
-                                    <span className="block max-w-[14ch] truncate">
-                                      {log.userName}
-                                    </span>
-                                  }
-                                />
-                                <TooltipContent
-                                  side="top"
-                                  align="start"
-                                  className="max-w-xs break-all"
-                                >
-                                  {log.userName}
-                                </TooltipContent>
-                              </TooltipRoot>
-                            </TooltipProvider>
-                          ) : (
-                            "—"
-                          )}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {log.apiKeyName ? (
-                            <TooltipProvider>
-                              <TooltipRoot>
-                                <TooltipTrigger
-                                  render={
-                                    <span className="block max-w-[14ch] truncate">
-                                      {log.apiKeyName}
-                                    </span>
-                                  }
-                                />
-                                <TooltipContent
-                                  side="top"
-                                  align="start"
-                                  className="max-w-xs break-all"
-                                >
-                                  {log.apiKeyName}
-                                </TooltipContent>
-                              </TooltipRoot>
-                            </TooltipProvider>
-                          ) : (
-                            "—"
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {!ok && hasError ? (
-                          <TooltipProvider>
-                            <TooltipRoot>
-                              <TooltipTrigger
-                                render={
-                                  <button type="button">
-                                    <Badge variant="destructive" className="text-xs">
-                                      {log.upstreamStatusCode}
-                                    </Badge>
-                                  </button>
-                                }
-                              />
-                              <TooltipContent side="top" className="max-w-xs">
-                                <span>{log.errorMessage}</span>
-                              </TooltipContent>
-                            </TooltipRoot>
-                          </TooltipProvider>
-                        ) : (
-                          <Badge variant={ok ? "secondary" : "destructive"} className="text-xs">
-                            {log.upstreamStatusCode}
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        <div className="text-xs">
-                          {formatTokens(log.inputTokens, log.outputTokens)}
-                        </div>
-                        {cacheInfo && (
-                          <div className="text-xs text-muted-foreground/70">{cacheInfo}</div>
-                        )}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap text-muted-foreground">
-                        <div className="text-xs">I: {formatMs(log.firstTokenLatencyMs)}</div>
-                        {log.streamDurationMs > 0 && (
-                          <div className="text-xs">O: {formatMs(log.streamDurationMs)}</div>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {log.userAgent ? (
-                          <TooltipProvider>
-                            <TooltipRoot>
-                              <TooltipTrigger
-                                render={
-                                  <button
-                                    type="button"
-                                    className="max-w-[80px] cursor-default truncate text-xs text-muted-foreground"
-                                  >
-                                    {uaShort}
-                                  </button>
-                                }
-                              />
-                              <TooltipContent side="top" className="max-w-xs">
-                                <span className="break-all">{log.userAgent}</span>
-                              </TooltipContent>
-                            </TooltipRoot>
-                          </TooltipProvider>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell
-                        className="cursor-pointer font-mono text-xs underline-offset-2 hover:underline"
-                        onClick={() => handleCopyTrace(log.traceId)}
+                    <div
+                      key={log.id}
+                      className={`rounded-lg border border-border bg-card ${ok ? "" : "bg-destructive/5"}`}
+                    >
+                      <div
+                        className="cursor-pointer p-4"
+                        onClick={() => setExpandedId(isExpanded ? null : log.id)}
                       >
-                        <TooltipProvider>
-                          <TooltipRoot>
-                            <TooltipTrigger render={<span>{log.traceId.slice(-6) || "—"}</span>} />
-                            <TooltipContent side="top">
-                              {t("audit.copy_traceid_title")}
-                            </TooltipContent>
-                          </TooltipRoot>
-                        </TooltipProvider>
-                      </TableCell>
-                    </TableRow>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium">
+                              <span className="inline-flex items-center gap-1.5">
+                                <ProviderIcon protocol={log.modelId} size={14} />
+                                {log.modelId || "—"}
+                              </span>
+                            </p>
+                            <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                              {log.userName || "—"} · {log.apiKeyName || "—"}
+                            </p>
+                          </div>
+                          <div className="shrink-0 text-right">
+                            <Badge variant={ok ? "secondary" : "destructive"} className="text-xs">
+                              {log.upstreamStatusCode}
+                            </Badge>
+                            {hasError && (
+                              <p className="mt-1 max-w-[200px] truncate text-xs text-destructive">
+                                {log.errorMessage}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                          <span>{formatTokens(log.inputTokens, log.outputTokens)}</span>
+                          <span>I: {formatMs(log.firstTokenLatencyMs)}</span>
+                          {log.streamDurationMs > 0 && (
+                            <span>O: {formatMs(log.streamDurationMs)}</span>
+                          )}
+                          {cacheInfo && <span>{cacheInfo}</span>}
+                          <TooltipProvider>
+                            <TooltipRoot>
+                              <TooltipTrigger
+                                render={
+                                  <span
+                                    className="cursor-pointer font-mono underline-offset-2 hover:underline"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleCopyTrace(log.traceId);
+                                    }}
+                                  >
+                                    {log.traceId.slice(-6) || "—"}
+                                  </span>
+                                }
+                              />
+                              <TooltipContent side="top">
+                                {t("audit.copy_traceid_title")}
+                              </TooltipContent>
+                            </TooltipRoot>
+                          </TooltipProvider>
+                        </div>
+                        <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground/70">
+                          <span>{formatTime(log.createdAt)}</span>
+                          <span
+                            className="inline-block transition-transform duration-200 motion-reduce:transition-none"
+                            style={{ transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }}
+                          >
+                            ▾
+                          </span>
+                        </div>
+                      </div>
+
+                      <div
+                        className="grid overflow-hidden transition-all duration-[250ms] ease-out motion-reduce:transition-none"
+                        style={{ gridTemplateRows: isExpanded ? "1fr" : "0fr" }}
+                      >
+                        <div className="min-h-0">
+                          <div className="border-t border-border px-4 pb-4 pt-3">
+                            {hasError && (
+                              <div className="mb-3 rounded-md bg-destructive/10 px-3 py-2 text-xs">
+                                <span className="font-medium text-destructive">
+                                  {t("audit.error_label")}
+                                </span>
+                                <span className="text-destructive">{log.errorMessage}</span>
+                              </div>
+                            )}
+
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                              <div>
+                                <span className="text-muted-foreground">
+                                  {t("audit.input_tokens_label")}
+                                </span>
+                                <p>{log.inputTokens.toLocaleString()}</p>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">
+                                  {t("audit.output_tokens_label")}
+                                </span>
+                                <p>{log.outputTokens.toLocaleString()}</p>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">
+                                  {t("audit.cache_read_colon")}
+                                </span>
+                                <p>{log.cacheReadInputTokens.toLocaleString()}</p>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">
+                                  {t("audit.cache_creation")}
+                                </span>
+                                <p>{log.cacheCreationInputTokens.toLocaleString()}</p>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">
+                                  {t("audit.first_token_label")}
+                                </span>
+                                <p>{formatMs(log.firstTokenLatencyMs)}</p>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">
+                                  {t("audit.stream_label")}
+                                </span>
+                                <p>
+                                  {log.streamDurationMs > 0 ? formatMs(log.streamDurationMs) : "—"}
+                                </p>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">{t("audit.upstream")}</span>
+                                <p className="flex items-center gap-1.5">
+                                  <ProviderIcon protocol={log.upstreamProtocol} size={14} />
+                                  {formatProtocol(log.upstreamProtocol)}
+                                </p>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">
+                                  {t("audit.endpoint_name")}
+                                </span>
+                                <p>{log.endpoint || "—"}</p>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">
+                                  {t("audit.user_name")}
+                                </span>
+                                <p>{log.userName || "—"}</p>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">
+                                  {t("audit.api_protocol")}
+                                </span>
+                                <p className="flex items-center gap-1.5">
+                                  <ProviderIcon protocol={log.apiProtocol} size={14} />
+                                  {formatProtocol(log.apiProtocol)}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="mt-3 border-t border-border pt-2 text-xs">
+                              <span className="text-muted-foreground">{t("audit.ua_label")}</span>
+                              <span className="break-all">{log.userAgent || "—"}</span>
+                            </div>
+
+                            <div className="mt-2 flex items-center justify-between border-t border-border pt-2 text-xs">
+                              <span className="text-muted-foreground">
+                                {formatTime(log.createdAt)}
+                              </span>
+                              <span
+                                className="cursor-pointer font-mono text-muted-foreground underline-offset-2 hover:underline"
+                                onClick={() => handleCopyTrace(log.traceId)}
+                              >
+                                {t("audit.copy_traceid")}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   );
                 })}
-              </TableBody>
-            </Table>
-          )}
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t("audit.time")}</TableHead>
+                    <TableHead>{t("audit.filter_model")}</TableHead>
+                    <TableHead>{t("audit.endpoint_name")}</TableHead>
+                    <TableHead>{t("audit.protocol")}</TableHead>
+                    <TableHead>{t("audit.user_name")}</TableHead>
+                    <TableHead>{t("audit.filter_status")}</TableHead>
+                    <TableHead>{t("audit.tokens")}</TableHead>
+                    <TableHead>{t("audit.latency")}</TableHead>
+                    <TableHead>{t("audit.useragent")}</TableHead>
+                    <TableHead>{t("audit.copy_traceid")}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {logs.map((log) => {
+                    const ok = log.upstreamStatusCode === 200;
+                    const hasError = !!log.errorMessage;
+                    const cacheInfo = formatCacheTokens(
+                      log.cacheCreationInputTokens,
+                      log.cacheReadInputTokens,
+                    );
+                    const uaShort = log.userAgent
+                      ? log.userAgent.slice(0, 30) + (log.userAgent.length > 30 ? "…" : "")
+                      : "—";
+                    return (
+                      <TableRow key={log.id} className={ok ? "" : "bg-destructive/5"}>
+                        <TableCell className="whitespace-nowrap text-xs tabular-nums text-muted-foreground">
+                          {formatTime(log.createdAt)}
+                        </TableCell>
+                        <TableCell>
+                          <TooltipProvider>
+                            <TooltipRoot>
+                              <TooltipTrigger
+                                render={
+                                  <button
+                                    type="button"
+                                    className="flex max-w-[130px] cursor-default items-center gap-1.5"
+                                  >
+                                    <ProviderIcon protocol={log.modelId} size={14} />
+                                    <span className="min-w-0 truncate">{log.modelId || "—"}</span>
+                                  </button>
+                                }
+                              />
+                              <TooltipContent side="top" className="max-w-xs">
+                                <span className="break-all">{log.modelId}</span>
+                              </TooltipContent>
+                            </TooltipRoot>
+                          </TooltipProvider>
+                        </TableCell>
+                        <TableCell>
+                          {log.endpoint ? (
+                            <TooltipProvider>
+                              <TooltipRoot>
+                                <TooltipTrigger
+                                  render={
+                                    <button
+                                      type="button"
+                                      className="max-w-[100px] cursor-default truncate text-xs text-muted-foreground"
+                                    >
+                                      {log.endpoint}
+                                    </button>
+                                  }
+                                />
+                                <TooltipContent side="top" className="max-w-xs">
+                                  <span className="break-all">{log.endpoint}</span>
+                                </TooltipContent>
+                              </TooltipRoot>
+                            </TooltipProvider>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-muted-foreground">
+                          <div className="flex items-center gap-1.5 text-xs">
+                            <ProviderIcon protocol={log.apiProtocol} size={14} />
+                            {formatProtocol(log.apiProtocol)}
+                          </div>
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground/70">
+                            <ProviderIcon protocol={log.upstreamProtocol} size={14} />
+                            {formatProtocol(log.upstreamProtocol)}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            {log.userName ? (
+                              <TooltipProvider>
+                                <TooltipRoot>
+                                  <TooltipTrigger
+                                    render={
+                                      <span className="block max-w-[14ch] truncate">
+                                        {log.userName}
+                                      </span>
+                                    }
+                                  />
+                                  <TooltipContent
+                                    side="top"
+                                    align="start"
+                                    className="max-w-xs break-all"
+                                  >
+                                    {log.userName}
+                                  </TooltipContent>
+                                </TooltipRoot>
+                              </TooltipProvider>
+                            ) : (
+                              "—"
+                            )}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {log.apiKeyName ? (
+                              <TooltipProvider>
+                                <TooltipRoot>
+                                  <TooltipTrigger
+                                    render={
+                                      <span className="block max-w-[14ch] truncate">
+                                        {log.apiKeyName}
+                                      </span>
+                                    }
+                                  />
+                                  <TooltipContent
+                                    side="top"
+                                    align="start"
+                                    className="max-w-xs break-all"
+                                  >
+                                    {log.apiKeyName}
+                                  </TooltipContent>
+                                </TooltipRoot>
+                              </TooltipProvider>
+                            ) : (
+                              "—"
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {!ok && hasError ? (
+                            <TooltipProvider>
+                              <TooltipRoot>
+                                <TooltipTrigger
+                                  render={
+                                    <button type="button">
+                                      <Badge variant="destructive" className="text-xs">
+                                        {log.upstreamStatusCode}
+                                      </Badge>
+                                    </button>
+                                  }
+                                />
+                                <TooltipContent side="top" className="max-w-xs">
+                                  <span>{log.errorMessage}</span>
+                                </TooltipContent>
+                              </TooltipRoot>
+                            </TooltipProvider>
+                          ) : (
+                            <Badge variant={ok ? "secondary" : "destructive"} className="text-xs">
+                              {log.upstreamStatusCode}
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          <div className="text-xs">
+                            {formatTokens(log.inputTokens, log.outputTokens)}
+                          </div>
+                          {cacheInfo && (
+                            <div className="text-xs text-muted-foreground/70">{cacheInfo}</div>
+                          )}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-muted-foreground">
+                          <div className="text-xs">I: {formatMs(log.firstTokenLatencyMs)}</div>
+                          {log.streamDurationMs > 0 && (
+                            <div className="text-xs">O: {formatMs(log.streamDurationMs)}</div>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {log.userAgent ? (
+                            <TooltipProvider>
+                              <TooltipRoot>
+                                <TooltipTrigger
+                                  render={
+                                    <button
+                                      type="button"
+                                      className="max-w-[80px] cursor-default truncate text-xs text-muted-foreground"
+                                    >
+                                      {uaShort}
+                                    </button>
+                                  }
+                                />
+                                <TooltipContent side="top" className="max-w-xs">
+                                  <span className="break-all">{log.userAgent}</span>
+                                </TooltipContent>
+                              </TooltipRoot>
+                            </TooltipProvider>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell
+                          className="cursor-pointer font-mono text-xs underline-offset-2 hover:underline"
+                          onClick={() => handleCopyTrace(log.traceId)}
+                        >
+                          <TooltipProvider>
+                            <TooltipRoot>
+                              <TooltipTrigger
+                                render={<span>{log.traceId.slice(-6) || "—"}</span>}
+                              />
+                              <TooltipContent side="top">
+                                {t("audit.copy_traceid_title")}
+                              </TooltipContent>
+                            </TooltipRoot>
+                          </TooltipProvider>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            )}
 
-          <PaginationBar
-            pageInfo={pageInfo}
-            onChange={(page, pageSize) => refresh(page, pageSize)}
-            totalLabel={t("pagination.logs")}
-          />
-        </CardContent>
-      </Card>
-    </div>
+            <PaginationBar
+              pageInfo={pageInfo}
+              onChange={(page, pageSize) => refresh(page, pageSize)}
+              totalLabel={t("pagination.logs")}
+            />
+          </CardContent>
+        </Card>
+      </div>
     </PermissionGuard>
   );
 }

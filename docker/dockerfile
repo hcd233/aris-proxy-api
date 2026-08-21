@@ -1,5 +1,6 @@
-# 声明在第一个 FROM 之前，支持 CI 通过 build-arg 切换前端来源
+# 声明在第一个 FROM 之前，支持 CI 通过 build-arg 切换前端/二进制来源
 ARG FRONTEND_SOURCE=frontend-builder
+ARG BINARY_SOURCE=source-builder
 
 # 阶段1a: 从源码构建前端（本地默认）
 FROM node:22-alpine AS frontend-builder
@@ -22,8 +23,8 @@ COPY web/out/ /app/out/
 # 阶段1: 根据 build-arg 选择前端来源
 FROM ${FRONTEND_SOURCE} AS frontend-final
 
-# 阶段2: Go 构建
-FROM golang:1.25.1-alpine3.22 AS builder
+# 阶段2a: Go 源码构建（本地默认，含 upx 压缩）
+FROM golang:1.25.1-alpine3.22 AS source-builder
 
 ENV CGO_ENABLED=0
 
@@ -48,12 +49,18 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     go build -trimpath -ldflags="-s -w" -o /go/bin/aris-proxy-api ./cmd/server \
     && upx -9 /go/bin/aris-proxy-api
 
+# 阶段2b: 预构建二进制（CI 模式：runner 上已增量编译完成，容器内不再重编；
+# 路径与 source-builder 统一为 /go/bin/aris-proxy-api）
+FROM scratch AS binary-prebuilt
+COPY aris-proxy-api /go/bin/aris-proxy-api
+
 # 阶段3: 运行时（distroless，自带 CA 证书，无 shell，nonroot）
 FROM gcr.io/distroless/static-debian12:nonroot AS final
 
+ARG BINARY_SOURCE
 WORKDIR /app
 
-COPY --from=builder /go/bin/aris-proxy-api /app/aris-proxy-api
+COPY --from=${BINARY_SOURCE} /go/bin/aris-proxy-api /app/aris-proxy-api
 
 USER nonroot:nonroot
 EXPOSE 8080
@@ -61,5 +68,5 @@ EXPOSE 8080
 ENTRYPOINT ["/app/aris-proxy-api"]
 
 # 本地构建：docker buildx build --platform linux/amd64 -t aris-proxy-api:latest -f docker/dockerfile .
-# CI 构建：docker buildx build --build-arg FRONTEND_SOURCE=frontend-prebuilt ...
+# CI 构建：docker buildx build --build-arg FRONTEND_SOURCE=frontend-prebuilt --build-arg BINARY_SOURCE=binary-prebuilt ...
 # 本地运行：docker run -d -p 8080:8080 --env-file api.env --name aris-proxy-api -t aris-proxy-api:latest server start --host 0.0.0.0 --port 8080

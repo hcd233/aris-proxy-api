@@ -8,11 +8,10 @@ import type { FilterToken } from "./filter-dsl";
 import type { FacetDef } from "./types";
 import type { UseFilterBarReturn } from "./use-filter-bar";
 
-export interface FilterBarProps
-  extends Pick<
-    UseFilterBarReturn,
-    "tokens" | "addToken" | "removeToken" | "clearTokens" | "loadOptions" | "loadingKey"
-  > {
+export interface FilterBarProps extends Pick<
+  UseFilterBarReturn,
+  "tokens" | "addToken" | "removeToken" | "clearTokens" | "loadOptions" | "loadingKey"
+> {
   facets: FacetDef[];
   placeholder?: string;
   className?: string;

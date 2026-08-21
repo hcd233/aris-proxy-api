@@ -101,10 +101,10 @@ export default function LoginPage() {
   if (processing) {
     return (
       <div className="page-surface flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="animate-scale-in w-full max-w-sm rounded-xl border border-border/70 bg-card p-8 text-center shadow-lg">
-        <p className="font-display text-3xl font-semibold text-foreground">Aris Proxy</p>
-        <p className="mt-3 text-sm text-muted-foreground">{t("common.loading")}</p>
-      </div>
+        <div className="animate-scale-in w-full max-w-sm rounded-xl border border-border/70 bg-card p-8 text-center shadow-lg">
+          <p className="font-display text-3xl font-semibold text-foreground">Aris Proxy</p>
+          <p className="mt-3 text-sm text-muted-foreground">{t("common.loading")}</p>
+        </div>
       </div>
     );
   }
