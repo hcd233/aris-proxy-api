@@ -101,9 +101,9 @@ const { barProps, queryParams, activeCount } = useFilterBar({
 
 - 每个 facet 值一个 token：`评分 ★5`、`模型 claude-sonnet-4.5`。
 - 同 key 多 token 序列化时合并为 `key:v1|v2`；不同 key 空格连接。
-- 自由文本 token（`关键词 "退款"`）**不进入 filter DSL**，映射到现有 `keyword`（sessions/trace 等）或 `query`（audit 页）参数。
+- 自由文本 token（`关键词 "退款"`）**不进入 filter DSL**，映射到各页既有参数名：sessions 为 `keyword`，其余页面（users/trace/cron/models/apikeys/endpoints/trigger/audit 两页）均为 `query`。
 - `target: "param"` 的 facet（users 页 `permission`）序列化为独立 query 参数，不进 DSL。
-- `kind: "range"` 的值原样传递（后端 `IsRange` 解析 `min-max`）；开放式区间（如 `51-`）的表示以对齐后端 `parseRangeValue` 为准——若不支持开放式则 v1 只提供闭区间预设，**不引入新的 range 语法**。
+- `kind: "range"` 的值原样传递（后端 `IsRange` 解析 `min-max`）。messageCount 选项由后端 `BuildMessageCountBuckets` 生成，格式恒为闭区间 `%d-%d`（edges `10/50/100/200/500`，末桶上限为实际最大值），前端**不引入新的 range 语法**。
 - UI 只生成 `=` 语义；`!=` / 比较运算符不进 UI，但 `parseFilterString` 须能容忍（持久化数据向前兼容）。
 
 ### 3.4 工具栏布局
@@ -166,13 +166,13 @@ const { barProps, queryParams, activeCount } = useFilterBar({
 | `sessions` | `score`、`model`、`messageCount`(range) | `keyword` | 保留 | 选项接口 `listSessionOptions` |
 | `audit/model` | `user`、`model`、`status`、`ua` | `query` | 保留 | 顺带收编内联搜索框 markup |
 | `audit/cron` | `type`、`status` | `query` | 保留 | 现状未持久化，迁移后获得持久化 |
-| `users` | `permission`（`target:"param"`，静态 4 选项） | `keyword` | 无 | 退役 shadcn `Select` |
-| `trace` | — | `keyword` | 无 | 退化为增强搜索框 |
-| `cron` | — | `keyword` | 无 | 同上 |
-| `models` | — | `keyword` | 无 | 同上 |
-| `apikeys` | — | `keyword` | 无 | 同上 |
-| `endpoints` | — | `keyword` | 无 | 同上 |
-| `trigger` | — | `keyword` | 无 | 同上 |
+| `users` | `permission`（`target:"param"`，静态 4 选项） | `query` | 无 | 退役 shadcn `Select` |
+| `trace` | — | `query` | 无 | 退化为增强搜索框 |
+| `cron` | — | `query` | 无 | 同上 |
+| `models` | — | `query` | 无 | 同上 |
+| `apikeys` | — | `query` | 无 | 同上 |
+| `endpoints` | — | `query` | 无 | 同上 |
+| `trigger` | — | `query` | 无 | 同上 |
 
 **排除**：
 - `dataset`：其"筛选"是导出配置语义（minScore 滑块、导出参数、StatPill 展示），不是列表筛选，保持现状。
