@@ -20,7 +20,7 @@ import { ScrollText } from "lucide-react";
 import { ProviderIcon } from "@/components/provider-icon";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useT } from "@/lib/i18n";
+import { useI18n } from "@/lib/i18n";
 import { PermissionGuard } from "@/components/permission-guard";
 import {
   TooltipProvider,
@@ -69,7 +69,7 @@ function formatMs(ms: number): string {
 
 export default function AuditPage() {
   const isMobile = useIsMobile();
-  const t = useT();
+  const { t, locale } = useI18n();
   const [logs, setLogs] = useState<AuditLogItem[]>([]);
   const [pageInfo, setPageInfo] = useState<PageInfo>({ page: 1, pageSize: 20, total: 0 });
   const [loading, setLoading] = useState(true);
@@ -94,7 +94,9 @@ export default function AuditPage() {
       { key: "status", label: t("audit.filter_status"), options: fetchOptionsFor("status") },
       { key: "ua", label: t("audit.filter_ua"), options: fetchOptionsFor("ua") },
     ],
-    [t, fetchOptionsFor],
+    // locale 必须在依赖里：t 引用已稳定（见 lib/i18n.tsx），翻译文本刷新只能靠 locale 驱动重算
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [locale, fetchOptionsFor],
   );
 
   const filterBar = useFilterBar({

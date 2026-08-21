@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { MessageSquare, Check, ArrowUp, ArrowDown, Trash2, Lock } from "lucide-react";
-import { useT } from "@/lib/i18n";
+import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth-context";
 import { PermissionGuard } from "@/components/permission-guard";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -48,7 +48,7 @@ const SORTABLE_COLUMNS: Record<string, string> = {
 };
 
 export default function SessionsPage() {
-  const t = useT();
+  const { t, locale } = useI18n();
   const isMobile = useIsMobile();
   const { isDemo } = useAuth();
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
@@ -102,7 +102,9 @@ export default function SessionsPage() {
         options: fetchOptionsFor("messageCount"),
       },
     ],
-    [t, fetchOptionsFor],
+    // locale 必须在依赖里：t 引用已稳定（见 lib/i18n.tsx），翻译文本刷新只能靠 locale 驱动重算
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [locale, fetchOptionsFor],
   );
 
   const filterBar = useFilterBar({
