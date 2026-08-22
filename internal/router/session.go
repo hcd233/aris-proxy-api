@@ -15,7 +15,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/middleware"
 )
 
-func initSessionJWTRouter(sessionGroup huma.API, sessionHandler handler.SessionHandler, db *gorm.DB, cache *redis.Client, accessSigner jwt.TokenSigner, demoAccessor demoport.DemoModuleAccessor) {
+func initSessionJWTRouter(sessionGroup huma.API, sessionHandler handler.SessionHandler, db *gorm.DB, cache *redis.Client, accessSigner jwt.TokenSigner, demoAccessor demoport.DemoModuleAccessor, auditSubmitter demoport.DemoSubmitter) {
 	sessionGroup.UseMiddleware(middleware.JwtMiddleware(db, cache, accessSigner))
 	sessionGroup.UseMiddleware(middleware.TokenBucketRateLimiterMiddleware(cache, "demoAccess", "", constant.PeriodDemoAccess, constant.LimitDemoAccess, middleware.WithPermissionFilter(enum.PermissionDemo)))
 
@@ -27,7 +27,7 @@ func initSessionJWTRouter(sessionGroup huma.API, sessionHandler handler.SessionH
 		Description: "Paginate session list for current user (JWT auth)",
 		Tags:        []string{constant.TagSession},
 		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
-		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("listSessions", enum.PermissionUser, enum.DemoModuleSessions, demoAccessor)},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("listSessions", enum.PermissionUser, enum.DemoModuleSessions, demoAccessor, auditSubmitter)},
 	}, sessionHandler.HandleListSessionsByUser)
 
 	huma.Register(sessionGroup, huma.Operation{
@@ -38,7 +38,7 @@ func initSessionJWTRouter(sessionGroup huma.API, sessionHandler handler.SessionH
 		Description: "Get session detail by session ID (JWT auth)",
 		Tags:        []string{constant.TagSession},
 		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
-		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("getSession", enum.PermissionUser, enum.DemoModuleSessions, demoAccessor)},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("getSession", enum.PermissionUser, enum.DemoModuleSessions, demoAccessor, auditSubmitter)},
 	}, sessionHandler.HandleGetSessionByUser)
 
 	huma.Register(sessionGroup, huma.Operation{
@@ -49,7 +49,7 @@ func initSessionJWTRouter(sessionGroup huma.API, sessionHandler handler.SessionH
 		Description: "Get session metadata (without messages/tools content)",
 		Tags:        []string{constant.TagSession},
 		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
-		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("getSessionMetadata", enum.PermissionUser, enum.DemoModuleSessions, demoAccessor)},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("getSessionMetadata", enum.PermissionUser, enum.DemoModuleSessions, demoAccessor, auditSubmitter)},
 	}, sessionHandler.HandleGetSessionMetadata)
 
 	huma.Register(sessionGroup, huma.Operation{
@@ -60,7 +60,7 @@ func initSessionJWTRouter(sessionGroup huma.API, sessionHandler handler.SessionH
 		Description: "Paginate session messages by offset+limit",
 		Tags:        []string{constant.TagSession},
 		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
-		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("listSessionMessages", enum.PermissionUser, enum.DemoModuleSessions, demoAccessor)},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("listSessionMessages", enum.PermissionUser, enum.DemoModuleSessions, demoAccessor, auditSubmitter)},
 	}, sessionHandler.HandleListSessionMessages)
 
 	huma.Register(sessionGroup, huma.Operation{
@@ -71,7 +71,7 @@ func initSessionJWTRouter(sessionGroup huma.API, sessionHandler handler.SessionH
 		Description: "Paginate session tools by offset+limit",
 		Tags:        []string{constant.TagSession},
 		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
-		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("listSessionTools", enum.PermissionUser, enum.DemoModuleSessions, demoAccessor)},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("listSessionTools", enum.PermissionUser, enum.DemoModuleSessions, demoAccessor, auditSubmitter)},
 	}, sessionHandler.HandleListSessionTools)
 
 	huma.Register(sessionGroup, huma.Operation{
@@ -115,7 +115,7 @@ func initSessionJWTRouter(sessionGroup huma.API, sessionHandler handler.SessionH
 		Description: "Get available options for session filter fields (score, model)",
 		Tags:        []string{constant.TagSession},
 		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
-		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("listSessionOptions", enum.PermissionUser, enum.DemoModuleSessions, demoAccessor)},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("listSessionOptions", enum.PermissionUser, enum.DemoModuleSessions, demoAccessor, auditSubmitter)},
 	}, sessionHandler.HandleListSessionOption)
 
 	initSessionShareRouter(sessionGroup, sessionHandler)

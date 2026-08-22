@@ -26,6 +26,7 @@ type APIRouterDependencies struct {
 	Cache              *redis.Client
 	AccessSigner       jwt.TokenSigner
 	DemoModuleAccessor demoport.DemoModuleAccessor
+	DemoAuditSubmitter demoport.DemoSubmitter
 	PingHandler        handler.PingHandler
 	TokenHandler       handler.TokenHandler
 	Oauth2Handler      handler.Oauth2Handler
@@ -110,25 +111,25 @@ func RegisterAPIRouter(humaAPI huma.API, deps APIRouterDependencies) {
 	initAPIKeyRouter(apikeyGroup, deps.APIKeyHandler, deps.DB, deps.Cache, deps.AccessSigner)
 
 	sessionJWTGroup := huma.NewGroup(v1Group, "/session")
-	initSessionJWTRouter(sessionJWTGroup, deps.SessionHandler, deps.DB, deps.Cache, deps.AccessSigner, deps.DemoModuleAccessor)
+	initSessionJWTRouter(sessionJWTGroup, deps.SessionHandler, deps.DB, deps.Cache, deps.AccessSigner, deps.DemoModuleAccessor, deps.DemoAuditSubmitter)
 
 	sessionPublicGroup := huma.NewGroup(v1Group, "/session")
 	initSessionPublicRouter(sessionPublicGroup, deps.SessionHandler, deps.Cache)
 
 	endpointGroup := huma.NewGroup(v1Group, "/endpoint")
-	initEndpointRouter(endpointGroup, deps.EndpointHandler, deps.DB, deps.Cache, deps.AccessSigner, deps.DemoModuleAccessor)
+	initEndpointRouter(endpointGroup, deps.EndpointHandler, deps.DB, deps.Cache, deps.AccessSigner, deps.DemoModuleAccessor, deps.DemoAuditSubmitter)
 
 	modelGroup := huma.NewGroup(v1Group, "/model")
-	initModelRouter(modelGroup, deps.ModelHandler, deps.DB, deps.Cache, deps.AccessSigner, deps.DemoModuleAccessor)
+	initModelRouter(modelGroup, deps.ModelHandler, deps.DB, deps.Cache, deps.AccessSigner, deps.DemoModuleAccessor, deps.DemoAuditSubmitter)
 
 	auditGroup := huma.NewGroup(v1Group, "/audit")
-	initAuditRouter(auditGroup, deps.AuditHandler, deps.CronHandler, deps.DB, deps.Cache, deps.AccessSigner, deps.DemoModuleAccessor)
+	initAuditRouter(auditGroup, deps.AuditHandler, deps.CronHandler, deps.DB, deps.Cache, deps.AccessSigner, deps.DemoModuleAccessor, deps.DemoAuditSubmitter)
 
 	cronGroup := huma.NewGroup(v1Group, "/cron")
-	initCronRouter(cronGroup, deps.CronHandler, deps.DB, deps.Cache, deps.AccessSigner, deps.DemoModuleAccessor)
+	initCronRouter(cronGroup, deps.CronHandler, deps.DB, deps.Cache, deps.AccessSigner, deps.DemoModuleAccessor, deps.DemoAuditSubmitter)
 
 	triggerGroup := huma.NewGroup(v1Group, "/trigger")
-	initTriggerRouter(triggerGroup, deps.TriggerHandler, deps.DB, deps.Cache, deps.AccessSigner, deps.DemoModuleAccessor)
+	initTriggerRouter(triggerGroup, deps.TriggerHandler, deps.DB, deps.Cache, deps.AccessSigner, deps.DemoModuleAccessor, deps.DemoAuditSubmitter)
 
 	openaiGroup := huma.NewGroup(apiGroup, "/openai/v1")
 	initOpenAIRouter(openaiGroup, deps.OpenAIHandler, deps.DB, deps.Cache)
@@ -137,7 +138,7 @@ func RegisterAPIRouter(humaAPI huma.API, deps APIRouterDependencies) {
 	initAnthropicRouter(anthropicGroup, deps.AnthropicHandler, deps.DB, deps.Cache)
 
 	metricsGroup := huma.NewGroup(v1Group, "/metrics")
-	initMetricsRouter(metricsGroup, deps.MetricsHandler, deps.DB, deps.Cache, deps.AccessSigner, deps.DemoModuleAccessor)
+	initMetricsRouter(metricsGroup, deps.MetricsHandler, deps.DB, deps.Cache, deps.AccessSigner, deps.DemoModuleAccessor, deps.DemoAuditSubmitter)
 
 	datasetGroup := huma.NewGroup(v1Group, "/dataset")
 	initDatasetRouter(datasetGroup, deps.DatasetHandler, deps.DB, deps.Cache, deps.AccessSigner)

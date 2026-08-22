@@ -14,7 +14,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func initCronRouter(cronGroup huma.API, cronHandler handler.CronHandler, db *gorm.DB, cache *redis.Client, accessSigner jwt.TokenSigner, demoAccessor demoport.DemoModuleAccessor) {
+func initCronRouter(cronGroup huma.API, cronHandler handler.CronHandler, db *gorm.DB, cache *redis.Client, accessSigner jwt.TokenSigner, demoAccessor demoport.DemoModuleAccessor, auditSubmitter demoport.DemoSubmitter) {
 	cronGroup.UseMiddleware(middleware.JwtMiddleware(db, cache, accessSigner))
 	cronGroup.UseMiddleware(middleware.TokenBucketRateLimiterMiddleware(cache, "demoAccess", "", constant.PeriodDemoAccess, constant.LimitDemoAccess, middleware.WithPermissionFilter(enum.PermissionDemo)))
 
@@ -26,7 +26,7 @@ func initCronRouter(cronGroup huma.API, cronHandler handler.CronHandler, db *gor
 		Description: "List all cron jobs with their enabled status",
 		Tags:        []string{constant.TagCron},
 		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
-		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("listCronJobs", enum.PermissionAdmin, enum.DemoModuleCron, demoAccessor)},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("listCronJobs", enum.PermissionAdmin, enum.DemoModuleCron, demoAccessor, auditSubmitter)},
 	}, cronHandler.HandleListCronJobs)
 
 	huma.Register(cronGroup, huma.Operation{

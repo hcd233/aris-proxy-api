@@ -14,7 +14,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func initTriggerRouter(group huma.API, handler handler.TriggerHandler, db *gorm.DB, cache *redis.Client, accessSigner jwt.TokenSigner, demoAccessor demoport.DemoModuleAccessor) {
+func initTriggerRouter(group huma.API, handler handler.TriggerHandler, db *gorm.DB, cache *redis.Client, accessSigner jwt.TokenSigner, demoAccessor demoport.DemoModuleAccessor, auditSubmitter demoport.DemoSubmitter) {
 	group.UseMiddleware(middleware.JwtMiddleware(db, cache, accessSigner))
 	group.UseMiddleware(middleware.TokenBucketRateLimiterMiddleware(cache, "demoAccess", "", constant.PeriodDemoAccess, constant.LimitDemoAccess, middleware.WithPermissionFilter(enum.PermissionDemo)))
 
@@ -38,7 +38,7 @@ func initTriggerRouter(group huma.API, handler handler.TriggerHandler, db *gorm.
 		Tags:        []string{constant.TagTrigger},
 		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
 		Middlewares: huma.Middlewares{
-			middleware.LimitUserPermissionWithDemoMiddleware("listTrigger", enum.PermissionAdmin, enum.DemoModuleTrigger, demoAccessor),
+			middleware.LimitUserPermissionWithDemoMiddleware("listTrigger", enum.PermissionAdmin, enum.DemoModuleTrigger, demoAccessor, auditSubmitter),
 		},
 	}, handler.HandleListTrigger)
 

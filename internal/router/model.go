@@ -14,7 +14,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func initModelRouter(modelGroup huma.API, modelHandler handler.ModelHandler, db *gorm.DB, cache *redis.Client, accessSigner jwt.TokenSigner, demoAccessor demoport.DemoModuleAccessor) {
+func initModelRouter(modelGroup huma.API, modelHandler handler.ModelHandler, db *gorm.DB, cache *redis.Client, accessSigner jwt.TokenSigner, demoAccessor demoport.DemoModuleAccessor, auditSubmitter demoport.DemoSubmitter) {
 	modelGroup.UseMiddleware(middleware.JwtMiddleware(db, cache, accessSigner))
 	modelGroup.UseMiddleware(middleware.TokenBucketRateLimiterMiddleware(cache, "demoAccess", "", constant.PeriodDemoAccess, constant.LimitDemoAccess, middleware.WithPermissionFilter(enum.PermissionDemo)))
 	modelGroup.UseMiddleware(middleware.TokenBucketRateLimiterMiddleware(
@@ -47,7 +47,7 @@ func initModelRouter(modelGroup huma.API, modelHandler handler.ModelHandler, db 
 			{constant.SecuritySchemeJWT: {}},
 		},
 		Middlewares: huma.Middlewares{
-			middleware.LimitUserPermissionWithDemoMiddleware("listModels", enum.PermissionAdmin, enum.DemoModuleModels, demoAccessor),
+			middleware.LimitUserPermissionWithDemoMiddleware("listModels", enum.PermissionAdmin, enum.DemoModuleModels, demoAccessor, auditSubmitter),
 		},
 	}, modelHandler.HandleListModels)
 
