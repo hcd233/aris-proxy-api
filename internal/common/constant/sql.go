@@ -64,6 +64,8 @@ const (
 	FieldHitCount                 = "hit_count"
 	FieldAction                   = "action"
 	FieldModule                   = "module"
+	FieldPath                     = "path"
+	FieldIP                       = "ip"
 	FieldMessageCount             = "message_count"
 	FieldToolCount                = "tool_count"
 

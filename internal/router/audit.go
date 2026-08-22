@@ -127,4 +127,26 @@ func initAuditRouter(auditGroup huma.API, auditHandler handler.AuditHandler, cro
 		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
 		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("listCronCallAuditOptions", enum.PermissionAdmin, enum.DemoModuleCronAudit, demoAccessor, auditSubmitter)},
 	}, cronHandler.HandleListCronCallAuditOptions)
+
+	huma.Register(auditGroup, huma.Operation{
+		OperationID: "listDemoAccessAudits",
+		Method:      http.MethodGet,
+		Path:        "/demo/log" + constant.RoutePathList,
+		Summary:     "ListDemoAccessAudits",
+		Description: "Paginate demo access audit records (admin only; not exposed to the demo account)",
+		Tags:        []string{constant.TagAudit},
+		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("listDemoAccessAudits", enum.PermissionAdmin)},
+	}, cronHandler.HandleListDemoAccessAudits)
+
+	huma.Register(auditGroup, huma.Operation{
+		OperationID: "listDemoAccessAuditOptions",
+		Method:      http.MethodGet,
+		Path:        "/demo/option/list",
+		Summary:     "ListDemoAccessAuditOptions",
+		Description: "Get available filter options for demo access audit (action, module)",
+		Tags:        []string{constant.TagAudit},
+		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("listDemoAccessAuditOptions", enum.PermissionAdmin)},
+	}, cronHandler.HandleListDemoAccessAuditOptions)
 }

@@ -19,6 +19,8 @@ import (
 	democommand "github.com/hcd233/aris-proxy-api/internal/application/demo/command"
 	demoport "github.com/hcd233/aris-proxy-api/internal/application/demo/port"
 	demoquery "github.com/hcd233/aris-proxy-api/internal/application/demo/query"
+	demoauditport "github.com/hcd233/aris-proxy-api/internal/application/demoaccessaudit/port"
+	demoauditquery "github.com/hcd233/aris-proxy-api/internal/application/demoaccessaudit/query"
 	endpointcommand "github.com/hcd233/aris-proxy-api/internal/application/endpoint/command"
 	endpointport "github.com/hcd233/aris-proxy-api/internal/application/endpoint/port"
 	endpointquery "github.com/hcd233/aris-proxy-api/internal/application/endpoint/query"
@@ -120,6 +122,8 @@ var ApplicationModule = fx.Module(constant.DigNameApplicationModule,
 		NewUpdateCronJobHandler,
 		NewTriggerCronJobHandler,
 		NewListCronCallAuditsHandler,
+		NewListDemoAccessAuditsHandler,
+		NewListDemoAccessAuditOptionsHandler,
 		NewListCronCallAuditOptionsHandler,
 		NewListSessionsByUserHandler,
 		NewGetSessionByUserHandler,
@@ -512,4 +516,12 @@ func NewListTraceEventsHandler(
 
 func NewDeleteTraceHandler(repo trace.TraceRepository, apiKeyRepo apikey.APIKeyRepository) traceport.DeleteTraceHandler {
 	return tracecommand.NewDeleteTraceHandler(repo, apiKeyRepo)
+}
+
+func NewListDemoAccessAuditsHandler(repo demoauditport.DemoAccessAuditRepository) demoauditport.ListDemoAccessAuditsHandler {
+	return demoauditquery.NewListDemoAccessAuditsHandler(repo)
+}
+
+func NewListDemoAccessAuditOptionsHandler(repo demoauditport.DemoAccessAuditRepository) demoauditport.ListDemoAccessAuditOptionsHandler {
+	return demoauditquery.NewListDemoAccessAuditOptionsHandler(repo)
 }

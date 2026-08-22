@@ -7,6 +7,7 @@ import (
 	cronmgmtport "github.com/hcd233/aris-proxy-api/internal/application/cronmgmt/port"
 	datasetport "github.com/hcd233/aris-proxy-api/internal/application/dataset/port"
 	demoport "github.com/hcd233/aris-proxy-api/internal/application/demo/port"
+	demoauditport "github.com/hcd233/aris-proxy-api/internal/application/demoaccessaudit/port"
 	endpointport "github.com/hcd233/aris-proxy-api/internal/application/endpoint/port"
 	identityport "github.com/hcd233/aris-proxy-api/internal/application/identity/port"
 	llmproxyport "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/port"
@@ -161,13 +162,17 @@ func NewCronDependencies(
 	triggerJob cronmgmtport.TriggerCronJobHandler,
 	listAudits cronauditport.ListCronCallAuditsHandler,
 	listAuditOpts cronauditport.ListCronCallAuditOptionsHandler,
+	listDemoAccessAudits demoauditport.ListDemoAccessAuditsHandler,
+	listDemoAccessOpts demoauditport.ListDemoAccessAuditOptionsHandler,
 ) handler.CronDependencies {
 	return handler.CronDependencies{
-		ListCronJobs:             listJobs,
-		UpdateCronJob:            updateJob,
-		TriggerCronJob:           triggerJob,
-		ListCronCallAudits:       listAudits,
-		ListCronCallAuditOptions: listAuditOpts,
+		ListCronJobs:               listJobs,
+		UpdateCronJob:              updateJob,
+		TriggerCronJob:             triggerJob,
+		ListCronCallAudits:         listAudits,
+		ListCronCallAuditOptions:   listAuditOpts,
+		ListDemoAccessAudits:       listDemoAccessAudits,
+		ListDemoAccessAuditOptions: listDemoAccessOpts,
 	}
 }
 
