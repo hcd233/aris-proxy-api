@@ -152,7 +152,12 @@ const NAV_GROUPS: NavGroup[] = [
     key: "system",
     labelKey: "nav.group.system",
     items: [
-      { labelKey: "nav.users", href: "/users/", icon: <Users className="size-4" />, adminOnly: true },
+      {
+        labelKey: "nav.users",
+        href: "/users/",
+        icon: <Users className="size-4" />,
+        adminOnly: true,
+      },
       {
         labelKey: "nav.demo",
         href: "/demo/",
