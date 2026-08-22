@@ -103,19 +103,9 @@ func (r *demoAccessAuditRepository) List(ctx context.Context, param model.Common
 
 // ListDistinctActions 列出 distinct action
 func (r *demoAccessAuditRepository) ListDistinctActions(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
-	return r.listDistinct(ctx, constant.FieldAction, keyword, startTime, endTime)
-}
-
-// ListDistinctModules 列出 distinct module
-func (r *demoAccessAuditRepository) ListDistinctModules(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
-	return r.listDistinct(ctx, constant.FieldModule, keyword, startTime, endTime)
-}
-
-func (r *demoAccessAuditRepository) listDistinct(ctx context.Context, column, keyword string, startTime, endTime time.Time) ([]string, error) {
 	query := r.db.WithContext(ctx).Model(&dbmodel.DemoAccessAudit{}).
-		Distinct(column).
+		Distinct(constant.FieldAction).
 		Where(constant.DBConditionDeletedAtZero)
-
 	if !startTime.IsZero() {
 		query = query.Where(constant.WhereCreatedAtGTE, startTime)
 	}
@@ -123,12 +113,32 @@ func (r *demoAccessAuditRepository) listDistinct(ctx context.Context, column, ke
 		query = query.Where(constant.WhereCreatedAtLTE, endTime)
 	}
 	if keyword != "" {
-		query = query.Where(column+" LIKE ?", "%"+keyword+"%")
+		query = query.Where(constant.FieldAction+" LIKE ?", "%"+keyword+"%")
 	}
-
 	var values []string
-	if err := query.Order(column + " ASC").Limit(constant.CronAuditDistinctLimit).Scan(&values).Error; err != nil {
-		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "list distinct demo access audit "+column)
+	if err := query.Order(constant.FieldAction + " ASC").Limit(constant.CronAuditDistinctLimit).Scan(&values).Error; err != nil {
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "list distinct demo access audit actions")
+	}
+	return values, nil
+}
+
+// ListDistinctModules 列出 distinct module
+func (r *demoAccessAuditRepository) ListDistinctModules(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
+	query := r.db.WithContext(ctx).Model(&dbmodel.DemoAccessAudit{}).
+		Distinct(constant.FieldModule).
+		Where(constant.DBConditionDeletedAtZero)
+	if !startTime.IsZero() {
+		query = query.Where(constant.WhereCreatedAtGTE, startTime)
+	}
+	if !endTime.IsZero() {
+		query = query.Where(constant.WhereCreatedAtLTE, endTime)
+	}
+	if keyword != "" {
+		query = query.Where(constant.FieldModule+" LIKE ?", "%"+keyword+"%")
+	}
+	var values []string
+	if err := query.Order(constant.FieldModule + " ASC").Limit(constant.CronAuditDistinctLimit).Scan(&values).Error; err != nil {
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "list distinct demo access audit modules")
 	}
 	return values, nil
 }

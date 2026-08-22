@@ -7,6 +7,7 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
+	"github.com/hcd233/aris-proxy-api/internal/dto"
 )
 
 // DemoConfigView Demo 配置视图
@@ -36,7 +37,17 @@ type UpdateDemoConfigHandler interface {
 }
 
 // DemoLoginCommand Demo 账户登录（无需 OAuth）
-type DemoLoginCommand struct{}
+type DemoLoginCommand struct {
+	// ClientIP 客户端 IP，用于访问审计
+	ClientIP string
+	// UserAgent 请求 UA，用于访问审计
+	UserAgent string
+}
+
+// DemoSubmitter Demo 访问审计任务提交端口（best-effort）
+type DemoSubmitter interface {
+	SubmitDemoAccessAuditTask(task *dto.DemoAccessAuditTask) error
+}
 
 // DemoLoginResult Demo 登录结果（JWT token pair）
 type DemoLoginResult struct {

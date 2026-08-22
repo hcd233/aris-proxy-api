@@ -54,4 +54,10 @@ const (
 	// CtxKeySkipStore 命中 allow 型触发词，跳过 session/message/tool 存储
 	//	@update 2026-08-11 10:00:00
 	CtxKeySkipStore enum.CtxKey = "skipStore"
+
+	// CtxKeyClientIP 客户端 IP（由 InjectRequestMetaMiddleware 注入，用于 demo 访问审计）
+	CtxKeyClientIP enum.CtxKey = "clientIP"
+
+	// CtxKeyClientUA 客户端 User-Agent（由 InjectRequestMetaMiddleware 注入，用于 demo 访问审计）
+	CtxKeyClientUA enum.CtxKey = "clientUA"
 )

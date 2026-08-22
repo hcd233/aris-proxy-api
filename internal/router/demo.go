@@ -24,6 +24,7 @@ func initDemoRouter(demoGroup huma.API, demoHandler handler.DemoHandler, db *gor
 		Description: "Login as the global demo account without OAuth (requires demo login entry enabled and a demo account configured)",
 		Tags:        []string{constant.TagDemo},
 		Middlewares: huma.Middlewares{
+			middleware.InjectRequestMetaMiddleware(),
 			middleware.TokenBucketRateLimiterMiddleware(cache, "demoLogin", "", constant.PeriodDemoLogin, constant.LimitDemoLogin),
 		},
 	}, demoHandler.HandleLogin)

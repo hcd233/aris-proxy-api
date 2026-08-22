@@ -56,6 +56,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/trace"
 	triggerdomain "github.com/hcd233/aris-proxy-api/internal/domain/trigger"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/redis/go-redis/v9"
@@ -94,6 +95,7 @@ var ApplicationModule = fx.Module(constant.DigNameApplicationModule,
 		democommand.NewUpdateDemoConfigHandler,
 		democommand.NewAddDemoSessionsHandler,
 		democommand.NewRemoveDemoSessionsHandler,
+		NewDemoAccessAuditSubmitter,
 		NewDemoLoginHandler,
 		NewDemoStatusHandler,
 		NewInitiateLoginHandler,
@@ -271,14 +273,31 @@ func NewRestoreDemoUserHandler(repo identity.UserRepository, cache *redis.Client
 type demoLoginParams struct {
 	fx.In
 
-	ConfigRepo    demoport.DemoConfigRepository
-	UserRepo      identity.UserRepository
-	AccessSigner  identityservice.TokenSigner `name:"accessSigner"`
-	RefreshSigner identityservice.TokenSigner `name:"refreshSigner"`
+	ConfigRepo     demoport.DemoConfigRepository
+	UserRepo       identity.UserRepository
+	AccessSigner   identityservice.TokenSigner `name:"accessSigner"`
+	RefreshSigner  identityservice.TokenSigner `name:"refreshSigner"`
+	AuditSubmitter demoport.DemoSubmitter
 }
 
 func NewDemoLoginHandler(params demoLoginParams) demoport.DemoLoginHandler {
-	return democommand.NewDemoLoginHandler(params.ConfigRepo, params.UserRepo, params.AccessSigner, params.RefreshSigner)
+	return democommand.NewDemoLoginHandler(
+		params.ConfigRepo, params.UserRepo,
+		params.AccessSigner, params.RefreshSigner,
+		params.AuditSubmitter,
+	)
+}
+
+// NewDemoAccessAuditSubmitter 把 PoolManager 适配为 DemoSubmitter 窄接口
+//
+// PoolManager 已实现 SubmitDemoAccessAuditTask 方法，天然满足接口。
+//
+//	@param pm *pool.PoolManager
+//	@return demoport.DemoSubmitter
+//	@author centonhuang
+//	@update 2026-08-23 10:00:00
+func NewDemoAccessAuditSubmitter(pm *pool.PoolManager) demoport.DemoSubmitter {
+	return pm
 }
 
 func NewDemoStatusHandler(configRepo demoport.DemoConfigRepository, userRepo identity.UserRepository) demoport.DemoStatusHandler {
