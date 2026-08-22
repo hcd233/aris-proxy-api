@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import cronstrue from "cronstrue";
+import "cronstrue/locales/zh_CN";
 import type { CronJobItem } from "@/lib/types";
 import {
   Dialog,

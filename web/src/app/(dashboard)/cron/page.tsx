@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { useOptimisticUpdate } from "@/hooks/use-optimistic-update";
 import cronstrue from "cronstrue";
+import "cronstrue/locales/zh_CN";
 import { api } from "@/lib/api-client";
 import type { CronJobItem, PageInfo } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
