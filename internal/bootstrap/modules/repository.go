@@ -4,6 +4,7 @@ import (
 	cronauditport "github.com/hcd233/aris-proxy-api/internal/application/cronaudit/port"
 	cronmgmtport "github.com/hcd233/aris-proxy-api/internal/application/cronmgmt/port"
 	demoport "github.com/hcd233/aris-proxy-api/internal/application/demo/port"
+	demoauditport "github.com/hcd233/aris-proxy-api/internal/application/demoaccessaudit/port"
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
 	oauthport "github.com/hcd233/aris-proxy-api/internal/application/oauth2/port"
 	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
@@ -64,6 +65,7 @@ var RepositoryModule = fx.Module(constant.DigNameRepositoryModule,
 		NewTriggerCache,
 		NewCronRepository,
 		NewCronCallAuditRepository,
+		NewDemoAccessAuditRepository,
 		fx.Annotate(
 			NewAccessTokenSignerImpl,
 			fx.ResultTags(`name:"accessSigner"`),
@@ -97,6 +99,10 @@ func NewAuditRepository(db *gorm.DB) modelcall.AuditRepository {
 
 func NewDemoConfigRepository(db *gorm.DB) demoport.DemoConfigRepository {
 	return repository.NewDemoConfigRepository(db)
+}
+
+func NewDemoAccessAuditRepository(db *gorm.DB) demoauditport.DemoAccessAuditRepository {
+	return repository.NewDemoAccessAuditRepository(db)
 }
 
 func NewDemoSessionRepository(db *gorm.DB) demoport.DemoSessionRepository {

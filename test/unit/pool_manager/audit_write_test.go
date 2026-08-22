@@ -30,7 +30,7 @@ func TestPoolManager_SubmitModelCallAuditTask_WritesViaRepository(t *testing.T) 
 	t.Parallel()
 
 	repo := &fakeAuditRepo{saved: make(chan *mcaggregate.ModelCallAudit, 1)}
-	pm := pool.NewPoolManager(nil, repo)
+	pm := pool.NewPoolManager(nil, repo, nil)
 
 	if err := pm.SubmitModelCallAuditTask(&dto.ModelCallAuditTask{
 		Ctx:                 context.Background(),

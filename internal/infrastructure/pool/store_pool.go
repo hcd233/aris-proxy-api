@@ -7,6 +7,7 @@ package pool
 import (
 	"time"
 
+	demoauditport "github.com/hcd233/aris-proxy-api/internal/application/demoaccessaudit/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/vo"
@@ -205,5 +206,31 @@ func (pm *PoolManager) SubmitModelCallAuditTask(task *dto.ModelCallAuditTask) er
 			return
 		}
 		l.Info("[StorePool] Audit record stored successfully")
+	})
+}
+
+// SubmitDemoAccessAuditTask 提交 Demo 访问审计任务到协程池
+//
+// best-effort：落库失败仅打日志，不影响业务请求。
+//
+//	@receiver pm *PoolManager
+//	@param task *dto.DemoAccessAuditTask
+//	@return error
+//	@author centonhuang
+//	@update 2026-08-23 10:00:00
+func (pm *PoolManager) SubmitDemoAccessAuditTask(task *dto.DemoAccessAuditTask) error {
+	return pm.storePool.Go(func() {
+		l := logger.WithCtx(task.Ctx)
+		view := &demoauditport.DemoAccessAuditView{
+			Action:    task.Action,
+			Module:    task.Module,
+			Path:      task.Path,
+			IP:        task.IP,
+			UserAgent: task.UserAgent,
+			Reason:    task.Reason,
+		}
+		if err := pm.demoAccessAuditRepo.Save(task.Ctx, view); err != nil {
+			l.Error("[StorePool] Failed to store demo access audit", zap.Error(err))
+		}
 	})
 }
