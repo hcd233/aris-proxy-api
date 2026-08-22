@@ -14,6 +14,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 // DemoHandler Demo 演示账户处理器
@@ -83,7 +84,11 @@ func NewDemoHandler(deps DemoHandlerDependencies) DemoHandler {
 //	@update 2026-08-16 10:00:00
 func (h *demoHandler) HandleLogin(ctx context.Context, _ *dto.EmptyReq) (*dto.HTTPResponse[*dto.DemoLoginRsp], error) {
 	rsp := &dto.DemoLoginRsp{}
-	result, err := h.login.Handle(ctx, port.DemoLoginCommand{})
+	cmd := port.DemoLoginCommand{
+		ClientIP:  util.CtxValueString(ctx, constant.CtxKeyClientIP),
+		UserAgent: util.CtxValueString(ctx, constant.CtxKeyClientUA),
+	}
+	result, err := h.login.Handle(ctx, cmd)
 	if err != nil {
 		logger.WithCtx(ctx).Error("[DemoHandler] Demo login failed", zap.Error(err))
 		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())

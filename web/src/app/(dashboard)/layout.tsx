@@ -42,6 +42,7 @@ import {
   Lock,
   Settings2,
   ChevronDown,
+  Footprints,
 } from "lucide-react";
 
 interface NavItem {
@@ -138,6 +139,12 @@ const NAV_GROUPS: NavGroup[] = [
         icon: <ScrollText className="size-4" />,
         adminOnly: true,
         demoModule: "cron_audit",
+      },
+      {
+        labelKey: "nav.demo_access_audit",
+        href: "/audit/demo/",
+        icon: <Footprints className="size-4" />,
+        adminOnly: true,
       },
       {
         labelKey: "nav.monitor",

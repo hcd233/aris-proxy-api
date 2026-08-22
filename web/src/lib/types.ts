@@ -799,3 +799,32 @@ export interface ListTraceEventsRsp extends CommonRsp {
   events?: TraceEventItem[];
   pageInfo?: PageInfo;
 }
+
+// ─── Demo Access Audit ────────────────────────────────────────────────────────
+
+export interface DemoAccessAuditItem {
+  id: number;
+  action: string;
+  module: string;
+  path: string;
+  ip: string;
+  userAgent: string;
+  reason: string;
+  createdAt: string;
+}
+
+export interface ListDemoAccessAuditsRsp extends CommonRsp {
+  logs?: DemoAccessAuditItem[];
+  pageInfo?: PageInfo;
+}
+
+export interface DemoAccessAuditOptionListReq {
+  field: "action" | "module";
+  keyword?: string;
+  startTime?: string;
+  endTime?: string;
+}
+
+export interface DemoAccessAuditOptionListRsp extends CommonRsp {
+  items: string[];
+}

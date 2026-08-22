@@ -25,6 +25,7 @@ type routeParams struct {
 	HumaAPI            huma.API
 	AccessSigner       identityservice.TokenSigner `name:"accessSigner"`
 	DemoModuleAccessor demoport.DemoModuleAccessor
+	DemoAuditSubmitter demoport.DemoSubmitter
 	PingHandler        handler.PingHandler
 	TokenHandler       handler.TokenHandler
 	Oauth2Handler      handler.Oauth2Handler
@@ -53,6 +54,7 @@ func registerRoutes(params routeParams) {
 		Cache:              params.Cache,
 		AccessSigner:       params.AccessSigner,
 		DemoModuleAccessor: params.DemoModuleAccessor,
+		DemoAuditSubmitter: params.DemoAuditSubmitter,
 		PingHandler:        params.PingHandler,
 		TokenHandler:       params.TokenHandler,
 		Oauth2Handler:      params.Oauth2Handler,

@@ -14,7 +14,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func initAuditRouter(auditGroup huma.API, auditHandler handler.AuditHandler, cronHandler handler.CronHandler, db *gorm.DB, cache *redis.Client, accessSigner jwt.TokenSigner, demoAccessor demoport.DemoModuleAccessor) {
+func initAuditRouter(auditGroup huma.API, auditHandler handler.AuditHandler, cronHandler handler.CronHandler, db *gorm.DB, cache *redis.Client, accessSigner jwt.TokenSigner, demoAccessor demoport.DemoModuleAccessor, auditSubmitter demoport.DemoSubmitter) {
 	auditGroup.UseMiddleware(middleware.JwtMiddleware(db, cache, accessSigner))
 	auditGroup.UseMiddleware(middleware.TokenBucketRateLimiterMiddleware(cache, "demoAccess", "", constant.PeriodDemoAccess, constant.LimitDemoAccess, middleware.WithPermissionFilter(enum.PermissionDemo)))
 
@@ -26,7 +26,7 @@ func initAuditRouter(auditGroup huma.API, auditHandler handler.AuditHandler, cro
 		Description: "Paginate audit logs scoped by current JWT user. Admin sees all records; regular user sees records under their own API keys.",
 		Tags:        []string{constant.TagAudit},
 		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
-		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("listAuditLogs", enum.PermissionUser, enum.DemoModuleAudit, demoAccessor)},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("listAuditLogs", enum.PermissionUser, enum.DemoModuleAudit, demoAccessor, auditSubmitter)},
 	}, auditHandler.HandleListAuditLogs)
 
 	huma.Register(auditGroup, huma.Operation{
@@ -37,7 +37,7 @@ func initAuditRouter(auditGroup huma.API, auditHandler handler.AuditHandler, cro
 		Description: "Get available options for audit filter fields (user, model)",
 		Tags:        []string{constant.TagAudit},
 		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
-		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("listAuditOptions", enum.PermissionUser, enum.DemoModuleAudit, demoAccessor)},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("listAuditOptions", enum.PermissionUser, enum.DemoModuleAudit, demoAccessor, auditSubmitter)},
 	}, auditHandler.HandleListAuditOption)
 
 	huma.Register(auditGroup, huma.Operation{
@@ -48,7 +48,7 @@ func initAuditRouter(auditGroup huma.API, auditHandler handler.AuditHandler, cro
 		Description: "Query model call count trend grouped by model and time bucket. Admin sees all; user sees only their own keys.",
 		Tags:        []string{constant.TagAudit},
 		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
-		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("queryModelTrend", enum.PermissionUser, enum.DemoModuleAudit, demoAccessor)},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("queryModelTrend", enum.PermissionUser, enum.DemoModuleAudit, demoAccessor, auditSubmitter)},
 	}, auditHandler.HandleModelTrend)
 
 	huma.Register(auditGroup, huma.Operation{
@@ -59,7 +59,7 @@ func initAuditRouter(auditGroup huma.API, auditHandler handler.AuditHandler, cro
 		Description: "Query request success rate grouped by model and time bucket. Admin sees all; user sees only their own keys.",
 		Tags:        []string{constant.TagAudit},
 		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
-		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("queryRequestRate", enum.PermissionUser, enum.DemoModuleAudit, demoAccessor)},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("queryRequestRate", enum.PermissionUser, enum.DemoModuleAudit, demoAccessor, auditSubmitter)},
 	}, auditHandler.HandleRequestRate)
 
 	huma.Register(auditGroup, huma.Operation{
@@ -70,7 +70,7 @@ func initAuditRouter(auditGroup huma.API, auditHandler handler.AuditHandler, cro
 		Description: "Query token throughput (volume + output rate) grouped by model and time bucket. Admin sees all; user sees only their own keys.",
 		Tags:        []string{constant.TagAudit},
 		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
-		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("queryTokenThroughput", enum.PermissionUser, enum.DemoModuleAudit, demoAccessor)},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("queryTokenThroughput", enum.PermissionUser, enum.DemoModuleAudit, demoAccessor, auditSubmitter)},
 	}, auditHandler.HandleTokenThroughput)
 
 	huma.Register(auditGroup, huma.Operation{
@@ -81,7 +81,7 @@ func initAuditRouter(auditGroup huma.API, auditHandler handler.AuditHandler, cro
 		Description: "Query output token rate grouped by model and time bucket. Admin sees all; user sees only their own keys.",
 		Tags:        []string{constant.TagAudit},
 		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
-		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("queryTokenRate", enum.PermissionUser, enum.DemoModuleAudit, demoAccessor)},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("queryTokenRate", enum.PermissionUser, enum.DemoModuleAudit, demoAccessor, auditSubmitter)},
 	}, auditHandler.HandleTokenRate)
 
 	huma.Register(auditGroup, huma.Operation{
@@ -92,7 +92,7 @@ func initAuditRouter(auditGroup huma.API, auditHandler handler.AuditHandler, cro
 		Description: "Query aggregated model usage per model. Admin sees all; user sees only their own keys.",
 		Tags:        []string{constant.TagAudit},
 		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
-		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("queryModelUsage", enum.PermissionUser, enum.DemoModuleAudit, demoAccessor)},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("queryModelUsage", enum.PermissionUser, enum.DemoModuleAudit, demoAccessor, auditSubmitter)},
 	}, auditHandler.HandleModelUsage)
 
 	huma.Register(auditGroup, huma.Operation{
@@ -103,7 +103,7 @@ func initAuditRouter(auditGroup huma.API, auditHandler handler.AuditHandler, cro
 		Description: "Query average first token latency grouped by model and time bucket. Admin sees all; user sees only their own keys.",
 		Tags:        []string{constant.TagAudit},
 		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
-		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("queryFirstTokenLatency", enum.PermissionUser, enum.DemoModuleAudit, demoAccessor)},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("queryFirstTokenLatency", enum.PermissionUser, enum.DemoModuleAudit, demoAccessor, auditSubmitter)},
 	}, auditHandler.HandleFirstTokenLatency)
 
 	huma.Register(auditGroup, huma.Operation{
@@ -114,7 +114,7 @@ func initAuditRouter(auditGroup huma.API, auditHandler handler.AuditHandler, cro
 		Description: "Paginate cron call audit records",
 		Tags:        []string{constant.TagCronAudit},
 		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
-		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("listCronCallAudits", enum.PermissionAdmin, enum.DemoModuleCronAudit, demoAccessor)},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("listCronCallAudits", enum.PermissionAdmin, enum.DemoModuleCronAudit, demoAccessor, auditSubmitter)},
 	}, cronHandler.HandleListCronCallAudits)
 
 	huma.Register(auditGroup, huma.Operation{
@@ -125,6 +125,28 @@ func initAuditRouter(auditGroup huma.API, auditHandler handler.AuditHandler, cro
 		Description: "Get available filter options for cron call audit (cron type)",
 		Tags:        []string{constant.TagCronAudit},
 		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
-		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("listCronCallAuditOptions", enum.PermissionAdmin, enum.DemoModuleCronAudit, demoAccessor)},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("listCronCallAuditOptions", enum.PermissionAdmin, enum.DemoModuleCronAudit, demoAccessor, auditSubmitter)},
 	}, cronHandler.HandleListCronCallAuditOptions)
+
+	huma.Register(auditGroup, huma.Operation{
+		OperationID: "listDemoAccessAudits",
+		Method:      http.MethodGet,
+		Path:        "/demo/log" + constant.RoutePathList,
+		Summary:     "ListDemoAccessAudits",
+		Description: "Paginate demo access audit records (admin only; not exposed to the demo account)",
+		Tags:        []string{constant.TagAudit},
+		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("listDemoAccessAudits", enum.PermissionAdmin)},
+	}, cronHandler.HandleListDemoAccessAudits)
+
+	huma.Register(auditGroup, huma.Operation{
+		OperationID: "listDemoAccessAuditOptions",
+		Method:      http.MethodGet,
+		Path:        "/demo/option/list",
+		Summary:     "ListDemoAccessAuditOptions",
+		Description: "Get available filter options for demo access audit (action, module)",
+		Tags:        []string{constant.TagAudit},
+		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("listDemoAccessAuditOptions", enum.PermissionAdmin)},
+	}, cronHandler.HandleListDemoAccessAuditOptions)
 }

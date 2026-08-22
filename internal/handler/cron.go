@@ -9,6 +9,7 @@ import (
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
 	cronauditport "github.com/hcd233/aris-proxy-api/internal/application/cronaudit/port"
 	cronmgmtport "github.com/hcd233/aris-proxy-api/internal/application/cronmgmt/port"
+	demoauditport "github.com/hcd233/aris-proxy-api/internal/application/demoaccessaudit/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
@@ -25,6 +26,8 @@ type CronHandler interface {
 	HandleTriggerCronJob(ctx context.Context, req *dto.TriggerCronJobReq) (*dto.HTTPResponse[*dto.TriggerCronJobRsp], error)
 	HandleListCronCallAudits(ctx context.Context, req *dto.ListCronCallAuditsReq) (*dto.HTTPResponse[*dto.ListCronCallAuditsRsp], error)
 	HandleListCronCallAuditOptions(ctx context.Context, req *dto.CronCallAuditOptionListReq) (*dto.HTTPResponse[*dto.CronCallAuditOptionListRsp], error)
+	HandleListDemoAccessAudits(ctx context.Context, req *dto.ListDemoAccessAuditsReq) (*dto.HTTPResponse[*dto.ListDemoAccessAuditsRsp], error)
+	HandleListDemoAccessAuditOptions(ctx context.Context, req *dto.DemoAccessAuditOptionListReq) (*dto.HTTPResponse[*dto.DemoAccessAuditOptionListRsp], error)
 }
 
 // CronDependencies CronHandler 依赖
@@ -32,11 +35,13 @@ type CronHandler interface {
 //	@author centonhuang
 //	@update 2026-08-05 10:00:00
 type CronDependencies struct {
-	ListCronJobs             cronmgmtport.ListCronJobsHandler
-	UpdateCronJob            cronmgmtport.UpdateCronJobHandler
-	TriggerCronJob           cronmgmtport.TriggerCronJobHandler
-	ListCronCallAudits       cronauditport.ListCronCallAuditsHandler
-	ListCronCallAuditOptions cronauditport.ListCronCallAuditOptionsHandler
+	ListCronJobs               cronmgmtport.ListCronJobsHandler
+	UpdateCronJob              cronmgmtport.UpdateCronJobHandler
+	TriggerCronJob             cronmgmtport.TriggerCronJobHandler
+	ListCronCallAudits         cronauditport.ListCronCallAuditsHandler
+	ListCronCallAuditOptions   cronauditport.ListCronCallAuditOptionsHandler
+	ListDemoAccessAudits       demoauditport.ListDemoAccessAuditsHandler
+	ListDemoAccessAuditOptions demoauditport.ListDemoAccessAuditOptionsHandler
 }
 
 type cronHandler struct {
@@ -45,6 +50,8 @@ type cronHandler struct {
 	triggerCronJob        cronmgmtport.TriggerCronJobHandler
 	listCronCallAudits    cronauditport.ListCronCallAuditsHandler
 	listCronCallAuditOpts cronauditport.ListCronCallAuditOptionsHandler
+	listDemoAccessAudits  demoauditport.ListDemoAccessAuditsHandler
+	listDemoAccessOpts    demoauditport.ListDemoAccessAuditOptionsHandler
 }
 
 // NewCronHandler 构造 CronHandler
@@ -58,6 +65,8 @@ func NewCronHandler(deps CronDependencies) CronHandler {
 		triggerCronJob:        deps.TriggerCronJob,
 		listCronCallAudits:    deps.ListCronCallAudits,
 		listCronCallAuditOpts: deps.ListCronCallAuditOptions,
+		listDemoAccessAudits:  deps.ListDemoAccessAudits,
+		listDemoAccessOpts:    deps.ListDemoAccessAuditOptions,
 	}
 }
 
@@ -159,6 +168,48 @@ func (h *cronHandler) HandleListCronCallAuditOptions(ctx context.Context, req *d
 		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 
+	rsp.Items = items
+	return apiutil.WrapHTTPResponse(rsp, nil)
+}
+
+func (h *cronHandler) HandleListDemoAccessAudits(ctx context.Context, req *dto.ListDemoAccessAuditsReq) (*dto.HTTPResponse[*dto.ListDemoAccessAuditsRsp], error) {
+	rsp := &dto.ListDemoAccessAuditsRsp{}
+	logs, pageInfo, err := h.listDemoAccessAudits.Handle(ctx,
+		model.CommonParam{
+			PageParam:  model.PageParam{Page: req.Page, PageSize: req.PageSize},
+			QueryParam: model.QueryParam{Query: req.Query},
+			SortParam:  model.SortParam{Sort: req.Sort, SortField: req.SortField},
+		},
+		req.StartTime, req.EndTime, req.Filter,
+	)
+	if err != nil {
+		logger.WithCtx(ctx).Error("[CronHandler] List demo access audits failed", zap.Error(err))
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
+	}
+
+	rsp.Logs = lo.Map(logs, func(log *demoauditport.DemoAccessAuditView, _ int) *dto.DemoAccessAuditItem {
+		return &dto.DemoAccessAuditItem{
+			ID:        log.ID,
+			Action:    log.Action,
+			Module:    log.Module,
+			Path:      log.Path,
+			IP:        log.IP,
+			UserAgent: log.UserAgent,
+			Reason:    log.Reason,
+			CreatedAt: log.CreatedAt,
+		}
+	})
+	rsp.PageInfo = pageInfo
+	return apiutil.WrapHTTPResponse(rsp, nil)
+}
+
+func (h *cronHandler) HandleListDemoAccessAuditOptions(ctx context.Context, req *dto.DemoAccessAuditOptionListReq) (*dto.HTTPResponse[*dto.DemoAccessAuditOptionListRsp], error) {
+	rsp := &dto.DemoAccessAuditOptionListRsp{}
+	items, err := h.listDemoAccessOpts.Handle(ctx, req.Field, req.Keyword, req.StartTime, req.EndTime)
+	if err != nil {
+		logger.WithCtx(ctx).Error("[CronHandler] List demo access audit options failed", zap.Error(err))
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
+	}
 	rsp.Items = items
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }

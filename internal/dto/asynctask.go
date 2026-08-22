@@ -139,3 +139,17 @@ func (t *ModelCallAuditTask) SetErrorFromResponseStatus(rsp *OpenAICreateRespons
 		t.ErrorMessage = constant.ResponseIncompleteAuditReason
 	}
 }
+
+// DemoAccessAuditTask Demo 访问审计异步落库任务
+//
+//	@author centonhuang
+//	@update 2026-08-23 10:00:00
+type DemoAccessAuditTask struct {
+	Ctx       context.Context
+	Action    string // login / login_denied / module_access / module_denied
+	Module    string // demo 模块名；login 类为空串
+	Path      string // 请求路径
+	IP        string // 客户端 IP
+	UserAgent string // User-Agent
+	Reason    string // 拒绝原因；成功时为空串
+}

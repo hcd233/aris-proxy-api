@@ -65,6 +65,9 @@ import type {
   ListCronCallAuditsRsp,
   CronCallAuditOptionListReq,
   CronCallAuditOptionListRsp,
+  ListDemoAccessAuditsRsp,
+  DemoAccessAuditOptionListReq,
+  DemoAccessAuditOptionListRsp,
   RuntimeMetricsRsp,
   DatasetPreviewRsp,
   DatasetFormatPreviewRsp,
@@ -815,6 +818,40 @@ class ApiClient {
     if (params.startTime) sp.set("startTime", params.startTime);
     if (params.endTime) sp.set("endTime", params.endTime);
     return this.request<CronCallAuditOptionListRsp>(`/api/v1/audit/cron/option/list?${sp}`);
+  }
+
+  async listDemoAccessAudits(params: {
+    page: number;
+    pageSize: number;
+    query?: string;
+    sort?: string;
+    sortField?: string;
+    startTime?: string;
+    endTime?: string;
+    filter?: string;
+  }): Promise<ListDemoAccessAuditsRsp> {
+    const sp = new URLSearchParams({
+      page: String(params.page),
+      pageSize: String(params.pageSize),
+    });
+    if (params.query) sp.set("query", params.query);
+    if (params.sort) sp.set("sort", params.sort);
+    if (params.sortField) sp.set("sortField", params.sortField);
+    if (params.startTime) sp.set("startTime", params.startTime);
+    if (params.endTime) sp.set("endTime", params.endTime);
+    if (params.filter) sp.set("filter", params.filter);
+    return this.request<ListDemoAccessAuditsRsp>(`/api/v1/audit/demo/log/list?${sp}`);
+  }
+
+  async listDemoAccessAuditOptions(
+    params: DemoAccessAuditOptionListReq,
+  ): Promise<DemoAccessAuditOptionListRsp> {
+    const sp = new URLSearchParams();
+    sp.set("field", params.field);
+    if (params.keyword) sp.set("keyword", params.keyword);
+    if (params.startTime) sp.set("startTime", params.startTime);
+    if (params.endTime) sp.set("endTime", params.endTime);
+    return this.request<DemoAccessAuditOptionListRsp>(`/api/v1/audit/demo/option/list?${sp}`);
   }
 
   async getRuntimeMetrics(params: { range: string; since?: number }): Promise<RuntimeMetricsRsp> {

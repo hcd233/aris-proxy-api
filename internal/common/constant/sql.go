@@ -63,6 +63,9 @@ const (
 	FieldWord                     = "word"
 	FieldHitCount                 = "hit_count"
 	FieldAction                   = "action"
+	FieldModule                   = "module"
+	FieldPath                     = "path"
+	FieldIP                       = "ip"
 	FieldMessageCount             = "message_count"
 	FieldToolCount                = "tool_count"
 
@@ -306,6 +309,10 @@ var (
 		FieldMetadata,
 		CronCallAuditRepoFieldCreatedAtQualified,
 	}
+
+	// ── Demo access audit ──
+	DemoAccessAuditFilterFieldAction = "action"
+	DemoAccessAuditFilterFieldModule = "module"
 
 	CronJobWhereNameEquals = "name = ?"
 

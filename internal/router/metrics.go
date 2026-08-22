@@ -14,7 +14,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func initMetricsRouter(metricsGroup huma.API, metricsHandler handler.MetricsHandler, db *gorm.DB, cache *redis.Client, accessSigner jwt.TokenSigner, demoAccessor demoport.DemoModuleAccessor) {
+func initMetricsRouter(metricsGroup huma.API, metricsHandler handler.MetricsHandler, db *gorm.DB, cache *redis.Client, accessSigner jwt.TokenSigner, demoAccessor demoport.DemoModuleAccessor, auditSubmitter demoport.DemoSubmitter) {
 	metricsGroup.UseMiddleware(middleware.JwtMiddleware(db, cache, accessSigner))
 	metricsGroup.UseMiddleware(middleware.TokenBucketRateLimiterMiddleware(cache, "demoAccess", "", constant.PeriodDemoAccess, constant.LimitDemoAccess, middleware.WithPermissionFilter(enum.PermissionDemo)))
 
@@ -26,6 +26,6 @@ func initMetricsRouter(metricsGroup huma.API, metricsHandler handler.MetricsHand
 		Description: "Get cross-pod aggregated runtime metrics time series for the monitor dashboard. Admin only.",
 		Tags:        []string{constant.TagMonitor},
 		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
-		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("getRuntimeMetrics", enum.PermissionAdmin, enum.DemoModuleMonitor, demoAccessor)},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("getRuntimeMetrics", enum.PermissionAdmin, enum.DemoModuleMonitor, demoAccessor, auditSubmitter)},
 	}, metricsHandler.HandleGetRuntimeMetrics)
 }
