@@ -80,7 +80,11 @@ export default function DemoAccessAuditPage() {
         options: fetchOptionsFor("action"),
         formatValue: (v) => actionLabelMap[v] ?? v,
       },
-      { key: "module", label: t("demo_access_audit.filter_module"), options: fetchOptionsFor("module") },
+      {
+        key: "module",
+        label: t("demo_access_audit.filter_module"),
+        options: fetchOptionsFor("module"),
+      },
     ],
     // locale 必须在依赖里：t 引用已稳定（见 lib/i18n.tsx），翻译文本刷新只能靠 locale 驱动重算
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -175,7 +179,9 @@ export default function DemoAccessAuditPage() {
           <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
             {t("demo_access_audit.page_title")}
           </h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">{t("demo_access_audit.page_subtitle")}</p>
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            {t("demo_access_audit.page_subtitle")}
+          </p>
         </div>
 
         <Card>
