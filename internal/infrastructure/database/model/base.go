@@ -34,4 +34,5 @@ var Models = []any{
 	&TraceEvent{},
 	&DemoConfig{},
 	&DemoSession{},
+	&DemoAccessAudit{},
 }

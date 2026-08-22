@@ -209,6 +209,13 @@ const (
 	// DemoSessionMaxPageSize demo 会话白名单列表单页上限（与 ListDemoSessionsReq pageSize maximum 一致）
 	DemoSessionMaxPageSize = 100
 
+	// ── Demo access audit ──
+	DemoAccessAuditTableName = "demo_access_audits"
+	// 拒绝原因
+	DemoAccessReasonLoginDisabled = "login_disabled"
+	DemoAccessReasonNoDemoUser    = "no_demo_user"
+	DemoAccessReasonModuleClosed  = "module_closed"
+
 	// ── Locale ──
 	LocaleEmbedDir        = "locales"
 	LocaleFileExt         = ".json"
