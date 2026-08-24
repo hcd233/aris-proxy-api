@@ -19,6 +19,7 @@ import (
 	"github.com/bytedance/sonic"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 )
 
 const e2eHTTPTimeout = 30 * time.Second
@@ -86,6 +87,10 @@ func doJSONBody(t *testing.T, client *http.Client, method, url, token string, pa
 func TestE2E_DemoAccessAudit(t *testing.T) {
 	baseURL, adminToken := mustE2EEnv(t)
 	client := &http.Client{Timeout: e2eHTTPTimeout}
+
+	// 本次测试产生记录的时间基线（放宽 5 分钟吸收本地与服务器时钟偏差），
+	// 用于把新记录与历史上 IP/UA 恒空的旧记录区分开
+	startBaseline := time.Now().Add(-5 * time.Minute)
 
 	// 记录当前 demo 配置，测试结束恢复
 	var origConfig struct {
@@ -174,6 +179,22 @@ func TestE2E_DemoAccessAudit(t *testing.T) {
 		}
 	}
 
+	// 5.1 回归断言：本次测试产生的 module_access / module_denied 记录必须带 IP/UA
+	// （曾有埋点从 ctx key 读 IP/UA、但管理路由未挂注入中间件导致恒空的缺陷）
+	finalRsp := queryDemoAccessAudits(t, client, baseURL, adminToken, "")
+	for _, item := range finalRsp.Logs {
+		if item.Action != enum.DemoAccessActionModuleAccess && item.Action != enum.DemoAccessActionModuleDenied {
+			continue
+		}
+		createdAt, err := time.Parse(time.RFC3339, item.CreatedAt)
+		if err != nil || createdAt.Before(startBaseline) {
+			continue
+		}
+		if item.IP == "" || item.UserAgent == "" {
+			t.Errorf("audit record (id=%d action=%s path=%s) missing IP/UA", item.ID, item.Action, item.Path)
+		}
+	}
+
 	// 6. demo 查询审计列表被拒
 	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/v1/audit/demo/log/list?page=1&pageSize=10", demoToken)
 	if status == http.StatusOK && !strings.Contains(string(body), "error") {
@@ -186,6 +207,9 @@ type demoAuditListRsp struct {
 		ID        uint   `json:"id"`
 		Action    string `json:"action"`
 		Module    string `json:"module"`
+		Path      string `json:"path"`
+		IP        string `json:"ip"`
+		UserAgent string `json:"userAgent"`
 		CreatedAt string `json:"createdAt"`
 	} `json:"logs"`
 }

@@ -86,12 +86,14 @@ func limitUserPermission(serviceName string, requiredPermission enum.Permission,
 			if action, reason, audited := ClassifyDemoAccess(permission, open); audited && auditSubmitter != nil {
 				fCtx := humafiber.Unwrap(ctx)
 				_ = auditSubmitter.SubmitDemoAccessAuditTask(&dto.DemoAccessAuditTask{ //nolint:errcheck // best-effort audit
-					Ctx:       util.CopyContextValues(ctx.Context()),
-					Action:    action,
-					Module:    demoModule,
-					Path:      fCtx.Path(),
-					IP:        util.CtxValueString(ctx.Context(), constant.CtxKeyClientIP),
-					UserAgent: util.CtxValueString(ctx.Context(), constant.CtxKeyClientUA),
+					Ctx:    util.CopyContextValues(ctx.Context()),
+					Action: action,
+					Module: demoModule,
+					Path:   fCtx.Path(),
+					// IP/UA 直接取 fiber ctx：挂本中间件的管理路由未注入
+					// InjectRequestMetaMiddleware（ctx key 为空），该中间件仅挂 demo 登录路由
+					IP:        fCtx.IP(),
+					UserAgent: fCtx.Get(constant.HTTPHeaderUserAgent),
 					Reason:    reason,
 				})
 			}
