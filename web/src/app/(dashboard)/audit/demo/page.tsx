@@ -16,6 +16,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  TooltipRoot,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 import { Footprints } from "lucide-react";
 import { PaginationBar } from "@/components/pagination-bar";
 import { useI18n } from "@/lib/i18n";
@@ -259,14 +264,34 @@ export default function DemoAccessAuditPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-muted-foreground">{log.module || "—"}</TableCell>
-                      <TableCell className="max-w-[220px] truncate font-mono text-xs">
-                        {log.path || "—"}
+                      <TableCell className="max-w-[220px] font-mono text-xs">
+                        <TooltipRoot>
+                          <TooltipTrigger
+                            render={
+                              <span className="block truncate text-left">{log.path || "—"}</span>
+                            }
+                          />
+                          <TooltipContent side="top" className="max-w-xs break-all">
+                            {log.path || "—"}
+                          </TooltipContent>
+                        </TooltipRoot>
                       </TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">
                         {log.ip || "—"}
                       </TableCell>
-                      <TableCell className="max-w-[180px] truncate text-xs text-muted-foreground">
-                        {log.userAgent || "—"}
+                      <TableCell className="max-w-[180px] text-xs text-muted-foreground">
+                        <TooltipRoot>
+                          <TooltipTrigger
+                            render={
+                              <span className="block truncate text-left">
+                                {log.userAgent || "—"}
+                              </span>
+                            }
+                          />
+                          <TooltipContent side="top" className="max-w-xs break-all">
+                            {log.userAgent || "—"}
+                          </TooltipContent>
+                        </TooltipRoot>
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {log.reason ? (reasonLabelMap[log.reason] ?? log.reason) : "—"}

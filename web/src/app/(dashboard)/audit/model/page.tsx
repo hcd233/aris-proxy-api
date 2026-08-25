@@ -251,24 +251,57 @@ export default function AuditPage() {
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-medium">
-                              <span className="inline-flex items-center gap-1.5">
-                                <ProviderIcon protocol={log.modelId} size={14} />
-                                {log.modelId || "—"}
-                              </span>
-                            </p>
-                            <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                              {log.userName || "—"} · {log.apiKeyName || "—"}
-                            </p>
+                            <TooltipProvider>
+                              <TooltipRoot>
+                                <TooltipTrigger
+                                  render={
+                                    <p className="truncate text-sm font-medium">
+                                      <span className="inline-flex items-center gap-1.5">
+                                        <ProviderIcon protocol={log.modelId} size={14} />
+                                        {log.modelId || "—"}
+                                      </span>
+                                    </p>
+                                  }
+                                />
+                                <TooltipContent side="top" className="max-w-xs break-all">
+                                  {log.modelId || "—"}
+                                </TooltipContent>
+                              </TooltipRoot>
+                            </TooltipProvider>
+                            <TooltipProvider>
+                              <TooltipRoot>
+                                <TooltipTrigger
+                                  render={
+                                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                                      {log.userName || "—"} · {log.apiKeyName || "—"}
+                                    </p>
+                                  }
+                                />
+                                <TooltipContent side="top" className="max-w-xs break-all">
+                                  {log.userName || "—"} · {log.apiKeyName || "—"}
+                                </TooltipContent>
+                              </TooltipRoot>
+                            </TooltipProvider>
                           </div>
                           <div className="shrink-0 text-right">
                             <Badge variant={ok ? "secondary" : "destructive"} className="text-xs">
                               {log.upstreamStatusCode}
                             </Badge>
                             {hasError && (
-                              <p className="mt-1 max-w-[200px] truncate text-xs text-destructive">
-                                {log.errorMessage}
-                              </p>
+                              <TooltipProvider>
+                                <TooltipRoot>
+                                  <TooltipTrigger
+                                    render={
+                                      <p className="mt-1 max-w-[200px] truncate text-xs text-destructive">
+                                        {log.errorMessage}
+                                      </p>
+                                    }
+                                  />
+                                  <TooltipContent side="top" className="max-w-xs break-all">
+                                    {log.errorMessage}
+                                  </TooltipContent>
+                                </TooltipRoot>
+                              </TooltipProvider>
                             )}
                           </div>
                         </div>

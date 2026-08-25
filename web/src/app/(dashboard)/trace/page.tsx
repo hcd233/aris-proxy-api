@@ -210,7 +210,20 @@ export default function TracePage() {
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0 flex-1">
-                            <p className="truncate font-mono text-sm font-medium">{tr.sessionId}</p>
+                            <TooltipProvider>
+                              <TooltipRoot>
+                                <TooltipTrigger
+                                  render={
+                                    <p className="truncate font-mono text-sm font-medium">
+                                      {tr.sessionId}
+                                    </p>
+                                  }
+                                />
+                                <TooltipContent side="top" className="max-w-xs break-all">
+                                  {tr.sessionId}
+                                </TooltipContent>
+                              </TooltipRoot>
+                            </TooltipProvider>
                           </div>
                           <div className="flex shrink-0 items-center gap-2">
                             <TooltipProvider>

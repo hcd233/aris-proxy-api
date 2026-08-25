@@ -324,8 +324,21 @@ export default function CronAuditPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-muted-foreground">{log.durationMs} ms</TableCell>
-                      <TableCell className="max-w-[250px] truncate text-xs text-muted-foreground">
-                        {formatMetadata(log.metadata)}
+                      <TableCell className="max-w-[250px] text-xs text-muted-foreground">
+                        <TooltipProvider>
+                          <TooltipRoot>
+                            <TooltipTrigger
+                              render={
+                                <span className="block truncate text-left">
+                                  {formatMetadata(log.metadata)}
+                                </span>
+                              }
+                            />
+                            <TooltipContent side="top" className="max-w-xs break-all">
+                              {formatMetadata(log.metadata)}
+                            </TooltipContent>
+                          </TooltipRoot>
+                        </TooltipProvider>
                       </TableCell>
                     </TableRow>
                   ))}
