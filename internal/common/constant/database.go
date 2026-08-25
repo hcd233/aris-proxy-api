@@ -18,6 +18,10 @@ const (
 	DBConditionDedupKeyNotZero  = "dedup_key <> ''"
 	DBLockStrengthUpdate        = "UPDATE"
 
+	// DBConditionAlwaysFalse 恒假条件：用于"资源范围列表非 nil 但为空"时显式短路查询，
+	// 防止空列表被当作"不过滤"退化为全量查询（越权）。
+	DBConditionAlwaysFalse = "1 = 0"
+
 	DBJSONConditionAssistantRole  = "(message::jsonb)->>'role' = 'assistant'"
 	DBJSONConditionHasThinkTag    = "(message::jsonb)->>'content' LIKE '%<think>%'"
 	DBJSONConditionReasoningEmpty = "((message::jsonb)->>'reasoning_content' IS NULL OR (message::jsonb)->>'reasoning_content' = '')"

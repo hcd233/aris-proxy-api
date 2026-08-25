@@ -708,8 +708,14 @@ func applyExportFilter(sql *gorm.DB, f session.ExportFilter) *gorm.DB {
 	if !f.EndTime.IsZero() {
 		sql = sql.Where(constant.FieldCreatedAt+" <= ?", f.EndTime)
 	}
-	if len(f.OwnerNames) > 0 {
-		sql = sql.Where(fmt.Sprintf(constant.DBConditionInTemplate, constant.FieldAPIKeyName), f.OwnerNames)
+	// OwnerNames 为 nil 表示不过滤（admin 路径）；非 nil 且为空（用户名下无 Key）恒假短路，
+	// 防止空 owner 列表被当作"不过滤"退化为全量导出（越权泄露全平台会话）
+	if f.OwnerNames != nil {
+		if len(f.OwnerNames) == 0 {
+			sql = sql.Where(constant.DBConditionAlwaysFalse)
+		} else {
+			sql = sql.Where(fmt.Sprintf(constant.DBConditionInTemplate, constant.FieldAPIKeyName), f.OwnerNames)
+		}
 	}
 	return sql
 }
