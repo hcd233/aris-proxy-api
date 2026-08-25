@@ -436,9 +436,18 @@ export default function ModelsPage() {
                           <span className="text-sm font-medium leading-none">
                             {t("models.export_opencode")}
                           </span>
-                          <span className="truncate text-xs text-muted-foreground">
-                            {t("models.export_opencode_hint")}
-                          </span>
+                          <TooltipRoot>
+                            <TooltipTrigger
+                              render={
+                                <span className="truncate text-xs text-muted-foreground">
+                                  {t("models.export_opencode_hint")}
+                                </span>
+                              }
+                            />
+                            <TooltipContent side="top" className="max-w-xs">
+                              {t("models.export_opencode_hint")}
+                            </TooltipContent>
+                          </TooltipRoot>
                         </span>
                       </DropdownMenuItem>
                       <DropdownMenuItem
@@ -452,9 +461,18 @@ export default function ModelsPage() {
                           <span className="text-sm font-medium leading-none">
                             {t("models.export_claudecode")}
                           </span>
-                          <span className="truncate text-xs text-muted-foreground">
-                            {t("models.export_claudecode_hint")}
-                          </span>
+                          <TooltipRoot>
+                            <TooltipTrigger
+                              render={
+                                <span className="truncate text-xs text-muted-foreground">
+                                  {t("models.export_claudecode_hint")}
+                                </span>
+                              }
+                            />
+                            <TooltipContent side="top" className="max-w-xs">
+                              {t("models.export_claudecode_hint")}
+                            </TooltipContent>
+                          </TooltipRoot>
                         </span>
                       </DropdownMenuItem>
                       <DropdownMenuItem
@@ -468,9 +486,18 @@ export default function ModelsPage() {
                           <span className="text-sm font-medium leading-none">
                             {t("models.export_codex")}
                           </span>
-                          <span className="truncate text-xs text-muted-foreground">
-                            {t("models.export_codex_hint")}
-                          </span>
+                          <TooltipRoot>
+                            <TooltipTrigger
+                              render={
+                                <span className="truncate text-xs text-muted-foreground">
+                                  {t("models.export_codex_hint")}
+                                </span>
+                              }
+                            />
+                            <TooltipContent side="top" className="max-w-xs">
+                              {t("models.export_codex_hint")}
+                            </TooltipContent>
+                          </TooltipRoot>
                         </span>
                       </DropdownMenuItem>
                       <DropdownMenuItem
@@ -484,9 +511,18 @@ export default function ModelsPage() {
                           <span className="text-sm font-medium leading-none">
                             {t("models.export_pi")}
                           </span>
-                          <span className="truncate text-xs text-muted-foreground">
-                            {t("models.export_pi_hint")}
-                          </span>
+                          <TooltipRoot>
+                            <TooltipTrigger
+                              render={
+                                <span className="truncate text-xs text-muted-foreground">
+                                  {t("models.export_pi_hint")}
+                                </span>
+                              }
+                            />
+                            <TooltipContent side="top" className="max-w-xs">
+                              {t("models.export_pi_hint")}
+                            </TooltipContent>
+                          </TooltipRoot>
                         </span>
                       </DropdownMenuItem>
                     </DropdownMenuGroup>
@@ -673,7 +709,8 @@ export default function ModelsPage() {
                                   </TooltipContent>
                                 </TooltipRoot>
                               ) : (
-                                <span className="block max-w-[12ch] truncate">—</span>
+                                // 恒定占位符不会截断，无需 truncate/tooltip
+                                <span>—</span>
                               )}
                             </TableCell>
                             <TableCell className="font-mono text-xs">

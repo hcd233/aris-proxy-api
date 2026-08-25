@@ -249,14 +249,32 @@ export default function EndpointsPage() {
                               </code>
                             </p>
                             {ep.openaiBaseURL && (
-                              <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">
-                                O: {ep.openaiBaseURL}
-                              </p>
+                              <TooltipRoot>
+                                <TooltipTrigger
+                                  render={
+                                    <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">
+                                      O: {ep.openaiBaseURL}
+                                    </p>
+                                  }
+                                />
+                                <TooltipContent className="max-w-xs break-all">
+                                  {ep.openaiBaseURL}
+                                </TooltipContent>
+                              </TooltipRoot>
                             )}
                             {ep.anthropicBaseURL && (
-                              <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">
-                                A: {ep.anthropicBaseURL}
-                              </p>
+                              <TooltipRoot>
+                                <TooltipTrigger
+                                  render={
+                                    <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">
+                                      A: {ep.anthropicBaseURL}
+                                    </p>
+                                  }
+                                />
+                                <TooltipContent className="max-w-xs break-all">
+                                  {ep.anthropicBaseURL}
+                                </TooltipContent>
+                              </TooltipRoot>
                             )}
                           </div>
                           <div className="flex items-center gap-1">

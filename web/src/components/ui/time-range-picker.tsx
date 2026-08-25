@@ -12,6 +12,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import type { TimeRangeKey } from "@/lib/time-range";
 
 export interface TimeRangePickerProps {
@@ -267,7 +268,12 @@ export function TimeRangePicker({
           <div className="flex items-center justify-between border-t border-border bg-muted/30 px-3 py-2.5">
             <div className="min-w-0 text-xs text-muted-foreground">
               <span className="font-medium text-foreground">{t("time_range.range")}</span>{" "}
-              <span className="truncate">{draftLabel}</span>
+              <TooltipRoot>
+                <TooltipTrigger render={<span className="truncate">{draftLabel}</span>} />
+                <TooltipContent side="top" className="max-w-xs break-all">
+                  {draftLabel}
+                </TooltipContent>
+              </TooltipRoot>
               {customRangeError && (
                 <span className="ml-2 text-destructive">{customRangeError}</span>
               )}

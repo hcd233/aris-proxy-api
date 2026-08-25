@@ -27,6 +27,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Key, Plus, Copy, Check } from "lucide-react";
 import { PaginationBar } from "@/components/pagination-bar";
 import { PermissionGuard } from "@/components/permission-guard";
@@ -241,10 +242,26 @@ export default function APIKeysPage() {
                       <div key={key.id} className="rounded-lg border border-border bg-card p-4">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-medium">{key.name}</p>
-                            <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">
-                              {key.key}
-                            </p>
+                            <TooltipRoot>
+                              <TooltipTrigger
+                                render={<p className="truncate text-sm font-medium">{key.name}</p>}
+                              />
+                              <TooltipContent className="max-w-xs break-all">
+                                {key.name}
+                              </TooltipContent>
+                            </TooltipRoot>
+                            <TooltipRoot>
+                              <TooltipTrigger
+                                render={
+                                  <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">
+                                    {key.key}
+                                  </p>
+                                }
+                              />
+                              <TooltipContent className="max-w-xs break-all">
+                                {key.key}
+                              </TooltipContent>
+                            </TooltipRoot>
                             {key.user && (
                               <p className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
                                 <Avatar size="sm">
@@ -255,7 +272,14 @@ export default function APIKeysPage() {
                                     {key.user.name.charAt(0).toUpperCase() || "?"}
                                   </AvatarFallback>
                                 </Avatar>
-                                <span className="truncate">{key.user.name}</span>
+                                <TooltipRoot>
+                                  <TooltipTrigger
+                                    render={<span className="truncate">{key.user.name}</span>}
+                                  />
+                                  <TooltipContent className="max-w-xs break-all">
+                                    {key.user.name}
+                                  </TooltipContent>
+                                </TooltipRoot>
                               </p>
                             )}
                           </div>
@@ -297,7 +321,16 @@ export default function APIKeysPage() {
                                     {key.user.name.charAt(0).toUpperCase() || "?"}
                                   </AvatarFallback>
                                 </Avatar>
-                                <span className="max-w-[14ch] truncate">{key.user.name}</span>
+                                <TooltipRoot>
+                                  <TooltipTrigger
+                                    render={
+                                      <span className="max-w-[14ch] truncate">{key.user.name}</span>
+                                    }
+                                  />
+                                  <TooltipContent className="max-w-xs break-all">
+                                    {key.user.name}
+                                  </TooltipContent>
+                                </TooltipRoot>
                               </span>
                             ) : (
                               <span className="text-muted-foreground">—</span>

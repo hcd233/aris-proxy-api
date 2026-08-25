@@ -70,7 +70,8 @@ export default function TraceInstallPopover() {
           <span className="size-[7px] rounded-full bg-[#FF5F57]" />
           <span className="size-[7px] rounded-full bg-[#FEBC2E]" />
           <span className="size-[7px] rounded-full bg-[#28C840]" />
-          <span className="ml-2 truncate font-mono text-[11px] font-medium tracking-wide text-white/35">
+          {/* 装饰性终端标题，恒定短文案不会截断，无需 truncate/tooltip */}
+          <span className="ml-2 font-mono text-[11px] font-medium tracking-wide text-white/35">
             ~/install.sh
           </span>
         </div>

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
+import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import type { FilterToken } from "./filter-dsl";
 import type { FacetDef } from "./types";
 import type { UseFilterBarReturn } from "./use-filter-bar";
@@ -181,7 +182,14 @@ export function FilterBar({
               )}
             >
               <span className="pl-2 pr-1 text-muted-foreground">{label.k}</span>
-              <span className="max-w-40 truncate pr-1 font-medium">{label.v}</span>
+              <TooltipRoot>
+                <TooltipTrigger
+                  render={<span className="max-w-40 truncate pr-1 font-medium">{label.v}</span>}
+                />
+                <TooltipContent side="top" className="max-w-xs break-all">
+                  {label.v}
+                </TooltipContent>
+              </TooltipRoot>
               <button
                 type="button"
                 aria-label={t("filter_bar.remove_token")}
@@ -272,14 +280,32 @@ export function FilterBar({
                   </>
                 )}
                 {row.kind === "value" && (
-                  <span className="truncate">
-                    {row.facet.formatValue ? row.facet.formatValue(row.value) : row.value}
-                  </span>
+                  <TooltipRoot>
+                    <TooltipTrigger
+                      render={
+                        <span className="truncate">
+                          {row.facet.formatValue ? row.facet.formatValue(row.value) : row.value}
+                        </span>
+                      }
+                    />
+                    <TooltipContent side="top" className="max-w-xs break-all">
+                      {row.facet.formatValue ? row.facet.formatValue(row.value) : row.value}
+                    </TooltipContent>
+                  </TooltipRoot>
                 )}
                 {row.kind === "keyword" && (
-                  <span className="truncate">
-                    {t("filter_bar.keyword_hint").replace("{text}", row.text)}
-                  </span>
+                  <TooltipRoot>
+                    <TooltipTrigger
+                      render={
+                        <span className="truncate">
+                          {t("filter_bar.keyword_hint").replace("{text}", row.text)}
+                        </span>
+                      }
+                    />
+                    <TooltipContent side="top" className="max-w-xs break-all">
+                      {t("filter_bar.keyword_hint").replace("{text}", row.text)}
+                    </TooltipContent>
+                  </TooltipRoot>
                 )}
               </button>
             ))

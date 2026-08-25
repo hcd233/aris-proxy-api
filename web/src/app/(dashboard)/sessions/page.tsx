@@ -15,6 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { MessageSquare, Check, ArrowUp, ArrowDown, Trash2, Lock } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
@@ -385,10 +386,23 @@ export default function SessionsPage() {
                                 {isSelected && <Check className="size-3" />}
                               </div>
                               <div className="min-w-0 flex-1">
-                                <p className="truncate text-sm font-medium">
-                                  {s.summary ||
-                                    t("sessions.untitled_session").replace("{id}", String(s.id))}
-                                </p>
+                                <TooltipRoot>
+                                  <TooltipTrigger
+                                    render={
+                                      <p className="truncate text-sm font-medium">
+                                        {s.summary ||
+                                          t("sessions.untitled_session").replace(
+                                            "{id}",
+                                            String(s.id),
+                                          )}
+                                      </p>
+                                    }
+                                  />
+                                  <TooltipContent side="top" className="max-w-xs break-all">
+                                    {s.summary ||
+                                      t("sessions.untitled_session").replace("{id}", String(s.id))}
+                                  </TooltipContent>
+                                </TooltipRoot>
                               </div>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
@@ -539,8 +553,19 @@ export default function SessionsPage() {
                             <TableCell className="text-muted-foreground">
                               {formatDateTime(s.createdAt)}
                             </TableCell>
-                            <TableCell className="max-w-[200px] truncate">
-                              {s.summary || "—"}
+                            <TableCell className="max-w-[200px]">
+                              <TooltipRoot>
+                                <TooltipTrigger
+                                  render={
+                                    <span className="block truncate text-left">
+                                      {s.summary || "—"}
+                                    </span>
+                                  }
+                                />
+                                <TooltipContent side="top" className="max-w-xs break-all">
+                                  {s.summary || "—"}
+                                </TooltipContent>
+                              </TooltipRoot>
                             </TableCell>
                             <TableCell className="w-[160px]">
                               <div className="flex justify-center">

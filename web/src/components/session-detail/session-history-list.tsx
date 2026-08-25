@@ -7,6 +7,7 @@ import { useInfiniteList } from "@/hooks/use-infinite-list";
 import type { SessionSummary } from "@/lib/types";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { cn, formatRelativeTime } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
 
@@ -112,16 +113,38 @@ export function SessionHistoryList({ activeSessionId, onSelect }: SessionHistory
                     session.id === activeSessionId && "bg-accent text-accent-foreground",
                   )}
                 >
-                  <p className="line-clamp-1 text-sm font-medium">
-                    {session.summary ||
-                      t("session_history.session_label").replace("{id}", String(session.id))}
-                  </p>
-                  <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
-                    {t("session_history.message_count")
-                      .replace("{count}", String(session.messageCount))
-                      .replace("{s}", session.messageCount === 1 ? "" : "s")}{" "}
-                    · {formatRelativeTime(session.updatedAt, locale)}
-                  </p>
+                  <TooltipRoot>
+                    <TooltipTrigger
+                      render={
+                        <p className="line-clamp-1 text-sm font-medium">
+                          {session.summary ||
+                            t("session_history.session_label").replace("{id}", String(session.id))}
+                        </p>
+                      }
+                    />
+                    <TooltipContent side="top" className="max-w-xs break-all">
+                      {session.summary ||
+                        t("session_history.session_label").replace("{id}", String(session.id))}
+                    </TooltipContent>
+                  </TooltipRoot>
+                  <TooltipRoot>
+                    <TooltipTrigger
+                      render={
+                        <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
+                          {t("session_history.message_count")
+                            .replace("{count}", String(session.messageCount))
+                            .replace("{s}", session.messageCount === 1 ? "" : "s")}{" "}
+                          · {formatRelativeTime(session.updatedAt, locale)}
+                        </p>
+                      }
+                    />
+                    <TooltipContent side="top" className="max-w-xs break-all">
+                      {t("session_history.message_count")
+                        .replace("{count}", String(session.messageCount))
+                        .replace("{s}", session.messageCount === 1 ? "" : "s")}{" "}
+                      · {formatRelativeTime(session.updatedAt, locale)}
+                    </TooltipContent>
+                  </TooltipRoot>
                 </button>
               </li>
             ))}

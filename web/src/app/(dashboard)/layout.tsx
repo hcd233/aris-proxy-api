@@ -232,7 +232,16 @@ function SidebarNav({
                   aria-expanded={openGroups.has(group.key)}
                   className="flex w-full items-center gap-2 rounded-md px-3 pb-1 pt-1.5 text-[11px] font-medium uppercase tracking-wider text-sidebar-foreground/45 transition-colors hover:text-sidebar-foreground/80"
                 >
-                  <span className="min-w-0 flex-1 truncate text-left">{t(group.labelKey)}</span>
+                  <TooltipRoot>
+                    <TooltipTrigger
+                      render={
+                        <span className="min-w-0 flex-1 truncate text-left">
+                          {t(group.labelKey)}
+                        </span>
+                      }
+                    />
+                    <TooltipContent side="right">{t(group.labelKey)}</TooltipContent>
+                  </TooltipRoot>
                   <ChevronDown
                     className={`size-3.5 shrink-0 text-sidebar-foreground/40 transition-transform duration-200 ${
                       openGroups.has(group.key) ? "" : "-rotate-90"
@@ -258,6 +267,11 @@ function SidebarNav({
                         <span className="opacity-60">{item.icon}</span>
                         {!collapsed && (
                           <>
+                            {/* 静态分析假阳性豁免：该 span 仅在 demoLocked 分支渲染，
+                                彼时整个 link 已由下方 TooltipTrigger render 包裹并弹出
+                                "{label} · demo locked" tooltip（变量引用不构成 ESLint
+                                parent 链，规则无法静态判定）。 */}
+                            {/* eslint-disable-next-line truncate-requires-tooltip/truncate-requires-tooltip */}
                             <span className="min-w-0 flex-1 truncate">{label}</span>
                             <Lock className="size-3.5 shrink-0 opacity-60" />
                           </>
@@ -324,9 +338,18 @@ function UserBar({ collapsed = false }: { collapsed?: boolean }) {
         </Avatar>
         {!collapsed && (
           <div className="hidden min-w-0 flex-1 md:block">
-            <p className="truncate text-sm font-medium leading-none">
-              {user.name ?? user.email ?? t("layout.user")}
-            </p>
+            <TooltipRoot>
+              <TooltipTrigger
+                render={
+                  <p className="truncate text-sm font-medium leading-none">
+                    {user.name ?? user.email ?? t("layout.user")}
+                  </p>
+                }
+              />
+              <TooltipContent side="right" className="max-w-xs break-all">
+                {user.name ?? user.email ?? t("layout.user")}
+              </TooltipContent>
+            </TooltipRoot>
             <div className="mt-1 flex items-center gap-1.5">
               <Badge variant="secondary" className="px-1.5 py-0 text-[10px] font-medium">
                 {user.permission}

@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { useT } from "@/lib/i18n";
 import { Check, Copy, Search, Terminal, X } from "lucide-react";
 
@@ -177,7 +178,16 @@ export function ExportDialogShell({
             <div className="shrink-0 flex items-center justify-between gap-3 border-b border-white/[0.07] bg-[#30302E] px-4 py-2.5">
               <div className="flex items-center gap-2 min-w-0">
                 <Terminal className="size-3.5 shrink-0 text-white/35" />
-                <span className="truncate font-mono text-xs text-white/50">{fileName}</span>
+                <TooltipRoot>
+                  <TooltipTrigger
+                    render={
+                      <span className="truncate font-mono text-xs text-white/50">{fileName}</span>
+                    }
+                  />
+                  <TooltipContent side="top" className="max-w-xs break-all">
+                    {fileName}
+                  </TooltipContent>
+                </TooltipRoot>
               </div>
               <div className="flex items-center gap-3 shrink-0">
                 {showPreview && (
@@ -566,12 +576,30 @@ export function ExportModelRow({
       </span>
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="flex items-center gap-1.5">
-          <span className="truncate text-sm font-medium text-foreground">{model.alias}</span>
+          <TooltipRoot>
+            <TooltipTrigger
+              render={
+                <span className="truncate text-sm font-medium text-foreground">{model.alias}</span>
+              }
+            />
+            <TooltipContent side="top" className="max-w-xs break-all">
+              {model.alias}
+            </TooltipContent>
+          </TooltipRoot>
           {badge}
         </span>
-        <span className="truncate font-mono text-[11px] text-muted-foreground/70">
-          {model.upstreamModel}
-        </span>
+        <TooltipRoot>
+          <TooltipTrigger
+            render={
+              <span className="truncate font-mono text-[11px] text-muted-foreground/70">
+                {model.upstreamModel}
+              </span>
+            }
+          />
+          <TooltipContent side="top" className="max-w-xs break-all">
+            {model.upstreamModel}
+          </TooltipContent>
+        </TooltipRoot>
       </span>
       <span className="shrink-0 font-mono text-[10px] tabular-nums text-muted-foreground/60">
         {formatTokens(model.contextLength || contextFallback)}

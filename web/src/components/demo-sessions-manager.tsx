@@ -16,6 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { ListEmptyState } from "@/components/list-empty-state";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { PaginationBar } from "@/components/pagination-bar";
@@ -99,7 +100,14 @@ function SessionListTable({
               <div className="flex items-start gap-2">
                 <SelectCheckbox checked={isSelected} onToggle={() => onToggle(item.id)} />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{summary(item)}</p>
+                  <TooltipRoot>
+                    <TooltipTrigger
+                      render={<p className="truncate text-sm font-medium">{summary(item)}</p>}
+                    />
+                    <TooltipContent side="top" className="max-w-xs break-all">
+                      {summary(item)}
+                    </TooltipContent>
+                  </TooltipRoot>
                   <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
                     <span>
                       {t("common.id")}: {item.id}
@@ -163,7 +171,16 @@ function SessionListTable({
               <TableCell className="whitespace-nowrap text-muted-foreground">
                 {item.createdAt ? formatDateTime(item.createdAt) : "—"}
               </TableCell>
-              <TableCell className="max-w-[200px] truncate">{summary(item)}</TableCell>
+              <TableCell className="max-w-[200px]">
+                <TooltipRoot>
+                  <TooltipTrigger
+                    render={<span className="block truncate text-left">{summary(item)}</span>}
+                  />
+                  <TooltipContent side="top" className="max-w-xs break-all">
+                    {summary(item)}
+                  </TooltipContent>
+                </TooltipRoot>
+              </TableCell>
               <TableCell className="w-[160px]">
                 <div className="flex justify-center">
                   {item.score != null ? (
