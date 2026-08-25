@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { useOptimisticUpdate } from "@/hooks/use-optimistic-update";
 import { useRouter } from "next/navigation";
@@ -230,6 +230,16 @@ export default function ModelsPage() {
     pageSize: persistedPageSize,
     total: 0,
   });
+  // 导出到 agent 框架的模型列表：仅启用，且按对外别名去重
+  //（同一 alias 可通过多条记录绑定多个 endpoint，导出时只保留第一条）
+  const exportModels = useMemo(() => {
+    const seen = new Set<string>();
+    return models.filter((m) => {
+      if (!m.enabled || seen.has(m.alias)) return false;
+      seen.add(m.alias);
+      return true;
+    });
+  }, [models]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -980,25 +990,25 @@ export default function ModelsPage() {
           <ExportDialog
             open={exportDialogOpen}
             onOpenChange={setExportDialogOpen}
-            models={models}
+            models={exportModels}
           />
 
           <ExportClaudecodeDialog
             open={exportClaudecodeDialogOpen}
             onOpenChange={setExportClaudecodeDialogOpen}
-            models={models}
+            models={exportModels}
           />
 
           <ExportCodexDialog
             open={exportCodexDialogOpen}
             onOpenChange={setExportCodexDialogOpen}
-            models={models}
+            models={exportModels}
           />
 
           <ExportPiDialog
             open={exportPiDialogOpen}
             onOpenChange={setExportPiDialogOpen}
-            models={models}
+            models={exportModels}
           />
         </div>
       </TooltipProvider>

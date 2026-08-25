@@ -133,20 +133,9 @@ export default function ExportPiDialog({ open, onOpenChange, models }: ExportPiD
     [models, selectedIds],
   );
 
-  const duplicateAliases = useMemo(() => {
-    const counts = new Map<string, number>();
-    selectedModels.forEach((model) => {
-      counts.set(model.alias, (counts.get(model.alias) ?? 0) + 1);
-    });
-    return [...counts.entries()].filter(([, count]) => count > 1).map(([alias]) => alias);
-  }, [selectedModels]);
-
   const script = useMemo(
-    () =>
-      duplicateAliases.length > 0
-        ? ""
-        : generateScript(providerId, baseUrl, apiKey, selectedModels),
-    [providerId, baseUrl, apiKey, selectedModels, duplicateAliases],
+    () => generateScript(providerId, baseUrl, apiKey, selectedModels),
+    [providerId, baseUrl, apiKey, selectedModels],
   );
 
   // 统一拦截所有关闭路径，关闭时重置选择态（搜索框状态由 ExportModelPicker 内部管理）
@@ -170,7 +159,6 @@ export default function ExportPiDialog({ open, onOpenChange, models }: ExportPiD
       emptyIcon={<Pi size={28} className="opacity-30" />}
       emptyTitle={t("models.export_no_models_selected")}
       emptyHint={t("models.export_pi_empty_hint")}
-      errorMessage={duplicateAliases.length > 0 ? t("models.export_duplicate_aliases") : null}
     >
       <ExportConnectionFields
         fields={[
@@ -208,13 +196,7 @@ export default function ExportPiDialog({ open, onOpenChange, models }: ExportPiD
         selectAllLabel={t("models.export_select_all")}
         clearAllLabel={t("models.export_clear_all")}
         outputFallback={16384}
-      >
-        {duplicateAliases.length > 0 && (
-          <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
-            {t("models.export_duplicate_aliases")}
-          </p>
-        )}
-      </ExportModelPicker>
+      />
     </ExportDialogShell>
   );
 }
