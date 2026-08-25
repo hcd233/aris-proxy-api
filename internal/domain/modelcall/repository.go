@@ -52,16 +52,16 @@ type AuditRepository interface {
 	// ListDistinctUserAgents 查询去重的 User-Agent 列表（支持模糊搜索与时间范围，排除空值）
 	ListDistinctUserAgents(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error)
 
-	// QueryModelTrend 按模型 + 时间桶统计调用次数。apiKeyIDs 为 nil 时查全部，非空时按 key 过滤。
+	// QueryModelTrend 按模型 + 时间桶统计调用次数。apiKeyIDs 为 nil 时查全部（admin），非 nil 时按 key 过滤（空列表返回空结果，名下无 Key 不得越权查全量）。
 	QueryModelTrend(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*ModelTrendPoint, error)
 
-	// QueryRequestRate 按模型 + 时间桶统计请求成功率。apiKeyIDs 为 nil 时查全部，非空时按 key 过滤。
+	// QueryRequestRate 按模型 + 时间桶统计请求成功率。apiKeyIDs 为 nil 时查全部（admin），非 nil 时按 key 过滤（空列表返回空结果，名下无 Key 不得越权查全量）。
 	QueryRequestRate(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*RequestRatePoint, error)
 
-	// QueryTokenThroughput 按模型 + 时间桶统计 Token 吞吐量。apiKeyIDs 为 nil 时查全部，非空时按 key 过滤。
+	// QueryTokenThroughput 按模型 + 时间桶统计 Token 吞吐量。apiKeyIDs 为 nil 时查全部（admin），非 nil 时按 key 过滤（空列表返回空结果，名下无 Key 不得越权查全量）。
 	QueryTokenThroughput(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*TokenThroughputPoint, error)
 
-	// QueryFirstTokenLatency 按模型 + 时间桶统计平均首 Token 延迟。apiKeyIDs 为 nil 时查全部，非空时按 key 过滤。
+	// QueryFirstTokenLatency 按模型 + 时间桶统计平均首 Token 延迟。apiKeyIDs 为 nil 时查全部（admin），非 nil 时按 key 过滤（空列表返回空结果，名下无 Key 不得越权查全量）。
 	QueryFirstTokenLatency(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*FirstTokenLatencyPoint, error)
 }
 

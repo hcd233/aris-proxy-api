@@ -369,6 +369,10 @@ func dateTruncSQL(granularity string) string {
 }
 
 func (r *auditRepository) QueryModelTrend(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.ModelTrendPoint, error) {
+	// apiKeyIDs 非 nil 且为空（用户名下无 Key）：短路返回空结果，防止越权查全量；nil 表示不过滤（admin 路径）
+	if apiKeyIDs != nil && len(apiKeyIDs) == 0 {
+		return []*modelcall.ModelTrendPoint{}, nil
+	}
 	db := r.db.WithContext(ctx).Model(&dbmodel.ModelCallAudit{}).
 		Where(constant.FieldCreatedAt+" >= ? AND "+constant.FieldCreatedAt+" <= ?", startTime, endTime).
 		Where(constant.DBConditionDeletedAtZero)
@@ -389,6 +393,10 @@ func (r *auditRepository) QueryModelTrend(ctx context.Context, apiKeyIDs []uint,
 }
 
 func (r *auditRepository) QueryRequestRate(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.RequestRatePoint, error) {
+	// apiKeyIDs 非 nil 且为空（用户名下无 Key）：短路返回空结果，防止越权查全量；nil 表示不过滤（admin 路径）
+	if apiKeyIDs != nil && len(apiKeyIDs) == 0 {
+		return []*modelcall.RequestRatePoint{}, nil
+	}
 	db := r.db.WithContext(ctx).Model(&dbmodel.ModelCallAudit{}).
 		Where(constant.FieldCreatedAt+" >= ? AND "+constant.FieldCreatedAt+" <= ?", startTime, endTime).
 		Where(constant.DBConditionDeletedAtZero)
@@ -409,6 +417,10 @@ func (r *auditRepository) QueryRequestRate(ctx context.Context, apiKeyIDs []uint
 }
 
 func (r *auditRepository) QueryTokenThroughput(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.TokenThroughputPoint, error) {
+	// apiKeyIDs 非 nil 且为空（用户名下无 Key）：短路返回空结果，防止越权查全量；nil 表示不过滤（admin 路径）
+	if apiKeyIDs != nil && len(apiKeyIDs) == 0 {
+		return []*modelcall.TokenThroughputPoint{}, nil
+	}
 	db := r.db.WithContext(ctx).Model(&dbmodel.ModelCallAudit{}).
 		Where(constant.FieldCreatedAt+" >= ? AND "+constant.FieldCreatedAt+" <= ?", startTime, endTime).
 		Where(constant.DBConditionDeletedAtZero)
@@ -436,6 +448,10 @@ func (r *auditRepository) QueryTokenThroughput(ctx context.Context, apiKeyIDs []
 }
 
 func (r *auditRepository) QueryFirstTokenLatency(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.FirstTokenLatencyPoint, error) {
+	// apiKeyIDs 非 nil 且为空（用户名下无 Key）：短路返回空结果，防止越权查全量；nil 表示不过滤（admin 路径）
+	if apiKeyIDs != nil && len(apiKeyIDs) == 0 {
+		return []*modelcall.FirstTokenLatencyPoint{}, nil
+	}
 	db := r.db.WithContext(ctx).Model(&dbmodel.ModelCallAudit{}).
 		Where(constant.FieldCreatedAt+" >= ? AND "+constant.FieldCreatedAt+" <= ?", startTime, endTime).
 		Where(constant.DBConditionDeletedAtZero)

@@ -63,6 +63,10 @@ func (h *modelUsageByUserHandler) Handle(ctx context.Context, q ModelUsageByUser
 	if err != nil {
 		return nil, err
 	}
+	// 名下无 API Key：直接返回空，防止空列表在仓储层退化为全量查询（越权）
+	if len(keyIDs) == 0 {
+		return []*dto.ModelUsageItem{}, nil
+	}
 	points, err := h.repo.QueryTokenThroughput(ctx, keyIDs, q.StartTime, q.EndTime, q.Granularity)
 	if err != nil {
 		return nil, err

@@ -50,7 +50,8 @@ type TraceRepository interface {
 	FindByID(ctx context.Context, id uint) (*Trace, error)
 	// InsertEvent 插入一条事件；重复幂等键返回 inserted=false。
 	InsertEvent(ctx context.Context, e *TraceEvent) (inserted bool, err error)
-	// PaginateByOwners 按 owner 名称列表分页（admin 传空切片表示不过滤）
+	// PaginateByOwners 按 owner 名称列表分页。owners 为 nil 时查全部（admin），非 nil 时按 owner 过滤
+	// （空列表返回空结果，名下无 Key 不得越权查全量）。
 	PaginateByOwners(ctx context.Context, owners []string, param model.CommonParam) ([]*Trace, *model.PageInfo, error)
 	// CountEvents 统计某 trace 的事件数
 	CountEvents(ctx context.Context, traceID uint) (int64, error)

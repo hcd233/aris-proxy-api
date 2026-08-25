@@ -166,8 +166,13 @@ func (r *traceRepository) InsertEvent(ctx context.Context, e *trace.TraceEvent) 
 func (r *traceRepository) PaginateByOwners(ctx context.Context, owners []string, param model.CommonParam) ([]*trace.Trace, *model.PageInfo, error) {
 	db := r.db.WithContext(ctx)
 	q := db.Model(&dbmodel.Trace{}).Where(constant.DBConditionDeletedAtZero)
-	if len(owners) > 0 {
-		q = q.Where(fmt.Sprintf(constant.DBConditionInTemplate, constant.FieldAPIKeyName), owners)
+	// owners 为 nil 表示不过滤（admin 路径）；非 nil 且为空（用户名下无 Key）恒假短路，防止越权查全量
+	if owners != nil {
+		if len(owners) == 0 {
+			q = q.Where(constant.DBConditionAlwaysFalse)
+		} else {
+			q = q.Where(fmt.Sprintf(constant.DBConditionInTemplate, constant.FieldAPIKeyName), owners)
+		}
 	}
 	if param.Query != "" && len(param.QueryFields) > 0 {
 		like := "%" + param.Query + "%"

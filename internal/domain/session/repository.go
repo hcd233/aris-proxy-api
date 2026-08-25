@@ -106,6 +106,9 @@ type SessionDetailProjection struct {
 //
 //	@author centonhuang
 //	@update 2026-07-03 10:00:00
+//
+// ExportFilter 导出筛选条件。OwnerNames 为 nil 表示不过滤（admin），
+// 非 nil 时按 owner 过滤（空列表返回空结果，名下无 Key 不得越权导出全量会话）。
 type ExportFilter struct {
 	MinScore   int
 	ModelIDs   []string

@@ -35,6 +35,11 @@ type fakeAuditRepo struct {
 	listAllCalls       int
 	listByAPIKeyIDsCnt int
 	lastAPIKeyIDs      []uint
+
+	queryModelTrendCnt        int
+	queryRequestRateCnt       int
+	queryTokenThroughputCnt   int
+	queryFirstTokenLatencyCnt int
 }
 
 func (f *fakeAuditRepo) Save(ctx context.Context, a *aggregate.ModelCallAudit) error { return nil }
@@ -64,14 +69,17 @@ func (f *fakeAuditRepo) BatchGetRelations(ctx context.Context, apiKeyIDs []uint)
 }
 
 func (f *fakeAuditRepo) QueryModelTrend(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.ModelTrendPoint, error) {
+	f.queryModelTrendCnt++
 	return nil, nil
 }
 
 func (f *fakeAuditRepo) QueryRequestRate(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.RequestRatePoint, error) {
+	f.queryRequestRateCnt++
 	return nil, nil
 }
 
 func (f *fakeAuditRepo) QueryTokenThroughput(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.TokenThroughputPoint, error) {
+	f.queryTokenThroughputCnt++
 	if f.queryTokenThroughputFn != nil {
 		return f.queryTokenThroughputFn(ctx, apiKeyIDs, startTime, endTime, granularity)
 	}
@@ -79,6 +87,7 @@ func (f *fakeAuditRepo) QueryTokenThroughput(ctx context.Context, apiKeyIDs []ui
 }
 
 func (f *fakeAuditRepo) QueryFirstTokenLatency(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.FirstTokenLatencyPoint, error) {
+	f.queryFirstTokenLatencyCnt++
 	return nil, nil
 }
 
@@ -674,5 +683,74 @@ func TestAggregateModelUsage_SumsPerModel(t *testing.T) {
 	}
 	if claude.InputTokens != 300 || claude.OutputTokens != 250 || claude.CacheReadTokens != 50 || claude.CacheCreationTokens != 15 {
 		t.Errorf("claude totals mismatch: %+v", claude)
+	}
+}
+
+// ─── ByUser 指标查询：无 API Key 用户不得越权 ───────────────────
+
+// TestByUserMetrics_EmptyAPIKeyIDsShortCircuit 回归测试（越权修复，2026-08-25）：
+// 用户名下无 API Key 时 LookupIDsByUserID 返回非 nil 空 slice（lo.Map 产物），
+// 6 个 ByUser 指标 handler 必须直接返回空结果且不触达 repository——
+// 修复前空 key 列表被 repository 当作"不过滤"，退化为全平台聚合查询。
+func TestByUserMetrics_EmptyAPIKeyIDsShortCircuit(t *testing.T) {
+	t.Parallel()
+
+	lookup := &fakeAPIKeyIDLookup{
+		lookupFunc: func(ctx context.Context, userID uint) ([]uint, error) {
+			return []uint{}, nil
+		},
+	}
+	repo := &fakeAuditRepo{}
+	ctx := context.Background()
+	now := time.Now()
+	start := now.Add(-24 * time.Hour)
+	end := now.Add(24 * time.Hour)
+
+	if points, err := auditquery.NewModelTrendByUserHandler(repo, lookup).
+		Handle(ctx, auditquery.ModelTrendByUserQuery{UserID: 1, StartTime: start, EndTime: end, Granularity: enum.GranularityHour}); err != nil || len(points) != 0 {
+		t.Errorf("ModelTrendByUser: got (%d points, err %v); want (0, nil)", len(points), err)
+	}
+	if repo.queryModelTrendCnt != 0 {
+		t.Errorf("ModelTrendByUser: repo queried %d times, want 0 (short-circuit)", repo.queryModelTrendCnt)
+	}
+
+	if points, err := auditquery.NewRequestRateByUserHandler(repo, lookup).
+		Handle(ctx, auditquery.RequestRateByUserQuery{UserID: 1, StartTime: start, EndTime: end, Granularity: enum.GranularityHour}); err != nil || len(points) != 0 {
+		t.Errorf("RequestRateByUser: got (%d points, err %v); want (0, nil)", len(points), err)
+	}
+	if repo.queryRequestRateCnt != 0 {
+		t.Errorf("RequestRateByUser: repo queried %d times, want 0 (short-circuit)", repo.queryRequestRateCnt)
+	}
+
+	if points, err := auditquery.NewTokenThroughputByUserHandler(repo, lookup).
+		Handle(ctx, auditquery.TokenThroughputByUserQuery{UserID: 1, StartTime: start, EndTime: end, Granularity: enum.GranularityHour}); err != nil || len(points) != 0 {
+		t.Errorf("TokenThroughputByUser: got (%d points, err %v); want (0, nil)", len(points), err)
+	}
+	if repo.queryTokenThroughputCnt != 0 {
+		t.Errorf("TokenThroughputByUser: repo queried %d times, want 0 (short-circuit)", repo.queryTokenThroughputCnt)
+	}
+
+	if items, err := auditquery.NewModelUsageByUserHandler(repo, lookup).
+		Handle(ctx, auditquery.ModelUsageByUserQuery{UserID: 1, StartTime: start, EndTime: end, Granularity: enum.GranularityHour}); err != nil || len(items) != 0 {
+		t.Errorf("ModelUsageByUser: got (%d items, err %v); want (0, nil)", len(items), err)
+	}
+	if repo.queryTokenThroughputCnt != 0 {
+		t.Errorf("ModelUsageByUser: repo queried %d times, want 0 (short-circuit)", repo.queryTokenThroughputCnt)
+	}
+
+	if items, err := auditquery.NewTokenRateByUserHandler(repo, lookup).
+		Handle(ctx, auditquery.TokenRateByUserQuery{UserID: 1, StartTime: start, EndTime: end, Granularity: enum.GranularityHour}); err != nil || len(items) != 0 {
+		t.Errorf("TokenRateByUser: got (%d items, err %v); want (0, nil)", len(items), err)
+	}
+	if repo.queryTokenThroughputCnt != 0 {
+		t.Errorf("TokenRateByUser: repo queried %d times, want 0 (short-circuit)", repo.queryTokenThroughputCnt)
+	}
+
+	if items, err := auditquery.NewFirstTokenLatencyByUserHandler(repo, lookup).
+		Handle(ctx, auditquery.FirstTokenLatencyByUserQuery{UserID: 1, StartTime: start, EndTime: end, Granularity: enum.GranularityHour}); err != nil || len(items) != 0 {
+		t.Errorf("FirstTokenLatencyByUser: got (%d items, err %v); want (0, nil)", len(items), err)
+	}
+	if repo.queryFirstTokenLatencyCnt != 0 {
+		t.Errorf("FirstTokenLatencyByUser: repo queried %d times, want 0 (short-circuit)", repo.queryFirstTokenLatencyCnt)
 	}
 }

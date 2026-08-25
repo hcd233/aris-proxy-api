@@ -28,6 +28,10 @@ func (h *listTracesHandler) Handle(ctx context.Context, q port.ListTracesQuery) 
 	if err != nil {
 		return nil, nil, err
 	}
+	// 名下无 API Key：直接返回空，防止空 owner 列表在仓储层退化为全量查询（越权）
+	if !q.IsAdmin && len(owners) == 0 {
+		return []*port.TraceSummaryView{}, &model.PageInfo{Page: q.Page, PageSize: q.PageSize, Total: 0}, nil
+	}
 	traces, pageInfo, err := h.repo.PaginateByOwners(ctx, owners, model.CommonParam{
 		PageParam:  model.PageParam{Page: q.Page, PageSize: q.PageSize},
 		QueryParam: model.QueryParam{Query: q.Query, QueryFields: []string{constant.FieldSessionID, constant.FieldModel, constant.FieldAPIKeyName}},
