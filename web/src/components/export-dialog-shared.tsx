@@ -14,11 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  TooltipRoot,
-  TooltipTrigger,
-  TooltipContent,
-} from "@/components/ui/tooltip";
+import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { useT } from "@/lib/i18n";
 import { Check, Copy, Search, Terminal, X } from "lucide-react";
 
@@ -583,9 +579,7 @@ export function ExportModelRow({
           <TooltipRoot>
             <TooltipTrigger
               render={
-                <span className="truncate text-sm font-medium text-foreground">
-                  {model.alias}
-                </span>
+                <span className="truncate text-sm font-medium text-foreground">{model.alias}</span>
               }
             />
             <TooltipContent side="top" className="max-w-xs break-all">

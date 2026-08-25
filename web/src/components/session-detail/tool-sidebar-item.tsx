@@ -4,11 +4,7 @@ import { useState } from "react";
 import { Braces, ChevronDown, ChevronRight, FileText, Hash, Wrench } from "lucide-react";
 import type { ToolItem, UnifiedTool } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
-import {
-  TooltipRoot,
-  TooltipTrigger,
-  TooltipContent,
-} from "@/components/ui/tooltip";
+import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { CollapsibleText } from "./collapsible-text";
 import { useT } from "@/lib/i18n";
 

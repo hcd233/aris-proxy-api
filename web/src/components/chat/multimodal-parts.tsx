@@ -1,9 +1,5 @@
 import { FileText, Music2, ShieldAlert } from "lucide-react";
-import {
-  TooltipRoot,
-  TooltipTrigger,
-  TooltipContent,
-} from "@/components/ui/tooltip";
+import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import type { ContentPart } from "./content-extract";
 import { imageURLOf } from "./content-extract";
 

@@ -3,11 +3,7 @@ import { ChevronDown, ChevronRight, Wrench } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
 import { CopyButton } from "@/components/ui/copy-button";
-import {
-  TooltipRoot,
-  TooltipTrigger,
-  TooltipContent,
-} from "@/components/ui/tooltip";
+import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import type { UnifiedToolCall } from "@/lib/types";
 import type { ToolResultInfo } from "./content-extract";
 

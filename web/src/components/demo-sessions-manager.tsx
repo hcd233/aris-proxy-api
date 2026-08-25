@@ -16,11 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  TooltipRoot,
-  TooltipTrigger,
-  TooltipContent,
-} from "@/components/ui/tooltip";
+import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { ListEmptyState } from "@/components/list-empty-state";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { PaginationBar } from "@/components/pagination-bar";
@@ -178,9 +174,7 @@ function SessionListTable({
               <TableCell className="max-w-[200px]">
                 <TooltipRoot>
                   <TooltipTrigger
-                    render={
-                      <span className="block truncate text-left">{summary(item)}</span>
-                    }
+                    render={<span className="block truncate text-left">{summary(item)}</span>}
                   />
                   <TooltipContent side="top" className="max-w-xs break-all">
                     {summary(item)}

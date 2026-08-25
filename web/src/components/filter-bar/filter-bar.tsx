@@ -4,11 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
-import {
-  TooltipRoot,
-  TooltipTrigger,
-  TooltipContent,
-} from "@/components/ui/tooltip";
+import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import type { FilterToken } from "./filter-dsl";
 import type { FacetDef } from "./types";
 import type { UseFilterBarReturn } from "./use-filter-bar";
@@ -188,9 +184,7 @@ export function FilterBar({
               <span className="pl-2 pr-1 text-muted-foreground">{label.k}</span>
               <TooltipRoot>
                 <TooltipTrigger
-                  render={
-                    <span className="max-w-40 truncate pr-1 font-medium">{label.v}</span>
-                  }
+                  render={<span className="max-w-40 truncate pr-1 font-medium">{label.v}</span>}
                 />
                 <TooltipContent side="top" className="max-w-xs break-all">
                   {label.v}

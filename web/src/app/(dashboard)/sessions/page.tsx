@@ -15,11 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  TooltipRoot,
-  TooltipTrigger,
-  TooltipContent,
-} from "@/components/ui/tooltip";
+import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { MessageSquare, Check, ArrowUp, ArrowDown, Trash2, Lock } from "lucide-react";
 import { useI18n } from "@/lib/i18n";

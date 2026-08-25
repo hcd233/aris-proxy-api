@@ -4,11 +4,7 @@ import { useMemo, useState } from "react";
 import type { ModelItem } from "@/lib/types";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-  TooltipRoot,
-  TooltipTrigger,
-  TooltipContent,
-} from "@/components/ui/tooltip";
+import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { useT } from "@/lib/i18n";
 import { ChevronDown, Search, X } from "lucide-react";
 import { ClaudeCode } from "@lobehub/icons";
