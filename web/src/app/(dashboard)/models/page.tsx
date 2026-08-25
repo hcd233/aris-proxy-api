@@ -405,6 +405,15 @@ export default function ModelsPage() {
     return model.endpoint?.name ?? `Endpoint #${model.endpoint?.id}`;
   };
 
+  // 与 trigger 页一致：点击 alias 文本复制到剪贴板
+  const handleCopyAlias = (alias: string) => {
+    if (!alias) return;
+    navigator.clipboard.writeText(alias).then(
+      () => toast.success(t("common.copied_to_clipboard")),
+      () => toast.error(t("common.copy_failed")),
+    );
+  };
+
   return (
     <PermissionGuard adminOnly module="models">
       <TooltipProvider>
@@ -578,7 +587,12 @@ export default function ModelsPage() {
                                   size={14}
                                   className="shrink-0"
                                 />
-                                {model.alias}
+                                <span
+                                  className="cursor-pointer underline-offset-2 hover:underline"
+                                  onClick={() => handleCopyAlias(model.alias)}
+                                >
+                                  {model.alias}
+                                </span>
                               </p>
                               <TooltipRoot>
                                 <TooltipTrigger
@@ -677,7 +691,12 @@ export default function ModelsPage() {
                                         size={14}
                                         className="shrink-0"
                                       />
-                                      <span className="truncate">{model.alias}</span>
+                                      <span
+                                        className="truncate cursor-pointer underline-offset-2 hover:underline"
+                                        onClick={() => handleCopyAlias(model.alias)}
+                                      >
+                                        {model.alias}
+                                      </span>
                                     </span>
                                   }
                                 />
