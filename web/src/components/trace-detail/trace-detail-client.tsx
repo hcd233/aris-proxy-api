@@ -421,9 +421,20 @@ export default function TraceDetailClient({ traceId }: { traceId: number }) {
               {t("trace.detail_title")}
             </h1>
           </div>
-          <p className="mt-1.5 truncate font-mono text-sm text-muted-foreground">
-            {detail.sessionId}
-          </p>
+          <TooltipProvider>
+            <TooltipRoot>
+              <TooltipTrigger
+                render={
+                  <p className="mt-1.5 truncate font-mono text-sm text-muted-foreground">
+                    {detail.sessionId}
+                  </p>
+                }
+              />
+              <TooltipContent side="top" align="start" className="max-w-xs break-all">
+                {detail.sessionId}
+              </TooltipContent>
+            </TooltipRoot>
+          </TooltipProvider>
         </div>
       </div>
 
@@ -474,7 +485,8 @@ export default function TraceDetailClient({ traceId }: { traceId: number }) {
                   </TooltipRoot>
                 </TooltipProvider>
               ) : (
-                <p className="mt-1 truncate font-mono text-xs">—</p>
+                // 恒定占位符不会截断，无需 truncate/tooltip
+                <p className="mt-1 font-mono text-xs">—</p>
               )}
             </div>
             <div>

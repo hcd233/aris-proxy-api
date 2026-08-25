@@ -4,6 +4,11 @@ import { useState } from "react";
 import { Braces, ChevronDown, ChevronRight, FileText, Hash, Wrench } from "lucide-react";
 import type { ToolItem, UnifiedTool } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
+import {
+  TooltipRoot,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 import { CollapsibleText } from "./collapsible-text";
 import { useT } from "@/lib/i18n";
 
@@ -27,12 +32,30 @@ export function ToolSidebarItem({ tool }: { tool: ToolItem }) {
           <Wrench className="size-4" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate font-mono text-[13.5px] font-medium text-foreground">
-            {toolData.name}
-          </p>
-          <p className="truncate text-[12px] leading-snug text-muted-foreground">
-            {toolData.description || t("tool_sidebar.no_description")}
-          </p>
+          <TooltipRoot>
+            <TooltipTrigger
+              render={
+                <p className="truncate font-mono text-[13.5px] font-medium text-foreground">
+                  {toolData.name}
+                </p>
+              }
+            />
+            <TooltipContent side="top" className="max-w-xs break-all">
+              {toolData.name}
+            </TooltipContent>
+          </TooltipRoot>
+          <TooltipRoot>
+            <TooltipTrigger
+              render={
+                <p className="truncate text-[12px] leading-snug text-muted-foreground">
+                  {toolData.description || t("tool_sidebar.no_description")}
+                </p>
+              }
+            />
+            <TooltipContent side="top" className="max-w-xs break-all">
+              {toolData.description || t("tool_sidebar.no_description")}
+            </TooltipContent>
+          </TooltipRoot>
         </div>
         {expanded ? (
           <ChevronDown className="size-4 shrink-0 text-muted-foreground" />

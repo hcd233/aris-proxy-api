@@ -3,6 +3,11 @@
 import * as React from "react";
 import { ChevronDown, Check } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  TooltipRoot,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
 
@@ -112,7 +117,18 @@ export function MultiSelectPill({
                   >
                     {checked && <Check className="size-3" />}
                   </span>
-                  <span className="truncate">{formatOption ? formatOption(opt) : opt}</span>
+                  <TooltipRoot>
+                    <TooltipTrigger
+                      render={
+                        <span className="block truncate text-left">
+                          {formatOption ? formatOption(opt) : opt}
+                        </span>
+                      }
+                    />
+                    <TooltipContent side="top" className="max-w-xs break-all">
+                      {formatOption ? formatOption(opt) : opt}
+                    </TooltipContent>
+                  </TooltipRoot>
                 </button>
               );
             })

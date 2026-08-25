@@ -4,6 +4,11 @@ import { useMemo, useState } from "react";
 import type { ModelItem } from "@/lib/types";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  TooltipRoot,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 import { useT } from "@/lib/i18n";
 import { ChevronDown, Search, X } from "lucide-react";
 import { ClaudeCode } from "@lobehub/icons";
@@ -175,7 +180,16 @@ function TierPicker({ models, selected, onSelect }: TierPickerProps) {
       >
         {selected ? (
           <span className="flex min-w-0 flex-1 items-center gap-2">
-            <span className="truncate font-medium text-foreground">{selected.alias}</span>
+            <TooltipRoot>
+              <TooltipTrigger
+                render={
+                  <span className="truncate font-medium text-foreground">{selected.alias}</span>
+                }
+              />
+              <TooltipContent side="top" className="max-w-xs break-all">
+                {selected.alias}
+              </TooltipContent>
+            </TooltipRoot>
             {supports1M(selected) && <OneMBadge />}
             <span className="shrink-0 font-mono text-[10px] tabular-nums text-muted-foreground/60">
               {formatTokens(selected.contextLength || 128000)}
@@ -336,9 +350,18 @@ export default function ExportClaudecodeDialog({
                     <span className={`size-1.5 rounded-full ${accent.dot}`} />
                     {t(`models.export_tier_${key}_name`)}
                   </span>
-                  <span className="truncate text-[11px] text-muted-foreground/70">
-                    {t(`models.export_tier_${key}_desc`)}
-                  </span>
+                  <TooltipRoot>
+                    <TooltipTrigger
+                      render={
+                        <span className="truncate text-[11px] text-muted-foreground/70">
+                          {t(`models.export_tier_${key}_desc`)}
+                        </span>
+                      }
+                    />
+                    <TooltipContent side="top" className="max-w-xs">
+                      {t(`models.export_tier_${key}_desc`)}
+                    </TooltipContent>
+                  </TooltipRoot>
                 </div>
                 <TierPicker models={models} selected={selected} onSelect={(m) => setTier(key, m)} />
               </div>
