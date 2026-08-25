@@ -161,6 +161,7 @@
   "shares.delete_confirm": "确定要删除该分享吗？",
   "apikeys.title": "API 密钥",
   "apikeys.name": "名称",
+  "apikeys.user": "用户",
   "apikeys.key": "密钥",
   "apikeys.create": "创建密钥",
   "apikeys.create_name_label": "名称",

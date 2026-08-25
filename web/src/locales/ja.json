@@ -111,6 +111,7 @@
   "shares.delete_confirm": "この共有を削除してもよろしいですか？",
   "apikeys.title": "API キー",
   "apikeys.name": "名前",
+  "apikeys.user": "ユーザー",
   "apikeys.key": "キー",
   "apikeys.create": "API キーを作成",
   "apikeys.create_key": "キーを作成",

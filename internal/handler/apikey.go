@@ -119,12 +119,20 @@ func (h *apiKeyHandler) HandleListAPIKeys(ctx context.Context, req *dto.ListAPIK
 	}
 
 	rsp.Keys = lo.Map(views, func(v *port.APIKeyView, _ int) *dto.APIKeyItem {
-		return &dto.APIKeyItem{
+		item := &dto.APIKeyItem{
 			ID:        v.ID,
 			Name:      v.Name,
 			Key:       v.MaskedKey,
 			CreatedAt: v.CreatedAt,
 		}
+		if v.User != nil {
+			item.User = &dto.APIKeyUser{
+				ID:     v.User.ID,
+				Name:   v.User.Name,
+				Avatar: v.User.Avatar,
+			}
+		}
+		return item
 	})
 	rsp.PageInfo = pageInfo
 	return apiutil.WrapHTTPResponse(rsp, nil)

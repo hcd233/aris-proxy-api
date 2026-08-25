@@ -53,12 +53,23 @@ type ListAPIKeysRsp struct {
 // APIKeyItem API Key 列表项（masked key）
 //
 //	@author centonhuang
-//	@update 2026-04-08 10:00:00
+//	@update 2026-08-25 10:00:00
 type APIKeyItem struct {
-	ID        uint      `json:"id" doc:"API Key ID"`
-	Name      string    `json:"name" doc:"API Key 名称"`
-	Key       string    `json:"key" doc:"Masked API Key 值"`
-	CreatedAt time.Time `json:"createdAt" doc:"创建时间"`
+	ID        uint        `json:"id" doc:"API Key ID"`
+	Name      string      `json:"name" doc:"API Key 名称"`
+	Key       string      `json:"key" doc:"Masked API Key 值"`
+	User      *APIKeyUser `json:"user,omitempty" doc:"所属用户信息（legacy key 或用户已删除时缺省）"`
+	CreatedAt time.Time   `json:"createdAt" doc:"创建时间"`
+}
+
+// APIKeyUser API Key 所属用户信息（列表嵌套展示）
+//
+//	@author centonhuang
+//	@update 2026-08-25 10:00:00
+type APIKeyUser struct {
+	ID     uint   `json:"id" doc:"用户 ID"`
+	Name   string `json:"name" doc:"用户名"`
+	Avatar string `json:"avatar" doc:"头像 URL"`
 }
 
 // APIKeyDetail API Key 详情（完整 key，仅创建时返回）

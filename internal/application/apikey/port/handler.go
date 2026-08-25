@@ -40,12 +40,20 @@ type RevokeAPIKeyHandler interface {
 	Handle(ctx context.Context, cmd RevokeAPIKeyCommand) error
 }
 
+// UserView User 只读投影（用于 APIKeyView 嵌套）
+type UserView struct {
+	ID     uint
+	Name   string
+	Avatar string
+}
+
 // APIKeyView 只读 API Key 投影（列表响应）
 type APIKeyView struct {
 	ID        uint
 	Name      string
 	MaskedKey string
 	CreatedAt time.Time
+	User      *UserView
 }
 
 // ListAPIKeysQuery 列出 API Keys 查询命令

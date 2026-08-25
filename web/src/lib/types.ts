@@ -345,10 +345,17 @@ export interface ListSharesRsp extends CommonRsp {
 
 // ─── API Key ───────────────────────────────────────────────────────────────────
 
+export interface APIKeyUser {
+  id: number;
+  name: string;
+  avatar: string;
+}
+
 export interface APIKeyItem {
   id: number;
   name: string;
   key: string; // masked
+  user?: APIKeyUser;
   createdAt: string;
 }
 

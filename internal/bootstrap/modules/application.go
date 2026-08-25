@@ -206,8 +206,8 @@ func NewRevokeAPIKeyHandler(repo apikey.APIKeyRepository) apikeyport.RevokeAPIKe
 	return apikeycommand.NewRevokeAPIKeyHandler(repo)
 }
 
-func NewListAPIKeysHandler(repo apikey.APIKeyRepository) apikeyport.ListAPIKeysHandler {
-	return apikeyquery.NewListAPIKeysHandler(repo)
+func NewListAPIKeysHandler(repo apikey.APIKeyRepository, userRepo identity.UserRepository) apikeyport.ListAPIKeysHandler {
+	return apikeyquery.NewListAPIKeysHandler(repo, userRepo)
 }
 
 func NewCreateEndpointHandler(repo llmproxy.EndpointRepository) endpointport.CreateEndpointHandler {

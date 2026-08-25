@@ -115,6 +115,34 @@ func (r *userRepository) FindByID(ctx context.Context, id uint) (*aggregate.User
 	return toUserAggregate(record), nil
 }
 
+// BatchFindByIDs 批量按 ID 查询用户聚合
+//
+// 入参去重并过滤 0；未找到的 ID 不出现在返回 map 中。
+//
+//	@receiver r *userRepository
+//	@param ctx context.Context
+//	@param ids []uint
+//	@return map[uint]*aggregate.User
+//	@return error
+//	@author centonhuang
+//	@update 2026-08-25 10:00:00
+func (r *userRepository) BatchFindByIDs(ctx context.Context, ids []uint) (map[uint]*aggregate.User, error) {
+	ids = lo.Uniq(lo.Filter(ids, func(id uint, _ int) bool { return id != 0 }))
+	out := make(map[uint]*aggregate.User, len(ids))
+	if len(ids) == 0 {
+		return out, nil
+	}
+	db := r.db.WithContext(ctx)
+	records, err := r.dao.BatchGetByField(db, constant.FieldID, ids, []string{constant.FieldID, constant.FieldName, constant.FieldAvatar})
+	if err != nil {
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "batch find users by ids")
+	}
+	for _, record := range records {
+		out[record.ID] = toUserAggregate(record)
+	}
+	return out, nil
+}
+
 // FindByGithubBindID 按 github 绑定 ID 查询
 //
 //	@receiver r *userRepository

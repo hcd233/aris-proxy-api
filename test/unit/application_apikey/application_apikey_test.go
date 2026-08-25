@@ -9,11 +9,14 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/application/apikey/command"
 	"github.com/hcd233/aris-proxy-api/internal/application/apikey/port"
+	"github.com/hcd233/aris-proxy-api/internal/application/apikey/query"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey/vo"
+	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
+	identityaggregate "github.com/hcd233/aris-proxy-api/internal/domain/identity/aggregate"
 )
 
 func mustAPIKeySecret(raw string) vo.APIKeySecret {
@@ -30,10 +33,12 @@ func restoreProxyAPIKeyForTest(userID uint, name, secret string, createdAt time.
 
 // mockAPIKeyRepository mock APIKeyRepository
 type mockAPIKeyRepository struct {
-	saveFunc    func(ctx context.Context, key *aggregate.ProxyAPIKey) error
-	countByUser func(ctx context.Context, userID uint) (int64, error)
-	saveCalled  bool
-	savedKey    *aggregate.ProxyAPIKey
+	saveFunc       func(ctx context.Context, key *aggregate.ProxyAPIKey) error
+	countByUser    func(ctx context.Context, userID uint) (int64, error)
+	paginateAll    func(ctx context.Context, param model.CommonParam) ([]*aggregate.ProxyAPIKey, *model.PageInfo, error)
+	paginateByUser func(ctx context.Context, userID uint, param model.CommonParam) ([]*aggregate.ProxyAPIKey, *model.PageInfo, error)
+	saveCalled     bool
+	savedKey       *aggregate.ProxyAPIKey
 }
 
 func (m *mockAPIKeyRepository) Save(ctx context.Context, key *aggregate.ProxyAPIKey) error {
@@ -77,10 +82,16 @@ func (m *mockAPIKeyRepository) LookupIDsByUserID(ctx context.Context, userID uin
 }
 
 func (m *mockAPIKeyRepository) PaginateByUser(ctx context.Context, userID uint, param model.CommonParam) ([]*aggregate.ProxyAPIKey, *model.PageInfo, error) {
+	if m.paginateByUser != nil {
+		return m.paginateByUser(ctx, userID, param)
+	}
 	return nil, nil, nil
 }
 
 func (m *mockAPIKeyRepository) PaginateAll(ctx context.Context, param model.CommonParam) ([]*aggregate.ProxyAPIKey, *model.PageInfo, error) {
+	if m.paginateAll != nil {
+		return m.paginateAll(ctx, param)
+	}
 	return nil, nil, nil
 }
 
@@ -636,5 +647,105 @@ func TestRevokeAPIKeyHandler_DeleteError(t *testing.T) {
 	}
 	if err != deleteErr {
 		t.Errorf("expected deleteErr, got: %v", err)
+	}
+}
+
+// mockUserRepository mock identity.UserRepository（嵌入接口，仅覆写 BatchFindByIDs）
+type mockUserRepository struct {
+	identity.UserRepository
+	batchFindByIDs func(ctx context.Context, ids []uint) (map[uint]*identityaggregate.User, error)
+}
+
+func (m *mockUserRepository) BatchFindByIDs(ctx context.Context, ids []uint) (map[uint]*identityaggregate.User, error) {
+	if m.batchFindByIDs != nil {
+		return m.batchFindByIDs(ctx, ids)
+	}
+	return map[uint]*identityaggregate.User{}, nil
+}
+
+// TestListAPIKeysHandler_FillsUserView 验证 admin 列表视图嵌套填充所属用户信息
+func TestListAPIKeysHandler_FillsUserView(t *testing.T) {
+	t.Parallel()
+	keys := []*aggregate.ProxyAPIKey{
+		aggregate.RestoreProxyAPIKey(1, 7, vo.APIKeyName("k1"), mustAPIKeySecret("sk-aris-a"), nowTime()),
+		aggregate.RestoreProxyAPIKey(2, 7, vo.APIKeyName("k2"), mustAPIKeySecret("sk-aris-b"), nowTime()),
+		aggregate.RestoreProxyAPIKey(3, 0, vo.APIKeyName("legacy"), mustAPIKeySecret("sk-aris-c"), nowTime()),
+	}
+	repo := &mockAPIKeyRepository{
+		paginateAll: func(ctx context.Context, param model.CommonParam) ([]*aggregate.ProxyAPIKey, *model.PageInfo, error) {
+			return keys, &model.PageInfo{Page: 1, PageSize: 20, Total: int64(len(keys))}, nil
+		},
+	}
+	var gotIDs []uint
+	userRepo := &mockUserRepository{
+		batchFindByIDs: func(ctx context.Context, ids []uint) (map[uint]*identityaggregate.User, error) {
+			gotIDs = ids
+			return map[uint]*identityaggregate.User{
+				7: identityaggregate.RestoreUser(7, "alice", "alice@example.com", "https://a.png", enum.PermissionUser, nowTime(), nowTime(), "", ""),
+			}, nil
+		},
+	}
+
+	handler := query.NewListAPIKeysHandler(repo, userRepo)
+	views, pageInfo, err := handler.Handle(context.Background(), port.ListAPIKeysQuery{
+		RequesterID:         1,
+		RequesterPermission: enum.PermissionAdmin,
+	})
+
+	if err != nil {
+		t.Fatalf("expected success, got err: %v", err)
+	}
+	if pageInfo == nil || pageInfo.Total != 3 {
+		t.Fatalf("expected pageInfo.Total=3, got %+v", pageInfo)
+	}
+	if len(views) != 3 {
+		t.Fatalf("expected 3 views, got %d", len(views))
+	}
+	for i, want := range []string{"alice", "alice"} {
+		if views[i].User == nil {
+			t.Fatalf("views[%d].User = nil, want filled", i)
+		}
+		if views[i].User.ID != 7 || views[i].User.Name != want || views[i].User.Avatar != "https://a.png" {
+			t.Errorf("views[%d].User = %+v, want ID=7 Name=%s Avatar=https://a.png", i, views[i].User, want)
+		}
+	}
+	if views[2].User != nil {
+		t.Errorf("legacy key (UserID=0) User = %+v, want nil", views[2].User)
+	}
+	if len(gotIDs) != 1 || gotIDs[0] != 7 {
+		t.Errorf("BatchFindByIDs ids = %v, want [7] (去重且过滤 0)", gotIDs)
+	}
+}
+
+// TestListAPIKeysHandler_ByUserFillsUserView 验证非 admin 视角同样填充用户信息
+func TestListAPIKeysHandler_ByUserFillsUserView(t *testing.T) {
+	t.Parallel()
+	keys := []*aggregate.ProxyAPIKey{
+		aggregate.RestoreProxyAPIKey(1, 7, vo.APIKeyName("k1"), mustAPIKeySecret("sk-aris-a"), nowTime()),
+	}
+	repo := &mockAPIKeyRepository{
+		paginateByUser: func(ctx context.Context, userID uint, param model.CommonParam) ([]*aggregate.ProxyAPIKey, *model.PageInfo, error) {
+			return keys, &model.PageInfo{Page: 1, PageSize: 20, Total: 1}, nil
+		},
+	}
+	userRepo := &mockUserRepository{
+		batchFindByIDs: func(ctx context.Context, ids []uint) (map[uint]*identityaggregate.User, error) {
+			return map[uint]*identityaggregate.User{
+				7: identityaggregate.RestoreUser(7, "alice", "alice@example.com", "https://a.png", enum.PermissionUser, nowTime(), nowTime(), "", ""),
+			}, nil
+		},
+	}
+
+	handler := query.NewListAPIKeysHandler(repo, userRepo)
+	views, _, err := handler.Handle(context.Background(), port.ListAPIKeysQuery{
+		RequesterID:         7,
+		RequesterPermission: enum.PermissionUser,
+	})
+
+	if err != nil {
+		t.Fatalf("expected success, got err: %v", err)
+	}
+	if len(views) != 1 || views[0].User == nil || views[0].User.Name != "alice" {
+		t.Fatalf("expected views[0].User.Name=alice, got %+v", views)
 	}
 }

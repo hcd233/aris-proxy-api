@@ -149,6 +149,10 @@ func (r *stubUserRepo) FindByID(ctx context.Context, id uint) (*aggregate.User, 
 	return nil, nil
 }
 
+func (r *stubUserRepo) BatchFindByIDs(ctx context.Context, ids []uint) (map[uint]*aggregate.User, error) {
+	return map[uint]*aggregate.User{}, nil
+}
+
 func (r *stubUserRepo) FindByGithubBindID(ctx context.Context, bindID string) (*aggregate.User, error) {
 	if r.findByGithubBindID != nil {
 		return r.findByGithubBindID(ctx, bindID)

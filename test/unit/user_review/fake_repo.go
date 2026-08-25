@@ -55,6 +55,18 @@ func (r *fakeUserRepo) FindByID(ctx context.Context, id uint) (*aggregate.User, 
 	return nil, nil
 }
 
+func (r *fakeUserRepo) BatchFindByIDs(ctx context.Context, ids []uint) (map[uint]*aggregate.User, error) {
+	out := make(map[uint]*aggregate.User, len(ids))
+	for _, id := range ids {
+		for _, u := range r.users {
+			if u.AggregateID() == id {
+				out[id] = u
+			}
+		}
+	}
+	return out, nil
+}
+
 func (r *fakeUserRepo) FindByGithubBindID(ctx context.Context, bindID string) (*aggregate.User, error) {
 	return nil, nil
 }

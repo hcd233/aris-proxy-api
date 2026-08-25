@@ -26,6 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Key, Plus, Copy, Check } from "lucide-react";
 import { PaginationBar } from "@/components/pagination-bar";
 import { PermissionGuard } from "@/components/permission-guard";
@@ -244,6 +245,19 @@ export default function APIKeysPage() {
                             <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">
                               {key.key}
                             </p>
+                            {key.user && (
+                              <p className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                                <Avatar size="sm">
+                                  {key.user.avatar && (
+                                    <AvatarImage src={key.user.avatar} alt={key.user.name} />
+                                  )}
+                                  <AvatarFallback className="text-[10px]">
+                                    {key.user.name.charAt(0).toUpperCase() || "?"}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="truncate">{key.user.name}</span>
+                              </p>
+                            )}
                           </div>
                           <DeleteButton
                             label={t("common.delete")}
@@ -262,6 +276,7 @@ export default function APIKeysPage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>{t("apikeys.name")}</TableHead>
+                        <TableHead>{t("apikeys.user")}</TableHead>
                         <TableHead>{t("apikeys.key")}</TableHead>
                         <TableHead>{t("apikeys.created")}</TableHead>
                         <TableHead className="text-right">{t("common.actions")}</TableHead>
@@ -271,6 +286,23 @@ export default function APIKeysPage() {
                       {keys.map((key) => (
                         <TableRow key={key.id}>
                           <TableCell className="font-medium">{key.name}</TableCell>
+                          <TableCell>
+                            {key.user ? (
+                              <span className="flex items-center gap-2">
+                                <Avatar size="sm">
+                                  {key.user.avatar && (
+                                    <AvatarImage src={key.user.avatar} alt={key.user.name} />
+                                  )}
+                                  <AvatarFallback className="text-xs">
+                                    {key.user.name.charAt(0).toUpperCase() || "?"}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="max-w-[14ch] truncate">{key.user.name}</span>
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
                           <TableCell className="font-mono text-xs text-muted-foreground">
                             {key.key}
                           </TableCell>

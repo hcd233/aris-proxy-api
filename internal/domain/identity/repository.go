@@ -18,6 +18,9 @@ type UserRepository interface {
 	Save(ctx context.Context, user *aggregate.User) error
 	// FindByID 按 ID 查询；未找到返回 (nil, nil)
 	FindByID(ctx context.Context, id uint) (*aggregate.User, error)
+	// BatchFindByIDs 批量按 ID 查询用户聚合；入参去重并过滤 0，
+	// 未找到的 ID 不出现在返回 map 中（列表接口关联展示，避免 N+1）
+	BatchFindByIDs(ctx context.Context, ids []uint) (map[uint]*aggregate.User, error)
 	// FindByGithubBindID 按 github 绑定 ID 查询
 	FindByGithubBindID(ctx context.Context, bindID string) (*aggregate.User, error)
 	// FindByGoogleBindID 按 google 绑定 ID 查询
