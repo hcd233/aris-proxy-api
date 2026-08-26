@@ -88,9 +88,9 @@ clean:
 	rm -f $(OUTPUT) aris
 	rm -rf $(CLIENT_OUTPUT_DIR)
 
-## web-lint: 前端 lint（ESLint）
+## web-lint: 前端 lint（ESLint + Prettier 格式检查，与 CI lint.yml web-lint job 一致）
 web-lint:
-	cd web && npm run lint
+	cd web && npm run lint && npm run format:check
 
 ## web-format: 前端格式化（Prettier 写入）
 web-format:
