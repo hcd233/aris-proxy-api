@@ -53,6 +53,7 @@ type DeleteModelReq struct {
 //	@update 2026-05-27 10:00:00
 type ListModelsReq struct {
 	model.CommonParam
+	Username string `query:"username,omitempty" doc:"按归属用户名过滤(仅管理员生效)"`
 }
 
 // ListModelsRsp 列出 Model 响应
@@ -65,6 +66,7 @@ type ListModelsRsp struct {
 // ModelItem Model 列表项
 type ModelItem struct {
 	ID              uint                 `json:"id" doc:"Model ID"`
+	Username        string               `json:"username" doc:"归属用户名"`
 	Alias           string               `json:"alias" doc:"模型别名"`
 	ModelID         string               `json:"modelId" doc:"业务模型ID"`
 	UpstreamModel   string               `json:"upstreamModel" doc:"上游实际模型名"`

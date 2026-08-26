@@ -53,7 +53,7 @@ func newStubModelRepo(behavior string) *stubModelRepo {
 
 var errStubDBFailure = ierr.New(ierr.ErrDBQuery, "simulated db outage")
 
-func (s *stubModelRepo) FindByAlias(_ context.Context, alias vo.EndpointAlias) ([]*aggregate.Model, error) {
+func (s *stubModelRepo) FindByAlias(_ context.Context, alias vo.EndpointAlias, _ uint) ([]*aggregate.Model, error) {
 	s.callsByAlias[alias.String()]++
 	b, ok := s.behaviorByAlias[alias.String()]
 	if !ok {
@@ -72,11 +72,11 @@ func (s *stubModelRepo) FindByAlias(_ context.Context, alias vo.EndpointAlias) (
 	}
 }
 
-func (s *stubModelRepo) FindByID(_ context.Context, _ uint) (*aggregate.Model, error) {
+func (s *stubModelRepo) FindByID(_ context.Context, _, _ uint) (*aggregate.Model, error) {
 	return nil, nil
 }
 
-func (s *stubModelRepo) Create(_ context.Context, _ *aggregate.Model) (uint, error) {
+func (s *stubModelRepo) Create(_ context.Context, _ *aggregate.Model, _ uint) (uint, error) {
 	return 0, nil
 }
 
@@ -84,7 +84,7 @@ func (s *stubModelRepo) Update(_ context.Context, _ *aggregate.Model) error {
 	return nil
 }
 
-func (s *stubModelRepo) Delete(_ context.Context, _ uint) error {
+func (s *stubModelRepo) Delete(_ context.Context, _, _ uint) error {
 	return nil
 }
 
@@ -96,7 +96,7 @@ func (s *stubModelRepo) List(_ context.Context) ([]*aggregate.Model, error) {
 	return nil, nil
 }
 
-func (s *stubModelRepo) Paginate(_ context.Context, _ model.CommonParam) ([]*aggregate.Model, *model.PageInfo, error) {
+func (s *stubModelRepo) Paginate(_ context.Context, _ model.CommonParam, _ uint) ([]*aggregate.Model, *model.PageInfo, error) {
 	return nil, nil, nil
 }
 
@@ -104,7 +104,7 @@ type stubEndpointRepo struct {
 	findByIDCalled bool
 }
 
-func (s *stubEndpointRepo) FindByID(_ context.Context, id uint) (*aggregate.Endpoint, error) {
+func (s *stubEndpointRepo) FindByID(_ context.Context, id, _ uint) (*aggregate.Endpoint, error) {
 	s.findByIDCalled = true
 	if id == 0 {
 		return nil, nil
@@ -116,7 +116,7 @@ func (s *stubEndpointRepo) BatchFindByIDs(_ context.Context, _ []uint) (map[uint
 	return map[uint]*aggregate.Endpoint{}, nil
 }
 
-func (s *stubEndpointRepo) Create(_ context.Context, _ *aggregate.Endpoint) (uint, error) {
+func (s *stubEndpointRepo) Create(_ context.Context, _ *aggregate.Endpoint, _ uint) (uint, error) {
 	return 0, nil
 }
 
@@ -124,11 +124,11 @@ func (s *stubEndpointRepo) Update(_ context.Context, _ *aggregate.Endpoint) erro
 	return nil
 }
 
-func (s *stubEndpointRepo) Delete(_ context.Context, _ uint) error {
+func (s *stubEndpointRepo) Delete(_ context.Context, _, _ uint) error {
 	return nil
 }
 
-func (s *stubEndpointRepo) DeleteCascade(_ context.Context, _ uint) error {
+func (s *stubEndpointRepo) DeleteCascade(_ context.Context, _, _ uint) error {
 	return nil
 }
 
@@ -136,7 +136,7 @@ func (s *stubEndpointRepo) List(_ context.Context) ([]*aggregate.Endpoint, error
 	return nil, nil
 }
 
-func (s *stubEndpointRepo) Paginate(_ context.Context, _ model.CommonParam) ([]*aggregate.Endpoint, *model.PageInfo, error) {
+func (s *stubEndpointRepo) Paginate(_ context.Context, _ model.CommonParam, _ uint) ([]*aggregate.Endpoint, *model.PageInfo, error) {
 	return nil, nil, nil
 }
 
@@ -144,15 +144,15 @@ type staticModelRepo struct {
 	models []*aggregate.Model
 }
 
-func (s *staticModelRepo) FindByAlias(_ context.Context, _ vo.EndpointAlias) ([]*aggregate.Model, error) {
+func (s *staticModelRepo) FindByAlias(_ context.Context, _ vo.EndpointAlias, userID uint) ([]*aggregate.Model, error) {
 	return s.models, nil
 }
 
-func (s *staticModelRepo) FindByID(_ context.Context, _ uint) (*aggregate.Model, error) {
+func (s *staticModelRepo) FindByID(_ context.Context, _, _ uint) (*aggregate.Model, error) {
 	return nil, nil
 }
 
-func (s *staticModelRepo) Create(_ context.Context, _ *aggregate.Model) (uint, error) {
+func (s *staticModelRepo) Create(_ context.Context, _ *aggregate.Model, _ uint) (uint, error) {
 	return 0, nil
 }
 
@@ -160,7 +160,7 @@ func (s *staticModelRepo) Update(_ context.Context, _ *aggregate.Model) error {
 	return nil
 }
 
-func (s *staticModelRepo) Delete(_ context.Context, _ uint) error {
+func (s *staticModelRepo) Delete(_ context.Context, _, _ uint) error {
 	return nil
 }
 
@@ -172,7 +172,7 @@ func (s *staticModelRepo) List(_ context.Context) ([]*aggregate.Model, error) {
 	return nil, nil
 }
 
-func (s *staticModelRepo) Paginate(_ context.Context, _ model.CommonParam) ([]*aggregate.Model, *model.PageInfo, error) {
+func (s *staticModelRepo) Paginate(_ context.Context, _ model.CommonParam, _ uint) ([]*aggregate.Model, *model.PageInfo, error) {
 	return nil, nil, nil
 }
 
@@ -180,7 +180,7 @@ type endpointByIDRepo struct {
 	endpoints map[uint]*aggregate.Endpoint
 }
 
-func (s *endpointByIDRepo) FindByID(_ context.Context, id uint) (*aggregate.Endpoint, error) {
+func (s *endpointByIDRepo) FindByID(_ context.Context, id, _ uint) (*aggregate.Endpoint, error) {
 	return s.endpoints[id], nil
 }
 
@@ -194,7 +194,7 @@ func (s *endpointByIDRepo) BatchFindByIDs(_ context.Context, ids []uint) (map[ui
 	return out, nil
 }
 
-func (s *endpointByIDRepo) Create(_ context.Context, _ *aggregate.Endpoint) (uint, error) {
+func (s *endpointByIDRepo) Create(_ context.Context, _ *aggregate.Endpoint, _ uint) (uint, error) {
 	return 0, nil
 }
 
@@ -202,11 +202,11 @@ func (s *endpointByIDRepo) Update(_ context.Context, _ *aggregate.Endpoint) erro
 	return nil
 }
 
-func (s *endpointByIDRepo) Delete(_ context.Context, _ uint) error {
+func (s *endpointByIDRepo) Delete(_ context.Context, _, _ uint) error {
 	return nil
 }
 
-func (s *endpointByIDRepo) DeleteCascade(_ context.Context, _ uint) error {
+func (s *endpointByIDRepo) DeleteCascade(_ context.Context, _, _ uint) error {
 	return nil
 }
 
@@ -214,7 +214,7 @@ func (s *endpointByIDRepo) List(_ context.Context) ([]*aggregate.Endpoint, error
 	return nil, nil
 }
 
-func (s *endpointByIDRepo) Paginate(_ context.Context, _ model.CommonParam) ([]*aggregate.Endpoint, *model.PageInfo, error) {
+func (s *endpointByIDRepo) Paginate(_ context.Context, _ model.CommonParam, _ uint) ([]*aggregate.Endpoint, *model.PageInfo, error) {
 	return nil, nil, nil
 }
 
@@ -230,7 +230,7 @@ func TestEndpointResolver_ResolveSkipsDisabledModels(t *testing.T) {
 		&staticModelRepo{models: []*aggregate.Model{disabledModel, enabledModel}},
 	)
 
-	_, m, err := resolver.Resolve(ctx, alias, func(ep *aggregate.Endpoint) bool {
+	_, m, err := resolver.Resolve(ctx, 0, alias, func(ep *aggregate.Endpoint) bool {
 		return ep.SupportOpenAIChatCompletion()
 	})
 	if err != nil {
@@ -257,7 +257,7 @@ func TestEndpointResolver_ResolveFiltersUnsupportedEndpoints(t *testing.T) {
 		&staticModelRepo{models: []*aggregate.Model{anthropicModel, openAIModel}},
 	)
 
-	ep, m, err := resolver.Resolve(ctx, alias, func(ep *aggregate.Endpoint) bool {
+	ep, m, err := resolver.Resolve(ctx, 0, alias, func(ep *aggregate.Endpoint) bool {
 		return ep.SupportOpenAIChatCompletion()
 	})
 	if err != nil {
@@ -283,7 +283,7 @@ func TestEndpointResolver_Resolve(t *testing.T) {
 			endpointRepo := &stubEndpointRepo{}
 			resolver := service.NewEndpointResolver(endpointRepo, modelRepo)
 
-			ep, m, err := resolver.Resolve(ctx, vo.EndpointAlias(tc.Alias), nil)
+			ep, m, err := resolver.Resolve(ctx, 0, vo.EndpointAlias(tc.Alias), nil)
 
 			switch tc.ExpectErrKind {
 			case "":
@@ -321,5 +321,52 @@ func TestEndpointResolver_Resolve(t *testing.T) {
 				t.Fatalf("unknown expectErrKind: %q", tc.ExpectErrKind)
 			}
 		})
+	}
+}
+
+// ownedModelRepo 仅对指定 (userID, alias) 返回命中，验证 Resolve 的用户隔离语义。
+type ownedModelRepo struct {
+	ownerUserID uint
+	alias       string
+}
+
+func (r *ownedModelRepo) FindByAlias(_ context.Context, alias vo.EndpointAlias, userID uint) ([]*aggregate.Model, error) {
+	if userID == r.ownerUserID && alias.String() == r.alias {
+		m, _ := aggregate.CreateModel(1, alias, "upstream-x", 1, true, 128000, 64000, []enum.InputModality{enum.InputModalityText})
+		return []*aggregate.Model{m}, nil
+	}
+	return nil, nil
+}
+func (r *ownedModelRepo) FindByID(context.Context, uint, uint) (*aggregate.Model, error) {
+	return nil, nil
+}
+func (r *ownedModelRepo) Create(context.Context, *aggregate.Model, uint) (uint, error) { return 0, nil }
+func (r *ownedModelRepo) Update(context.Context, *aggregate.Model) error               { return nil }
+func (r *ownedModelRepo) Delete(context.Context, uint, uint) error                     { return nil }
+func (r *ownedModelRepo) DeleteByEndpointID(context.Context, uint) error               { return nil }
+func (r *ownedModelRepo) List(context.Context) ([]*aggregate.Model, error)             { return nil, nil }
+func (r *ownedModelRepo) Paginate(context.Context, model.CommonParam, uint) ([]*aggregate.Model, *model.PageInfo, error) {
+	return nil, nil, nil
+}
+
+// TestEndpointResolver_UserIsolation 非归属用户的别名解析必须返回 ErrDataNotExists。
+func TestEndpointResolver_UserIsolation(t *testing.T) {
+	t.Parallel()
+
+	resolver := service.NewEndpointResolver(
+		&stubEndpointRepo{},
+		&ownedModelRepo{ownerUserID: 101, alias: "gpt-x"},
+	)
+
+	// 归属用户解析成功
+	_, _, err := resolver.Resolve(context.Background(), 101, vo.EndpointAlias("gpt-x"), nil)
+	if err != nil {
+		t.Fatalf("owner resolve should succeed: %v", err)
+	}
+
+	// 非归属用户 → 数据不存在（不泄露他人配置存在性）
+	_, _, err = resolver.Resolve(context.Background(), 202, vo.EndpointAlias("gpt-x"), nil)
+	if !errors.Is(err, ierr.ErrDataNotExists) {
+		t.Fatalf("non-owner resolve should be ErrDataNotExists, got %v", err)
 	}
 }

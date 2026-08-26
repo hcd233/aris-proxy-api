@@ -806,5 +806,7 @@
   "demo_access_audit.action_module_denied": "ロック済みモジュール探知",
   "demo_access_audit.reason_login_disabled": "入口無効",
   "demo_access_audit.reason_no_demo_user": "デモアカウントなし",
-  "demo_access_audit.reason_module_closed": "モジュール未開放"
+  "demo_access_audit.reason_module_closed": "モジュール未開放",
+  "endpoints.filter_by_username": "所有者ユーザー名で絞り込み...",
+  "models.filter_by_username": "所有者ユーザー名で絞り込み..."
 }

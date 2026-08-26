@@ -51,6 +51,7 @@ func (h *modelHandler) HandleCreateModel(ctx context.Context, req *dto.CreateMod
 	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
 
 	_, err := h.create.Handle(ctx, port.CreateModelCommand{
+		ScopeUserID:     scopeFor(ctx, util.CtxValuePermission(ctx)),
 		Alias:           req.Body.Alias,
 		ModelID:         req.Body.ModelID,
 		UpstreamModel:   req.Body.UpstreamModel,
@@ -72,9 +73,13 @@ func (h *modelHandler) HandleCreateModel(ctx context.Context, req *dto.CreateMod
 func (h *modelHandler) HandleListModels(ctx context.Context, req *dto.ListModelsReq) (*dto.HTTPResponse[*dto.ListModelsRsp], error) {
 	rsp := &dto.ListModelsRsp{}
 
+	perm := util.CtxValuePermission(ctx)
+	isGlobalScope := perm == enum.PermissionAdmin
 	views, pageInfo, err := h.list.Handle(ctx, port.ListModelsQuery{
 		CommonParam: req.CommonParam,
-		IsDemo:      util.CtxValuePermission(ctx) == enum.PermissionDemo,
+		IsDemo:      perm == enum.PermissionDemo,
+		ScopeUserID: lo.Ternary(isGlobalScope, 0, util.CtxValueUint(ctx, constant.CtxKeyUserID)),
+		Username:    req.Username,
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[ModelHandler] List models failed", zap.Error(err))
@@ -84,6 +89,7 @@ func (h *modelHandler) HandleListModels(ctx context.Context, req *dto.ListModels
 	rsp.Models = lo.Map(views, func(v *port.ModelView, _ int) *dto.ModelItem {
 		item := &dto.ModelItem{
 			ID:              v.ID,
+			Username:        v.Username,
 			Alias:           v.Alias,
 			ModelID:         v.ModelID,
 			UpstreamModel:   v.UpstreamModel,
@@ -118,6 +124,7 @@ func (h *modelHandler) HandleUpdateModel(ctx context.Context, req *dto.UpdateMod
 	rsp := &dto.EmptyRsp{}
 
 	err := h.update.Handle(ctx, port.UpdateModelCommand{
+		ScopeUserID:     scopeFor(ctx, util.CtxValuePermission(ctx)),
 		ID:              req.ID,
 		Alias:           req.Body.Alias,
 		UpstreamModel:   req.Body.UpstreamModel,
@@ -138,7 +145,10 @@ func (h *modelHandler) HandleUpdateModel(ctx context.Context, req *dto.UpdateMod
 func (h *modelHandler) HandleDeleteModel(ctx context.Context, req *dto.DeleteModelReq) (*dto.HTTPResponse[*dto.EmptyRsp], error) {
 	rsp := &dto.EmptyRsp{}
 
-	err := h.delete.Handle(ctx, port.DeleteModelCommand{ModelID: req.ID})
+	err := h.delete.Handle(ctx, port.DeleteModelCommand{
+		ScopeUserID: scopeFor(ctx, util.CtxValuePermission(ctx)),
+		ModelID:     req.ID,
+	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[ModelHandler] Delete model failed", zap.Error(err))
 		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())

@@ -536,9 +536,11 @@ class ApiClient {
     page: number = 1,
     pageSize: number = 20,
     query?: string,
+    username?: string,
   ): Promise<ListEndpointsRsp> {
     const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
     if (query) params.set("query", query);
+    if (username) params.set("username", username);
     return this.request<ListEndpointsRsp>(`/api/v1/endpoint/list?${params}`);
   }
 
@@ -568,9 +570,11 @@ class ApiClient {
     page: number = 1,
     pageSize: number = 20,
     query?: string,
+    username?: string,
   ): Promise<ListModelsRsp> {
     const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
     if (query) params.set("query", query);
+    if (username) params.set("username", username);
     return this.request<ListModelsRsp>(`/api/v1/model/list?${params}`);
   }
 

@@ -19,6 +19,7 @@ type Model struct {
 	commonagg.Base
 
 	alias           vo.EndpointAlias
+	userID          uint // 归属用户 ID（多租户隔离；由 repository 从 DB 恢复）
 	modelID         string
 	upstreamModel   string
 	endpointID      uint
@@ -80,6 +81,7 @@ func validateCapabilities(capabilities []enum.InputModality) error {
 
 func (m *Model) Alias() vo.EndpointAlias { return m.alias }
 func (m *Model) ModelID() string         { return m.modelID }
+func (m *Model) UserID() uint            { return m.userID }
 func (m *Model) UpstreamModel() string   { return m.upstreamModel }
 func (m *Model) EndpointID() uint        { return m.endpointID }
 func (m *Model) Enabled() bool           { return m.enabled }
@@ -92,6 +94,9 @@ func (m *Model) CreatedAt() time.Time { return m.createdAt }
 func (m *Model) UpdatedAt() time.Time { return m.updatedAt }
 
 // SetModelID 设置业务模型 ID（仓储恢复用）
+// SetUserID 设置归属用户 ID（repository 从 DB 恢复时使用）
+func (m *Model) SetUserID(userID uint) { m.userID = userID }
+
 func (m *Model) SetModelID(modelID string) { m.modelID = modelID }
 
 func (m *Model) SetTimestamps(createdAt, updatedAt time.Time) {

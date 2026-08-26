@@ -24,7 +24,7 @@ func NewDeleteModelHandler(repo llmproxy.ModelRepository) port.DeleteModelHandle
 func (h *deleteModelHandler) Handle(ctx context.Context, cmd port.DeleteModelCommand) error {
 	log := logger.WithCtx(ctx)
 
-	m, err := h.repo.FindByID(ctx, cmd.ModelID)
+	m, err := h.repo.FindByID(ctx, cmd.ModelID, cmd.ScopeUserID)
 	if err != nil {
 		return err
 	}
@@ -32,7 +32,7 @@ func (h *deleteModelHandler) Handle(ctx context.Context, cmd port.DeleteModelCom
 		return ierr.New(ierr.ErrDataNotExists, "model not found")
 	}
 
-	if err := h.repo.Delete(ctx, cmd.ModelID); err != nil {
+	if err := h.repo.Delete(ctx, cmd.ModelID, cmd.ScopeUserID); err != nil {
 		log.Error("[ModelCommand] Delete model failed", zap.Error(err))
 		return err
 	}

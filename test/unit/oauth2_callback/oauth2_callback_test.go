@@ -199,6 +199,10 @@ func (r *stubUserRepo) DeleteCascade(ctx context.Context, id uint) error {
 }
 
 // Ensure stubUserRepo implements identity.UserRepository
+func (r *stubUserRepo) FindByName(context.Context, string) (*aggregate.User, error) {
+	return nil, nil
+}
+
 var _ identity.UserRepository = (*stubUserRepo)(nil)
 
 // stubTokenSigner 模拟 token 签发者

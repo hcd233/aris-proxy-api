@@ -24,7 +24,7 @@ func NewUpdateEndpointHandler(repo llmproxy.EndpointRepository) port.UpdateEndpo
 func (h *updateEndpointHandler) Handle(ctx context.Context, cmd port.UpdateEndpointCommand) error {
 	log := logger.WithCtx(ctx)
 
-	ep, err := h.repo.FindByID(ctx, cmd.EndpointID)
+	ep, err := h.repo.FindByID(ctx, cmd.EndpointID, cmd.ScopeUserID)
 	if err != nil {
 		log.Error("[EndpointCommand] Find endpoint for update failed", zap.Error(err))
 		return err

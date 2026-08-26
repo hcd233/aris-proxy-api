@@ -383,6 +383,7 @@ export interface ListAPIKeysRsp extends CommonRsp {
 
 export interface EndpointItem {
   id: number;
+  username: string;
   name: string;
   openaiBaseURL: string;
   anthropicBaseURL: string;
@@ -395,6 +396,7 @@ export interface EndpointItem {
 }
 
 export interface CreateEndpointReqBody {
+  ownerUserID?: number;
   name: string;
   openaiBaseURL?: string;
   anthropicBaseURL?: string;
@@ -425,6 +427,7 @@ export type ModelCapability = "text" | "image";
 
 export interface ModelItem {
   id: number;
+  username: string;
   alias: string;
   modelId: string;
   upstreamModel: string;

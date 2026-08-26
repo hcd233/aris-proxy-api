@@ -32,7 +32,7 @@ func initModelRouter(modelGroup huma.API, modelHandler handler.ModelHandler, db 
 			{constant.SecuritySchemeJWT: {}},
 		},
 		Middlewares: huma.Middlewares{
-			middleware.LimitUserPermissionMiddleware("createModel", enum.PermissionAdmin),
+			middleware.LimitUserPermissionMiddleware("createModel", enum.PermissionUser),
 		},
 	}, modelHandler.HandleCreateModel)
 
@@ -47,7 +47,7 @@ func initModelRouter(modelGroup huma.API, modelHandler handler.ModelHandler, db 
 			{constant.SecuritySchemeJWT: {}},
 		},
 		Middlewares: huma.Middlewares{
-			middleware.LimitUserPermissionWithDemoMiddleware("listModels", enum.PermissionAdmin, enum.DemoModuleModels, demoAccessor, auditSubmitter),
+			middleware.LimitUserPermissionWithDemoMiddleware("listModels", enum.PermissionUser, enum.DemoModuleModels, demoAccessor, auditSubmitter),
 		},
 	}, modelHandler.HandleListModels)
 
@@ -62,7 +62,7 @@ func initModelRouter(modelGroup huma.API, modelHandler handler.ModelHandler, db 
 			{constant.SecuritySchemeJWT: {}},
 		},
 		Middlewares: huma.Middlewares{
-			middleware.LimitUserPermissionMiddleware("updateModel", enum.PermissionAdmin),
+			middleware.LimitUserPermissionMiddleware("updateModel", enum.PermissionUser),
 		},
 	}, modelHandler.HandleUpdateModel)
 
@@ -77,7 +77,7 @@ func initModelRouter(modelGroup huma.API, modelHandler handler.ModelHandler, db 
 			{constant.SecuritySchemeJWT: {}},
 		},
 		Middlewares: huma.Middlewares{
-			middleware.LimitUserPermissionMiddleware("deleteModel", enum.PermissionAdmin),
+			middleware.LimitUserPermissionMiddleware("deleteModel", enum.PermissionUser),
 		},
 	}, modelHandler.HandleDeleteModel)
 }

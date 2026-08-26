@@ -206,6 +206,27 @@ func (r *userRepository) FindByPermission(ctx context.Context, permission enum.P
 	return toUserAggregate(record), nil
 }
 
+// FindByName 按用户名精确查询；未找到返回 (nil, nil)
+//
+//	@receiver r *userRepository
+//	@param ctx context.Context
+//	@param name string 用户名
+//	@return *aggregate.User 未找到返回 nil
+//	@return error
+//	@author centonhuang
+//	@update 2026-08-26
+func (r *userRepository) FindByName(ctx context.Context, name string) (*aggregate.User, error) {
+	db := r.db.WithContext(ctx)
+	record, err := r.dao.Get(db, &dbmodel.User{Name: name}, constant.UserRepoFieldsFull)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "get user by name")
+	}
+	return toUserAggregate(record), nil
+}
+
 // ReplaceDemoUser 在同一事务内替换全局 Demo 用户。
 func (r *userRepository) ReplaceDemoUser(ctx context.Context, targetID uint) (previousDemoID uint, err error) {
 	db := r.db.WithContext(ctx)

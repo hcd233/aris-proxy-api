@@ -35,11 +35,11 @@ _Avoid_: jwt token, session token
 ## LLM Proxy（LLM 代理）
 
 **Endpoint（上游端点）**:
-一个上游 LLM 服务连接配置，包含名称、OpenAI 和 Anthropic 两个协议的 Base URL、共享 API Key，以及各接口（OpenAI Chat Completion / OpenAI Response / Anthropic Message）的支持标记。通过 `EndpointResolver` 按模型别名解析出目标端点。
+一个上游 LLM 服务连接配置，包含名称、OpenAI 和 Anthropic 两个协议的 Base URL、共享 API Key，以及各接口（OpenAI Chat Completion / OpenAI Response / Anthropic Message）的支持标记。归属某个 User（多租户隔离），通过 `EndpointResolver` 按模型别名在当前用户的配置范围内解析出目标端点。管理后台对所有 user 级用户开放自管；admin 可查看全量并按用户名过滤、代建。
 _Avoid_: upstream, provider, backend
 
 **Model（模型别名）**:
-一条将对外别名（`alias`）映射到上游真实模型名的记录，归属于某个 Endpoint。同一别名可通过不同 endpoint_id 关联多个端点以支持负载均衡。客户端请求时传入别名，网关解析后转发到对应的上游模型。
+一条将对外别名（`alias`）映射到上游真实模型名的记录，归属于某个 Endpoint，其用户归属继承该 Endpoint（model.user_id = endpoint.user_id）。唯一性按 `(user_id, alias, endpoint_id)` 判定：不同用户可各自配置同名别名互不干扰。OpenAI / Anthropic `/v1/models` 只返回当前 API Key 所属用户启用的别名；转发解析同样只在用户自己的配置范围内进行。
 _Avoid_: model mapping, model route, alias record
 
 **EndpointAlias（端点别名）**:

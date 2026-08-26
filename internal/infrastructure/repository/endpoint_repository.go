@@ -32,10 +32,10 @@ func NewEndpointRepository(db *gorm.DB) llmproxy.EndpointRepository {
 	return &endpointRepository{endpointDAO: dao.GetEndpointDAO(), modelDAO: dao.GetModelDAO(), db: db}
 }
 
-// FindByID 按 ID 查询端点
-func (r *endpointRepository) FindByID(ctx context.Context, id uint) (*aggregate.Endpoint, error) {
+// FindByID 按 ID 查询端点（scopeUserID>0 时限定在该用户名下）
+func (r *endpointRepository) FindByID(ctx context.Context, id, scopeUserID uint) (*aggregate.Endpoint, error) {
 	db := r.db.WithContext(ctx)
-	ep, err := r.endpointDAO.Get(db, &dbmodel.Endpoint{ID: id}, constant.EndpointRepoFieldsFull)
+	ep, err := r.endpointDAO.Get(db, &dbmodel.Endpoint{ID: id, UserID: scopeUserID}, constant.EndpointRepoFieldsFull)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -80,6 +80,7 @@ func toEndpointAggregate(m *dbmodel.Endpoint) (*aggregate.Endpoint, error) {
 	if err != nil {
 		return nil, err
 	}
+	ep.SetUserID(m.UserID)
 	ep.SetTimestamps(m.CreatedAt, m.UpdatedAt)
 	return ep, nil
 }
@@ -97,10 +98,11 @@ func toEndpointModel(ep *aggregate.Endpoint) *dbmodel.Endpoint {
 	}
 }
 
-// Create 创建端点
-func (r *endpointRepository) Create(ctx context.Context, ep *aggregate.Endpoint) (uint, error) {
+// Create 创建端点（写入归属 ownerUserID）
+func (r *endpointRepository) Create(ctx context.Context, ep *aggregate.Endpoint, ownerUserID uint) (uint, error) {
 	db := r.db.WithContext(ctx)
 	m := toEndpointModel(ep)
+	m.UserID = ownerUserID
 	if err := db.Create(m).Error; err != nil {
 		return 0, ierr.Wrap(ierr.ErrDBCreate, err, "create endpoint")
 	}
@@ -125,23 +127,23 @@ func (r *endpointRepository) Update(ctx context.Context, ep *aggregate.Endpoint)
 	return nil
 }
 
-// Delete 删除端点（软删除）
-func (r *endpointRepository) Delete(ctx context.Context, id uint) error {
+// Delete 删除端点（软删除；scopeUserID>0 时限定在该用户名下）
+func (r *endpointRepository) Delete(ctx context.Context, id, scopeUserID uint) error {
 	db := r.db.WithContext(ctx)
-	if err := r.endpointDAO.Delete(db, &dbmodel.Endpoint{ID: id}); err != nil {
+	if err := r.endpointDAO.Delete(db, &dbmodel.Endpoint{ID: id, UserID: scopeUserID}); err != nil {
 		return ierr.Wrap(ierr.ErrDBDelete, err, "delete endpoint")
 	}
 	return nil
 }
 
-// DeleteCascade 级联删除端点及其关联模型（事务保护）
-func (r *endpointRepository) DeleteCascade(ctx context.Context, id uint) error {
+// DeleteCascade 级联删除端点及其关联模型（事务保护；scopeUserID>0 时限定在该用户名下）
+func (r *endpointRepository) DeleteCascade(ctx context.Context, id, scopeUserID uint) error {
 	db := r.db.WithContext(ctx)
 	return db.Transaction(func(tx *gorm.DB) error {
 		if err := r.modelDAO.BatchDeleteByField(tx, constant.FieldEndpointID, []uint{id}); err != nil {
 			return ierr.Wrap(ierr.ErrDBDelete, err, "cascade delete models by endpoint id")
 		}
-		if err := r.endpointDAO.Delete(tx, &dbmodel.Endpoint{ID: id}); err != nil {
+		if err := r.endpointDAO.Delete(tx, &dbmodel.Endpoint{ID: id, UserID: scopeUserID}); err != nil {
 			return ierr.Wrap(ierr.ErrDBDelete, err, "delete endpoint")
 		}
 		return nil
@@ -164,11 +166,11 @@ func (r *endpointRepository) List(ctx context.Context) ([]*aggregate.Endpoint, e
 //
 //	@author centonhuang
 //	@update 2026-05-27 10:00:00
-func (r *endpointRepository) Paginate(ctx context.Context, param model.CommonParam) ([]*aggregate.Endpoint, *model.PageInfo, error) {
+func (r *endpointRepository) Paginate(ctx context.Context, param model.CommonParam, scopeUserID uint) ([]*aggregate.Endpoint, *model.PageInfo, error) {
 	db := r.db.WithContext(ctx)
 	records, pageInfo, err := r.endpointDAO.Paginate(
 		db,
-		&dbmodel.Endpoint{},
+		&dbmodel.Endpoint{UserID: scopeUserID},
 		constant.EndpointRepoFieldsFull,
 		&dao.CommonParam{
 			PageParam:  dao.PageParam{Page: param.Page, PageSize: param.PageSize},
@@ -199,10 +201,10 @@ func NewModelRepository(db *gorm.DB) llmproxy.ModelRepository {
 	return &modelRepository{dao: dao.GetModelDAO(), db: db}
 }
 
-// FindByAlias 按 alias 查询所有关联的模型记录
-func (r *modelRepository) FindByAlias(ctx context.Context, alias vo.EndpointAlias) ([]*aggregate.Model, error) {
+// FindByAlias 按 alias 查询指定用户的所有关联模型记录（网关解析专用，userID 必传真实值）
+func (r *modelRepository) FindByAlias(ctx context.Context, alias vo.EndpointAlias, userID uint) ([]*aggregate.Model, error) {
 	db := r.db.WithContext(ctx)
-	models, err := r.dao.BatchGet(db, &dbmodel.Model{Alias: alias.String(), Enabled: true}, constant.ModelRepoFieldsFull)
+	models, err := r.dao.BatchGet(db, &dbmodel.Model{Alias: alias.String(), Enabled: true, UserID: userID}, constant.ModelRepoFieldsFull)
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "find models by alias")
 	}
@@ -216,6 +218,7 @@ func toModelAggregate(m *dbmodel.Model) (*aggregate.Model, error) {
 	if err != nil {
 		return nil, err
 	}
+	model.SetUserID(m.UserID)
 	model.SetModelID(m.ModelID)
 	model.SetTimestamps(m.CreatedAt, m.UpdatedAt)
 	return model, nil
@@ -235,10 +238,10 @@ func toModelDBModel(m *aggregate.Model) *dbmodel.Model {
 	}
 }
 
-// FindByID 按 ID 查询模型
-func (r *modelRepository) FindByID(ctx context.Context, id uint) (*aggregate.Model, error) {
+// FindByID 按 ID 查询模型（scopeUserID>0 时限定在该用户名下）
+func (r *modelRepository) FindByID(ctx context.Context, id, scopeUserID uint) (*aggregate.Model, error) {
 	db := r.db.WithContext(ctx)
-	m, err := r.dao.Get(db, &dbmodel.Model{ID: id}, constant.ModelRepoFieldsFull)
+	m, err := r.dao.Get(db, &dbmodel.Model{ID: id, UserID: scopeUserID}, constant.ModelRepoFieldsFull)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -248,10 +251,11 @@ func (r *modelRepository) FindByID(ctx context.Context, id uint) (*aggregate.Mod
 	return toModelAggregate(m)
 }
 
-// Create 创建模型
-func (r *modelRepository) Create(ctx context.Context, m *aggregate.Model) (uint, error) {
+// Create 创建模型（写入归属 ownerUserID）
+func (r *modelRepository) Create(ctx context.Context, m *aggregate.Model, ownerUserID uint) (uint, error) {
 	db := r.db.WithContext(ctx)
 	mdl := toModelDBModel(m)
+	mdl.UserID = ownerUserID
 	if err := db.Create(mdl).Error; err != nil {
 		return 0, ierr.Wrap(ierr.ErrDBCreate, err, "create model")
 	}
@@ -279,10 +283,10 @@ func (r *modelRepository) Update(ctx context.Context, m *aggregate.Model) error 
 	return nil
 }
 
-// Delete 删除模型（软删除）
-func (r *modelRepository) Delete(ctx context.Context, id uint) error {
+// Delete 删除模型（软删除；scopeUserID>0 时限定在该用户名下）
+func (r *modelRepository) Delete(ctx context.Context, id, scopeUserID uint) error {
 	db := r.db.WithContext(ctx)
-	if err := r.dao.Delete(db, &dbmodel.Model{ID: id}); err != nil {
+	if err := r.dao.Delete(db, &dbmodel.Model{ID: id, UserID: scopeUserID}); err != nil {
 		return ierr.Wrap(ierr.ErrDBDelete, err, "delete model")
 	}
 	return nil
@@ -313,11 +317,11 @@ func (r *modelRepository) List(ctx context.Context) ([]*aggregate.Model, error) 
 //
 //	@author centonhuang
 //	@update 2026-05-27 10:00:00
-func (r *modelRepository) Paginate(ctx context.Context, param model.CommonParam) ([]*aggregate.Model, *model.PageInfo, error) {
+func (r *modelRepository) Paginate(ctx context.Context, param model.CommonParam, scopeUserID uint) ([]*aggregate.Model, *model.PageInfo, error) {
 	db := r.db.WithContext(ctx)
 	records, pageInfo, err := r.dao.Paginate(
 		db,
-		&dbmodel.Model{},
+		&dbmodel.Model{UserID: scopeUserID},
 		constant.ModelRepoFieldsFull,
 		&dao.CommonParam{
 			PageParam:  dao.PageParam{Page: param.Page, PageSize: param.PageSize},
@@ -354,10 +358,10 @@ func NewEndpointReadRepository(db *gorm.DB) llmproxy.EndpointReadRepository {
 	}
 }
 
-// ListAliases 查询所有不重复的模型别名（仅已启用的模型）
-func (r *endpointReadRepository) ListAliases(ctx context.Context) ([]*llmproxy.ModelAliasProjection, error) {
+// ListAliases 查询指定用户的不重复模型别名（仅已启用的模型；userID=0 不过滤，仅限 admin 内部用途）
+func (r *endpointReadRepository) ListAliases(ctx context.Context, userID uint) ([]*llmproxy.ModelAliasProjection, error) {
 	db := r.db.WithContext(ctx)
-	models, err := r.modelDAO.BatchGet(db, &dbmodel.Model{Enabled: true}, constant.ModelRepoFieldsAlias)
+	models, err := r.modelDAO.BatchGet(db, &dbmodel.Model{Enabled: true, UserID: userID}, constant.ModelRepoFieldsAlias)
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "list model aliases")
 	}
@@ -368,9 +372,11 @@ func (r *endpointReadRepository) ListAliases(ctx context.Context) ([]*llmproxy.M
 }
 
 // ListEnabledModelDetails 查询所有启用中模型的完整投影（仅已启用、按 alias 去重）
-func (r *endpointReadRepository) ListEnabledModelDetails(ctx context.Context) ([]*llmproxy.ModelDetailProjection, error) {
+//
+// userID 语义：网关路径必传真实用户 ID；0 不过滤（仅限 admin 内部用途）。
+func (r *endpointReadRepository) ListEnabledModelDetails(ctx context.Context, userID uint) ([]*llmproxy.ModelDetailProjection, error) {
 	db := r.db.WithContext(ctx)
-	models, err := r.modelDAO.BatchGet(db, &dbmodel.Model{Enabled: true}, constant.ModelRepoFieldsFull)
+	models, err := r.modelDAO.BatchGet(db, &dbmodel.Model{Enabled: true, UserID: userID}, constant.ModelRepoFieldsFull)
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "list enabled model details")
 	}
@@ -386,11 +392,11 @@ func (r *endpointReadRepository) ListEnabledModelDetails(ctx context.Context) ([
 	}), nil
 }
 
-// FindEndpointByAlias 按 alias 随机选满足 matcher 的 endpoint，返回端点信息 + 上游模型名。
+// FindEndpointByAlias 按 alias 在指定用户的模型集合内随机选满足 matcher 的 endpoint。
 // 仅查询已启用的模型。
-func (r *endpointReadRepository) FindEndpointByAlias(ctx context.Context, alias string, matcher func(*llmproxy.EndpointProjection) bool) (*llmproxy.EndpointProjection, *llmproxy.ModelAliasProjection, error) {
+func (r *endpointReadRepository) FindEndpointByAlias(ctx context.Context, userID uint, alias string, matcher func(*llmproxy.EndpointProjection) bool) (*llmproxy.EndpointProjection, *llmproxy.ModelAliasProjection, error) {
 	db := r.db.WithContext(ctx)
-	models, err := r.modelDAO.BatchGet(db, &dbmodel.Model{Alias: alias, Enabled: true}, constant.ModelRepoFieldsFull)
+	models, err := r.modelDAO.BatchGet(db, &dbmodel.Model{Alias: alias, Enabled: true, UserID: userID}, constant.ModelRepoFieldsFull)
 	if err != nil {
 		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "find models by alias")
 	}

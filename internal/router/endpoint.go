@@ -32,7 +32,7 @@ func initEndpointRouter(endpointGroup huma.API, endpointHandler handler.Endpoint
 			{constant.SecuritySchemeJWT: {}},
 		},
 		Middlewares: huma.Middlewares{
-			middleware.LimitUserPermissionMiddleware("createEndpoint", enum.PermissionAdmin),
+			middleware.LimitUserPermissionMiddleware("createEndpoint", enum.PermissionUser),
 		},
 	}, endpointHandler.HandleCreateEndpoint)
 
@@ -47,7 +47,7 @@ func initEndpointRouter(endpointGroup huma.API, endpointHandler handler.Endpoint
 			{constant.SecuritySchemeJWT: {}},
 		},
 		Middlewares: huma.Middlewares{
-			middleware.LimitUserPermissionWithDemoMiddleware("listEndpoints", enum.PermissionAdmin, enum.DemoModuleEndpoints, demoAccessor, auditSubmitter),
+			middleware.LimitUserPermissionWithDemoMiddleware("listEndpoints", enum.PermissionUser, enum.DemoModuleEndpoints, demoAccessor, auditSubmitter),
 		},
 	}, endpointHandler.HandleListEndpoints)
 
@@ -62,7 +62,7 @@ func initEndpointRouter(endpointGroup huma.API, endpointHandler handler.Endpoint
 			{constant.SecuritySchemeJWT: {}},
 		},
 		Middlewares: huma.Middlewares{
-			middleware.LimitUserPermissionMiddleware("updateEndpoint", enum.PermissionAdmin),
+			middleware.LimitUserPermissionMiddleware("updateEndpoint", enum.PermissionUser),
 		},
 	}, endpointHandler.HandleUpdateEndpoint)
 
@@ -77,7 +77,7 @@ func initEndpointRouter(endpointGroup huma.API, endpointHandler handler.Endpoint
 			{constant.SecuritySchemeJWT: {}},
 		},
 		Middlewares: huma.Middlewares{
-			middleware.LimitUserPermissionMiddleware("deleteEndpoint", enum.PermissionAdmin),
+			middleware.LimitUserPermissionMiddleware("deleteEndpoint", enum.PermissionUser),
 		},
 	}, endpointHandler.HandleDeleteEndpoint)
 }

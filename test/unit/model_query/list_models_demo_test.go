@@ -10,6 +10,8 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	commonutil "github.com/hcd233/aris-proxy-api/internal/common/util"
+	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
+	useragg "github.com/hcd233/aris-proxy-api/internal/domain/identity/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
@@ -20,20 +22,20 @@ type fakeModelRepo struct {
 	page   *model.PageInfo
 }
 
-func (f *fakeModelRepo) Paginate(_ context.Context, _ model.CommonParam) ([]*aggregate.Model, *model.PageInfo, error) {
+func (f *fakeModelRepo) Paginate(_ context.Context, _ model.CommonParam, _ uint) ([]*aggregate.Model, *model.PageInfo, error) {
 	return f.models, f.page, nil
 }
-func (f *fakeModelRepo) FindByAlias(context.Context, vo.EndpointAlias) ([]*aggregate.Model, error) {
+func (f *fakeModelRepo) FindByAlias(context.Context, vo.EndpointAlias, uint) ([]*aggregate.Model, error) {
 	return nil, nil
 }
-func (f *fakeModelRepo) FindByID(context.Context, uint) (*aggregate.Model, error) {
+func (f *fakeModelRepo) FindByID(context.Context, uint, uint) (*aggregate.Model, error) {
 	return nil, nil
 }
-func (f *fakeModelRepo) Create(context.Context, *aggregate.Model) (uint, error) { return 0, nil }
-func (f *fakeModelRepo) Update(context.Context, *aggregate.Model) error         { return nil }
-func (f *fakeModelRepo) Delete(context.Context, uint) error                     { return nil }
-func (f *fakeModelRepo) DeleteByEndpointID(context.Context, uint) error         { return nil }
-func (f *fakeModelRepo) List(context.Context) ([]*aggregate.Model, error)       { return nil, nil }
+func (f *fakeModelRepo) Create(context.Context, *aggregate.Model, uint) (uint, error) { return 0, nil }
+func (f *fakeModelRepo) Update(context.Context, *aggregate.Model) error               { return nil }
+func (f *fakeModelRepo) Delete(context.Context, uint, uint) error                     { return nil }
+func (f *fakeModelRepo) DeleteByEndpointID(context.Context, uint) error               { return nil }
+func (f *fakeModelRepo) List(context.Context) ([]*aggregate.Model, error)             { return nil, nil }
 
 type fakeEndpointRepo struct {
 	endpoints map[uint]*aggregate.Endpoint
@@ -42,15 +44,17 @@ type fakeEndpointRepo struct {
 func (f *fakeEndpointRepo) BatchFindByIDs(_ context.Context, _ []uint) (map[uint]*aggregate.Endpoint, error) {
 	return f.endpoints, nil
 }
-func (f *fakeEndpointRepo) FindByID(context.Context, uint) (*aggregate.Endpoint, error) {
+func (f *fakeEndpointRepo) FindByID(context.Context, uint, uint) (*aggregate.Endpoint, error) {
 	return nil, nil
 }
-func (f *fakeEndpointRepo) Create(context.Context, *aggregate.Endpoint) (uint, error) { return 0, nil }
-func (f *fakeEndpointRepo) Update(context.Context, *aggregate.Endpoint) error         { return nil }
-func (f *fakeEndpointRepo) Delete(context.Context, uint) error                        { return nil }
-func (f *fakeEndpointRepo) DeleteCascade(context.Context, uint) error                 { return nil }
-func (f *fakeEndpointRepo) List(context.Context) ([]*aggregate.Endpoint, error)       { return nil, nil }
-func (f *fakeEndpointRepo) Paginate(context.Context, model.CommonParam) ([]*aggregate.Endpoint, *model.PageInfo, error) {
+func (f *fakeEndpointRepo) Create(context.Context, *aggregate.Endpoint, uint) (uint, error) {
+	return 0, nil
+}
+func (f *fakeEndpointRepo) Update(context.Context, *aggregate.Endpoint) error   { return nil }
+func (f *fakeEndpointRepo) Delete(context.Context, uint, uint) error            { return nil }
+func (f *fakeEndpointRepo) DeleteCascade(context.Context, uint, uint) error     { return nil }
+func (f *fakeEndpointRepo) List(context.Context) ([]*aggregate.Endpoint, error) { return nil, nil }
+func (f *fakeEndpointRepo) Paginate(context.Context, model.CommonParam, uint) ([]*aggregate.Endpoint, *model.PageInfo, error) {
 	return nil, nil, nil
 }
 
@@ -77,6 +81,7 @@ func newDemoFixture() (port.ListModelsHandler, error) {
 	return query.NewListModelsHandler(
 		&fakeModelRepo{models: []*aggregate.Model{m}, page: &model.PageInfo{Page: 1, PageSize: 20, Total: 1}},
 		&fakeEndpointRepo{endpoints: map[uint]*aggregate.Endpoint{1: ep}},
+		&fakeUserRepo{},
 	), nil
 }
 
@@ -156,3 +161,36 @@ func TestListModels_NonDemoKeepsRawValues(t *testing.T) {
 		t.Fatalf("Endpoint.AnthropicBaseURL unexpectedly changed: got %q, want %q", v.Endpoint.AnthropicBaseURL, anthropicBaseURL)
 	}
 }
+
+// fakeUserRepo 空实现：demo 脱敏测试不触发 username 回填路径。
+type fakeUserRepo struct{}
+
+func (f *fakeUserRepo) FindByID(context.Context, uint) (*useragg.User, error) { return nil, nil }
+func (f *fakeUserRepo) BatchFindByIDs(context.Context, []uint) (map[uint]*useragg.User, error) {
+	return map[uint]*useragg.User{}, nil
+}
+func (f *fakeUserRepo) Save(context.Context, *useragg.User) error { return nil }
+func (f *fakeUserRepo) Update(context.Context, *useragg.User) error {
+	return nil
+}
+func (f *fakeUserRepo) Create(context.Context, *useragg.User) (uint, error) { return 0, nil }
+func (f *fakeUserRepo) FindByGithubBindID(context.Context, string) (*useragg.User, error) {
+	return nil, nil
+}
+func (f *fakeUserRepo) FindByGoogleBindID(context.Context, string) (*useragg.User, error) {
+	return nil, nil
+}
+func (f *fakeUserRepo) FindByPermission(context.Context, enum.Permission) (*useragg.User, error) {
+	return nil, nil
+}
+func (f *fakeUserRepo) FindByName(context.Context, string) (*useragg.User, error) {
+	return nil, nil
+}
+func (f *fakeUserRepo) ReplaceDemoUser(context.Context, uint) (uint, error) { return 0, nil }
+func (f *fakeUserRepo) TouchLastLogin(context.Context, uint) error          { return nil }
+func (f *fakeUserRepo) ListUsers(context.Context, model.CommonParam, enum.Permission) ([]*useragg.User, *model.PageInfo, error) {
+	return nil, nil, nil
+}
+func (f *fakeUserRepo) DeleteCascade(context.Context, uint) error { return nil }
+
+var _ identity.UserRepository = (*fakeUserRepo)(nil)

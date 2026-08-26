@@ -113,7 +113,7 @@ type mockResolver struct {
 	resolveErr      error
 }
 
-func (r *mockResolver) Resolve(_ context.Context, _ vo.EndpointAlias, matcher func(*aggregate.Endpoint) bool) (*aggregate.Endpoint, *aggregate.Model, error) {
+func (r *mockResolver) Resolve(_ context.Context, _ uint, _ vo.EndpointAlias, matcher func(*aggregate.Endpoint) bool) (*aggregate.Endpoint, *aggregate.Model, error) {
 	if r.resolveErr != nil || r.resolveEndpoint == nil {
 		return r.resolveEndpoint, r.resolveModel, r.resolveErr
 	}

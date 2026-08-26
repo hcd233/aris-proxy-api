@@ -71,7 +71,8 @@ func (u *anthropicUseCase) CreateMessage(ctx context.Context, req *dto.Anthropic
 	log := logger.WithCtx(ctx)
 
 	var compatRoute enum.CompatRoute
-	ep, m, err := u.resolver.Resolve(ctx, vo.EndpointAlias(req.Body.Model), func(ep *aggregate.Endpoint) bool {
+	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
+	ep, m, err := u.resolver.Resolve(ctx, userID, vo.EndpointAlias(req.Body.Model), func(ep *aggregate.Endpoint) bool {
 		compatRoute = SelectCompatRoute(enum.ProxyAPIAnthropicMessage, ep)
 		return compatRoute != enum.CompatRouteUnsupported
 	})

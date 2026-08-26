@@ -28,8 +28,8 @@ func NewCreateModelHandler(endpointRepo llmproxy.EndpointRepository, modelRepo l
 func (h *createModelHandler) Handle(ctx context.Context, cmd port.CreateModelCommand) (*port.CreateModelResult, error) {
 	log := logger.WithCtx(ctx)
 
-	// Verify endpoint exists
-	ep, err := h.endpointRepo.FindByID(ctx, cmd.EndpointID)
+	// Verify endpoint exists（scopeUserID>0 时限定在该用户名下，跨租户校验天然成立）
+	ep, err := h.endpointRepo.FindByID(ctx, cmd.EndpointID, cmd.ScopeUserID)
 	if err != nil {
 		log.Error("[ModelCommand] Find endpoint for model creation failed", zap.Error(err))
 		return nil, err
@@ -62,7 +62,7 @@ func (h *createModelHandler) Handle(ctx context.Context, cmd port.CreateModelCom
 		m.SetModelID(*cmd.ModelID)
 	}
 
-	id, err := h.modelRepo.Create(ctx, m)
+	id, err := h.modelRepo.Create(ctx, m, ep.UserID())
 	if err != nil {
 		log.Error("[ModelCommand] Create model failed", zap.Error(err))
 		return nil, err
