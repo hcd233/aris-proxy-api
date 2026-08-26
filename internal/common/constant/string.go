@@ -148,6 +148,7 @@ const (
 	TagAudit     = "Audit"
 	TagCron      = "Cron"
 	TagCronAudit = "CronAudit"
+	TagClient    = "Client"
 	TagDemo      = "Demo"
 	TagEndpoint  = "Endpoint"
 	TagHealth    = "Health"

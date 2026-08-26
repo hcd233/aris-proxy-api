@@ -43,6 +43,7 @@ type routeParams struct {
 	MetricsHandler     handler.MetricsHandler
 	DatasetHandler     handler.DatasetHandler
 	TraceHandler       handler.TraceHandler
+	ClientHandler      handler.ClientHandler
 }
 
 func registerRoutes(params routeParams) {
@@ -72,6 +73,7 @@ func registerRoutes(params routeParams) {
 		MetricsHandler:     params.MetricsHandler,
 		DatasetHandler:     params.DatasetHandler,
 		TraceHandler:       params.TraceHandler,
+		ClientHandler:      params.ClientHandler,
 	})
 
 	router.RegisterWebRouter(params.App, web.DistFS)

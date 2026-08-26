@@ -44,6 +44,7 @@ type APIRouterDependencies struct {
 	MetricsHandler     handler.MetricsHandler
 	DatasetHandler     handler.DatasetHandler
 	TraceHandler       handler.TraceHandler
+	ClientHandler      handler.ClientHandler
 }
 
 // RegisterDocsRouter 注册文档路由
@@ -96,6 +97,8 @@ func RegisterAPIRouter(humaAPI huma.API, deps APIRouterDependencies) {
 	}, deps.TraceHandler.HandleInstallScript)
 
 	tokenGroup := huma.NewGroup(v1Group, "/token")
+	clientAPIGroup := huma.NewGroup(v1Group, "/client")
+	initClientRouter(clientAPIGroup, deps.ClientHandler, deps.DB)
 	initTokenRouter(tokenGroup, deps.TokenHandler, deps.Cache)
 
 	oauth2Group := huma.NewGroup(v1Group, "/oauth2")

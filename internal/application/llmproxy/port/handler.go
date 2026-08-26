@@ -14,6 +14,11 @@ type OpenAIUseCase interface {
 	CreateResponse(ctx context.Context, req *dto.OpenAICreateResponseRequest) (Result, error)
 }
 
+// ListClientModelsHandler 客户端模型列表用例端口
+type ListClientModelsHandler interface {
+	Handle(ctx context.Context) (*dto.ClientModelsRsp, error)
+}
+
 // AnthropicUseCase Anthropic 协议用例端口
 type AnthropicUseCase interface {
 	ListModels(ctx context.Context) (*dto.AnthropicListModelsRsp, error)
