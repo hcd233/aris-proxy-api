@@ -33,10 +33,12 @@ type bizError struct {
 	Message string `json:"message"`
 }
 
-type listEndpointsRsp struct {
-	Endpoints []struct {
-		ID uint `json:"id"`
-	} `json:"endpoints"`
+type listUpstreamRsp struct {
+	Groups []struct {
+		Endpoint struct {
+			ID uint `json:"id"`
+		} `json:"endpoint"`
+	} `json:"groups"`
 	Error *bizError `json:"error,omitempty"`
 }
 
@@ -103,21 +105,21 @@ func doJSON(t *testing.T, client *http.Client, method, url, jwtToken string, req
 // pickEndpointID 选一个可用 endpoint 挂载模型。
 func pickEndpointID(t *testing.T, baseURL, jwtToken string, client *http.Client) uint {
 	t.Helper()
-	status, traceID, body := doJSON(t, client, http.MethodGet, baseURL+"/api/v1/endpoint/list?page=1&pageSize=1", jwtToken, nil)
+	status, traceID, body := doJSON(t, client, http.MethodGet, baseURL+"/api/v1/upstream/list?page=1&pageSize=1", jwtToken, nil)
 	if status != http.StatusOK {
-		t.Fatalf("list endpoints status=%d traceID=%s body=%s", status, traceID, string(body))
+		t.Fatalf("list upstream status=%d traceID=%s body=%s", status, traceID, string(body))
 	}
-	var rsp listEndpointsRsp
+	var rsp listUpstreamRsp
 	if err := sonic.Unmarshal(body, &rsp); err != nil {
-		t.Fatalf("unmarshal endpoints failed: %v body=%s", err, string(body))
+		t.Fatalf("unmarshal upstream groups failed: %v body=%s", err, string(body))
 	}
 	if rsp.Error != nil {
-		t.Fatalf("list endpoints error: code=%s msg=%s traceID=%s", rsp.Error.Code, rsp.Error.Message, traceID)
+		t.Fatalf("list upstream error: code=%s msg=%s traceID=%s", rsp.Error.Code, rsp.Error.Message, traceID)
 	}
-	if len(rsp.Endpoints) == 0 {
+	if len(rsp.Groups) == 0 {
 		t.Skip("no endpoint available to attach model")
 	}
-	return rsp.Endpoints[0].ID
+	return rsp.Groups[0].Endpoint.ID
 }
 
 // createModel 创建模型（不显式传 modelId，验证服务端默认=alias）。
