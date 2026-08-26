@@ -84,9 +84,7 @@ export default function DashboardPage() {
       ]);
 
       const canListUpstream = isAdmin() || isModuleOpen("upstream");
-      const upstreamRsp = canListUpstream
-        ? await api.listUpstream(1, 1).catch(() => null)
-        : null; // 端点数取 pageInfo.total，模型数取 modelTotal，一次调用双统计
+      const upstreamRsp = canListUpstream ? await api.listUpstream(1, 1).catch(() => null) : null; // 端点数取 pageInfo.total，模型数取 modelTotal，一次调用双统计
 
       setStats({
         apiKeys: keysRsp?.pageInfo?.total ?? 0,

@@ -24,14 +24,7 @@ export type Permission = "pending" | "demo" | "user" | "admin";
 // ─── Demo Account ──────────────────────────────────────────────────────────────
 
 export type DemoModule =
-  | "dashboard"
-  | "sessions"
-  | "audit"
-  | "upstream"
-  | "trigger"
-  | "monitor"
-  | "cron"
-  | "cron_audit";
+  "dashboard" | "sessions" | "audit" | "upstream" | "trigger" | "monitor" | "cron" | "cron_audit";
 
 export interface DemoStatusRsp extends CommonRsp {
   loginEnabled: boolean;
