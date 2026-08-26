@@ -34,6 +34,7 @@ import { computeRange } from "@/lib/time-range";
 import { FilterBar } from "@/components/filter-bar/filter-bar";
 import { useFilterBar } from "@/components/filter-bar/use-filter-bar";
 import type { FacetDef, FilterBarQueryParams } from "@/components/filter-bar/types";
+import { copyTextToClipboard } from "@/lib/clipboard";
 
 function formatTime(iso: string): string {
   const d = new Date(iso);
@@ -164,9 +165,8 @@ export default function AuditPage() {
 
   const handleCopyTrace = (traceId: string) => {
     if (!traceId) return;
-    navigator.clipboard.writeText(traceId).then(
-      () => toast.success(t("audit.trace_copied")),
-      () => toast.error(t("audit.copy_failed")),
+    void copyTextToClipboard(traceId).then((ok) =>
+      ok ? toast.success(t("audit.trace_copied")) : toast.error(t("audit.copy_failed")),
     );
   };
 

@@ -164,15 +164,15 @@ func (r *traceRepository) InsertEvent(ctx context.Context, e *trace.TraceEvent) 
 }
 
 func (r *traceRepository) PaginateByOwners(ctx context.Context, owners []string, param model.CommonParam) ([]*trace.Trace, *model.PageInfo, error) {
+	// owners 为 nil 表示不过滤（admin 路径）；非 nil 且为空（用户名下无 Key）
+	// 短路返回空结果，防止越权查全量（与 audit 守卫的入口短路风格统一）
+	if owners != nil && len(owners) == 0 {
+		return []*trace.Trace{}, &model.PageInfo{Page: param.Page, PageSize: param.PageSize, Total: 0}, nil
+	}
 	db := r.db.WithContext(ctx)
 	q := db.Model(&dbmodel.Trace{}).Where(constant.DBConditionDeletedAtZero)
-	// owners 为 nil 表示不过滤（admin 路径）；非 nil 且为空（用户名下无 Key）恒假短路，防止越权查全量
 	if owners != nil {
-		if len(owners) == 0 {
-			q = q.Where(constant.DBConditionAlwaysFalse)
-		} else {
-			q = q.Where(fmt.Sprintf(constant.DBConditionInTemplate, constant.FieldAPIKeyName), owners)
-		}
+		q = q.Where(fmt.Sprintf(constant.DBConditionInTemplate, constant.FieldAPIKeyName), owners)
 	}
 	if param.Query != "" && len(param.QueryFields) > 0 {
 		like := "%" + param.Query + "%"

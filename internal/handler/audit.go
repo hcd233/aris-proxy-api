@@ -97,6 +97,7 @@ func (h *auditHandler) HandleListAuditOption(ctx context.Context, req *dto.Audit
 	items, err := h.svc.ListAuditOption(
 		ctx,
 		util.CtxValuePermission(ctx),
+		util.CtxValueUint(ctx, constant.CtxKeyUserID),
 		req.Field,
 		req.Keyword,
 		req.StartTime,

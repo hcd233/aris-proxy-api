@@ -91,28 +91,32 @@ func (f *fakeAuditRepo) QueryFirstTokenLatency(ctx context.Context, apiKeyIDs []
 	return nil, nil
 }
 
-func (f *fakeAuditRepo) ListDistinctUserNames(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
+func (f *fakeAuditRepo) ListDistinctUserNames(ctx context.Context, apiKeyIDs []uint, keyword string, startTime, endTime time.Time) ([]string, error) {
+	f.lastAPIKeyIDs = apiKeyIDs
 	if f.listDistinctUserNamesFn != nil {
 		return f.listDistinctUserNamesFn(ctx, keyword, startTime, endTime)
 	}
 	return []string{}, nil
 }
 
-func (f *fakeAuditRepo) ListDistinctModels(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
+func (f *fakeAuditRepo) ListDistinctModels(ctx context.Context, apiKeyIDs []uint, keyword string, startTime, endTime time.Time) ([]string, error) {
+	f.lastAPIKeyIDs = apiKeyIDs
 	if f.listDistinctModelsFn != nil {
 		return f.listDistinctModelsFn(ctx, keyword, startTime, endTime)
 	}
 	return []string{}, nil
 }
 
-func (f *fakeAuditRepo) ListDistinctStatusCodes(ctx context.Context, startTime, endTime time.Time) ([]string, error) {
+func (f *fakeAuditRepo) ListDistinctStatusCodes(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time) ([]string, error) {
+	f.lastAPIKeyIDs = apiKeyIDs
 	if f.listDistinctStatusCodesFn != nil {
 		return f.listDistinctStatusCodesFn(ctx, startTime, endTime)
 	}
 	return []string{}, nil
 }
 
-func (f *fakeAuditRepo) ListDistinctUserAgents(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
+func (f *fakeAuditRepo) ListDistinctUserAgents(ctx context.Context, apiKeyIDs []uint, keyword string, startTime, endTime time.Time) ([]string, error) {
+	f.lastAPIKeyIDs = apiKeyIDs
 	if f.listDistinctUserAgentsFn != nil {
 		return f.listDistinctUserAgentsFn(ctx, keyword, startTime, endTime)
 	}
@@ -320,7 +324,7 @@ func TestListAuditOption_DispatchesByField(t *testing.T) {
 			return []string{"Mozilla/5.0", "curl/8.0"}, nil
 		},
 	}
-	h := auditquery.NewListAuditOptionHandler(repo)
+	h := auditquery.NewListAuditOptionHandler(repo, &fakeAPIKeyIDLookup{})
 
 	t.Run("field=user", func(t *testing.T) {
 		t.Parallel()
@@ -411,7 +415,7 @@ func TestAuditService_DemoOptionsUseFullQuery(t *testing.T) {
 	svc := auditquery.NewAuditService(
 		nil,
 		nil,
-		auditquery.NewListAuditOptionHandler(repo),
+		auditquery.NewListAuditOptionHandler(repo, &fakeAPIKeyIDLookup{}),
 		nil,
 		nil,
 		nil,
@@ -426,7 +430,7 @@ func TestAuditService_DemoOptionsUseFullQuery(t *testing.T) {
 		nil,
 	)
 
-	items, err := svc.ListAuditOption(context.Background(), enum.PermissionDemo, constant.AuditFilterFieldUA, "", time.Time{}, time.Time{})
+	items, err := svc.ListAuditOption(context.Background(), enum.PermissionDemo, 0, constant.AuditFilterFieldUA, "", time.Time{}, time.Time{})
 	if err != nil {
 		t.Fatalf("list demo audit options: %v", err)
 	}
@@ -607,7 +611,7 @@ func TestAuditService_DispatchesByPermission(t *testing.T) {
 	svc := auditquery.NewAuditService(
 		auditquery.NewListAllAuditLogsHandler(repo),
 		auditquery.NewListAuditLogsByUserHandler(repo, &fakeAPIKeyIDLookup{}),
-		auditquery.NewListAuditOptionHandler(repo),
+		auditquery.NewListAuditOptionHandler(repo, &fakeAPIKeyIDLookup{}),
 		auditquery.NewModelTrendHandler(repo),
 		auditquery.NewModelTrendByUserHandler(repo, &fakeAPIKeyIDLookup{}),
 		auditquery.NewRequestRateHandler(repo),
@@ -752,5 +756,94 @@ func TestByUserMetrics_EmptyAPIKeyIDsShortCircuit(t *testing.T) {
 	}
 	if repo.queryFirstTokenLatencyCnt != 0 {
 		t.Errorf("FirstTokenLatencyByUser: repo queried %d times, want 0 (short-circuit)", repo.queryFirstTokenLatencyCnt)
+	}
+}
+
+// TestListAuditOption_UserScopeRestricted user 视角的筛选选项必须限制在名下
+// key 范围内：UserID 非零时先 lookup 名下 key 并传递给仓储（2026-08-26 越权
+// 修复回归——此前 user 视角返回全平台维度选项）。
+func TestListAuditOption_UserScopeRestricted(t *testing.T) {
+	t.Parallel()
+
+	repo := &fakeAuditRepo{
+		listDistinctUserNamesFn: func(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
+			return []string{"user1", "user2"}, nil
+		},
+	}
+	lookup := &fakeAPIKeyIDLookup{
+		lookupFunc: func(ctx context.Context, userID uint) ([]uint, error) {
+			if userID != 42 {
+				t.Errorf("lookup userID = %d, want 42", userID)
+			}
+			return []uint{7, 8}, nil
+		},
+	}
+	h := auditquery.NewListAuditOptionHandler(repo, lookup)
+
+	items, err := h.Handle(context.Background(), auditquery.ListAuditOptionQuery{
+		Field:  constant.AuditFilterFieldUser,
+		UserID: 42,
+	})
+	if err != nil {
+		t.Fatalf("unexpected err: %v", err)
+	}
+	if len(items) != 2 {
+		t.Fatalf("items = %v, want 2 entries", items)
+	}
+	if len(repo.lastAPIKeyIDs) != 2 || repo.lastAPIKeyIDs[0] != 7 || repo.lastAPIKeyIDs[1] != 8 {
+		t.Errorf("lastAPIKeyIDs = %v, want [7 8]", repo.lastAPIKeyIDs)
+	}
+	if lookup.calls != 1 {
+		t.Errorf("lookup calls = %d, want 1", lookup.calls)
+	}
+}
+
+// TestListAuditOption_UserWithoutKeysReturnsEmpty 名下无 key 的 user 视角
+// 必须返回空选项且不触达仓储（不得退化为全平台维度）。
+func TestListAuditOption_UserWithoutKeysReturnsEmpty(t *testing.T) {
+	t.Parallel()
+
+	repo := &fakeAuditRepo{}
+	lookup := &fakeAPIKeyIDLookup{
+		lookupFunc: func(ctx context.Context, userID uint) ([]uint, error) {
+			return []uint{}, nil
+		},
+	}
+	h := auditquery.NewListAuditOptionHandler(repo, lookup)
+
+	items, err := h.Handle(context.Background(), auditquery.ListAuditOptionQuery{
+		Field:  constant.AuditFilterFieldModel,
+		UserID: 42,
+	})
+	if err != nil {
+		t.Fatalf("unexpected err: %v", err)
+	}
+	if len(items) != 0 {
+		t.Errorf("items = %v, want empty", items)
+	}
+	if repo.lastAPIKeyIDs != nil {
+		t.Errorf("repo must not be reached, lastAPIKeyIDs = %v", repo.lastAPIKeyIDs)
+	}
+}
+
+// TestListAuditOption_AdminKeepsFullScope admin/demo 视角（UserID=0）不触发
+// lookup，key 范围为 nil（全量）。
+func TestListAuditOption_AdminKeepsFullScope(t *testing.T) {
+	t.Parallel()
+
+	repo := &fakeAuditRepo{}
+	lookup := &fakeAPIKeyIDLookup{}
+	h := auditquery.NewListAuditOptionHandler(repo, lookup)
+
+	if _, err := h.Handle(context.Background(), auditquery.ListAuditOptionQuery{
+		Field: constant.AuditFilterFieldModel,
+	}); err != nil {
+		t.Fatalf("unexpected err: %v", err)
+	}
+	if lookup.calls != 0 {
+		t.Errorf("lookup calls = %d, want 0 (admin must not lookup)", lookup.calls)
+	}
+	if repo.lastAPIKeyIDs != nil {
+		t.Errorf("lastAPIKeyIDs = %v, want nil (full scope)", repo.lastAPIKeyIDs)
 	}
 }

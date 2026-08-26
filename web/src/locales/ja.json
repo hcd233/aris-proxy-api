@@ -756,6 +756,7 @@
   "models.model_id_hint": "空欄の場合は alias がモデルIDとして使用されます。",
   "models.upstream_model": "上流モデル名",
   "models.upstream_model_placeholder": "例: gpt-4o-2024-08-06",
+  "models.click_to_copy": "クリックしてコピー",
   "callback.invalid_state": "無効な認可ステートです",
   "cron.trigger": "今すぐ実行",
   "cron.triggering": "実行中",

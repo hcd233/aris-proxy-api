@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"sync"
+	"sync/atomic"
 
 	"github.com/prometheus/client_golang/prometheus"
 
@@ -61,21 +62,35 @@ type EndpointGuard struct {
 
 // GuardLease 容错租约：持有 bulkhead 槽位与待上报的熔断结果。
 // 流式请求的槽位占用与熔断上报延迟到 body 消费完成（Close）时执行，
-// 保证慢流真实占用上游连接期间不超卖并发槽，且流中断计入熔断窗口。
+// 保证慢流真实占用上游连接期间不超卖并发槽。
+// 结果为「初始判定 + Fail 翻转」合成：上游半死（响应头已到但 body 中途断流）
+// 只有消费阶段才能发现，经 Fail 翻转后 Close 时计入熔断失败。
 type GuardLease struct {
 	g       *EndpointGuard
 	key     string
 	release func()
 	once    sync.Once
+	failed  atomic.Bool
 }
 
-// Done 结束租约：释放 bulkhead 槽位并按 success 上报熔断结果。幂等，可安全 defer。
+// Fail 将租约标记为失败：响应头到达时无法判定、消费 body 阶段才发现失败
+// 的场景（SSE 流中途断开）调用；Done 时无论 success 参数为何均上报失败。
+// 幂等；Done 之后调用无效。
+func (l *GuardLease) Fail() {
+	if l == nil {
+		return
+	}
+	l.failed.Store(true)
+}
+
+// Done 结束租约：释放 bulkhead 槽位并按 success 上报熔断结果；
+// 曾调用 Fail 则强制上报失败。幂等，可安全 defer。
 func (l *GuardLease) Done(success bool) {
 	if l == nil {
 		return
 	}
 	l.once.Do(func() {
-		l.g.Report(l.key, success)
+		l.g.Report(l.key, success && !l.failed.Load())
 		l.release()
 	})
 }
@@ -136,14 +151,17 @@ func (g *EndpointGuard) Report(key string, success bool) {
 // BindLease 把容错租约绑定到响应 body 的生命周期：返回的 ReadCloser 在 Close 时
 // 先关闭原始 body，再释放 bulkhead 槽位并按 success 上报熔断结果。
 // 流式链路（SSE）的槽位占用与熔断上报因此覆盖整个 body 消费阶段：
-// 慢流不超卖并发槽，流中断计入熔断窗口。非流式调用方读完 body 后 Close 即可。
+// 慢流不超卖并发槽；body 读错误（非 EOF，即上游断流）在 Read 时把租约翻转为
+// 失败，Close 时计入熔断窗口——上游半死因此能被熔断捕获。
+// 下游消费方出错（onChunk 回调失败、客户端断开）不会经过 Read 的错误分支，
+// 不影响租约的 success 判定。非流式调用方读完 body 后 Close 即可。
 //
 //	@param body io.ReadCloser 上游响应 body（可为 nil，此时立即结束租约）
 //	@param lease Allow 返回的租约（可为 nil，原样返回 body）
 //	@param success bool 调用是否成功（由调用方按业务判定）
 //	@return io.ReadCloser 绑定租约的 body
 //	@author centonhuang
-//	@update 2026-08-21 10:00:00
+//	@update 2026-08-26 10:00:00
 func (g *EndpointGuard) BindLease(body io.ReadCloser, lease *GuardLease, success bool) io.ReadCloser {
 	if lease == nil {
 		return body
@@ -156,10 +174,19 @@ func (g *EndpointGuard) BindLease(body io.ReadCloser, lease *GuardLease, success
 }
 
 // leaseBoundBody Close 时结束容错租约的响应 body 包装。
+// Read 遇到非 EOF 错误（上游流中断）时把租约翻转为失败。
 type leaseBoundBody struct {
 	io.ReadCloser
 	lease   *GuardLease
 	success bool
+}
+
+func (b *leaseBoundBody) Read(p []byte) (int, error) {
+	n, err := b.ReadCloser.Read(p)
+	if err != nil && !errors.Is(err, io.EOF) {
+		b.lease.Fail()
+	}
+	return n, err
 }
 
 func (b *leaseBoundBody) Close() error {

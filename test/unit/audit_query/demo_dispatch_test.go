@@ -31,7 +31,7 @@ func TestAuditService_DispatchesDemoToFullAll(t *testing.T) {
 	svc := auditquery.NewAuditService(
 		auditquery.NewListAllAuditLogsHandler(repo),
 		auditquery.NewListAuditLogsByUserHandler(repo, &fakeAPIKeyIDLookup{}),
-		auditquery.NewListAuditOptionHandler(repo),
+		auditquery.NewListAuditOptionHandler(repo, &fakeAPIKeyIDLookup{}),
 		auditquery.NewModelTrendHandler(repo),
 		auditquery.NewModelTrendByUserHandler(repo, &fakeAPIKeyIDLookup{}),
 		auditquery.NewRequestRateHandler(repo),
@@ -91,7 +91,7 @@ func TestAuditService_DemoListLogsMasksIdentityAndConnection(t *testing.T) {
 	svc := auditquery.NewAuditService(
 		auditquery.NewListAllAuditLogsHandler(repo),
 		auditquery.NewListAuditLogsByUserHandler(repo, &fakeAPIKeyIDLookup{}),
-		auditquery.NewListAuditOptionHandler(repo),
+		auditquery.NewListAuditOptionHandler(repo, &fakeAPIKeyIDLookup{}),
 		auditquery.NewModelTrendHandler(repo),
 		auditquery.NewModelTrendByUserHandler(repo, &fakeAPIKeyIDLookup{}),
 		auditquery.NewRequestRateHandler(repo),
@@ -148,7 +148,7 @@ func TestAuditService_DemoOptionsMaskUserField(t *testing.T) {
 	svc := auditquery.NewAuditService(
 		nil,
 		nil,
-		auditquery.NewListAuditOptionHandler(repo),
+		auditquery.NewListAuditOptionHandler(repo, &fakeAPIKeyIDLookup{}),
 		nil,
 		nil,
 		nil,
@@ -163,7 +163,7 @@ func TestAuditService_DemoOptionsMaskUserField(t *testing.T) {
 		nil,
 	)
 
-	items, err := svc.ListAuditOption(ctx, enum.PermissionDemo, constant.AuditFilterFieldUser, "", time.Time{}, time.Time{})
+	items, err := svc.ListAuditOption(ctx, enum.PermissionDemo, 0, constant.AuditFilterFieldUser, "", time.Time{}, time.Time{})
 	if err != nil {
 		t.Fatalf("list demo audit options: %v", err)
 	}

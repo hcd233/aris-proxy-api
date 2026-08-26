@@ -749,3 +749,39 @@ func TestListAPIKeysHandler_ByUserFillsUserView(t *testing.T) {
 		t.Fatalf("expected views[0].User.Name=alice, got %+v", views)
 	}
 }
+
+// TestListAPIKeysHandler_LoadUsersFailureDegrades 验证 user 信息加载失败时
+// 降级为无 user 的列表而非整体报错（user 列是增强字段，与 demo summary
+// 加载失败的降级策略一致）。
+func TestListAPIKeysHandler_LoadUsersFailureDegrades(t *testing.T) {
+	t.Parallel()
+	keys := []*aggregate.ProxyAPIKey{
+		aggregate.RestoreProxyAPIKey(1, 7, vo.APIKeyName("k1"), mustAPIKeySecret("sk-aris-a"), nowTime()),
+	}
+	repo := &mockAPIKeyRepository{
+		paginateAll: func(ctx context.Context, param model.CommonParam) ([]*aggregate.ProxyAPIKey, *model.PageInfo, error) {
+			return keys, &model.PageInfo{Page: 1, PageSize: 20, Total: 1}, nil
+		},
+	}
+	userRepo := &mockUserRepository{
+		batchFindByIDs: func(ctx context.Context, ids []uint) (map[uint]*identityaggregate.User, error) {
+			return nil, ierr.New(ierr.ErrInternal, "db down")
+		},
+	}
+
+	handler := query.NewListAPIKeysHandler(repo, userRepo)
+	views, _, err := handler.Handle(context.Background(), port.ListAPIKeysQuery{
+		RequesterID:         1,
+		RequesterPermission: enum.PermissionAdmin,
+	})
+
+	if err != nil {
+		t.Fatalf("expected degraded success, got err: %v", err)
+	}
+	if len(views) != 1 || views[0].User != nil {
+		t.Fatalf("expected 1 view without user, got %+v", views)
+	}
+	if views[0].Name != "k1" {
+		t.Fatalf("expected key name k1, got %q", views[0].Name)
+	}
+}

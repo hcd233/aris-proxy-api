@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 )
 
@@ -50,6 +51,11 @@ func (s *Semaphore) Acquire(ctx context.Context, key string) (func(), error) {
 	s.mu.Lock()
 	ch, ok := s.slots[key]
 	if !ok {
+		// 软上限防无界增长（与 Guard.breaker 的重建策略一致）。在途请求持有
+		// 旧 channel 引用不受影响，旧 channel 由 GC 回收。
+		if len(s.slots) >= constant.ResilienceRegistryMaxKeys {
+			s.slots = make(map[string]chan struct{}, constant.ResilienceRegistryMaxKeys/2)
+		}
 		ch = make(chan struct{}, s.cfg.MaxConcurrent)
 		s.slots[key] = ch
 	}

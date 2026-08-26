@@ -31,6 +31,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { copyTextToClipboard } from "@/lib/clipboard";
 
 export interface ShareDialogProps {
   sessionId: number;
@@ -112,12 +113,11 @@ export function ShareDialog({ sessionId, existingShareID, open, onOpenChange }: 
 
   const handleCopy = useCallback(async () => {
     if (!shareURL) return;
-    try {
-      await navigator.clipboard.writeText(shareURL);
+    if (await copyTextToClipboard(shareURL)) {
       setCopied(true);
       toast.success(t("share_dialog.copied_to_clipboard"));
       window.setTimeout(() => setCopied(false), 2000);
-    } catch {
+    } else {
       toast.error(t("share_dialog.copy_failed"));
     }
   }, [shareURL, t]);

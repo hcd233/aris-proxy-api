@@ -44,6 +44,10 @@ describe("serializeTokens", () => {
     expect(serializeTokens([{ key: "model", value: "a|b" }])).toBe('model:"a|b"');
   });
 
+  it("含双引号的值降级为单引号（DSL 无转义机制，优于静默丢字符）", () => {
+    expect(serializeTokens([{ key: "model", value: 'a"b' }])).toBe('model:"a\'b"');
+  });
+
   it("range 桶值原样传递", () => {
     expect(serializeTokens([{ key: "messageCount", value: "0-10" }])).toBe("messageCount:0-10");
   });

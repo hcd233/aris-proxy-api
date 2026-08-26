@@ -5,6 +5,7 @@ package transport_test
 import (
 	"context"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
@@ -118,6 +119,76 @@ func TestGuardIntegration_OpenThenRecover(t *testing.T) { //nolint:paralleltest 
 	// 恢复后请求正常放行
 	if _, err := proxy.ForwardChatCompletion(ctx, ep, []byte(`{"messages":[]}`)); err != nil {
 		t.Fatalf("steady state request failed: %v", err)
+	}
+}
+
+// TestGuardIntegration_StreamBreakCountsAsFailure 验证「上游流建立后中断」计入熔断失败：
+// 上游返回 200 响应头后立即断开连接（模拟半死），响应头正常到达但 body 读取失败；
+// 3 次（MinRequests=3）后熔断应打开，后续请求快速失败。
+// 回归背景：曾实现 BindLease 时把 success 固定为 true，流中断被上报为成功，
+// 熔断器对上游半死状态系统性失明。
+func TestGuardIntegration_StreamBreakCountsAsFailure(t *testing.T) { //nolint:paralleltest // modifies global config
+	orig := []any{
+		config.UpstreamRetryMaxAttempts,
+		config.UpstreamCircuitWindow,
+		config.UpstreamCircuitMinRequests,
+		config.UpstreamCircuitErrorThreshold,
+		config.UpstreamCircuitOpenTimeout,
+		config.UpstreamCircuitHalfOpenMaxRequests,
+		config.UpstreamBulkheadEnabled,
+	}
+	t.Cleanup(func() {
+		config.UpstreamRetryMaxAttempts = orig[0].(int)
+		config.UpstreamCircuitWindow = orig[1].(time.Duration)
+		config.UpstreamCircuitMinRequests = orig[2].(int)
+		config.UpstreamCircuitErrorThreshold = orig[3].(float64)
+		config.UpstreamCircuitOpenTimeout = orig[4].(time.Duration)
+		config.UpstreamCircuitHalfOpenMaxRequests = orig[5].(int)
+		config.UpstreamBulkheadEnabled = orig[6].(bool)
+	})
+	config.UpstreamRetryMaxAttempts = 0
+	config.UpstreamCircuitWindow = 6 * time.Second
+	config.UpstreamCircuitMinRequests = 3
+	config.UpstreamCircuitErrorThreshold = 0.5
+	config.UpstreamCircuitOpenTimeout = time.Hour // 本用例不进入恢复阶段
+	config.UpstreamCircuitHalfOpenMaxRequests = 1
+	config.UpstreamBulkheadEnabled = false // 本用例只验证熔断路径
+
+	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("data: {\"id\":\"1\"}\n\n"))
+		if f, ok := w.(http.Flusher); ok {
+			f.Flush()
+		}
+		if hj, ok := w.(http.Hijacker); ok {
+			conn, _, _ := hj.Hijack()
+			_ = conn.Close()
+		}
+	}))
+	defer mock.Close()
+
+	guard := transport.NewEndpointGuard(nil)
+	proxy := transport.NewOpenAIProxy(inflight.NewTracker(), guard)
+	ep := vo.UpstreamEndpoint{Model: "m", APIKey: "k", BaseURL: mock.URL}
+	ctx := context.Background()
+
+	for i := 0; i < 3; i++ {
+		stream, err := proxy.OpenChatCompletionStream(ctx, ep, []byte(`{"messages":[]}`))
+		if err != nil {
+			t.Fatalf("stream #%d should get response headers: %v", i, err)
+		}
+		if _, rerr := io.ReadAll(stream); rerr == nil {
+			t.Fatalf("stream #%d read should fail (upstream broke), got nil error", i)
+		}
+		_ = stream.Close()
+	}
+
+	// 3 次流中断均计入失败 → 熔断打开，后续请求不达上游
+	_, err := proxy.OpenChatCompletionStream(ctx, ep, []byte(`{"messages":[]}`))
+	var ce *model.CircuitOpenError
+	if !errors.As(err, &ce) {
+		t.Fatalf("err = %v, want CircuitOpenError after stream breaks", err)
 	}
 }
 

@@ -779,6 +779,8 @@ func (h *sessionHandler) HandleListSessionOption(ctx context.Context, req *dto.S
 		StartTime:  req.StartTime,
 		EndTime:    req.EndTime,
 		SessionIDs: allowedIDs,
+		IsAdmin:    util.CtxValuePermission(ctx).Level() >= enum.PermissionAdmin.Level(),
+		UserID:     util.CtxValueUint(ctx, constant.CtxKeyUserID),
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[SessionHandler] List session options failed", zap.Error(err))

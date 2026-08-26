@@ -217,11 +217,18 @@ type DeleteScoreSessionHandler interface {
 
 // ListSessionOptionQuery 会话筛选选项查询
 type ListSessionOptionQuery struct {
-	Field      string
-	Keyword    string
-	StartTime  time.Time
-	EndTime    time.Time
+	Field     string
+	Keyword   string
+	StartTime time.Time
+	EndTime   time.Time
+	// SessionIDs demo 白名单会话 ID 集合：非 nil 时按白名单过滤（空白名单由
+	// handler 层短路，不会进入 Handle）；nil 表示非 demo 视角。
 	SessionIDs []uint
+	// IsAdmin admin 视角：选项为全量维度（与列表接口的 admin 全量语义一致）。
+	IsAdmin bool
+	// UserID 当前用户 ID：非 admin 且非 demo（SessionIDs 为 nil）的 user 视角
+	// 按 Name 下 key owner 过滤选项，名下无 Key 返回空。
+	UserID uint
 }
 
 // ListSessionOptionHandler 会话筛选选项查询处理器

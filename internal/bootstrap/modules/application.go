@@ -116,7 +116,7 @@ var ApplicationModule = fx.Module(constant.DigNameApplicationModule,
 		NewModelUsageByUserHandler,
 		auditquery.NewFirstTokenLatencyHandler,
 		NewFirstTokenLatencyByUserHandler,
-		auditquery.NewListAuditOptionHandler,
+		NewListAuditOptionHandler,
 		NewAuditService,
 		NewListCronJobsHandler,
 		NewUpdateCronJobHandler,
@@ -328,6 +328,10 @@ func NewListAuditLogsByUserHandler(repo modelcall.AuditRepository, apiKeyRepo ap
 	return auditquery.NewListAuditLogsByUserHandler(repo, apiKeyRepo)
 }
 
+func NewListAuditOptionHandler(repo modelcall.AuditRepository, apiKeyRepo apikey.APIKeyRepository) auditquery.ListAuditOptionHandler {
+	return auditquery.NewListAuditOptionHandler(repo, apiKeyRepo)
+}
+
 func NewModelTrendByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apikey.APIKeyRepository) auditquery.ModelTrendByUserHandler {
 	return auditquery.NewModelTrendByUserHandler(repo, apiKeyRepo)
 }
@@ -408,8 +412,8 @@ func NewCreateShareHandler(getByUser sessionport.GetSessionByUserHandler, shareC
 	return sessioncommand.NewCreateShareHandler(getByUser, shareCache)
 }
 
-func NewSessionOptionHandler(readRepo session.SessionReadRepository) sessionport.ListSessionOptionHandler {
-	return sessionquery.NewListSessionOptionHandler(readRepo)
+func NewSessionOptionHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository) sessionport.ListSessionOptionHandler {
+	return sessionquery.NewListSessionOptionHandler(readRepo, apiKeyRepo)
 }
 
 func NewTriggerService(repo triggerdomain.TriggerRepository, hitRecorder triggerport.HitRecorder, cache *redis.Client) *triggerapp.TriggerService {
