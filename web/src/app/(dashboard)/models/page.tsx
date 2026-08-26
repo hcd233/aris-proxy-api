@@ -62,8 +62,7 @@ import { TableSkeleton } from "@/components/table-skeleton";
 import { useDeleteConfirm } from "@/hooks/use-delete-confirm";
 import { FilterBar } from "@/components/filter-bar/filter-bar";
 import { useFilterBar } from "@/components/filter-bar/use-filter-bar";
-import {
-} from "@/components/ui/dropdown-menu";
+import {} from "@/components/ui/dropdown-menu";
 import {
   Plus,
   Pencil,
@@ -912,10 +911,6 @@ export default function ModelsPage() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-
-
-
-
         </div>
       </TooltipProvider>
     </PermissionGuard>
