@@ -323,3 +323,50 @@ func TestEndpointResolver_Resolve(t *testing.T) {
 		})
 	}
 }
+
+// ownedModelRepo 仅对指定 (userID, alias) 返回命中，验证 Resolve 的用户隔离语义。
+type ownedModelRepo struct {
+	ownerUserID uint
+	alias       string
+}
+
+func (r *ownedModelRepo) FindByAlias(_ context.Context, alias vo.EndpointAlias, userID uint) ([]*aggregate.Model, error) {
+	if userID == r.ownerUserID && alias.String() == r.alias {
+		m, _ := aggregate.CreateModel(1, alias, "upstream-x", 1, true, 128000, 64000, []enum.InputModality{enum.InputModalityText})
+		return []*aggregate.Model{m}, nil
+	}
+	return nil, nil
+}
+func (r *ownedModelRepo) FindByID(context.Context, uint, uint) (*aggregate.Model, error) {
+	return nil, nil
+}
+func (r *ownedModelRepo) Create(context.Context, *aggregate.Model, uint) (uint, error) { return 0, nil }
+func (r *ownedModelRepo) Update(context.Context, *aggregate.Model) error               { return nil }
+func (r *ownedModelRepo) Delete(context.Context, uint, uint) error                     { return nil }
+func (r *ownedModelRepo) DeleteByEndpointID(context.Context, uint) error               { return nil }
+func (r *ownedModelRepo) List(context.Context) ([]*aggregate.Model, error)             { return nil, nil }
+func (r *ownedModelRepo) Paginate(context.Context, model.CommonParam, uint) ([]*aggregate.Model, *model.PageInfo, error) {
+	return nil, nil, nil
+}
+
+// TestEndpointResolver_UserIsolation 非归属用户的别名解析必须返回 ErrDataNotExists。
+func TestEndpointResolver_UserIsolation(t *testing.T) {
+	t.Parallel()
+
+	resolver := service.NewEndpointResolver(
+		&stubEndpointRepo{},
+		&ownedModelRepo{ownerUserID: 101, alias: "gpt-x"},
+	)
+
+	// 归属用户解析成功
+	_, _, err := resolver.Resolve(context.Background(), 101, vo.EndpointAlias("gpt-x"), nil)
+	if err != nil {
+		t.Fatalf("owner resolve should succeed: %v", err)
+	}
+
+	// 非归属用户 → 数据不存在（不泄露他人配置存在性）
+	_, _, err = resolver.Resolve(context.Background(), 202, vo.EndpointAlias("gpt-x"), nil)
+	if !errors.Is(err, ierr.ErrDataNotExists) {
+		t.Fatalf("non-owner resolve should be ErrDataNotExists, got %v", err)
+	}
+}
