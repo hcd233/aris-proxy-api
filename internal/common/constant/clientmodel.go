@@ -101,3 +101,18 @@ const (
 	ClientModelModelKey = "model"
 	ClientModelSpaceSep = " "
 )
+
+// ClientModelExportMessages aris model export 交互文案
+const (
+	ClientModelExportNeedInitMessage       = "Not initialized. Run `aris init` first."
+	ClientModelExportFetchingMessage       = "Fetching models from server..."
+	ClientModelExportEmptyModelsMessage    = "No enabled models found on the server."
+	ClientModelExportSelectModelsTitle     = "Select models to export"
+	ClientModelExportModelsRequiredMessage = "At least one model must be selected"
+	ClientModelExportSelectTargetTitle     = "Select target agent"
+	ClientModelExportOptionFormat          = "%s · %s · ctx %d / out %d"
+	ClientModelExportWritingFormat         = "Writing %s configuration..."
+	ClientModelExportDoneFormat            = "✓ %s configured with %d model(s)"
+	ClientModelExportConfigPathPrefix      = "Config: "
+	ClientModelExportBackupHint            = "Previous config backed up as *.bak"
+)
