@@ -13,6 +13,7 @@ import (
 //
 // ModelID 为业务模型 ID（缺省 nil 时默认 = alias，与领域层 CreateModel 行为一致）。
 type CreateModelCommand struct {
+	ScopeUserID     uint
 	Alias           string
 	ModelID         *string
 	UpstreamModel   string
@@ -36,6 +37,7 @@ type CreateModelHandler interface {
 //
 // ID 为 Model 数据库主键（路由 id），ModelID 为业务模型 ID（默认=alias，可更新）。
 type UpdateModelCommand struct {
+	ScopeUserID     uint
 	ID              uint
 	Alias           *string
 	UpstreamModel   *string
@@ -54,7 +56,8 @@ type UpdateModelHandler interface {
 
 // DeleteModelCommand 删除 Model 命令
 type DeleteModelCommand struct {
-	ModelID uint
+	ScopeUserID uint
+	ModelID     uint
 }
 
 // DeleteModelHandler 删除命令处理器
@@ -79,6 +82,7 @@ type EndpointView struct {
 // ModelView Model 只读投影
 type ModelView struct {
 	ID              uint
+	Username        string // 归属用户名（admin 全局视图辨认归属）
 	Alias           string
 	ModelID         string
 	UpstreamModel   string
@@ -98,6 +102,7 @@ type ListModelsQuery struct {
 	model.CommonParam
 	IsDemo      bool
 	ScopeUserID uint
+	Username    string // 仅 admin 视角生效：按归属用户名过滤
 }
 
 // ListModelsHandler 查询处理器

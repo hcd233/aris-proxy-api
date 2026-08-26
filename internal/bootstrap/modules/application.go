@@ -238,8 +238,8 @@ func NewDeleteModelHandler(repo llmproxy.ModelRepository) modelport.DeleteModelH
 	return modelcommand.NewDeleteModelHandler(repo)
 }
 
-func NewListModelsHandler(repo llmproxy.ModelRepository, endpointRepo llmproxy.EndpointRepository) modelport.ListModelsHandler {
-	return modelquery.NewListModelsHandler(repo, endpointRepo)
+func NewListModelsHandler(repo llmproxy.ModelRepository, endpointRepo llmproxy.EndpointRepository, userRepo identity.UserRepository) modelport.ListModelsHandler {
+	return modelquery.NewListModelsHandler(repo, endpointRepo, userRepo)
 }
 
 func NewUpdateProfileHandler(repo identity.UserRepository) identityport.UpdateProfileHandler {

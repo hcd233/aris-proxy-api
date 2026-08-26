@@ -218,6 +218,7 @@ func toModelAggregate(m *dbmodel.Model) (*aggregate.Model, error) {
 	if err != nil {
 		return nil, err
 	}
+	model.SetUserID(m.UserID)
 	model.SetModelID(m.ModelID)
 	model.SetTimestamps(m.CreatedAt, m.UpdatedAt)
 	return model, nil

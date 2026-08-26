@@ -9,6 +9,7 @@ import (
 	modelport "github.com/hcd233/aris-proxy-api/internal/application/model/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	commonutil "github.com/hcd233/aris-proxy-api/internal/common/util"
+	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
@@ -17,18 +18,32 @@ import (
 type listModelsHandler struct {
 	repo         llmproxy.ModelRepository
 	endpointRepo llmproxy.EndpointRepository
+	userRepo     identity.UserRepository
 }
 
 // NewListModelsHandler 构造查询处理器
-func NewListModelsHandler(repo llmproxy.ModelRepository, endpointRepo llmproxy.EndpointRepository) modelport.ListModelsHandler {
-	return &listModelsHandler{repo: repo, endpointRepo: endpointRepo}
+func NewListModelsHandler(repo llmproxy.ModelRepository, endpointRepo llmproxy.EndpointRepository, userRepo identity.UserRepository) modelport.ListModelsHandler {
+	return &listModelsHandler{repo: repo, endpointRepo: endpointRepo, userRepo: userRepo}
 }
 
 // Handle 执行列表查询
 func (h *listModelsHandler) Handle(ctx context.Context, q modelport.ListModelsQuery) ([]*modelport.ModelView, *model.PageInfo, error) {
 	log := logger.WithCtx(ctx)
 
-	models, pageInfo, err := h.repo.Paginate(ctx, q.CommonParam, q.ScopeUserID)
+	scope := q.ScopeUserID
+	if scope == 0 && q.Username != "" {
+		u, findErr := h.userRepo.FindByName(ctx, q.Username)
+		if findErr != nil {
+			log.Error("[ModelQuery] Find user by name failed", zap.Error(findErr))
+			return nil, nil, findErr
+		}
+		if u == nil {
+			return []*modelport.ModelView{}, &model.PageInfo{Page: q.Page, PageSize: q.PageSize}, nil
+		}
+		scope = u.AggregateID()
+	}
+
+	models, pageInfo, err := h.repo.Paginate(ctx, q.CommonParam, scope)
 	if err != nil {
 		log.Error("[ModelQuery] List models failed", zap.Error(err))
 		return nil, nil, err
@@ -40,6 +55,8 @@ func (h *listModelsHandler) Handle(ctx context.Context, q modelport.ListModelsQu
 		return nil, nil, err
 	}
 
+	usernamesByID := h.loadUsernames(ctx, models)
+
 	views := lo.Map(models, func(m *aggregate.Model, _ int) *modelport.ModelView {
 		upstreamModel := m.UpstreamModel()
 		if q.IsDemo {
@@ -47,6 +64,7 @@ func (h *listModelsHandler) Handle(ctx context.Context, q modelport.ListModelsQu
 		}
 		return &modelport.ModelView{
 			ID:              m.AggregateID(),
+			Username:        usernamesByID[m.UserID()],
 			Alias:           m.Alias().String(),
 			ModelID:         m.ModelID(),
 			UpstreamModel:   upstreamModel,
@@ -62,6 +80,24 @@ func (h *listModelsHandler) Handle(ctx context.Context, q modelport.ListModelsQu
 
 	log.Info("[ModelQuery] List models", zap.Int("count", len(views)))
 	return views, pageInfo, nil
+}
+
+// loadUsernames 一次性拉取本页 model 归属用户名，避免 N+1。
+func (h *listModelsHandler) loadUsernames(ctx context.Context, models []*aggregate.Model) map[uint]string {
+	out := make(map[uint]string, len(models))
+	ids := lo.Uniq(lo.Map(models, func(m *aggregate.Model, _ int) uint { return m.UserID() }))
+	if len(ids) == 0 {
+		return out
+	}
+	users, err := h.userRepo.BatchFindByIDs(ctx, ids)
+	if err != nil {
+		logger.WithCtx(ctx).Warn("[ModelQuery] Load usernames failed", zap.Error(err))
+		return out
+	}
+	for id, u := range users {
+		out[id] = string(u.Name())
+	}
+	return out
 }
 
 // loadEndpoints 一次性拉取本页所有 model 关联的 endpoint，避免 N+1。

@@ -10,6 +10,8 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	commonutil "github.com/hcd233/aris-proxy-api/internal/common/util"
+	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
+	useragg "github.com/hcd233/aris-proxy-api/internal/domain/identity/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
@@ -79,6 +81,7 @@ func newDemoFixture() (port.ListModelsHandler, error) {
 	return query.NewListModelsHandler(
 		&fakeModelRepo{models: []*aggregate.Model{m}, page: &model.PageInfo{Page: 1, PageSize: 20, Total: 1}},
 		&fakeEndpointRepo{endpoints: map[uint]*aggregate.Endpoint{1: ep}},
+		&fakeUserRepo{},
 	), nil
 }
 
@@ -158,3 +161,36 @@ func TestListModels_NonDemoKeepsRawValues(t *testing.T) {
 		t.Fatalf("Endpoint.AnthropicBaseURL unexpectedly changed: got %q, want %q", v.Endpoint.AnthropicBaseURL, anthropicBaseURL)
 	}
 }
+
+// fakeUserRepo 空实现：demo 脱敏测试不触发 username 回填路径。
+type fakeUserRepo struct{}
+
+func (f *fakeUserRepo) FindByID(context.Context, uint) (*useragg.User, error) { return nil, nil }
+func (f *fakeUserRepo) BatchFindByIDs(context.Context, []uint) (map[uint]*useragg.User, error) {
+	return map[uint]*useragg.User{}, nil
+}
+func (f *fakeUserRepo) Save(context.Context, *useragg.User) error { return nil }
+func (f *fakeUserRepo) Update(context.Context, *useragg.User) error {
+	return nil
+}
+func (f *fakeUserRepo) Create(context.Context, *useragg.User) (uint, error) { return 0, nil }
+func (f *fakeUserRepo) FindByGithubBindID(context.Context, string) (*useragg.User, error) {
+	return nil, nil
+}
+func (f *fakeUserRepo) FindByGoogleBindID(context.Context, string) (*useragg.User, error) {
+	return nil, nil
+}
+func (f *fakeUserRepo) FindByPermission(context.Context, enum.Permission) (*useragg.User, error) {
+	return nil, nil
+}
+func (f *fakeUserRepo) FindByName(context.Context, string) (*useragg.User, error) {
+	return nil, nil
+}
+func (f *fakeUserRepo) ReplaceDemoUser(context.Context, uint) (uint, error) { return 0, nil }
+func (f *fakeUserRepo) TouchLastLogin(context.Context, uint) error          { return nil }
+func (f *fakeUserRepo) ListUsers(context.Context, model.CommonParam, enum.Permission) ([]*useragg.User, *model.PageInfo, error) {
+	return nil, nil, nil
+}
+func (f *fakeUserRepo) DeleteCascade(context.Context, uint) error { return nil }
+
+var _ identity.UserRepository = (*fakeUserRepo)(nil)

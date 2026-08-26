@@ -6,11 +6,9 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/model/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
-	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 type deleteModelHandler struct {
@@ -26,7 +24,7 @@ func NewDeleteModelHandler(repo llmproxy.ModelRepository) port.DeleteModelHandle
 func (h *deleteModelHandler) Handle(ctx context.Context, cmd port.DeleteModelCommand) error {
 	log := logger.WithCtx(ctx)
 
-	m, err := h.repo.FindByID(ctx, cmd.ModelID, util.CtxValueUint(ctx, constant.CtxKeyUserID))
+	m, err := h.repo.FindByID(ctx, cmd.ModelID, cmd.ScopeUserID)
 	if err != nil {
 		return err
 	}
@@ -34,7 +32,7 @@ func (h *deleteModelHandler) Handle(ctx context.Context, cmd port.DeleteModelCom
 		return ierr.New(ierr.ErrDataNotExists, "model not found")
 	}
 
-	if err := h.repo.Delete(ctx, cmd.ModelID, util.CtxValueUint(ctx, constant.CtxKeyUserID)); err != nil {
+	if err := h.repo.Delete(ctx, cmd.ModelID, cmd.ScopeUserID); err != nil {
 		log.Error("[ModelCommand] Delete model failed", zap.Error(err))
 		return err
 	}

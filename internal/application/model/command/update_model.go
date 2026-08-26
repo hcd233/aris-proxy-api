@@ -6,12 +6,10 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/model/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
-	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 type updateModelHandler struct {
@@ -27,7 +25,7 @@ func NewUpdateModelHandler(repo llmproxy.ModelRepository) port.UpdateModelHandle
 func (h *updateModelHandler) Handle(ctx context.Context, cmd port.UpdateModelCommand) error {
 	log := logger.WithCtx(ctx)
 
-	m, err := h.repo.FindByID(ctx, cmd.ID, util.CtxValueUint(ctx, constant.CtxKeyUserID))
+	m, err := h.repo.FindByID(ctx, cmd.ID, cmd.ScopeUserID)
 	if err != nil {
 		log.Error("[ModelCommand] Find model for update failed", zap.Error(err))
 		return err

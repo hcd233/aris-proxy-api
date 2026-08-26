@@ -77,11 +77,11 @@ func (h *endpointHandler) HandleListEndpoints(ctx context.Context, req *dto.List
 	rsp := &dto.ListEndpointsRsp{}
 
 	perm := util.CtxValuePermission(ctx)
-	isAdminList := perm == enum.PermissionAdmin
+	isGlobalScope := perm == enum.PermissionAdmin
 	views, pageInfo, err := h.list.Handle(ctx, port.ListEndpointsQuery{
 		CommonParam: req.CommonParam,
 		IsDemo:      perm == enum.PermissionDemo,
-		ScopeUserID: lo.Ternary(isAdminList, 0, util.CtxValueUint(ctx, constant.CtxKeyUserID)),
+		ScopeUserID: lo.Ternary(isGlobalScope, 0, util.CtxValueUint(ctx, constant.CtxKeyUserID)),
 		Username:    req.Username,
 	})
 	if err != nil {
