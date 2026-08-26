@@ -103,7 +103,13 @@ func (r *auditRepository) ListByAPIKeyIDs(ctx context.Context, apiKeyIDs []uint,
 }
 
 // ListDistinctUserNames 查询去重的用户名列表。
-func (r *auditRepository) ListDistinctUserNames(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
+//
+// apiKeyIDs 为 nil 表示不过滤（admin/demo 路径）；非 nil 时按 key 过滤，
+// 空（用户名下无 Key）短路返回空结果，防止越权查全量。
+func (r *auditRepository) ListDistinctUserNames(ctx context.Context, apiKeyIDs []uint, keyword string, startTime, endTime time.Time) ([]string, error) {
+	if apiKeyIDs != nil && len(apiKeyIDs) == 0 {
+		return []string{}, nil
+	}
 	db := r.db.WithContext(ctx)
 
 	var names []string
@@ -112,6 +118,9 @@ func (r *auditRepository) ListDistinctUserNames(ctx context.Context, keyword str
 		Joins(constant.AuditDistinctJoinAPIKey).
 		Joins(constant.AuditDistinctJoinUser).
 		Where(constant.AuditDistinctWhereDeletedAtZero)
+	if apiKeyIDs != nil {
+		query = query.Where(fmt.Sprintf(constant.DBConditionInTemplate, "mca."+constant.FieldAPIKeyID), apiKeyIDs)
+	}
 	if !startTime.IsZero() {
 		query = query.Where(constant.AuditDistinctWhereCreatedAtGTE, startTime)
 	}
@@ -130,13 +139,22 @@ func (r *auditRepository) ListDistinctUserNames(ctx context.Context, keyword str
 }
 
 // ListDistinctModels 查询去重的模型列表。
-func (r *auditRepository) ListDistinctModels(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
+//
+// apiKeyIDs 为 nil 表示不过滤（admin/demo 路径）；非 nil 时按 key 过滤，
+// 空（用户名下无 Key）短路返回空结果，防止越权查全量。
+func (r *auditRepository) ListDistinctModels(ctx context.Context, apiKeyIDs []uint, keyword string, startTime, endTime time.Time) ([]string, error) {
+	if apiKeyIDs != nil && len(apiKeyIDs) == 0 {
+		return []string{}, nil
+	}
 	db := r.db.WithContext(ctx)
 
 	var models []string
 	query := db.Model(&dbmodel.ModelCallAudit{}).
 		Select(constant.AuditDistinctSelectModel).
 		Where(constant.DBConditionDeletedAtZero)
+	if apiKeyIDs != nil {
+		query = query.Where(constant.FieldAPIKeyID+" IN ?", apiKeyIDs)
+	}
 	if !startTime.IsZero() {
 		query = query.Where(constant.WhereCreatedAtGTE, startTime)
 	}
@@ -155,7 +173,13 @@ func (r *auditRepository) ListDistinctModels(ctx context.Context, keyword string
 }
 
 // ListDistinctStatusCodes 查询去重的上游状态码列表。
-func (r *auditRepository) ListDistinctStatusCodes(ctx context.Context, startTime, endTime time.Time) ([]string, error) {
+//
+// apiKeyIDs 为 nil 表示不过滤（admin/demo 路径）；非 nil 时按 key 过滤，
+// 空（用户名下无 Key）短路返回空结果，防止越权查全量。
+func (r *auditRepository) ListDistinctStatusCodes(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time) ([]string, error) {
+	if apiKeyIDs != nil && len(apiKeyIDs) == 0 {
+		return []string{}, nil
+	}
 	db := r.db.WithContext(ctx)
 
 	var codes []string
@@ -163,6 +187,9 @@ func (r *auditRepository) ListDistinctStatusCodes(ctx context.Context, startTime
 		Select(constant.AuditDistinctSelectStatus).
 		Where(constant.DBConditionDeletedAtZero).
 		Order(constant.FieldUpstreamStatusCode)
+	if apiKeyIDs != nil {
+		query = query.Where(constant.FieldAPIKeyID+" IN ?", apiKeyIDs)
+	}
 	if !startTime.IsZero() {
 		query = query.Where(constant.WhereCreatedAtGTE, startTime)
 	}
@@ -178,7 +205,13 @@ func (r *auditRepository) ListDistinctStatusCodes(ctx context.Context, startTime
 }
 
 // ListDistinctUserAgents 查询去重的 User-Agent 列表（排除空值）。
-func (r *auditRepository) ListDistinctUserAgents(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
+//
+// apiKeyIDs 为 nil 表示不过滤（admin/demo 路径）；非 nil 时按 key 过滤，
+// 空（用户名下无 Key）短路返回空结果，防止越权查全量。
+func (r *auditRepository) ListDistinctUserAgents(ctx context.Context, apiKeyIDs []uint, keyword string, startTime, endTime time.Time) ([]string, error) {
+	if apiKeyIDs != nil && len(apiKeyIDs) == 0 {
+		return []string{}, nil
+	}
 	db := r.db.WithContext(ctx)
 
 	var agents []string
@@ -186,6 +219,9 @@ func (r *auditRepository) ListDistinctUserAgents(ctx context.Context, keyword st
 		Select(constant.AuditDistinctSelectUA).
 		Where(constant.DBConditionDeletedAtZero).
 		Where(constant.AuditDistinctWhereUANotEmpty)
+	if apiKeyIDs != nil {
+		query = query.Where(constant.FieldAPIKeyID+" IN ?", apiKeyIDs)
+	}
 	if !startTime.IsZero() {
 		query = query.Where(constant.WhereCreatedAtGTE, startTime)
 	}

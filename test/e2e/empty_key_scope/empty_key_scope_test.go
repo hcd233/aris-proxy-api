@@ -170,4 +170,34 @@ func TestEmptyKeyUser_SeesNoPlatformData(t *testing.T) {
 	if previewRsp.TotalSessions != 0 {
 		t.Errorf("dataset preview: no-key user sees %d platform sessions, scope isolation broken", previewRsp.TotalSessions)
 	}
+
+	// 4. 筛选选项接口（2026-08-26 修复）：此前对普通用户返回全平台维度
+	// （用户名/邮箱等），与列表接口的 owner 隔离语义不一致；现在无 Key 用户
+	// 必须拿到空选项列表。
+	optionPaths := []string{
+		"/api/v1/audit/model/option/list?field=user&startTime=2025-09-01T00:00:00Z&endTime=2026-09-01T00:00:00Z",
+		"/api/v1/audit/model/option/list?field=model&startTime=2025-09-01T00:00:00Z&endTime=2026-09-01T00:00:00Z",
+		"/api/v1/session/option/list?field=model&startTime=2025-09-01T00:00:00Z&endTime=2026-09-01T00:00:00Z",
+	}
+	for _, p := range optionPaths {
+		status, body := doGetJSON(t, client, baseURL+p, userToken)
+		if status != http.StatusOK {
+			t.Errorf("%s expected 200, got %d: %s", p, status, body)
+			continue
+		}
+		if code := bizErrorCode(body); code != 0 {
+			t.Errorf("%s unexpected biz error code %d: %s", p, code, body)
+			continue
+		}
+		var rsp struct {
+			Items []any `json:"items"`
+		}
+		if err := sonic.Unmarshal(body, &rsp); err != nil {
+			t.Errorf("%s unmarshal failed: %v", p, err)
+			continue
+		}
+		if len(rsp.Items) != 0 {
+			t.Errorf("%s: no-key user sees platform-wide filter options (len=%d), option scope broken", p, len(rsp.Items))
+		}
+	}
 }

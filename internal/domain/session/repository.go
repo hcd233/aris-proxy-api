@@ -160,12 +160,12 @@ type SessionReadRepository interface {
 	FindMessagesByIDs(ctx context.Context, ids []uint) ([]*MessageDetailProjection, error)
 	// FindToolsByIDs 批量查询工具投影
 	FindToolsByIDs(ctx context.Context, ids []uint) ([]*ToolDetailProjection, error)
-	// ListDistinctScores 查询去重的评分列表（支持时间范围与会话 ID 集合过滤）
-	ListDistinctScores(ctx context.Context, startTime, endTime time.Time, sessionIDs []uint) ([]int, error)
-	// ListDistinctModels 查询去重的模型列表（支持时间范围、关键字与会话 ID 集合过滤）
-	ListDistinctModels(ctx context.Context, keyword string, startTime, endTime time.Time, sessionIDs []uint) ([]string, error)
-	// ListMessageCountStats 查询消息数统计（当前时间范围最大消息数 + 各固定桶的会话数，支持会话 ID 集合过滤）
-	ListMessageCountStats(ctx context.Context, startTime, endTime time.Time, sessionIDs []uint) (maxCount int, bucketCounts map[int]int64, err error)
+	// ListDistinctScores 查询去重的评分列表。ownerNames 为 nil 表示不过滤（admin/demo 白名单路径），非 nil 时按 owner 过滤（空列表返回空结果，名下无 Key 不得越权查全量）；sessionIDs 非 nil 时按会话 ID 集合过滤（demo 白名单）。
+	ListDistinctScores(ctx context.Context, ownerNames []string, startTime, endTime time.Time, sessionIDs []uint) ([]int, error)
+	// ListDistinctModels 查询去重的模型列表。ownerNames 为 nil 表示不过滤（admin/demo 白名单路径），非 nil 时按 owner 过滤（空列表返回空结果，名下无 Key 不得越权查全量）；sessionIDs 非 nil 时按会话 ID 集合过滤（demo 白名单）。
+	ListDistinctModels(ctx context.Context, ownerNames []string, keyword string, startTime, endTime time.Time, sessionIDs []uint) ([]string, error)
+	// ListMessageCountStats 查询消息数统计（当前时间范围最大消息数 + 各固定桶的会话数）。ownerNames 为 nil 表示不过滤（admin/demo 白名单路径），非 nil 时按 owner 过滤（空列表返回空结果，名下无 Key 不得越权查全量）；sessionIDs 非 nil 时按会话 ID 集合过滤（demo 白名单）。
+	ListMessageCountStats(ctx context.Context, ownerNames []string, startTime, endTime time.Time, sessionIDs []uint) (maxCount int, bucketCounts map[int]int64, err error)
 	// ListSessionsForExport 按筛选条件查询导出用会话行（不含消息内容，仅 IDs）
 	ListSessionsForExport(ctx context.Context, f ExportFilter) ([]*ExportSessionRow, error)
 	// PreviewExport 按筛选条件统计预览（会话数 + 评分分布 + 模型分布）

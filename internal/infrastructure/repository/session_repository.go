@@ -562,7 +562,13 @@ func BuildOrderedToolProjections(ids []uint, records []*dbmodel.Tool) []*session
 }
 
 // ListDistinctScores 查询去重的评分列表。
-func (r *sessionReadRepository) ListDistinctScores(ctx context.Context, startTime, endTime time.Time, sessionIDs []uint) ([]int, error) {
+//
+// ownerNames 为 nil 表示不过滤（admin/demo 白名单路径）；非 nil 且为空（用户名下
+// 无 Key）短路返回空结果，防止越权查全量。sessionIDs 非 nil 时按白名单过滤。
+func (r *sessionReadRepository) ListDistinctScores(ctx context.Context, ownerNames []string, startTime, endTime time.Time, sessionIDs []uint) ([]int, error) {
+	if ownerNames != nil && len(ownerNames) == 0 {
+		return []int{}, nil
+	}
 	db := r.db.WithContext(ctx)
 
 	var scores []int
@@ -570,6 +576,9 @@ func (r *sessionReadRepository) ListDistinctScores(ctx context.Context, startTim
 		Select(constant.SessionDistinctScoreSelect).
 		Where(constant.SessionDistinctScoreWhere).
 		Where(constant.DBConditionDeletedAtZero)
+	if ownerNames != nil {
+		query = query.Where(fmt.Sprintf(constant.DBConditionInTemplate, constant.FieldAPIKeyName), ownerNames)
+	}
 	if len(sessionIDs) > 0 {
 		query = query.Where(constant.FieldID+" IN ?", sessionIDs)
 	}
@@ -588,7 +597,13 @@ func (r *sessionReadRepository) ListDistinctScores(ctx context.Context, startTim
 }
 
 // ListDistinctModels 查询去重的模型列表。
-func (r *sessionReadRepository) ListDistinctModels(ctx context.Context, keyword string, startTime, endTime time.Time, sessionIDs []uint) ([]string, error) {
+//
+// ownerNames 为 nil 表示不过滤（admin/demo 白名单路径）；非 nil 且为空（用户名下
+// 无 Key）短路返回空结果，防止越权查全量。sessionIDs 非 nil 时按白名单过滤。
+func (r *sessionReadRepository) ListDistinctModels(ctx context.Context, ownerNames []string, keyword string, startTime, endTime time.Time, sessionIDs []uint) ([]string, error) {
+	if ownerNames != nil && len(ownerNames) == 0 {
+		return []string{}, nil
+	}
 	db := r.db.WithContext(ctx)
 
 	var models []string
@@ -596,6 +611,9 @@ func (r *sessionReadRepository) ListDistinctModels(ctx context.Context, keyword 
 		Select(constant.SessionDistinctModelSelect).
 		Where(constant.DBConditionDeletedAtZero).
 		Where(constant.SessionDistinctModelWhere)
+	if ownerNames != nil {
+		query = query.Where(fmt.Sprintf(constant.DBConditionInTemplate, constant.FieldAPIKeyName), ownerNames)
+	}
 	if len(sessionIDs) > 0 {
 		query = query.Where(constant.FieldID+" IN ?", sessionIDs)
 	}
@@ -619,15 +637,29 @@ func (r *sessionReadRepository) ListDistinctModels(ctx context.Context, keyword 
 // ListMessageCountStats 查询消息数统计：
 //   - maxCount：当前时间范围内最大的 session 消息数（无会话时为 0）
 //   - bucketCounts：各固定边界桶（0-10 / 11-50 / 51-100 / 101-200 / 201-500 / 501+）的会话数
-func (r *sessionReadRepository) ListMessageCountStats(ctx context.Context, startTime, endTime time.Time, sessionIDs []uint) (maxCount int, bucketCounts map[int]int64, err error) {
+//
+// ownerNames 为 nil 表示不过滤（admin/demo 白名单路径）；非 nil 且为空（用户名下
+// 无 Key）短路返回空结果，防止越权查全量。sessionIDs 非 nil 时按白名单过滤。
+func (r *sessionReadRepository) ListMessageCountStats(ctx context.Context, ownerNames []string, startTime, endTime time.Time, sessionIDs []uint) (maxCount int, bucketCounts map[int]int64, err error) {
+	if ownerNames != nil && len(ownerNames) == 0 {
+		return 0, map[int]int64{}, nil
+	}
 	db := r.db.WithContext(ctx)
+
+	ownerFilter := func(q *gorm.DB) *gorm.DB {
+		if ownerNames != nil {
+			q = q.Where(fmt.Sprintf(constant.DBConditionInTemplate, constant.FieldAPIKeyName), ownerNames)
+		}
+		if len(sessionIDs) > 0 {
+			q = q.Where(constant.FieldID+" IN ?", sessionIDs)
+		}
+		return q
+	}
 
 	maxQuery := db.Model(&dbmodel.Session{}).
 		Select(constant.SessionMessageCountMaxSelect).
 		Where(constant.DBConditionDeletedAtZero)
-	if len(sessionIDs) > 0 {
-		maxQuery = maxQuery.Where(constant.FieldID+" IN ?", sessionIDs)
-	}
+	maxQuery = ownerFilter(maxQuery)
 	if !startTime.IsZero() {
 		maxQuery = maxQuery.Where(constant.WhereCreatedAtGTE, startTime)
 	}
@@ -642,9 +674,7 @@ func (r *sessionReadRepository) ListMessageCountStats(ctx context.Context, start
 	subQuery := db.Model(&dbmodel.Session{}).
 		Select(constant.SessionMessageCountSQLExpr + " AS cnt").
 		Where(constant.DBConditionDeletedAtZero)
-	if len(sessionIDs) > 0 {
-		subQuery = subQuery.Where(constant.FieldID+" IN ?", sessionIDs)
-	}
+	subQuery = ownerFilter(subQuery)
 	if !startTime.IsZero() {
 		subQuery = subQuery.Where(constant.WhereCreatedAtGTE, startTime)
 	}
@@ -708,20 +738,22 @@ func applyExportFilter(sql *gorm.DB, f session.ExportFilter) *gorm.DB {
 	if !f.EndTime.IsZero() {
 		sql = sql.Where(constant.FieldCreatedAt+" <= ?", f.EndTime)
 	}
-	// OwnerNames 为 nil 表示不过滤（admin 路径）；非 nil 且为空（用户名下无 Key）恒假短路，
-	// 防止空 owner 列表被当作"不过滤"退化为全量导出（越权泄露全平台会话）
+	// OwnerNames 为 nil 表示不过滤（admin 路径）；非 nil 且为空（用户名下无 Key）
+	// 由两个导出入口短路返回空结果，此处不会收到非 nil 空列表
 	if f.OwnerNames != nil {
-		if len(f.OwnerNames) == 0 {
-			sql = sql.Where(constant.DBConditionAlwaysFalse)
-		} else {
-			sql = sql.Where(fmt.Sprintf(constant.DBConditionInTemplate, constant.FieldAPIKeyName), f.OwnerNames)
-		}
+		sql = sql.Where(fmt.Sprintf(constant.DBConditionInTemplate, constant.FieldAPIKeyName), f.OwnerNames)
 	}
 	return sql
 }
 
 // ListSessionsForExport 按筛选条件查询导出用会话行
 func (r *sessionReadRepository) ListSessionsForExport(ctx context.Context, f session.ExportFilter) ([]*session.ExportSessionRow, error) {
+	// OwnerNames 为 nil 表示不过滤（admin 路径）；非 nil 且为空（用户名下无 Key）
+	// 短路返回空结果，防止空 owner 列表退化为全量导出（越权泄露全平台会话；
+	// 与 audit/trace 守卫的入口短路风格统一）
+	if f.OwnerNames != nil && len(f.OwnerNames) == 0 {
+		return []*session.ExportSessionRow{}, nil
+	}
 	db := r.db.WithContext(ctx)
 	sql := db.Model(&dbmodel.Session{}).Select(constant.SessionExportSelect)
 	sql = applyExportFilter(sql, f)
@@ -749,6 +781,11 @@ type exportPreviewRow struct {
 }
 
 func (r *sessionReadRepository) PreviewExport(ctx context.Context, f session.ExportFilter) (*session.ExportPreview, error) {
+	// OwnerNames 为 nil 表示不过滤（admin 路径）；非 nil 且为空（用户名下无 Key）
+	// 短路返回空预览，防止空 owner 列表退化为全量统计（与导出主链路守卫一致）
+	if f.OwnerNames != nil && len(f.OwnerNames) == 0 {
+		return &session.ExportPreview{}, nil
+	}
 	db := r.db.WithContext(ctx)
 	sql := db.Model(&dbmodel.Session{}).
 		Select(constant.SessionExportPreviewSelect).

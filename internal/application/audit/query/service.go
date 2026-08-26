@@ -136,13 +136,18 @@ func toPortAuditLogViews(views []*AuditLogView) []*port.AuditLogView {
 	})
 }
 
-func (s *auditService) ListAuditOption(ctx context.Context, permission enum.Permission, field, keyword string, startTime, endTime time.Time) ([]string, error) {
-	items, err := s.listAuditOption.Handle(ctx, ListAuditOptionQuery{
+func (s *auditService) ListAuditOption(ctx context.Context, permission enum.Permission, userID uint, field, keyword string, startTime, endTime time.Time) ([]string, error) {
+	query := ListAuditOptionQuery{
 		Field:     field,
 		Keyword:   keyword,
 		StartTime: startTime,
 		EndTime:   endTime,
-	})
+	}
+	// user 视角按名下 key 范围过滤选项（admin/demo 全量，demo 的身份脱敏在下方统一处理）
+	if permission == enum.PermissionUser {
+		query.UserID = userID
+	}
+	items, err := s.listAuditOption.Handle(ctx, query)
 	if err != nil {
 		return nil, err
 	}

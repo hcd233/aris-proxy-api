@@ -40,17 +40,17 @@ type AuditRepository interface {
 	// BatchGetRelations 批量查询审计列表所需的 API Key/User 展示信息。
 	BatchGetRelations(ctx context.Context, apiKeyIDs []uint) (map[uint]*AuditRelation, error)
 
-	// ListDistinctUserNames 查询去重的用户名列表（支持模糊搜索与时间范围）
-	ListDistinctUserNames(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error)
+	// ListDistinctUserNames 查询去重的用户名列表。apiKeyIDs 为 nil 时查全部（admin/demo），非 nil 时按 key 过滤（空列表返回空结果，名下无 Key 不得越权查全量）。
+	ListDistinctUserNames(ctx context.Context, apiKeyIDs []uint, keyword string, startTime, endTime time.Time) ([]string, error)
 
-	// ListDistinctModels 查询去重的模型列表（支持模糊搜索与时间范围）
-	ListDistinctModels(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error)
+	// ListDistinctModels 查询去重的模型列表。apiKeyIDs 为 nil 时查全部（admin/demo），非 nil 时按 key 过滤（空列表返回空结果，名下无 Key 不得越权查全量）。
+	ListDistinctModels(ctx context.Context, apiKeyIDs []uint, keyword string, startTime, endTime time.Time) ([]string, error)
 
-	// ListDistinctStatusCodes 查询去重的上游状态码列表（支持时间范围）
-	ListDistinctStatusCodes(ctx context.Context, startTime, endTime time.Time) ([]string, error)
+	// ListDistinctStatusCodes 查询去重的上游状态码列表。apiKeyIDs 为 nil 时查全部（admin/demo），非 nil 时按 key 过滤（空列表返回空结果，名下无 Key 不得越权查全量）。
+	ListDistinctStatusCodes(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time) ([]string, error)
 
-	// ListDistinctUserAgents 查询去重的 User-Agent 列表（支持模糊搜索与时间范围，排除空值）
-	ListDistinctUserAgents(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error)
+	// ListDistinctUserAgents 查询去重的 User-Agent 列表（排除空值）。apiKeyIDs 为 nil 时查全部（admin/demo），非 nil 时按 key 过滤（空列表返回空结果，名下无 Key 不得越权查全量）。
+	ListDistinctUserAgents(ctx context.Context, apiKeyIDs []uint, keyword string, startTime, endTime time.Time) ([]string, error)
 
 	// QueryModelTrend 按模型 + 时间桶统计调用次数。apiKeyIDs 为 nil 时查全部（admin），非 nil 时按 key 过滤（空列表返回空结果，名下无 Key 不得越权查全量）。
 	QueryModelTrend(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*ModelTrendPoint, error)
