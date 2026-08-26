@@ -39,6 +39,15 @@ type ModelAliasProjection struct {
 	Alias string
 }
 
+// ModelDetailProjection 启用模型的完整只读投影
+type ModelDetailProjection struct {
+	Alias           string
+	UpstreamModel   string
+	ContextLength   int
+	MaxOutputTokens int
+	Capabilities    []string
+}
+
 // EndpointProjection 端点只读投影
 type EndpointProjection struct {
 	ID                          uint
@@ -54,5 +63,6 @@ type EndpointProjection struct {
 // EndpointReadRepository CQRS 读模型仓储接口
 type EndpointReadRepository interface {
 	ListAliases(ctx context.Context) ([]*ModelAliasProjection, error)
+	ListEnabledModelDetails(ctx context.Context) ([]*ModelDetailProjection, error)
 	FindEndpointByAlias(ctx context.Context, alias string, matcher func(*EndpointProjection) bool) (*EndpointProjection, *ModelAliasProjection, error)
 }
