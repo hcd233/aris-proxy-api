@@ -11,9 +11,14 @@ export interface FilterToken {
   value: string;
 }
 
+/**
+ * 值序列化：含空白或 `|` 时整体加引号成为单值字面量。
+ * DSL 无转义机制，值内的 `"` 无法原样表达——降级为 `'`（视觉近似，
+ * 优于静默丢字符；后端 parser 对齐，见 internal/common/filter/parser.go）。
+ */
 function escapeValue(value: string): string {
   if (/[\s|"]/.test(value)) {
-    return `"${value.replace(/"/g, "")}"`;
+    return `"${value.replace(/"/g, "'")}"`;
   }
   return value;
 }

@@ -34,6 +34,7 @@ import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
+import { copyTextToClipboard } from "@/lib/clipboard";
 
 import "highlight.js/styles/atom-one-dark.css";
 
@@ -160,18 +161,14 @@ function CodeBlock({
   const t = useT();
 
   const onCopy = () => {
-    // 非安全上下文（纯 HTTP 非 localhost）下 clipboard API 不存在
-    if (!navigator.clipboard) {
-      toast.error(t("common.copy_failed"));
-      return;
-    }
-    void navigator.clipboard.writeText(value).then(
-      () => {
+    void copyTextToClipboard(value).then((ok) => {
+      if (ok) {
         setCopied(true);
         window.setTimeout(() => setCopied(false), 1400);
-      },
-      () => toast.error(t("common.copy_failed")),
-    );
+      } else {
+        toast.error(t("common.copy_failed"));
+      }
+    });
   };
 
   return (

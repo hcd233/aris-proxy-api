@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/table";
 import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { useT } from "@/lib/i18n";
+import { copyTextToClipboard } from "@/lib/clipboard";
 
 export default function SharesPage() {
   const t = useT();
@@ -89,12 +90,12 @@ export default function SharesPage() {
   const handleCopy = useCallback(
     async (share: ShareItem) => {
       const url = buildShareURL(share.shareId);
-      try {
-        await navigator.clipboard.writeText(url);
+      const ok = await copyTextToClipboard(url);
+      if (ok) {
         setCopiedID(share.shareId);
         toast.success(t("common.copied_to_clipboard"));
         window.setTimeout(() => setCopiedID(null), 2000);
-      } catch {
+      } else {
         toast.error(t("shares.copy_error"));
       }
     },

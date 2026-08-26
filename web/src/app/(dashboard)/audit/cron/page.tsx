@@ -27,6 +27,7 @@ import { computeRange } from "@/lib/time-range";
 import { FilterBar } from "@/components/filter-bar/filter-bar";
 import { useFilterBar } from "@/components/filter-bar/use-filter-bar";
 import type { FacetDef, FilterBarQueryParams } from "@/components/filter-bar/types";
+import { copyTextToClipboard } from "@/lib/clipboard";
 import {
   TooltipProvider,
   TooltipRoot,
@@ -172,9 +173,8 @@ export default function CronAuditPage() {
 
   const handleCopyTrace = (traceId: string) => {
     if (!traceId) return;
-    navigator.clipboard.writeText(traceId).then(
-      () => toast.success(t("cron_audit.trace_copied")),
-      () => toast.error(t("cron_audit.copy_failed")),
+    void copyTextToClipboard(traceId).then((ok) =>
+      ok ? toast.success(t("cron_audit.trace_copied")) : toast.error(t("cron_audit.copy_failed")),
     );
   };
 

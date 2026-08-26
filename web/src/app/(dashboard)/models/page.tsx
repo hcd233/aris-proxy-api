@@ -89,6 +89,7 @@ import {
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useT } from "@/lib/i18n";
+import { copyTextToClipboard } from "@/lib/clipboard";
 
 interface ModelForm {
   alias: string;
@@ -408,9 +409,8 @@ export default function ModelsPage() {
   // 与 trigger 页一致：点击 alias 文本复制到剪贴板
   const handleCopyAlias = (alias: string) => {
     if (!alias) return;
-    navigator.clipboard.writeText(alias).then(
-      () => toast.success(t("common.copied_to_clipboard")),
-      () => toast.error(t("common.copy_failed")),
+    void copyTextToClipboard(alias).then((ok) =>
+      ok ? toast.success(t("common.copied_to_clipboard")) : toast.error(t("common.copy_failed")),
     );
   };
 
@@ -587,12 +587,21 @@ export default function ModelsPage() {
                                   size={14}
                                   className="shrink-0"
                                 />
-                                <span
-                                  className="cursor-pointer underline-offset-2 hover:underline"
-                                  onClick={() => handleCopyAlias(model.alias)}
-                                >
-                                  {model.alias}
-                                </span>
+                                <TooltipRoot>
+                                  <TooltipTrigger
+                                    render={
+                                      <span
+                                        className="cursor-pointer underline-offset-2 hover:underline"
+                                        onClick={() => handleCopyAlias(model.alias)}
+                                      >
+                                        {model.alias}
+                                      </span>
+                                    }
+                                  />
+                                  <TooltipContent side="top" className="max-w-xs break-all">
+                                    {t("models.click_to_copy")}
+                                  </TooltipContent>
+                                </TooltipRoot>
                               </p>
                               <TooltipRoot>
                                 <TooltipTrigger

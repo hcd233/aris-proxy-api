@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { useT } from "@/lib/i18n";
+import { copyTextToClipboard } from "@/lib/clipboard";
 import { Check, Copy, Search, Terminal, X } from "lucide-react";
 
 /* ─── 通用工具 ─── */
@@ -125,7 +126,7 @@ export function ExportDialogShell({
 
   const handleCopy = useCallback(async () => {
     if (!script) return;
-    await navigator.clipboard.writeText(script);
+    await copyTextToClipboard(script);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }, [script]);

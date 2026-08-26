@@ -39,6 +39,7 @@ import { useDeleteConfirm } from "@/hooks/use-delete-confirm";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { copyTextToClipboard } from "@/lib/clipboard";
 
 /** 动作徽章：点击循环切换 deny→omit→capture，悬停用 Tooltip 展示切换提示 */
 function ActionBadge({
@@ -204,9 +205,8 @@ export default function TriggerPage() {
 
   const handleCopyWord = (word: string) => {
     if (!word) return;
-    navigator.clipboard.writeText(word).then(
-      () => toast.success(t("common.copied_to_clipboard")),
-      () => toast.error(t("common.copy_failed")),
+    void copyTextToClipboard(word).then((ok) =>
+      ok ? toast.success(t("common.copied_to_clipboard")) : toast.error(t("common.copy_failed")),
     );
   };
 
@@ -253,6 +253,7 @@ export default function TriggerPage() {
 
   return (
     <PermissionGuard adminOnly module="trigger">
+      <TooltipProvider>
       <div className="space-y-8">
         <PageHeader title={t("trigger.title")} description={t("trigger.subtitle")} />
 
@@ -314,23 +315,21 @@ export default function TriggerPage() {
                                 onToggle={() => toggleSelect(item.id)}
                               />
                               <div className="min-w-0 flex-1">
-                                <TooltipProvider>
-                                  <TooltipRoot>
-                                    <TooltipTrigger
-                                      render={
-                                        <p
-                                          className="cursor-pointer text-sm font-medium underline-offset-2 hover:underline"
-                                          onClick={() => handleCopyWord(item.word)}
-                                        >
-                                          {item.word}
-                                        </p>
-                                      }
-                                    />
-                                    <TooltipContent side="top">
-                                      {t("trigger.copy_word_title")}
-                                    </TooltipContent>
-                                  </TooltipRoot>
-                                </TooltipProvider>
+                                <TooltipRoot>
+                                  <TooltipTrigger
+                                    render={
+                                      <p
+                                        className="cursor-pointer text-sm font-medium underline-offset-2 hover:underline"
+                                        onClick={() => handleCopyWord(item.word)}
+                                      >
+                                        {item.word}
+                                      </p>
+                                    }
+                                  />
+                                  <TooltipContent side="top">
+                                    {t("trigger.copy_word_title")}
+                                  </TooltipContent>
+                                </TooltipRoot>
                                 <p className="mt-0.5 text-xs text-muted-foreground">
                                   {t("trigger.hit_count")}: {item.hitCount}
                                 </p>
@@ -396,23 +395,21 @@ export default function TriggerPage() {
                             </TableCell>
                             <TableCell className="text-muted-foreground">{item.id}</TableCell>
                             <TableCell className="font-medium">
-                              <TooltipProvider>
-                                <TooltipRoot>
-                                  <TooltipTrigger
-                                    render={
-                                      <span
-                                        className="cursor-pointer underline-offset-2 hover:underline"
-                                        onClick={() => handleCopyWord(item.word)}
-                                      >
-                                        {item.word}
-                                      </span>
-                                    }
-                                  />
-                                  <TooltipContent side="top">
-                                    {t("trigger.copy_word_title")}
-                                  </TooltipContent>
-                                </TooltipRoot>
-                              </TooltipProvider>
+                              <TooltipRoot>
+                                <TooltipTrigger
+                                  render={
+                                    <span
+                                      className="cursor-pointer underline-offset-2 hover:underline"
+                                      onClick={() => handleCopyWord(item.word)}
+                                    >
+                                      {item.word}
+                                    </span>
+                                  }
+                                />
+                                <TooltipContent side="top">
+                                  {t("trigger.copy_word_title")}
+                                </TooltipContent>
+                              </TooltipRoot>
                             </TableCell>
                             <TableCell>
                               <ActionBadge
@@ -477,6 +474,7 @@ export default function TriggerPage() {
           onConfirm={handleBatchDelete}
         />
       </div>
+    </TooltipProvider>
     </PermissionGuard>
   );
 }

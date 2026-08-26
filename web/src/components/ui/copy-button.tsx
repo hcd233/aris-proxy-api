@@ -13,6 +13,7 @@ import { useState, type MouseEvent } from "react";
 import { Check, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { copyTextToClipboard } from "@/lib/clipboard";
 import { useT } from "@/lib/i18n";
 
 interface CopyButtonProps {
@@ -30,18 +31,14 @@ export function CopyButton({ value, ariaLabel, variant = "label", className }: C
   const onCopy = (e: MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
     if (!value) return;
-    // 非安全上下文（纯 HTTP 非 localhost）下 clipboard API 不存在
-    if (!navigator.clipboard) {
-      toast.error(t("common.copy_failed"));
-      return;
-    }
-    void navigator.clipboard.writeText(value).then(
-      () => {
+    void copyTextToClipboard(value).then((ok) => {
+      if (ok) {
         setCopied(true);
         window.setTimeout(() => setCopied(false), 1400);
-      },
-      () => toast.error(t("common.copy_failed")),
-    );
+      } else {
+        toast.error(t("common.copy_failed"));
+      }
+    });
   };
 
   return (

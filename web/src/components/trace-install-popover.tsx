@@ -8,6 +8,7 @@ import { Check, Copy, Radar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useT } from "@/lib/i18n";
+import { copyTextToClipboard } from "@/lib/clipboard";
 
 hljs.registerLanguage("bash", bash);
 
@@ -40,13 +41,9 @@ export default function TraceInstallPopover() {
   );
 
   const handleCopy = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(generateInstallCommand(host));
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      /* noop */
-    }
+    await copyTextToClipboard(generateInstallCommand(host));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }, [host]);
 
   return (

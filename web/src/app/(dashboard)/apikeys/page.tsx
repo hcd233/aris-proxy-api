@@ -42,6 +42,7 @@ import { FilterBar } from "@/components/filter-bar/filter-bar";
 import { useFilterBar } from "@/components/filter-bar/use-filter-bar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useT } from "@/lib/i18n";
+import { copyTextToClipboard } from "@/lib/clipboard";
 
 export default function APIKeysPage() {
   const t = useT();
@@ -129,10 +130,15 @@ export default function APIKeysPage() {
   });
 
   const handleCopy = (key: string) => {
-    navigator.clipboard.writeText(key);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-    toast.success(t("common.copied_to_clipboard"));
+    void copyTextToClipboard(key).then((ok) => {
+      if (ok) {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+        toast.success(t("common.copied_to_clipboard"));
+      } else {
+        toast.error(t("common.copy_failed"));
+      }
+    });
   };
 
   const closeCreateDialog = () => {
