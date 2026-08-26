@@ -65,3 +65,39 @@ const (
 	ClientModelParentRel    = ".."
 	ClientModelParentRelSep = "../"
 )
+
+// ClientModelCodexExtra Codex/Claude Code 配置细节常量
+const (
+	// ClientModelLabelArisProxy Codex provider 展示名
+	ClientModelLabelArisProxy = "Aris Proxy"
+	// ClientModelDefaultMemoryModel memories 表模型缺省值
+	ClientModelDefaultMemoryModel = ""
+	// ClientModelKeyEnv Claude Code settings.json 的 env 键
+	ClientModelKeyEnv = "env"
+)
+
+// ClaudeCodeEnvKeys Claude Code tier → 环境变量名
+const (
+	ClaudeEnvBaseURL    = "ANTHROPIC_BASE_URL"
+	ClaudeEnvAuthToken  = "ANTHROPIC_AUTH_TOKEN"
+	ClaudeTierOpusKey   = "ANTHROPIC_DEFAULT_OPUS_MODEL"
+	ClaudeTierSonnetKey = "ANTHROPIC_DEFAULT_SONNET_MODEL"
+	ClaudeTierHaikuKey  = "ANTHROPIC_DEFAULT_HAIKU_MODEL"
+)
+
+// ClaudeTierOrder / ClaudeTierEnvKeys tier 顺序与对应环境变量
+var ClaudeTierOrder = []string{"opus", "sonnet", "haiku"}
+
+var ClaudeTierEnvKeys = map[string]string{
+	"opus":   ClaudeTierOpusKey,
+	"sonnet": ClaudeTierSonnetKey,
+	"haiku":  ClaudeTierHaikuKey,
+}
+
+// ClientModelMisc 通用杂项常量
+const (
+	ClientModelCRLF     = "\r\n"
+	ClientModelLF       = "\n"
+	ClientModelModelKey = "model"
+	ClientModelSpaceSep = " "
+)
