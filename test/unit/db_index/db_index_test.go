@@ -68,6 +68,45 @@ func TestModelCallAuditAutoMigrateIndexes(t *testing.T) {
 	}
 }
 
+// TestEndpointModelAutoMigrateUserScopeIndexes 验证多租户化后的复合唯一索引包含 user_id。
+func TestEndpointModelAutoMigrateUserScopeIndexes(t *testing.T) {
+	t.Parallel()
+	db := newTestDB(t)
+	if err := db.AutoMigrate(&dbmodel.Endpoint{}, &dbmodel.Model{}); err != nil {
+		t.Fatalf("failed to migrate: %v", err)
+	}
+
+	want := map[string][]string{
+		"idx_endpoint_name_deleted":        {"user_id", "name", "deleted_at"},
+		"idx_model_alias_endpoint_deleted": {"user_id", "alias", "endpoint_id", "deleted_at"},
+	}
+	got := map[string][]string{}
+	rows, err := db.Raw("SELECT name, sql FROM sqlite_master WHERE type = 'index' AND tbl_name IN ('endpoints','models')").Rows()
+	if err != nil {
+		t.Fatalf("failed to query sqlite_master: %v", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var name, sql string
+		if err := rows.Scan(&name, &sql); err != nil {
+			t.Fatalf("scan failed: %v", err)
+		}
+		if cols, ok := want[name]; ok {
+			for _, c := range cols {
+				if !strings.Contains(sql, c) {
+					t.Errorf("index %s missing column %s, sql: %s", name, c, sql)
+				}
+			}
+			got[name] = cols
+		}
+	}
+	for name := range want {
+		if _, ok := got[name]; !ok {
+			t.Errorf("expected index %q not found", name)
+		}
+	}
+}
+
 // toolChecksumIndexName tools 表 checksum 复合唯一索引名
 const toolChecksumIndexName = "idx_tool_checksum_deleted"
 
