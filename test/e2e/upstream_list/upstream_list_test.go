@@ -142,7 +142,7 @@ func TestUpstreamList_GroupPaginationAndTotals(t *testing.T) {
 	aliasA := fmt.Sprintf("e2e-upl-ma-%d", stamp)
 	aliasB := fmt.Sprintf("e2e-upl-mb-%d", stamp)
 
-	createBody := fmt.Sprintf(`{"body":{"name":%q,"apiKey":"sk-e2e","openaiBaseURL":"https://o.example.com/v1","supportOpenAIChatCompletion":true}}`, epName)
+	createBody := fmt.Sprintf(`{"name":%q,"apiKey":"sk-e2e","openaiBaseURL":"https://o.example.com/v1","supportOpenAIChatCompletion":true}`, epName)
 	status, data := doJSON(t, http.MethodPost, baseURL+"/api/v1/endpoint", token, []byte(createBody))
 	if status != http.StatusOK {
 		t.Fatalf("create endpoint: status=%d body=%s", status, data)
@@ -162,7 +162,7 @@ func TestUpstreamList_GroupPaginationAndTotals(t *testing.T) {
 	t.Cleanup(cleanup)
 
 	for _, alias := range []string{aliasA, aliasB} {
-		body := fmt.Sprintf(`{"body":{"alias":%q,"upstreamModel":"up-%s","endpointID":%d}}`, alias, epName, mustEndpointIDByName(t, baseURL, token, epName))
+		body := fmt.Sprintf(`{"alias":%q,"upstreamModel":"up-%s","endpointID":%d}`, alias, epName, mustEndpointIDByName(t, baseURL, token, epName))
 		status, data = doJSON(t, http.MethodPost, baseURL+"/api/v1/model", token, []byte(body))
 		if status != http.StatusOK {
 			t.Fatalf("create model %s: status=%d body=%s", alias, status, data)
@@ -202,7 +202,7 @@ func TestUpstreamList_KeywordAggregatesWholeGroup(t *testing.T) {
 	aliasB := fmt.Sprintf("e2e-upk-bb-%d", stamp)
 
 	status, data := doJSON(t, http.MethodPost, baseURL+"/api/v1/endpoint", token,
-		[]byte(fmt.Sprintf(`{"body":{"name":%q,"apiKey":"sk-e2e","supportOpenAIChatCompletion":true}}`, epName)))
+		[]byte(fmt.Sprintf(`{"name":%q,"apiKey":"sk-e2e","openaiBaseURL":"https://o.example.com/v1","supportOpenAIChatCompletion":true}`, epName)))
 	if status != http.StatusOK {
 		t.Fatalf("create endpoint: status=%d body=%s", status, data)
 	}
@@ -218,7 +218,7 @@ func TestUpstreamList_KeywordAggregatesWholeGroup(t *testing.T) {
 
 	epID := mustEndpointIDByName(t, baseURL, token, epName)
 	for _, alias := range []string{aliasA, aliasB} {
-		body := fmt.Sprintf(`{"body":{"alias":%q,"upstreamModel":"up-%s","endpointID":%d}}`, alias, alias, epID)
+		body := fmt.Sprintf(`{"alias":%q,"upstreamModel":"up-%s","endpointID":%d}`, alias, alias, epID)
 		status, data = doJSON(t, http.MethodPost, baseURL+"/api/v1/model", token, []byte(body))
 		if status != http.StatusOK {
 			t.Fatalf("create model %s: status=%d body=%s", alias, status, data)
@@ -244,7 +244,7 @@ func TestUpstreamList_NestedUserObject(t *testing.T) {
 	epName := fmt.Sprintf("e2e-upu-ep-%d", stamp)
 
 	status, data := doJSON(t, http.MethodPost, baseURL+"/api/v1/endpoint", token,
-		[]byte(fmt.Sprintf(`{"body":{"name":%q,"apiKey":"sk-e2e","supportOpenAIChatCompletion":true}}`, epName)))
+		[]byte(fmt.Sprintf(`{"name":%q,"apiKey":"sk-e2e","openaiBaseURL":"https://o.example.com/v1","supportOpenAIChatCompletion":true}`, epName)))
 	if status != http.StatusOK {
 		t.Fatalf("create endpoint: status=%d body=%s", status, data)
 	}
@@ -282,14 +282,14 @@ func TestUpstreamList_ScopeIsolationAndCascadingDelete(t *testing.T) {
 	alias := fmt.Sprintf("e2e-ups-m-%d", stamp)
 
 	status, data := doJSON(t, http.MethodPost, baseURL+"/api/v1/endpoint", token,
-		[]byte(fmt.Sprintf(`{"body":{"name":%q,"apiKey":"sk-e2e","supportOpenAIChatCompletion":true}}`, epName)))
+		[]byte(fmt.Sprintf(`{"name":%q,"apiKey":"sk-e2e","openaiBaseURL":"https://o.example.com/v1","supportOpenAIChatCompletion":true}`, epName)))
 	if status != http.StatusOK {
 		t.Fatalf("create endpoint: status=%d body=%s", status, data)
 	}
 
 	epID := mustEndpointIDByName(t, baseURL, token, epName)
 	status, data = doJSON(t, http.MethodPost, baseURL+"/api/v1/model", token,
-		[]byte(fmt.Sprintf(`{"body":{"alias":%q,"upstreamModel":"up-%d","endpointID":%d}}`, alias, stamp, epID)))
+		[]byte(fmt.Sprintf(`{"alias":%q,"upstreamModel":"up-%d","endpointID":%d}`, alias, stamp, epID)))
 	if status != http.StatusOK {
 		t.Fatalf("create model: status=%d body=%s", status, data)
 	}

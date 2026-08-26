@@ -195,7 +195,7 @@ func (r *endpointRepository) Paginate(ctx context.Context, param model.CommonPar
 // scopeUserID==0（admin 视角）不过滤。
 func (r *endpointRepository) FindIDsByScope(ctx context.Context, scopeUserID uint) ([]uint, error) {
 	db := r.db.WithContext(ctx)
-	q := db.Model(&dbmodel.Endpoint{})
+	q := db.Model(&dbmodel.Endpoint{}).Where(constant.DBConditionDeletedAtZero)
 	if scopeUserID > 0 {
 		q = q.Where(constant.FieldUserID, scopeUserID)
 	}

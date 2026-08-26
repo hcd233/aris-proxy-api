@@ -31,7 +31,7 @@ import (
 const e2eHTTPTimeout = 30 * time.Second
 
 type bizError struct {
-	Code    string `json:"code"`
+	Code    int64  `json:"code"`
 	Message string `json:"message"`
 }
 
@@ -108,7 +108,7 @@ func TestUserScope_ConfigLifecycle(t *testing.T) {
 	}
 
 	// 1. admin 代建 endpoint（ownerUserID 指定自身）
-	createBody := fmt.Sprintf(`{"body":{"ownerUserID":1,"name":%q,"apiKey":"sk-e2e","openaiBaseURL":"https://o.example.com/v1","supportOpenAIChatCompletion":true}}`, epName)
+	createBody := fmt.Sprintf(`{"ownerUserID":1,"name":%q,"apiKey":"sk-e2e","openaiBaseURL":"https://o.example.com/v1","supportOpenAIChatCompletion":true}`, epName)
 	status, data := doJSON(t, http.MethodPost, baseURL+"/api/v1/endpoint", token, []byte(createBody))
 	if status != http.StatusOK {
 		t.Fatalf("create endpoint: status=%d body=%s", status, data)
@@ -122,7 +122,7 @@ func TestUserScope_ConfigLifecycle(t *testing.T) {
 	}
 	cleanup := func() {
 		// 按 name 找到 id 后删除
-		_, listData := doJSON(t, http.MethodGet, baseURL+"/api/v1/upstream/list?query="+epName+"&pageSize=100", token, nil)
+		_, listData := doJSON(t, http.MethodGet, baseURL+"/api/v1/upstream/list?page=1&pageSize=100&query="+epName, token, nil)
 		var list listUpstreamRsp
 		if err := sonic.Unmarshal(listData, &list); err != nil {
 			return
@@ -140,7 +140,7 @@ func TestUserScope_ConfigLifecycle(t *testing.T) {
 
 	// 2. username 过滤：命中 admin 名下的端点且响应带归属用户名
 	status, data = doJSON(t, http.MethodGet,
-		fmt.Sprintf("%s/api/v1/upstream/list?query=%s&username=%s&pageSize=100", baseURL, epName, adminName), token, nil)
+		fmt.Sprintf("%s/api/v1/upstream/list?page=1&pageSize=100&query=%s&username=%s", baseURL, epName, adminName), token, nil)
 	if status != http.StatusOK {
 		t.Fatalf("list upstream by username: status=%d body=%s", status, data)
 	}
@@ -168,7 +168,7 @@ func TestUserScope_ConfigLifecycle(t *testing.T) {
 
 	// 3. 不存在的 username → 空列表而非错误
 	status, data = doJSON(t, http.MethodGet,
-		fmt.Sprintf("%s/api/v1/upstream/list?query=%s&username=%s", baseURL, epName, "no-such-user-xyz-"+strconv.FormatInt(stamp, 10)), token, nil)
+		fmt.Sprintf("%s/api/v1/upstream/list?page=1&pageSize=20&query=%s&username=%s", baseURL, epName, "no-such-user-xyz-"+strconv.FormatInt(stamp, 10)), token, nil)
 	if status != http.StatusOK {
 		t.Fatalf("list with unknown username: status=%d body=%s", status, data)
 	}
@@ -184,7 +184,7 @@ func TestUserScope_ConfigLifecycle(t *testing.T) {
 	}
 
 	// 4. 在该端点上创建 model
-	modelBody := fmt.Sprintf(`{"body":{"alias":%q,"upstreamModel":"upstream-%d","endpointID":%d}}`, alias, stamp, endpointID)
+	modelBody := fmt.Sprintf(`{"alias":%q,"upstreamModel":"upstream-%d","endpointID":%d}`, alias, stamp, endpointID)
 	status, data = doJSON(t, http.MethodPost, baseURL+"/api/v1/model", token, []byte(modelBody))
 	if status != http.StatusOK {
 		t.Fatalf("create model: status=%d body=%s", status, data)
@@ -192,7 +192,7 @@ func TestUserScope_ConfigLifecycle(t *testing.T) {
 
 	// 5. username 过滤可见该 model
 	status, data = doJSON(t, http.MethodGet,
-		fmt.Sprintf("%s/api/v1/upstream/list?query=%s&username=%s&pageSize=100", baseURL, alias, adminName), token, nil)
+		fmt.Sprintf("%s/api/v1/upstream/list?page=1&pageSize=100&query=%s&username=%s", baseURL, alias, adminName), token, nil)
 	if status != http.StatusOK {
 		t.Fatalf("list models via upstream by username: status=%d body=%s", status, data)
 	}
