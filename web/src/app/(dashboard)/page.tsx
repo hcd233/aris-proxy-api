@@ -83,18 +83,16 @@ export default function DashboardPage() {
         api.listSessions({ page: 1, pageSize: 1 }).catch(() => null),
       ]);
 
-      const canListEndpoints = isAdmin() || isModuleOpen("endpoints");
-      const canListModels = isAdmin() || isModuleOpen("models");
-      const endpointsRsp = canListEndpoints
-        ? await api.listEndpoints(1, 1).catch(() => null)
-        : null; // 仅探测是否存在 endpoint
-      const modelsRsp = canListModels ? await api.listModels(1, 1).catch(() => null) : null;
+      const canListUpstream = isAdmin() || isModuleOpen("upstream");
+      const upstreamRsp = canListUpstream
+        ? await api.listUpstream(1, 1).catch(() => null)
+        : null; // 端点数取 pageInfo.total，模型数取 modelTotal，一次调用双统计
 
       setStats({
         apiKeys: keysRsp?.pageInfo?.total ?? 0,
         sessions: sessionsRsp?.pageInfo?.total ?? 0,
-        endpoints: endpointsRsp?.pageInfo?.total ?? 0,
-        models: modelsRsp?.pageInfo?.total ?? 0,
+        endpoints: upstreamRsp?.pageInfo?.total ?? 0,
+        models: upstreamRsp?.modelTotal ?? 0,
       });
     } catch {
       // Errors handled silently — dashboard shows zeros
@@ -134,7 +132,7 @@ export default function DashboardPage() {
             icon={<MessageSquare className="size-4" />}
             loading={loading}
           />
-          {(isAdmin() || isModuleOpen("endpoints")) && (
+          {(isAdmin() || isModuleOpen("upstream")) && (
             <StatCard
               title={t("endpoints.title")}
               value={stats.endpoints}
@@ -142,7 +140,7 @@ export default function DashboardPage() {
               loading={loading}
             />
           )}
-          {(isAdmin() || isModuleOpen("models")) && (
+          {(isAdmin() || isModuleOpen("upstream")) && (
             <StatCard
               title={t("models.title")}
               value={stats.models}

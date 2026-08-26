@@ -27,9 +27,8 @@ export type DemoModule =
   | "dashboard"
   | "sessions"
   | "audit"
-  | "models"
+  | "upstream"
   | "trigger"
-  | "endpoints"
   | "monitor"
   | "cron"
   | "cron_audit";
@@ -419,6 +418,55 @@ export interface UpdateEndpointReqBody {
 export interface ListEndpointsRsp extends CommonRsp {
   endpoints?: EndpointItem[];
   pageInfo?: PageInfo;
+}
+
+// ─── Upstream (endpoint 分组视图) ─────────────────────────────────────────────
+
+export interface UpstreamUser {
+  id: number;
+  name: string;
+  avatar: string;
+}
+
+export interface UpstreamEndpointItem {
+  id: number;
+  user?: UpstreamUser;
+  name: string;
+  openaiBaseURL: string;
+  anthropicBaseURL: string;
+  maskedAPIKey: string;
+  supportOpenAIChatCompletion: boolean;
+  supportOpenAIResponse: boolean;
+  supportAnthropicMessage: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpstreamModelItem {
+  id: number;
+  user?: UpstreamUser;
+  alias: string;
+  modelId: string;
+  upstreamModel: string;
+  enabled: boolean;
+  contextLength: number;
+  maxOutputTokens: number;
+  capabilities: ModelCapability[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpstreamGroupItem {
+  endpoint: UpstreamEndpointItem;
+  models: UpstreamModelItem[];
+  modelCount: number;
+  truncated?: boolean;
+}
+
+export interface ListUpstreamRsp extends CommonRsp {
+  groups?: UpstreamGroupItem[];
+  pageInfo?: PageInfo;
+  modelTotal?: number;
 }
 
 // ─── Model ─────────────────────────────────────────────────────────────────────
