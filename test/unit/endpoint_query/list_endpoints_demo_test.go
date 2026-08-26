@@ -38,6 +38,10 @@ func (f *fakeEndpointRepo) Delete(context.Context, uint, uint) error            
 func (f *fakeEndpointRepo) DeleteCascade(context.Context, uint, uint) error     { return nil }
 func (f *fakeEndpointRepo) List(context.Context) ([]*aggregate.Endpoint, error) { return nil, nil }
 
+func (f *fakeEndpointRepo) FindIDsByScope(context.Context, uint) ([]uint, error) {
+	return nil, nil
+}
+
 var _ llmproxy.EndpointRepository = (*fakeEndpointRepo)(nil)
 
 const (

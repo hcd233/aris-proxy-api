@@ -190,6 +190,22 @@ func (r *endpointRepository) Paginate(ctx context.Context, param model.CommonPar
 	return out, pageInfo, nil
 }
 
+// FindIDsByScope 按租户范围返回全部可见 endpoint ID 列表（id 升序）
+//
+// scopeUserID==0（admin 视角）不过滤。
+func (r *endpointRepository) FindIDsByScope(ctx context.Context, scopeUserID uint) ([]uint, error) {
+	db := r.db.WithContext(ctx)
+	q := db.Model(&dbmodel.Endpoint{})
+	if scopeUserID > 0 {
+		q = q.Where(constant.FieldUserID, scopeUserID)
+	}
+	var ids []uint
+	if err := q.Order(constant.FieldID).Pluck(constant.FieldID, &ids).Error; err != nil {
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "find endpoint ids by scope")
+	}
+	return ids, nil
+}
+
 // modelRepository ModelRepository 的 GORM 实现
 type modelRepository struct {
 	dao *dao.ModelDAO
@@ -339,6 +355,28 @@ func (r *modelRepository) Paginate(ctx context.Context, param model.CommonParam,
 		return nil, nil, convErr
 	}
 	return out, pageInfo, nil
+}
+
+// ListByEndpointIDs 按 endpoint ID 集合批量拉取模型聚合（id 升序）
+//
+// 不做二次 scope 过滤，调用方传入的 endpointIDs 必须已经过 scope 解析。
+func (r *modelRepository) ListByEndpointIDs(ctx context.Context, endpointIDs []uint) ([]*aggregate.Model, error) {
+	ids := lo.Uniq(lo.Filter(endpointIDs, func(id uint, _ int) bool { return id != 0 }))
+	if len(ids) == 0 {
+		return []*aggregate.Model{}, nil
+	}
+	db := r.db.WithContext(ctx)
+	records, err := r.dao.BatchGetByField(db, constant.FieldEndpointID, ids, constant.ModelRepoFieldsFull)
+	if err != nil {
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "list models by endpoint ids")
+	}
+	out, convErr := util.MapErr(records, func(m *dbmodel.Model, _ int) (*aggregate.Model, error) {
+		return toModelAggregate(m)
+	})
+	if convErr != nil {
+		return nil, convErr
+	}
+	return out, nil
 }
 
 // ==================== CQRS 读模型实现 ====================

@@ -57,6 +57,13 @@ func (f *fakeEndpointRepo) List(context.Context) ([]*aggregate.Endpoint, error) 
 func (f *fakeEndpointRepo) Paginate(context.Context, model.CommonParam, uint) ([]*aggregate.Endpoint, *model.PageInfo, error) {
 	return nil, nil, nil
 }
+func (f *fakeEndpointRepo) FindIDsByScope(context.Context, uint) ([]uint, error) {
+	return nil, nil
+}
+
+func (f *fakeModelRepo) ListByEndpointIDs(context.Context, []uint) ([]*aggregate.Model, error) {
+	return nil, nil
+}
 
 var _ llmproxy.ModelRepository = (*fakeModelRepo)(nil)
 var _ llmproxy.EndpointRepository = (*fakeEndpointRepo)(nil)
