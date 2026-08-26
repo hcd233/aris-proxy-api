@@ -116,3 +116,17 @@ const (
 	ClientModelExportConfigPathPrefix      = "Config: "
 	ClientModelExportBackupHint            = "Previous config backed up as *.bak"
 )
+
+// ClientInitMessages aris init 瘦身后的新文案
+const (
+	TraceClientInitTitleSave        = "Save configuration"
+	TraceClientInitSavingConfig     = "Saving configuration..."
+	TraceClientNextHintTraceInstall = "Next: aris trace install  # register hooks in Codex/Claude Code"
+	TraceClientNextHintModelExport  = "Next: aris model export    # configure models for your agents"
+)
+
+// TraceInstallMessages aris trace install 文案
+const (
+	TraceClientInstallNeedInitMessage = "Not initialized. Run `aris init` first."
+	TraceClientInstallDone            = "✓ Hooks installation complete"
+)
