@@ -24,21 +24,14 @@ var migrateDatabaseCmd = &cobra.Command{
 }
 
 // runMigrate 执行数据库结构迁移：仅 AutoMigrate 建表/建列/建索引。
+//
+// 注意：AutoMigrate 不修改已有同名索引的列组合。涉及索引变更的迁移
+// （如多租户化 user_id 复合唯一索引）需部署后手工执行 SQL 重建，见 PR #162 描述。
 func runMigrate(ctx context.Context) {
 	lo.Must0(database.AutoMigrate(ctx))
 }
 
-var migrateDatabaseDataCmd = &cobra.Command{
-	Use:   "migrate-data",
-	Short: "Migrate Database Data",
-	Long:  `Execute data migration operation, e.g. backfilling user-scope columns and rebuilding unique indexes.`,
-	Run: func(cmd *cobra.Command, _ []string) {
-		lo.Must0(database.MigrateUserScopeData(cmd.Context()))
-	},
-}
-
 func init() {
 	databaseCmd.AddCommand(migrateDatabaseCmd)
-	databaseCmd.AddCommand(migrateDatabaseDataCmd)
 	rootCmd.AddCommand(databaseCmd)
 }
