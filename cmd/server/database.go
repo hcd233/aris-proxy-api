@@ -28,7 +28,17 @@ func runMigrate(ctx context.Context) {
 	lo.Must0(database.AutoMigrate(ctx))
 }
 
+var migrateDatabaseDataCmd = &cobra.Command{
+	Use:   "migrate-data",
+	Short: "Migrate Database Data",
+	Long:  `Execute data migration operation, e.g. backfilling user-scope columns and rebuilding unique indexes.`,
+	Run: func(cmd *cobra.Command, _ []string) {
+		lo.Must0(database.MigrateUserScopeData(cmd.Context()))
+	},
+}
+
 func init() {
 	databaseCmd.AddCommand(migrateDatabaseCmd)
+	databaseCmd.AddCommand(migrateDatabaseDataCmd)
 	rootCmd.AddCommand(databaseCmd)
 }
