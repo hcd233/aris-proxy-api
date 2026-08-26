@@ -38,6 +38,7 @@ var HandlerModule = fx.Module(constant.DigNameHandlerModule,
 		NewCronDependencies,
 		NewOpenAIDependencies,
 		NewAnthropicDependencies,
+		NewClientDependencies,
 		handler.NewPingHandler,
 		handler.NewTokenHandler,
 		handler.NewOauth2Handler,
@@ -59,6 +60,7 @@ var HandlerModule = fx.Module(constant.DigNameHandlerModule,
 		handler.NewDatasetHandler,
 		NewTraceDependencies,
 		handler.NewTraceHandler,
+		handler.NewClientHandler,
 	),
 )
 
@@ -150,6 +152,10 @@ func NewOpenAIDependencies(useCase llmproxyport.OpenAIUseCase, sseGauge *metrics
 
 func NewAnthropicDependencies(useCase llmproxyport.AnthropicUseCase, sseGauge *metrics.SSEGauge) handler.AnthropicDependencies {
 	return handler.AnthropicDependencies{UseCase: useCase, SSEGauge: sseGauge}
+}
+
+func NewClientDependencies(list llmproxyport.ListClientModelsHandler) handler.ClientDependencies {
+	return handler.ClientDependencies{List: list}
 }
 
 func NewAuditDependencies(svc auditport.AuditService) handler.AuditDependencies {

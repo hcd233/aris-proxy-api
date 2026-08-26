@@ -43,6 +43,15 @@ type ModelAliasProjection struct {
 	Alias string
 }
 
+// ModelDetailProjection 启用模型的完整只读投影
+type ModelDetailProjection struct {
+	Alias           string
+	UpstreamModel   string
+	ContextLength   int
+	MaxOutputTokens int
+	Capabilities    []string
+}
+
 // EndpointProjection 端点只读投影
 type EndpointProjection struct {
 	ID                          uint
@@ -60,5 +69,6 @@ type EndpointProjection struct {
 // userID 语义：网关路径必传真实用户 ID；0 不过滤（仅限 admin 内部用途）。
 type EndpointReadRepository interface {
 	ListAliases(ctx context.Context, userID uint) ([]*ModelAliasProjection, error)
+	ListEnabledModelDetails(ctx context.Context, userID uint) ([]*ModelDetailProjection, error)
 	FindEndpointByAlias(ctx context.Context, userID uint, alias string, matcher func(*EndpointProjection) bool) (*EndpointProjection, *ModelAliasProjection, error)
 }

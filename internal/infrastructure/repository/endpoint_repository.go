@@ -371,6 +371,27 @@ func (r *endpointReadRepository) ListAliases(ctx context.Context, userID uint) (
 	return out, nil
 }
 
+// ListEnabledModelDetails 查询所有启用中模型的完整投影（仅已启用、按 alias 去重）
+//
+// userID 语义：网关路径必传真实用户 ID；0 不过滤（仅限 admin 内部用途）。
+func (r *endpointReadRepository) ListEnabledModelDetails(ctx context.Context, userID uint) ([]*llmproxy.ModelDetailProjection, error) {
+	db := r.db.WithContext(ctx)
+	models, err := r.modelDAO.BatchGet(db, &dbmodel.Model{Enabled: true, UserID: userID}, constant.ModelRepoFieldsFull)
+	if err != nil {
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "list enabled model details")
+	}
+	uniq := lo.UniqBy(models, func(m *dbmodel.Model) string { return m.Alias })
+	return lo.Map(uniq, func(m *dbmodel.Model, _ int) *llmproxy.ModelDetailProjection {
+		return &llmproxy.ModelDetailProjection{
+			Alias:           m.Alias,
+			UpstreamModel:   m.UpstreamModel,
+			ContextLength:   m.ContextLength,
+			MaxOutputTokens: m.MaxOutputTokens,
+			Capabilities:    m.Capabilities,
+		}
+	}), nil
+}
+
 // FindEndpointByAlias 按 alias 在指定用户的模型集合内随机选满足 matcher 的 endpoint。
 // 仅查询已启用的模型。
 func (r *endpointReadRepository) FindEndpointByAlias(ctx context.Context, userID uint, alias string, matcher func(*llmproxy.EndpointProjection) bool) (*llmproxy.EndpointProjection, *llmproxy.ModelAliasProjection, error) {

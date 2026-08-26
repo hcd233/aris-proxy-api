@@ -7,6 +7,7 @@ import (
 
 func newTraceCommand() *cobra.Command {
 	cmd := &cobra.Command{Use: "trace", Short: "Ingest agent traces"}
+	cmd.AddCommand(newTraceInstallCommand())
 	cmd.AddCommand(newTraceIngestCommand())
 	return cmd
 }
@@ -27,4 +28,18 @@ func newTraceIngestCommand() *cobra.Command {
 	}
 	cmd.Flags().StringVar(&agentName, "agent", "", "agent whose hook fired (codex|claude)")
 	return cmd
+}
+
+func newTraceInstallCommand() *cobra.Command {
+	return &cobra.Command{
+		Use:   "install",
+		Short: "Register aris hooks in agent harnesses (codex/claude)",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return trace.RunInstall(cmd.Context(), trace.InstallOptions{
+				In:  cmd.InOrStdin(),
+				Out: cmd.OutOrStdout(),
+			})
+		},
+	}
 }

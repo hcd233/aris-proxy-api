@@ -55,6 +55,7 @@ import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { Switch } from "@/components/ui/switch";
 import { PaginationBar } from "@/components/pagination-bar";
 import { ProviderIcon } from "@/components/provider-icon";
+import TraceInstallPopover from "@/components/trace-install-popover";
 import { PageHeader } from "@/components/page-header";
 import { ListEmptyState } from "@/components/list-empty-state";
 import { TableSkeleton } from "@/components/table-skeleton";
@@ -62,25 +63,10 @@ import { useDeleteConfirm } from "@/hooks/use-delete-confirm";
 import { FilterBar } from "@/components/filter-bar/filter-bar";
 import { useFilterBar } from "@/components/filter-bar/use-filter-bar";
 import type { FacetDef } from "@/components/filter-bar/types";
-import ExportDialog from "@/components/export-dialog";
-import ExportClaudecodeDialog from "@/components/export-claudecode-dialog";
-import ExportCodexDialog from "@/components/export-codex-dialog";
-import ExportPiDialog from "@/components/export-pi-dialog";
-import { OpenCode, ClaudeCode, Codex, Pi } from "@lobehub/icons";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Plus,
   Pencil,
   Cpu,
-  FileDown,
-  ChevronDown,
   ArrowLeftRight,
   ArrowUpFromLine,
   Type,
@@ -232,16 +218,6 @@ export default function ModelsPage() {
     pageSize: persistedPageSize,
     total: 0,
   });
-  // 导出到 agent 框架的模型列表：仅启用，且按对外别名去重
-  //（同一 alias 可通过多条记录绑定多个 endpoint，导出时只保留第一条）
-  const exportModels = useMemo(() => {
-    const seen = new Set<string>();
-    return models.filter((m) => {
-      if (!m.enabled || seen.has(m.alias)) return false;
-      seen.add(m.alias);
-      return true;
-    });
-  }, [models]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -249,10 +225,6 @@ export default function ModelsPage() {
   // 标记用户是否手动改过 modelId；未手动改时新建表单跟随 alias 同步输入
   const [modelIdTouched, setModelIdTouched] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [exportDialogOpen, setExportDialogOpen] = useState(false);
-  const [exportClaudecodeDialogOpen, setExportClaudecodeDialogOpen] = useState(false);
-  const [exportCodexDialogOpen, setExportCodexDialogOpen] = useState(false);
-  const [exportPiDialogOpen, setExportPiDialogOpen] = useState(false);
 
   // 仅 admin 可按归属用户名过滤（后端对普通用户忽略该参数）
   const facets = useMemo<FacetDef[]>(
@@ -442,120 +414,7 @@ export default function ModelsPage() {
             description={t("models.subtitle")}
             actions={
               <div className="flex gap-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger render={<Button variant="outline" className="gap-1.5" />}>
-                    <FileDown className="size-4" />
-                    {t("models.export")}
-                    <ChevronDown className="size-3.5 opacity-50 transition-transform duration-150 group-aria-expanded/button:rotate-180" />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-64 p-1.5">
-                    <DropdownMenuGroup>
-                      <DropdownMenuLabel className="px-2 pb-1.5 pt-1 text-[11px] uppercase tracking-[0.08em] text-muted-foreground/70">
-                        {t("models.export_target")}
-                      </DropdownMenuLabel>
-                      <DropdownMenuItem
-                        onClick={() => setExportDialogOpen(true)}
-                        className="items-start gap-2.5 rounded-lg px-2 py-2"
-                      >
-                        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border bg-gradient-to-b from-secondary to-muted">
-                          <OpenCode size={17} />
-                        </span>
-                        <span className="flex min-w-0 flex-col gap-0.5">
-                          <span className="text-sm font-medium leading-none">
-                            {t("models.export_opencode")}
-                          </span>
-                          <TooltipRoot>
-                            <TooltipTrigger
-                              render={
-                                <span className="truncate text-xs text-muted-foreground">
-                                  {t("models.export_opencode_hint")}
-                                </span>
-                              }
-                            />
-                            <TooltipContent side="top" className="max-w-xs">
-                              {t("models.export_opencode_hint")}
-                            </TooltipContent>
-                          </TooltipRoot>
-                        </span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => setExportClaudecodeDialogOpen(true)}
-                        className="items-start gap-2.5 rounded-lg px-2 py-2"
-                      >
-                        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border bg-gradient-to-b from-secondary to-muted">
-                          <ClaudeCode.Color size={17} />
-                        </span>
-                        <span className="flex min-w-0 flex-col gap-0.5">
-                          <span className="text-sm font-medium leading-none">
-                            {t("models.export_claudecode")}
-                          </span>
-                          <TooltipRoot>
-                            <TooltipTrigger
-                              render={
-                                <span className="truncate text-xs text-muted-foreground">
-                                  {t("models.export_claudecode_hint")}
-                                </span>
-                              }
-                            />
-                            <TooltipContent side="top" className="max-w-xs">
-                              {t("models.export_claudecode_hint")}
-                            </TooltipContent>
-                          </TooltipRoot>
-                        </span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => setExportCodexDialogOpen(true)}
-                        className="items-start gap-2.5 rounded-lg px-2 py-2"
-                      >
-                        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border bg-gradient-to-b from-secondary to-muted">
-                          <Codex.Color size={17} />
-                        </span>
-                        <span className="flex min-w-0 flex-col gap-0.5">
-                          <span className="text-sm font-medium leading-none">
-                            {t("models.export_codex")}
-                          </span>
-                          <TooltipRoot>
-                            <TooltipTrigger
-                              render={
-                                <span className="truncate text-xs text-muted-foreground">
-                                  {t("models.export_codex_hint")}
-                                </span>
-                              }
-                            />
-                            <TooltipContent side="top" className="max-w-xs">
-                              {t("models.export_codex_hint")}
-                            </TooltipContent>
-                          </TooltipRoot>
-                        </span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => setExportPiDialogOpen(true)}
-                        className="items-start gap-2.5 rounded-lg px-2 py-2"
-                      >
-                        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border bg-gradient-to-b from-secondary to-muted">
-                          <Pi size={17} />
-                        </span>
-                        <span className="flex min-w-0 flex-col gap-0.5">
-                          <span className="text-sm font-medium leading-none">
-                            {t("models.export_pi")}
-                          </span>
-                          <TooltipRoot>
-                            <TooltipTrigger
-                              render={
-                                <span className="truncate text-xs text-muted-foreground">
-                                  {t("models.export_pi_hint")}
-                                </span>
-                              }
-                            />
-                            <TooltipContent side="top" className="max-w-xs">
-                              {t("models.export_pi_hint")}
-                            </TooltipContent>
-                          </TooltipRoot>
-                        </span>
-                      </DropdownMenuItem>
-                    </DropdownMenuGroup>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <TraceInstallPopover />
                 <Button onClick={openCreate}>
                   <Plus className="mr-1 size-4" />
                   {t("models.create")}
@@ -1070,30 +929,6 @@ export default function ModelsPage() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-
-          <ExportDialog
-            open={exportDialogOpen}
-            onOpenChange={setExportDialogOpen}
-            models={exportModels}
-          />
-
-          <ExportClaudecodeDialog
-            open={exportClaudecodeDialogOpen}
-            onOpenChange={setExportClaudecodeDialogOpen}
-            models={exportModels}
-          />
-
-          <ExportCodexDialog
-            open={exportCodexDialogOpen}
-            onOpenChange={setExportCodexDialogOpen}
-            models={exportModels}
-          />
-
-          <ExportPiDialog
-            open={exportPiDialogOpen}
-            onOpenChange={setExportPiDialogOpen}
-            models={exportModels}
-          />
         </div>
       </TooltipProvider>
     </PermissionGuard>
