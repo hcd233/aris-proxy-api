@@ -254,227 +254,240 @@ export default function TriggerPage() {
   return (
     <PermissionGuard adminOnly module="trigger">
       <TooltipProvider>
-      <div className="space-y-8">
-        <PageHeader title={t("trigger.title")} description={t("trigger.subtitle")} />
+        <div className="space-y-8">
+          <PageHeader title={t("trigger.title")} description={t("trigger.subtitle")} />
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="font-display">{t("trigger.all_words")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {/* Search — faceted bar */}
-            <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
-              <FilterBar {...filterBar} facets={[]} placeholder={t("trigger.search_placeholder")} />
-              <Input
-                className="sm:max-w-xs"
-                placeholder={t("trigger.inline_add_placeholder")}
-                value={inlineWord}
-                onChange={(e) => setInlineWord(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleInlineAdd();
-                }}
-                disabled={adding}
-              />
-              {selected.size > 0 && (
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  disabled={isDemo()}
-                  onClick={() => setBatchDeleteConfirmOpen(true)}
-                  className="gap-1.5 sm:ml-auto"
-                >
-                  {isDemo() ? <Lock className="size-3.5" /> : <Trash2 className="size-3.5" />}
-                  {t("common.delete")} {selected.size}
-                </Button>
+          <Card>
+            <CardHeader>
+              <CardTitle className="font-display">{t("trigger.all_words")}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {/* Search — faceted bar */}
+              <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+                <FilterBar
+                  {...filterBar}
+                  facets={[]}
+                  placeholder={t("trigger.search_placeholder")}
+                />
+                <Input
+                  className="sm:max-w-xs"
+                  placeholder={t("trigger.inline_add_placeholder")}
+                  value={inlineWord}
+                  onChange={(e) => setInlineWord(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleInlineAdd();
+                  }}
+                  disabled={adding}
+                />
+                {selected.size > 0 && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    disabled={isDemo()}
+                    onClick={() => setBatchDeleteConfirmOpen(true)}
+                    className="gap-1.5 sm:ml-auto"
+                  >
+                    {isDemo() ? <Lock className="size-3.5" /> : <Trash2 className="size-3.5" />}
+                    {t("common.delete")} {selected.size}
+                  </Button>
+                )}
+              </div>
+              {filterBar.tokens.length > 0 && (
+                <p className="-mt-2 mb-3 text-xs text-muted-foreground">
+                  {t("filter_bar.applied_count").replace(
+                    "{count}",
+                    String(filterBar.tokens.length),
+                  )}
+                </p>
               )}
-            </div>
-            {filterBar.tokens.length > 0 && (
-              <p className="-mt-2 mb-3 text-xs text-muted-foreground">
-                {t("filter_bar.applied_count").replace("{count}", String(filterBar.tokens.length))}
-              </p>
-            )}
-            {loading ? (
-              <TableSkeleton />
-            ) : items.length === 0 ? (
-              <ListEmptyState
-                icon={<Ban className="mb-3 size-10 text-muted-foreground/40" />}
-                message={t("trigger.no_words")}
-              />
-            ) : (
-              <>
-                {isMobile ? (
-                  <div className="space-y-3">
-                    {items.map((item) => {
-                      const isSelected = selected.has(item.id);
-                      return (
-                        <div key={item.id} className="rounded-lg border border-border bg-card p-4">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex min-w-0 flex-1 items-start gap-2">
-                              <SelectCheckbox
-                                checked={isSelected}
-                                onToggle={() => toggleSelect(item.id)}
-                              />
-                              <div className="min-w-0 flex-1">
+              {loading ? (
+                <TableSkeleton />
+              ) : items.length === 0 ? (
+                <ListEmptyState
+                  icon={<Ban className="mb-3 size-10 text-muted-foreground/40" />}
+                  message={t("trigger.no_words")}
+                />
+              ) : (
+                <>
+                  {isMobile ? (
+                    <div className="space-y-3">
+                      {items.map((item) => {
+                        const isSelected = selected.has(item.id);
+                        return (
+                          <div
+                            key={item.id}
+                            className="rounded-lg border border-border bg-card p-4"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex min-w-0 flex-1 items-start gap-2">
+                                <SelectCheckbox
+                                  checked={isSelected}
+                                  onToggle={() => toggleSelect(item.id)}
+                                />
+                                <div className="min-w-0 flex-1">
+                                  <TooltipRoot>
+                                    <TooltipTrigger
+                                      render={
+                                        <p
+                                          className="cursor-pointer text-sm font-medium underline-offset-2 hover:underline"
+                                          onClick={() => handleCopyWord(item.word)}
+                                        >
+                                          {item.word}
+                                        </p>
+                                      }
+                                    />
+                                    <TooltipContent side="top">
+                                      {t("trigger.copy_word_title")}
+                                    </TooltipContent>
+                                  </TooltipRoot>
+                                  <p className="mt-0.5 text-xs text-muted-foreground">
+                                    {t("trigger.hit_count")}: {item.hitCount}
+                                  </p>
+                                  <div className="mt-1.5">
+                                    <ActionBadge
+                                      action={item.action}
+                                      t={t}
+                                      disabled={toggleAction.updatingKey !== null}
+                                      onClick={() =>
+                                        toggleAction.apply(item, {
+                                          action:
+                                            item.action === "deny"
+                                              ? "omit"
+                                              : item.action === "omit"
+                                                ? "capture"
+                                                : "deny",
+                                        })
+                                      }
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex shrink-0 items-center gap-1">
+                                <DeleteButton
+                                  label={t("common.delete")}
+                                  locked={isDemo()}
+                                  onClick={() => deleteConfirm.openDelete(item)}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-10">
+                            <SelectCheckbox
+                              checked={selected.size === items.length}
+                              onToggle={toggleSelectAll}
+                            />
+                          </TableHead>
+                          <TableHead className="w-16">{t("trigger.id")}</TableHead>
+                          <TableHead>{t("trigger.word")}</TableHead>
+                          <TableHead className="w-32">{t("trigger.action")}</TableHead>
+                          <TableHead className="w-24">{t("trigger.hit_count")}</TableHead>
+                          <TableHead className="w-32">{t("common.created")}</TableHead>
+                          <TableHead className="w-24">{t("common.actions")}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {items.map((item) => {
+                          const isSelected = selected.has(item.id);
+                          return (
+                            <TableRow key={item.id}>
+                              <TableCell className="w-10">
+                                <SelectCheckbox
+                                  checked={isSelected}
+                                  onToggle={() => toggleSelect(item.id)}
+                                />
+                              </TableCell>
+                              <TableCell className="text-muted-foreground">{item.id}</TableCell>
+                              <TableCell className="font-medium">
                                 <TooltipRoot>
                                   <TooltipTrigger
                                     render={
-                                      <p
-                                        className="cursor-pointer text-sm font-medium underline-offset-2 hover:underline"
+                                      <span
+                                        className="cursor-pointer underline-offset-2 hover:underline"
                                         onClick={() => handleCopyWord(item.word)}
                                       >
                                         {item.word}
-                                      </p>
+                                      </span>
                                     }
                                   />
                                   <TooltipContent side="top">
                                     {t("trigger.copy_word_title")}
                                   </TooltipContent>
                                 </TooltipRoot>
-                                <p className="mt-0.5 text-xs text-muted-foreground">
-                                  {t("trigger.hit_count")}: {item.hitCount}
-                                </p>
-                                <div className="mt-1.5">
-                                  <ActionBadge
-                                    action={item.action}
-                                    t={t}
-                                    disabled={toggleAction.updatingKey !== null}
-                                    onClick={() =>
-                                      toggleAction.apply(item, {
-                                        action:
-                                          item.action === "deny"
-                                            ? "omit"
-                                            : item.action === "omit"
-                                              ? "capture"
-                                              : "deny",
-                                      })
-                                    }
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex shrink-0 items-center gap-1">
-                              <DeleteButton
-                                label={t("common.delete")}
-                                locked={isDemo()}
-                                onClick={() => deleteConfirm.openDelete(item)}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-10">
-                          <SelectCheckbox
-                            checked={selected.size === items.length}
-                            onToggle={toggleSelectAll}
-                          />
-                        </TableHead>
-                        <TableHead className="w-16">{t("trigger.id")}</TableHead>
-                        <TableHead>{t("trigger.word")}</TableHead>
-                        <TableHead className="w-32">{t("trigger.action")}</TableHead>
-                        <TableHead className="w-24">{t("trigger.hit_count")}</TableHead>
-                        <TableHead className="w-32">{t("common.created")}</TableHead>
-                        <TableHead className="w-24">{t("common.actions")}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {items.map((item) => {
-                        const isSelected = selected.has(item.id);
-                        return (
-                          <TableRow key={item.id}>
-                            <TableCell className="w-10">
-                              <SelectCheckbox
-                                checked={isSelected}
-                                onToggle={() => toggleSelect(item.id)}
-                              />
-                            </TableCell>
-                            <TableCell className="text-muted-foreground">{item.id}</TableCell>
-                            <TableCell className="font-medium">
-                              <TooltipRoot>
-                                <TooltipTrigger
-                                  render={
-                                    <span
-                                      className="cursor-pointer underline-offset-2 hover:underline"
-                                      onClick={() => handleCopyWord(item.word)}
-                                    >
-                                      {item.word}
-                                    </span>
+                              </TableCell>
+                              <TableCell>
+                                <ActionBadge
+                                  action={item.action}
+                                  t={t}
+                                  disabled={toggleAction.updatingKey !== null}
+                                  onClick={() =>
+                                    toggleAction.apply(item, {
+                                      action:
+                                        item.action === "deny"
+                                          ? "omit"
+                                          : item.action === "omit"
+                                            ? "capture"
+                                            : "deny",
+                                    })
                                   }
                                 />
-                                <TooltipContent side="top">
-                                  {t("trigger.copy_word_title")}
-                                </TooltipContent>
-                              </TooltipRoot>
-                            </TableCell>
-                            <TableCell>
-                              <ActionBadge
-                                action={item.action}
-                                t={t}
-                                disabled={toggleAction.updatingKey !== null}
-                                onClick={() =>
-                                  toggleAction.apply(item, {
-                                    action:
-                                      item.action === "deny"
-                                        ? "omit"
-                                        : item.action === "omit"
-                                          ? "capture"
-                                          : "deny",
-                                  })
-                                }
-                              />
-                            </TableCell>
-                            <TableCell>{item.hitCount}</TableCell>
-                            <TableCell className="text-muted-foreground">
-                              {new Date(item.createdAt).toLocaleDateString()}
-                            </TableCell>
-                            <TableCell>
-                              <DeleteButton
-                                label={t("common.delete")}
-                                locked={isDemo()}
-                                onClick={() => deleteConfirm.openDelete(item)}
-                              />
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                )}
-                <PaginationBar
-                  pageInfo={pageInfo}
-                  onChange={(page, pageSize) =>
-                    fetchItems(page, pageSize, queryParams.freeText || undefined)
-                  }
-                  totalLabel={t("pagination.items")}
-                />
-              </>
+                              </TableCell>
+                              <TableCell>{item.hitCount}</TableCell>
+                              <TableCell className="text-muted-foreground">
+                                {new Date(item.createdAt).toLocaleDateString()}
+                              </TableCell>
+                              <TableCell>
+                                <DeleteButton
+                                  label={t("common.delete")}
+                                  locked={isDemo()}
+                                  onClick={() => deleteConfirm.openDelete(item)}
+                                />
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  )}
+                  <PaginationBar
+                    pageInfo={pageInfo}
+                    onChange={(page, pageSize) =>
+                      fetchItems(page, pageSize, queryParams.freeText || undefined)
+                    }
+                    totalLabel={t("pagination.items")}
+                  />
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          <DeleteConfirmDialog
+            {...deleteConfirm.dialogProps}
+            title={t("common.are_you_sure")}
+            description={t("trigger.delete_confirm")}
+            confirmLabel={t("common.delete")}
+          />
+
+          <DeleteConfirmDialog
+            open={batchDeleteConfirmOpen}
+            onOpenChange={setBatchDeleteConfirmOpen}
+            title={t("common.are_you_sure")}
+            description={t("trigger.batch_delete_confirm").replace(
+              "{count}",
+              String(selected.size),
             )}
-          </CardContent>
-        </Card>
-
-        <DeleteConfirmDialog
-          {...deleteConfirm.dialogProps}
-          title={t("common.are_you_sure")}
-          description={t("trigger.delete_confirm")}
-          confirmLabel={t("common.delete")}
-        />
-
-        <DeleteConfirmDialog
-          open={batchDeleteConfirmOpen}
-          onOpenChange={setBatchDeleteConfirmOpen}
-          title={t("common.are_you_sure")}
-          description={t("trigger.batch_delete_confirm").replace("{count}", String(selected.size))}
-          confirmLabel={t("common.delete")}
-          loading={batchDeleting}
-          onConfirm={handleBatchDelete}
-        />
-      </div>
-    </TooltipProvider>
+            confirmLabel={t("common.delete")}
+            loading={batchDeleting}
+            onConfirm={handleBatchDelete}
+          />
+        </div>
+      </TooltipProvider>
     </PermissionGuard>
   );
 }

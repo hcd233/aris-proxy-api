@@ -96,17 +96,17 @@ jobs:
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
 
           FIRST_TAG="master"
-          TAG_ARGS="--tag=${IMAGE}:master --tag=${IMAGE}:sha-${GITHUB_SHA:0:7}"
+          TAG_ARGS=(--tag="${IMAGE}:master" --tag="${IMAGE}:sha-${GITHUB_SHA:0:7}")
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             VERSION="${GITHUB_REF_NAME#v}"
             FIRST_TAG="${VERSION}"
-            TAG_ARGS="--tag=${IMAGE}:${VERSION} --tag=${IMAGE}:${VERSION%.*}"
+            TAG_ARGS=(--tag="${IMAGE}:${VERSION}" --tag="${IMAGE}:${VERSION%.*}")
           fi
 
           docker buildx build -f docker/dockerfile \
             --build-arg FRONTEND_SOURCE=frontend-prebuilt \
             --build-arg BINARY_SOURCE=binary-prebuilt \
-            ${TAG_ARGS} --push .
+            "${TAG_ARGS[@]}" --push .
 
           DIGEST="$(docker buildx imagetools inspect "${IMAGE}:${FIRST_TAG}" --format '{{.Manifest.Digest}}')"
           echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
