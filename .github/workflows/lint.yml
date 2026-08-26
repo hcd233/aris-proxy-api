@@ -21,6 +21,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # workflow 语法/表达式静态校验（2026-08-22 CI 拆分曾因 IMAGE_TAG 残留、
+      # COPY --from 变量展开等问题连环修复 8 次——CI 变更本身没有 CI 验证）。
+      # PR 不触发 docker-publish，workflow 错误只能在此处提前拦截。
+      - name: Run actionlint
+        run: |
+          bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+          ./actionlint -color
+
       # go:embed all:dist 要求目录存在且非空，lint 无需真实前端产物
       - name: Placeholder web dist for embed
         run: mkdir -p internal/web/dist && touch internal/web/dist/.gitkeep
