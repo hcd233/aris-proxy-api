@@ -45,6 +45,7 @@ type APIRouterDependencies struct {
 	DatasetHandler     handler.DatasetHandler
 	TraceHandler       handler.TraceHandler
 	ClientHandler      handler.ClientHandler
+	UpstreamHandler    handler.UpstreamHandler
 }
 
 // RegisterDocsRouter 注册文档路由
@@ -120,10 +121,13 @@ func RegisterAPIRouter(humaAPI huma.API, deps APIRouterDependencies) {
 	initSessionPublicRouter(sessionPublicGroup, deps.SessionHandler, deps.Cache)
 
 	endpointGroup := huma.NewGroup(v1Group, "/endpoint")
-	initEndpointRouter(endpointGroup, deps.EndpointHandler, deps.DB, deps.Cache, deps.AccessSigner, deps.DemoModuleAccessor, deps.DemoAuditSubmitter)
+	initEndpointRouter(endpointGroup, deps.EndpointHandler, deps.DB, deps.Cache, deps.AccessSigner)
 
 	modelGroup := huma.NewGroup(v1Group, "/model")
-	initModelRouter(modelGroup, deps.ModelHandler, deps.DB, deps.Cache, deps.AccessSigner, deps.DemoModuleAccessor, deps.DemoAuditSubmitter)
+	initModelRouter(modelGroup, deps.ModelHandler, deps.DB, deps.Cache, deps.AccessSigner)
+
+	upstreamGroup := huma.NewGroup(v1Group, "/upstream")
+	initUpstreamRouter(upstreamGroup, deps.UpstreamHandler, deps.DB, deps.Cache, deps.AccessSigner, deps.DemoModuleAccessor, deps.DemoAuditSubmitter)
 
 	auditGroup := huma.NewGroup(v1Group, "/audit")
 	initAuditRouter(auditGroup, deps.AuditHandler, deps.CronHandler, deps.DB, deps.Cache, deps.AccessSigner, deps.DemoModuleAccessor, deps.DemoAuditSubmitter)

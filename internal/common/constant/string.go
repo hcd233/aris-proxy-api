@@ -156,6 +156,7 @@ const (
 	TagMonitor   = "Monitor"
 	TagOpenAI    = "OpenAI"
 	TagSession   = "Session"
+	TagUpstream  = "Upstream"
 	TagTrace     = "Trace"
 	TagTrigger   = "Trigger"
 	TagDataset   = "Dataset"
