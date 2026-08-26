@@ -12,6 +12,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 type createModelHandler struct {
@@ -29,7 +30,7 @@ func (h *createModelHandler) Handle(ctx context.Context, cmd port.CreateModelCom
 	log := logger.WithCtx(ctx)
 
 	// Verify endpoint exists
-	ep, err := h.endpointRepo.FindByID(ctx, cmd.EndpointID)
+	ep, err := h.endpointRepo.FindByID(ctx, cmd.EndpointID, util.CtxValueUint(ctx, constant.CtxKeyUserID))
 	if err != nil {
 		log.Error("[ModelCommand] Find endpoint for model creation failed", zap.Error(err))
 		return nil, err
@@ -62,7 +63,7 @@ func (h *createModelHandler) Handle(ctx context.Context, cmd port.CreateModelCom
 		m.SetModelID(*cmd.ModelID)
 	}
 
-	id, err := h.modelRepo.Create(ctx, m)
+	id, err := h.modelRepo.Create(ctx, m, ep.UserID())
 	if err != nil {
 		log.Error("[ModelCommand] Create model failed", zap.Error(err))
 		return nil, err

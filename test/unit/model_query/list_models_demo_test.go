@@ -20,20 +20,20 @@ type fakeModelRepo struct {
 	page   *model.PageInfo
 }
 
-func (f *fakeModelRepo) Paginate(_ context.Context, _ model.CommonParam) ([]*aggregate.Model, *model.PageInfo, error) {
+func (f *fakeModelRepo) Paginate(_ context.Context, _ model.CommonParam, _ uint) ([]*aggregate.Model, *model.PageInfo, error) {
 	return f.models, f.page, nil
 }
-func (f *fakeModelRepo) FindByAlias(context.Context, vo.EndpointAlias) ([]*aggregate.Model, error) {
+func (f *fakeModelRepo) FindByAlias(context.Context, vo.EndpointAlias, uint) ([]*aggregate.Model, error) {
 	return nil, nil
 }
-func (f *fakeModelRepo) FindByID(context.Context, uint) (*aggregate.Model, error) {
+func (f *fakeModelRepo) FindByID(context.Context, uint, uint) (*aggregate.Model, error) {
 	return nil, nil
 }
-func (f *fakeModelRepo) Create(context.Context, *aggregate.Model) (uint, error) { return 0, nil }
-func (f *fakeModelRepo) Update(context.Context, *aggregate.Model) error         { return nil }
-func (f *fakeModelRepo) Delete(context.Context, uint) error                     { return nil }
-func (f *fakeModelRepo) DeleteByEndpointID(context.Context, uint) error         { return nil }
-func (f *fakeModelRepo) List(context.Context) ([]*aggregate.Model, error)       { return nil, nil }
+func (f *fakeModelRepo) Create(context.Context, *aggregate.Model, uint) (uint, error) { return 0, nil }
+func (f *fakeModelRepo) Update(context.Context, *aggregate.Model) error               { return nil }
+func (f *fakeModelRepo) Delete(context.Context, uint, uint) error                     { return nil }
+func (f *fakeModelRepo) DeleteByEndpointID(context.Context, uint) error               { return nil }
+func (f *fakeModelRepo) List(context.Context) ([]*aggregate.Model, error)             { return nil, nil }
 
 type fakeEndpointRepo struct {
 	endpoints map[uint]*aggregate.Endpoint
@@ -42,15 +42,17 @@ type fakeEndpointRepo struct {
 func (f *fakeEndpointRepo) BatchFindByIDs(_ context.Context, _ []uint) (map[uint]*aggregate.Endpoint, error) {
 	return f.endpoints, nil
 }
-func (f *fakeEndpointRepo) FindByID(context.Context, uint) (*aggregate.Endpoint, error) {
+func (f *fakeEndpointRepo) FindByID(context.Context, uint, uint) (*aggregate.Endpoint, error) {
 	return nil, nil
 }
-func (f *fakeEndpointRepo) Create(context.Context, *aggregate.Endpoint) (uint, error) { return 0, nil }
-func (f *fakeEndpointRepo) Update(context.Context, *aggregate.Endpoint) error         { return nil }
-func (f *fakeEndpointRepo) Delete(context.Context, uint) error                        { return nil }
-func (f *fakeEndpointRepo) DeleteCascade(context.Context, uint) error                 { return nil }
-func (f *fakeEndpointRepo) List(context.Context) ([]*aggregate.Endpoint, error)       { return nil, nil }
-func (f *fakeEndpointRepo) Paginate(context.Context, model.CommonParam) ([]*aggregate.Endpoint, *model.PageInfo, error) {
+func (f *fakeEndpointRepo) Create(context.Context, *aggregate.Endpoint, uint) (uint, error) {
+	return 0, nil
+}
+func (f *fakeEndpointRepo) Update(context.Context, *aggregate.Endpoint) error   { return nil }
+func (f *fakeEndpointRepo) Delete(context.Context, uint, uint) error            { return nil }
+func (f *fakeEndpointRepo) DeleteCascade(context.Context, uint, uint) error     { return nil }
+func (f *fakeEndpointRepo) List(context.Context) ([]*aggregate.Endpoint, error) { return nil, nil }
+func (f *fakeEndpointRepo) Paginate(context.Context, model.CommonParam, uint) ([]*aggregate.Endpoint, *model.PageInfo, error) {
 	return nil, nil, nil
 }
 

@@ -14,7 +14,7 @@ import (
 //
 // 按 alias 查询 model 表 → 随机选择满足能力要求的 endpoint → 返回 endpoint + model。
 type EndpointResolver interface {
-	Resolve(ctx context.Context, alias vo.EndpointAlias, matcher func(*aggregate.Endpoint) bool) (*aggregate.Endpoint, *aggregate.Model, error)
+	Resolve(ctx context.Context, userID uint, alias vo.EndpointAlias, matcher func(*aggregate.Endpoint) bool) (*aggregate.Endpoint, *aggregate.Model, error)
 }
 
 type endpointResolver struct {
@@ -39,11 +39,11 @@ func NewEndpointResolver(
 // 2. 随机遍历 endpointID
 // 3. 返回首个满足 matcher 的 endpoint + model
 // 4. 若无匹配端点，返回 ErrDataNotExists
-func (r *endpointResolver) Resolve(ctx context.Context, alias vo.EndpointAlias, matcher func(*aggregate.Endpoint) bool) (*aggregate.Endpoint, *aggregate.Model, error) {
+func (r *endpointResolver) Resolve(ctx context.Context, userID uint, alias vo.EndpointAlias, matcher func(*aggregate.Endpoint) bool) (*aggregate.Endpoint, *aggregate.Model, error) {
 	if alias.IsEmpty() {
 		return nil, nil, ierr.New(ierr.ErrValidation, "endpoint alias is empty")
 	}
-	models, err := r.modelRepo.FindByAlias(ctx, alias)
+	models, err := r.modelRepo.FindByAlias(ctx, alias, userID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -55,7 +55,7 @@ func (r *endpointResolver) Resolve(ctx context.Context, alias vo.EndpointAlias, 
 		if !m.Enabled() {
 			continue
 		}
-		ep, findErr := r.endpointRepo.FindByID(ctx, m.EndpointID())
+		ep, findErr := r.endpointRepo.FindByID(ctx, m.EndpointID(), userID)
 		if findErr != nil {
 			return nil, nil, findErr
 		}

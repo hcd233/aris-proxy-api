@@ -15,6 +15,7 @@ type Endpoint struct {
 	commonagg.Base
 
 	name                        string
+	userID                      uint // 归属用户 ID（多租户隔离；由 repository 从 DB 恢复或 Create 时写入）
 	openaiBaseURL               string
 	anthropicBaseURL            string
 	apiKey                      string
@@ -63,6 +64,7 @@ func CreateEndpoint(
 }
 
 func (e *Endpoint) Name() string                      { return e.name }
+func (e *Endpoint) UserID() uint                      { return e.userID }
 func (e *Endpoint) OpenaiBaseURL() string             { return e.openaiBaseURL }
 func (e *Endpoint) AnthropicBaseURL() string          { return e.anthropicBaseURL }
 func (e *Endpoint) APIKey() string                    { return e.apiKey }
@@ -71,6 +73,9 @@ func (e *Endpoint) SupportOpenAIResponse() bool       { return e.supportOpenAIRe
 func (e *Endpoint) SupportAnthropicMessage() bool     { return e.supportAnthropicMessage }
 func (e *Endpoint) CreatedAt() time.Time              { return e.createdAt }
 func (e *Endpoint) UpdatedAt() time.Time              { return e.updatedAt }
+
+// SetUserID 设置归属用户 ID（repository 从 DB 恢复时使用）
+func (e *Endpoint) SetUserID(userID uint) { e.userID = userID }
 
 func (e *Endpoint) SetTimestamps(createdAt, updatedAt time.Time) {
 	e.createdAt = createdAt

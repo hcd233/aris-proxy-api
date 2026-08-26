@@ -14,6 +14,7 @@ import (
 
 	proxyutil "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 // ListOpenAIModels 列出 OpenAI 兼容模型
@@ -30,7 +31,7 @@ func NewListOpenAIModels(readRepo llmproxy.EndpointReadRepository) ListOpenAIMod
 }
 
 func (q *listOpenAIModels) Handle(ctx context.Context) (*dto.OpenAIListModelsRsp, error) {
-	projections, err := q.readRepo.ListAliases(ctx)
+	projections, err := q.readRepo.ListAliases(ctx, util.CtxValueUint(ctx, constant.CtxKeyUserID))
 	if err != nil {
 		logger.WithCtx(ctx).Error("[OpenAIQuery] Failed to query models", zap.Error(err))
 		return &dto.OpenAIListModelsRsp{Object: constant.OpenAIListObject, Data: []*dto.OpenAIModel{}}, nil
@@ -62,7 +63,7 @@ func NewListAnthropicModels(readRepo llmproxy.EndpointReadRepository) ListAnthro
 }
 
 func (q *listAnthropicModels) Handle(ctx context.Context) (*dto.AnthropicListModelsRsp, error) {
-	projections, err := q.readRepo.ListAliases(ctx)
+	projections, err := q.readRepo.ListAliases(ctx, util.CtxValueUint(ctx, constant.CtxKeyUserID))
 	if err != nil {
 		logger.WithCtx(ctx).Error("[AnthropicQuery] Failed to query models", zap.Error(err))
 		return &dto.AnthropicListModelsRsp{Data: []*dto.AnthropicModelInfo{}}, nil
@@ -100,7 +101,7 @@ func NewCountTokens(readRepo llmproxy.EndpointReadRepository, proxy AnthropicPro
 func (q *countTokens) Handle(ctx context.Context, req *dto.AnthropicCountTokensRequest) (*dto.AnthropicTokensCount, error) {
 	log := logger.WithCtx(ctx)
 
-	epProj, modelNameProj, err := q.readRepo.FindEndpointByAlias(ctx, req.Body.Model, func(ep *llmproxy.EndpointProjection) bool {
+	epProj, modelNameProj, err := q.readRepo.FindEndpointByAlias(ctx, util.CtxValueUint(ctx, constant.CtxKeyUserID), req.Body.Model, func(ep *llmproxy.EndpointProjection) bool {
 		return ep.SupportAnthropicMessage
 	})
 	if err != nil {

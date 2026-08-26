@@ -63,7 +63,8 @@ func (u *openAIUseCase) CreateChatCompletion(ctx context.Context, req *dto.OpenA
 	log := logger.WithCtx(ctx)
 
 	var compatRoute enum.CompatRoute
-	ep, m, err := u.resolver.Resolve(ctx, vo.EndpointAlias(req.Body.Model), func(ep *aggregate.Endpoint) bool {
+	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
+	ep, m, err := u.resolver.Resolve(ctx, userID, vo.EndpointAlias(req.Body.Model), func(ep *aggregate.Endpoint) bool {
 		compatRoute = SelectCompatRoute(enum.ProxyAPIOpenAIChat, ep)
 		return compatRoute != enum.CompatRouteUnsupported
 	})
@@ -125,7 +126,8 @@ func (u *openAIUseCase) CreateResponse(ctx context.Context, req *dto.OpenAICreat
 
 	model := lo.FromPtr(req.Body.Model)
 	var compatRoute enum.CompatRoute
-	ep, m, err := u.resolver.Resolve(ctx, vo.EndpointAlias(model), func(ep *aggregate.Endpoint) bool {
+	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
+	ep, m, err := u.resolver.Resolve(ctx, userID, vo.EndpointAlias(model), func(ep *aggregate.Endpoint) bool {
 		compatRoute = SelectCompatRoute(enum.ProxyAPIOpenAIResponse, ep)
 		return compatRoute != enum.CompatRouteUnsupported
 	})

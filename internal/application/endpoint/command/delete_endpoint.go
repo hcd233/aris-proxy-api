@@ -6,9 +6,11 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/endpoint/port"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 type deleteEndpointHandler struct {
@@ -22,7 +24,7 @@ func NewDeleteEndpointHandler(endpointRepo llmproxy.EndpointRepository) port.Del
 func (h *deleteEndpointHandler) Handle(ctx context.Context, cmd port.DeleteEndpointCommand) error {
 	log := logger.WithCtx(ctx)
 
-	ep, err := h.endpointRepo.FindByID(ctx, cmd.EndpointID)
+	ep, err := h.endpointRepo.FindByID(ctx, cmd.EndpointID, util.CtxValueUint(ctx, constant.CtxKeyUserID))
 	if err != nil {
 		return err
 	}
@@ -30,7 +32,7 @@ func (h *deleteEndpointHandler) Handle(ctx context.Context, cmd port.DeleteEndpo
 		return ierr.New(ierr.ErrDataNotExists, "endpoint not found")
 	}
 
-	if err := h.endpointRepo.DeleteCascade(ctx, cmd.EndpointID); err != nil {
+	if err := h.endpointRepo.DeleteCascade(ctx, cmd.EndpointID, util.CtxValueUint(ctx, constant.CtxKeyUserID)); err != nil {
 		log.Error("[EndpointCommand] Cascade delete endpoint failed", zap.Error(err))
 		return err
 	}

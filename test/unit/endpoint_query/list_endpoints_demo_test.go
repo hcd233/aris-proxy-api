@@ -18,20 +18,22 @@ type fakeEndpointRepo struct {
 	page      *model.PageInfo
 }
 
-func (f *fakeEndpointRepo) Paginate(_ context.Context, _ model.CommonParam) ([]*aggregate.Endpoint, *model.PageInfo, error) {
+func (f *fakeEndpointRepo) Paginate(_ context.Context, _ model.CommonParam, _ uint) ([]*aggregate.Endpoint, *model.PageInfo, error) {
 	return f.endpoints, f.page, nil
 }
-func (f *fakeEndpointRepo) FindByID(context.Context, uint) (*aggregate.Endpoint, error) {
+func (f *fakeEndpointRepo) FindByID(context.Context, uint, uint) (*aggregate.Endpoint, error) {
 	return nil, nil
 }
 func (f *fakeEndpointRepo) BatchFindByIDs(context.Context, []uint) (map[uint]*aggregate.Endpoint, error) {
 	return nil, nil
 }
-func (f *fakeEndpointRepo) Create(context.Context, *aggregate.Endpoint) (uint, error) { return 0, nil }
-func (f *fakeEndpointRepo) Update(context.Context, *aggregate.Endpoint) error         { return nil }
-func (f *fakeEndpointRepo) Delete(context.Context, uint) error                        { return nil }
-func (f *fakeEndpointRepo) DeleteCascade(context.Context, uint) error                 { return nil }
-func (f *fakeEndpointRepo) List(context.Context) ([]*aggregate.Endpoint, error)       { return nil, nil }
+func (f *fakeEndpointRepo) Create(context.Context, *aggregate.Endpoint, uint) (uint, error) {
+	return 0, nil
+}
+func (f *fakeEndpointRepo) Update(context.Context, *aggregate.Endpoint) error   { return nil }
+func (f *fakeEndpointRepo) Delete(context.Context, uint, uint) error            { return nil }
+func (f *fakeEndpointRepo) DeleteCascade(context.Context, uint, uint) error     { return nil }
+func (f *fakeEndpointRepo) List(context.Context) ([]*aggregate.Endpoint, error) { return nil, nil }
 
 var _ llmproxy.EndpointRepository = (*fakeEndpointRepo)(nil)
 

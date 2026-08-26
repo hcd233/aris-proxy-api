@@ -92,9 +92,12 @@ type ModelView struct {
 }
 
 // ListModelsQuery 列出 Models 查询命令
+//
+// ScopeUserID 多租户隔离：>0 时只返回该用户的配置；==0（admin 视角）不过滤。
 type ListModelsQuery struct {
 	model.CommonParam
-	IsDemo bool
+	IsDemo      bool
+	ScopeUserID uint
 }
 
 // ListModelsHandler 查询处理器

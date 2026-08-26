@@ -78,7 +78,9 @@ func (dao *baseDAO[ModelT]) Update(db *gorm.DB, data *ModelT, info map[string]an
 //	author centonhuang
 //	update 2024-10-17 02:52:33
 func (dao *baseDAO[ModelT]) Delete(db *gorm.DB, data *ModelT) (err error) {
-	err = db.Model(data).Update(constant.FieldDeletedAt, time.Now().UTC().Unix()).Error
+	// Where(data) 而非 Model(data)：结构体非零字段需作为更新条件（如 user_id 隔离），
+	// Model() 仅解析表名与主键，会丢弃其他条件字段。
+	err = db.Where(data).Model(data).Update(constant.FieldDeletedAt, time.Now().UTC().Unix()).Error
 	return
 }
 

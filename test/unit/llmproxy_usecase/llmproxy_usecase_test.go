@@ -30,11 +30,11 @@ func newMockReadRepo(aliases []string) *mockReadRepo {
 	}
 }
 
-func (r *mockReadRepo) ListAliases(_ context.Context) ([]*llmproxy.ModelAliasProjection, error) {
+func (r *mockReadRepo) ListAliases(_ context.Context, _ uint) ([]*llmproxy.ModelAliasProjection, error) {
 	return r.listAliasesResult, r.listAliasesErr
 }
 
-func (r *mockReadRepo) FindEndpointByAlias(_ context.Context, _ string, matcher func(*llmproxy.EndpointProjection) bool) (*llmproxy.EndpointProjection, *llmproxy.ModelAliasProjection, error) {
+func (r *mockReadRepo) FindEndpointByAlias(_ context.Context, _ uint, _ string, matcher func(*llmproxy.EndpointProjection) bool) (*llmproxy.EndpointProjection, *llmproxy.ModelAliasProjection, error) {
 	if r.findErr != nil || r.findResult == nil {
 		return r.findResult, r.findModelResult, r.findErr
 	}

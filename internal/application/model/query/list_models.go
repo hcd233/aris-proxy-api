@@ -28,7 +28,7 @@ func NewListModelsHandler(repo llmproxy.ModelRepository, endpointRepo llmproxy.E
 func (h *listModelsHandler) Handle(ctx context.Context, q modelport.ListModelsQuery) ([]*modelport.ModelView, *model.PageInfo, error) {
 	log := logger.WithCtx(ctx)
 
-	models, pageInfo, err := h.repo.Paginate(ctx, q.CommonParam)
+	models, pageInfo, err := h.repo.Paginate(ctx, q.CommonParam, q.ScopeUserID)
 	if err != nil {
 		log.Error("[ModelQuery] List models failed", zap.Error(err))
 		return nil, nil, err

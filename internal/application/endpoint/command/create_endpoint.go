@@ -6,10 +6,12 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/endpoint/port"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 type createEndpointHandler struct {
@@ -30,7 +32,7 @@ func (h *createEndpointHandler) Handle(ctx context.Context, cmd port.CreateEndpo
 		return nil, ierr.Wrap(ierr.ErrValidation, err, "validate endpoint")
 	}
 
-	id, err := h.repo.Create(ctx, ep)
+	id, err := h.repo.Create(ctx, ep, util.CtxValueUint(ctx, constant.CtxKeyUserID))
 	if err != nil {
 		log.Error("[EndpointCommand] Create endpoint failed", zap.Error(err))
 		return nil, err

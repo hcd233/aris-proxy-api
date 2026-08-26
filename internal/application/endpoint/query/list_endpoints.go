@@ -27,7 +27,7 @@ func NewListEndpointsHandler(repo llmproxy.EndpointRepository) port.ListEndpoint
 func (h *listEndpointsHandler) Handle(ctx context.Context, q port.ListEndpointsQuery) ([]*port.EndpointView, *model.PageInfo, error) {
 	log := logger.WithCtx(ctx)
 
-	endpoints, pageInfo, err := h.repo.Paginate(ctx, q.CommonParam)
+	endpoints, pageInfo, err := h.repo.Paginate(ctx, q.CommonParam, q.ScopeUserID)
 	if err != nil {
 		log.Error("[EndpointQuery] List endpoints failed", zap.Error(err))
 		return nil, nil, err
