@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { api } from "@/lib/api-client";
 import { showErrorToast } from "@/lib/api-error-handler";
@@ -45,6 +45,7 @@ import { TableSkeleton } from "@/components/table-skeleton";
 import { PaginationBar } from "@/components/pagination-bar";
 import { FilterBar } from "@/components/filter-bar/filter-bar";
 import { useFilterBar } from "@/components/filter-bar/use-filter-bar";
+import type { FacetDef } from "@/components/filter-bar/types";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useDeleteConfirm } from "@/hooks/use-delete-confirm";
 import { useT } from "@/lib/i18n";
@@ -71,7 +72,7 @@ const emptyForm: EndpointForm = {
 
 export default function EndpointsPage() {
   const t = useT();
-  const { isDemo } = useAuth();
+  const { isDemo, isAdmin } = useAuth();
   const isMobile = useIsMobile();
   const [endpoints, setEndpoints] = useState<EndpointItem[]>([]);
   const [persistedPage, setPersistedPage] = usePersistentState("dashboard.endpoints.page", 1);
@@ -90,9 +91,27 @@ export default function EndpointsPage() {
   const [form, setForm] = useState<EndpointForm>(emptyForm);
   const [saving, setSaving] = useState(false);
 
+  // 仅 admin 可按归属用户名过滤（后端对普通用户忽略该参数）
+  const facets = useMemo<FacetDef[]>(
+    () =>
+      isAdmin()
+        ? [
+            {
+              key: "username",
+              label: t("endpoints.filter_by_username"),
+              options: [],
+              target: "param",
+              single: true,
+            },
+          ]
+        : [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- isAdmin/t 均为稳定引用，仅需挂载时判定
+    [],
+  );
+
   const filterBar = useFilterBar({
     persistKey: "dashboard.endpoints",
-    facets: [],
+    facets,
     freeTextPlaceholder: t("endpoints.search_endpoints"),
   });
   const { queryParams } = filterBar;
@@ -103,7 +122,7 @@ export default function EndpointsPage() {
       const safeSize = validSizes.includes(pageSize) ? pageSize : 20;
       setLoading(true);
       try {
-        const rsp = await api.listEndpoints(page, safeSize, query);
+        const rsp = await api.listEndpoints(page, safeSize, query, queryParams.params.username);
         setEndpoints(rsp.endpoints ?? []);
         if (rsp.pageInfo) {
           setPageInfo(rsp.pageInfo);
@@ -118,7 +137,7 @@ export default function EndpointsPage() {
         setLoading(false);
       }
     },
-    [t, setPersistedPage, setPersistedPageSize],
+    [t, setPersistedPage, setPersistedPageSize, queryParams.params.username],
   );
 
   /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- 关键词 token 变化回到第 1 页查询；挂载时以持久化关键词发起首次查询 */
@@ -199,7 +218,7 @@ export default function EndpointsPage() {
   });
 
   return (
-    <PermissionGuard adminOnly module="endpoints">
+    <PermissionGuard module="endpoints">
       <div className="space-y-8">
         <PageHeader
           title={t("endpoints.title")}

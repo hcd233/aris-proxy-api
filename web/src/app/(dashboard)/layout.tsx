@@ -103,14 +103,12 @@ const NAV_GROUPS: NavGroup[] = [
         labelKey: "nav.endpoints",
         href: "/endpoints/",
         icon: <Server className="size-4" />,
-        adminOnly: true,
         demoModule: "endpoints",
       },
       {
         labelKey: "nav.models",
         href: "/models/",
         icon: <Cpu className="size-4" />,
-        adminOnly: true,
         demoModule: "models",
       },
       {

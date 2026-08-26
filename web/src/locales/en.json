@@ -866,5 +866,7 @@
   "demo_access_audit.action_module_denied": "Locked Module Probe",
   "demo_access_audit.reason_login_disabled": "Entry Disabled",
   "demo_access_audit.reason_no_demo_user": "No Demo Account",
-  "demo_access_audit.reason_module_closed": "Module Closed"
+  "demo_access_audit.reason_module_closed": "Module Closed",
+  "endpoints.filter_by_username": "Filter by owner username...",
+  "models.filter_by_username": "Filter by owner username..."
 }

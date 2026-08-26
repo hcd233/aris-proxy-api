@@ -866,5 +866,7 @@
   "demo_access_audit.action_module_denied": "探测锁定模块",
   "demo_access_audit.reason_login_disabled": "入口关闭",
   "demo_access_audit.reason_no_demo_user": "无 Demo 账户",
-  "demo_access_audit.reason_module_closed": "模块未开放"
+  "demo_access_audit.reason_module_closed": "模块未开放",
+  "endpoints.filter_by_username": "按归属用户名筛选...",
+  "models.filter_by_username": "按归属用户名筛选..."
 }

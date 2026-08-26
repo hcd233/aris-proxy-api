@@ -61,6 +61,7 @@ import { TableSkeleton } from "@/components/table-skeleton";
 import { useDeleteConfirm } from "@/hooks/use-delete-confirm";
 import { FilterBar } from "@/components/filter-bar/filter-bar";
 import { useFilterBar } from "@/components/filter-bar/use-filter-bar";
+import type { FacetDef } from "@/components/filter-bar/types";
 import ExportDialog from "@/components/export-dialog";
 import ExportClaudecodeDialog from "@/components/export-claudecode-dialog";
 import ExportCodexDialog from "@/components/export-codex-dialog";
@@ -217,7 +218,7 @@ function TokenPresetPopover({
 export default function ModelsPage() {
   const router = useRouter();
   const t = useT();
-  const { isDemo } = useAuth();
+  const { isDemo, isAdmin } = useAuth();
   const isMobile = useIsMobile();
   const [models, setModels] = useState<ModelItem[]>([]);
   const [endpoints, setEndpoints] = useState<EndpointItem[]>([]);
@@ -253,9 +254,27 @@ export default function ModelsPage() {
   const [exportCodexDialogOpen, setExportCodexDialogOpen] = useState(false);
   const [exportPiDialogOpen, setExportPiDialogOpen] = useState(false);
 
+  // 仅 admin 可按归属用户名过滤（后端对普通用户忽略该参数）
+  const facets = useMemo<FacetDef[]>(
+    () =>
+      isAdmin()
+        ? [
+            {
+              key: "username",
+              label: t("models.filter_by_username"),
+              options: [],
+              target: "param",
+              single: true,
+            },
+          ]
+        : [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- isAdmin/t 均为稳定引用，仅需挂载时判定
+    [],
+  );
+
   const filterBar = useFilterBar({
     persistKey: "dashboard.models",
-    facets: [],
+    facets,
     freeTextPlaceholder: t("models.search_placeholder"),
   });
   const { queryParams } = filterBar;
@@ -264,7 +283,7 @@ export default function ModelsPage() {
     async (page: number, pageSize: number, query?: string) => {
       setLoading(true);
       try {
-        const modelsRsp = await api.listModels(page, pageSize, query);
+        const modelsRsp = await api.listModels(page, pageSize, query, queryParams.params.username);
         setModels(modelsRsp.models ?? []);
         if (modelsRsp.pageInfo) {
           setPageInfo(modelsRsp.pageInfo);
@@ -277,7 +296,7 @@ export default function ModelsPage() {
         setLoading(false);
       }
     },
-    [setPersistedPage, setPersistedPageSize, t],
+    [setPersistedPage, setPersistedPageSize, t, queryParams.params.username],
   );
 
   const fetchEndpoints = useCallback(async () => {
@@ -415,7 +434,7 @@ export default function ModelsPage() {
   };
 
   return (
-    <PermissionGuard adminOnly module="models">
+    <PermissionGuard module="models">
       <TooltipProvider>
         <div className="space-y-8">
           <PageHeader
