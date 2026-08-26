@@ -3,6 +3,7 @@ package upstream_query
 
 import (
 	"context"
+	"slices"
 	"strconv"
 	"testing"
 	"time"
@@ -32,6 +33,8 @@ func (f *fakeEndpointRepo) FindIDsByScope(_ context.Context, scopeUserID uint) (
 			ids = append(ids, id)
 		}
 	}
+	// 与 SQL 实现 ORDER BY id 对齐，保证分页确定性
+	slices.Sort(ids)
 	return ids, nil
 }
 

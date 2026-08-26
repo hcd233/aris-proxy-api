@@ -23,7 +23,7 @@ func initClientRouter(clientGroup huma.API, clientHandler handler.ClientHandler,
 	huma.Register(clientGroup, huma.Operation{
 		OperationID: "listClientModels",
 		Method:      http.MethodGet,
-		Path:        constant.RoutePathList,
+		Path:        "/model/list",
 		Summary:     "ListClientModels",
 		Description: "List enabled models with capabilities for aris client configuration",
 		Tags:        []string{constant.TagClient},
