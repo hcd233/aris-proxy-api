@@ -33,6 +33,8 @@ const (
 	TraceClientSchemeHTTP           = "http"
 	TraceClientSchemeHTTPS          = "https"
 	TraceClientCheckPath            = "/api/v1/trace/client/check"
+	ClientModelsListPath            = "/api/v1/client/list"
+	ClientModelsListMaxBodyBytes    = 1 << 20
 	TraceClientHTTPTimeout          = 5 * time.Second
 	TraceClientSpoolLimit           = 256 << 20
 	TraceClientBatchMaxRecords      = 500
