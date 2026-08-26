@@ -9,7 +9,7 @@ func newInitCommand() *cobra.Command {
 	var host string
 	cmd := &cobra.Command{
 		Use:   "init",
-		Short: "Configure the aris trace client",
+		Short: "Initialize aris client (host + API key)",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return setup.RunInit(cmd.Context(), setup.InitOptions{

@@ -43,6 +43,8 @@ func TestRenderHealthyReport(t *testing.T) {
   ✓ API key valid · ••••5678
 ◆ Agent
   ✓ codex · hooks 3/3 registered
+◆ Providers
+  ! agent configs · none configured — run aris model export
 ◆ Local queue
   ✓ no pending records
 ◆ Diagnostics
@@ -72,6 +74,8 @@ func TestRenderNotInitialized(t *testing.T) {
   ! not configured
 ◆ Agent
   ! codex · hooks 0/3 registered, missing: SessionStart, Stop, SubagentStop
+◆ Providers
+  ! agent configs · none configured — run aris model export
 ◆ Local queue
   ✓ no pending records
 ◆ Diagnostics

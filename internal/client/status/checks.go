@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/hcd233/aris-proxy-api/internal/client/api"
+	"github.com/hcd233/aris-proxy-api/internal/client/model"
 	"github.com/hcd233/aris-proxy-api/internal/client/setup"
 	"github.com/hcd233/aris-proxy-api/internal/client/trace"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
@@ -18,23 +19,25 @@ import (
 
 // Report aris status 全部检查结果
 type Report struct {
-	ConfigFound   bool
-	Host          string
-	Agent         string
-	ServerOK      bool
-	ServerLatency time.Duration
-	ServerErr     string
-	AuthOK        bool
-	AuthMaskedKey string
-	AuthErr       string
-	HooksFound    int
-	HooksTotal    int
-	HooksMissing  []string
-	PendingCount  int
-	PendingBytes  int64
-	RejectedCount int
-	RecentErrors  int
-	LogDir        string
+	ConfigFound      bool
+	Host             string
+	Agent            string
+	ServerOK         bool
+	ServerLatency    time.Duration
+	ServerErr        string
+	AuthOK           bool
+	AuthMaskedKey    string
+	AuthErr          string
+	HooksFound       int
+	HooksTotal       int
+	HooksMissing     []string
+	ProvidersFound   []string
+	ProvidersMissing []string
+	PendingCount     int
+	PendingBytes     int64
+	RejectedCount    int
+	RecentErrors     int
+	LogDir           string
 }
 
 // Collect 并发收集本地扫描与网络检查结果；无 config 时跳过网络请求
@@ -89,6 +92,23 @@ func collectLocal(paths trace.Paths, report *Report) {
 		return
 	}
 	report.HooksFound, report.HooksMissing = trace.InspectCodexHooks(paths, binPath)
+	report.ProvidersFound, report.ProvidersMissing = scanProviderConfigs()
+}
+
+// scanProviderConfigs 遍历各 agent harness 默认配置路径，报告存在性
+func scanProviderConfigs() (found, missing []string) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil, nil
+	}
+	for _, tgt := range model.Targets() {
+		if _, statErr := os.Stat(tgt.ConfigPath(home)); statErr == nil {
+			found = append(found, tgt.Key())
+		} else {
+			missing = append(missing, tgt.Key())
+		}
+	}
+	return found, missing
 }
 
 // scanRecordDir 统计目录中记录文件的数量与总字节数；目录缺失视为 0

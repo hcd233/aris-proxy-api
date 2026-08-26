@@ -42,7 +42,7 @@ func TestServerCommandTreePreservesExistingCommands(t *testing.T) {
 func TestClientCommandTree(t *testing.T) {
 	t.Parallel()
 	out := runGo(t, "run", "./cmd/client", "--help")
-	for _, name := range []string{"init", "status", "trace"} {
+	for _, name := range []string{"init", "status", "trace", "model"} {
 		if !strings.Contains(out, name) {
 			t.Errorf("client help missing %q:\n%s", name, out)
 		}
@@ -53,7 +53,7 @@ func TestClientCommandTree(t *testing.T) {
 		}
 	}
 	traceOut := runGo(t, "run", "./cmd/client", "trace", "--help")
-	for _, name := range []string{"ingest"} {
+	for _, name := range []string{"ingest", "install"} {
 		if !strings.Contains(traceOut, name) {
 			t.Errorf("trace help missing %q:\n%s", name, traceOut)
 		}
