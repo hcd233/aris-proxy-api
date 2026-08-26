@@ -27,6 +27,7 @@ import (
 	identitycommand "github.com/hcd233/aris-proxy-api/internal/application/identity/command"
 	identityport "github.com/hcd233/aris-proxy-api/internal/application/identity/port"
 	identityquery "github.com/hcd233/aris-proxy-api/internal/application/identity/query"
+	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/port"
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
 	metricsport "github.com/hcd233/aris-proxy-api/internal/application/metrics/port"
 	metricsquery "github.com/hcd233/aris-proxy-api/internal/application/metrics/query"
@@ -137,7 +138,10 @@ var ApplicationModule = fx.Module(constant.DigNameApplicationModule,
 		NewSessionOptionHandler,
 		usecase.NewListOpenAIModels,
 		usecase.NewListAnthropicModels,
-		usecase.NewListClientModels,
+		fx.Annotate(
+			usecase.NewListClientModels,
+			fx.As(new(port.ListClientModelsHandler)),
+		),
 		usecase.NewCountTokens,
 		usecase.NewOpenAIUseCase,
 		usecase.NewAnthropicUseCase,
