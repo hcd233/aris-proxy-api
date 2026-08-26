@@ -14,6 +14,7 @@ type CreateEndpointReq struct {
 
 // CreateEndpointReqBody 创建 Endpoint 请求体
 type CreateEndpointReqBody struct {
+	OwnerUserID                 *uint   `json:"ownerUserID,omitempty" minimum:"1" doc:"归属用户ID(仅管理员生效，缺省为当前用户)"`
 	Name                        string  `json:"name" required:"true" minLength:"1" maxLength:"64" doc:"Endpoint 名称"`
 	OpenaiBaseURL               *string `json:"openaiBaseURL,omitempty" doc:"OpenAI Base URL"`
 	AnthropicBaseURL            *string `json:"anthropicBaseURL,omitempty" doc:"Anthropic Base URL"`
@@ -51,6 +52,7 @@ type DeleteEndpointReq struct {
 //	@update 2026-05-27 10:00:00
 type ListEndpointsReq struct {
 	model.CommonParam
+	Username string `query:"username,omitempty" doc:"按归属用户名过滤(仅管理员生效)"`
 }
 
 // ListEndpointsRsp 列出 Endpoint 响应
@@ -63,6 +65,7 @@ type ListEndpointsRsp struct {
 // EndpointItem Endpoint 列表项
 type EndpointItem struct {
 	ID                          uint      `json:"id" doc:"Endpoint ID"`
+	Username                    string    `json:"username" doc:"归属用户名"`
 	Name                        string    `json:"name" doc:"Endpoint 名称"`
 	OpenaiBaseURL               string    `json:"openaiBaseURL" doc:"OpenAI Base URL"`
 	AnthropicBaseURL            string    `json:"anthropicBaseURL" doc:"Anthropic Base URL"`

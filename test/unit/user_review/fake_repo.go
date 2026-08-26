@@ -157,3 +157,7 @@ func (r *fakeUserRepo) DeleteCascade(ctx context.Context, id uint) error {
 	}
 	return nil
 }
+
+func (r *fakeUserRepo) FindByName(context.Context, string) (*aggregate.User, error) {
+	return nil, nil
+}

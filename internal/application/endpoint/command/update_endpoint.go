@@ -6,11 +6,9 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/endpoint/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
-	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 type updateEndpointHandler struct {
@@ -26,7 +24,7 @@ func NewUpdateEndpointHandler(repo llmproxy.EndpointRepository) port.UpdateEndpo
 func (h *updateEndpointHandler) Handle(ctx context.Context, cmd port.UpdateEndpointCommand) error {
 	log := logger.WithCtx(ctx)
 
-	ep, err := h.repo.FindByID(ctx, cmd.EndpointID, util.CtxValueUint(ctx, constant.CtxKeyUserID))
+	ep, err := h.repo.FindByID(ctx, cmd.EndpointID, cmd.ScopeUserID)
 	if err != nil {
 		log.Error("[EndpointCommand] Find endpoint for update failed", zap.Error(err))
 		return err

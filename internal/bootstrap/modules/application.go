@@ -222,8 +222,8 @@ func NewDeleteEndpointHandler(endpointRepo llmproxy.EndpointRepository) endpoint
 	return endpointcommand.NewDeleteEndpointHandler(endpointRepo)
 }
 
-func NewListEndpointsHandler(repo llmproxy.EndpointRepository) endpointport.ListEndpointsHandler {
-	return endpointquery.NewListEndpointsHandler(repo)
+func NewListEndpointsHandler(repo llmproxy.EndpointRepository, userRepo identity.UserRepository) endpointport.ListEndpointsHandler {
+	return endpointquery.NewListEndpointsHandler(repo, userRepo)
 }
 
 func NewCreateModelHandler(endpointRepo llmproxy.EndpointRepository, modelRepo llmproxy.ModelRepository) modelport.CreateModelHandler {

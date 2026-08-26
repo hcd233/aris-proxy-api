@@ -50,7 +50,10 @@ func (h *endpointHandler) HandleCreateEndpoint(ctx context.Context, req *dto.Cre
 	rsp := &dto.EmptyRsp{}
 	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
 
+	isAdmin := util.CtxValuePermission(ctx) == enum.PermissionAdmin
+	ownerUserID := lo.Ternary(isAdmin && req.Body.OwnerUserID != nil, lo.FromPtr(req.Body.OwnerUserID), userID)
 	result, err := h.create.Handle(ctx, port.CreateEndpointCommand{
+		OwnerUserID:                 ownerUserID,
 		Name:                        req.Body.Name,
 		OpenaiBaseURL:               lo.FromPtr(req.Body.OpenaiBaseURL),
 		AnthropicBaseURL:            lo.FromPtr(req.Body.AnthropicBaseURL),
@@ -73,9 +76,13 @@ func (h *endpointHandler) HandleCreateEndpoint(ctx context.Context, req *dto.Cre
 func (h *endpointHandler) HandleListEndpoints(ctx context.Context, req *dto.ListEndpointsReq) (*dto.HTTPResponse[*dto.ListEndpointsRsp], error) {
 	rsp := &dto.ListEndpointsRsp{}
 
+	perm := util.CtxValuePermission(ctx)
+	isAdminList := perm == enum.PermissionAdmin
 	views, pageInfo, err := h.list.Handle(ctx, port.ListEndpointsQuery{
 		CommonParam: req.CommonParam,
-		IsDemo:      util.CtxValuePermission(ctx) == enum.PermissionDemo,
+		IsDemo:      perm == enum.PermissionDemo,
+		ScopeUserID: lo.Ternary(isAdminList, 0, util.CtxValueUint(ctx, constant.CtxKeyUserID)),
+		Username:    req.Username,
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[EndpointHandler] List endpoints failed", zap.Error(err))
@@ -85,6 +92,7 @@ func (h *endpointHandler) HandleListEndpoints(ctx context.Context, req *dto.List
 	rsp.Endpoints = lo.Map(views, func(v *port.EndpointView, _ int) *dto.EndpointItem {
 		return &dto.EndpointItem{
 			ID:                          v.ID,
+			Username:                    v.Username,
 			Name:                        v.Name,
 			OpenaiBaseURL:               v.OpenaiBaseURL,
 			AnthropicBaseURL:            v.AnthropicBaseURL,
@@ -104,6 +112,7 @@ func (h *endpointHandler) HandleUpdateEndpoint(ctx context.Context, req *dto.Upd
 	rsp := &dto.EmptyRsp{}
 
 	err := h.update.Handle(ctx, port.UpdateEndpointCommand{
+		ScopeUserID:                 scopeFor(ctx, util.CtxValuePermission(ctx)),
 		EndpointID:                  req.ID,
 		Name:                        req.Body.Name,
 		OpenaiBaseURL:               req.Body.OpenaiBaseURL,
@@ -123,10 +132,21 @@ func (h *endpointHandler) HandleUpdateEndpoint(ctx context.Context, req *dto.Upd
 func (h *endpointHandler) HandleDeleteEndpoint(ctx context.Context, req *dto.DeleteEndpointReq) (*dto.HTTPResponse[*dto.EmptyRsp], error) {
 	rsp := &dto.EmptyRsp{}
 
-	err := h.delete.Handle(ctx, port.DeleteEndpointCommand{EndpointID: req.ID})
+	err := h.delete.Handle(ctx, port.DeleteEndpointCommand{
+		ScopeUserID: scopeFor(ctx, util.CtxValuePermission(ctx)),
+		EndpointID:  req.ID,
+	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[EndpointHandler] Delete endpoint failed", zap.Error(err))
 		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 	return apiutil.WrapHTTPResponse(rsp, nil)
+}
+
+// scopeFor 多租户隔离 scope 计算：admin 返回 0（不过滤），其余用户限定自身。
+func scopeFor(ctx context.Context, perm enum.Permission) uint {
+	if perm == enum.PermissionAdmin {
+		return 0
+	}
+	return util.CtxValueUint(ctx, constant.CtxKeyUserID)
 }

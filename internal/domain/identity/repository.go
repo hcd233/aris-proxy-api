@@ -27,6 +27,8 @@ type UserRepository interface {
 	FindByGoogleBindID(ctx context.Context, bindID string) (*aggregate.User, error)
 	// FindByPermission 按权限精确查询（用于定位全局单例 Demo 账户）；未找到返回 (nil, nil)
 	FindByPermission(ctx context.Context, permission enum.Permission) (*aggregate.User, error)
+	// FindByName 按用户名精确查询；未找到返回 (nil, nil)
+	FindByName(ctx context.Context, name string) (*aggregate.User, error)
 	// ReplaceDemoUser 在一个事务中将目标用户提升为 Demo，并将旧 Demo 用户降为 pending。
 	// 返回被替换的 Demo 用户 ID；不存在旧 Demo 时返回 0。
 	ReplaceDemoUser(ctx context.Context, targetID uint) (uint, error)
