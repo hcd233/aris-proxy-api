@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 )
@@ -44,7 +45,8 @@ type Metrics interface {
 // Guard 组合熔断与信号量：Allow 先过熔断再取信号量，Report 回写熔断结果。
 // 按 key 懒创建熔断器，key 数量 = 接入方配置的 endpoint 数，常驻生命周期。
 //
-// ponytail: registry 不做 idle 清理，如出现 endpoint 动态增删场景再做 GC。
+// registry 软上限见 breaker()：超限整体重建（2026-08-26 CR 修复，防 endpoint
+// 高频增删场景下的无界增长）。
 type Guard struct {
 	cfg      GuardConfig
 	metrics  Metrics
@@ -122,6 +124,11 @@ func (g *Guard) breaker(key string) *Breaker {
 	defer g.mu.Unlock()
 	b, ok := g.breakers[key]
 	if !ok {
+		// 软上限防无界增长（endpoint 高频增删场景）。整体重建仅丢失熔断窗口
+		// （可重新积累），不影响隔离信号量与在途请求。
+		if len(g.breakers) >= constant.ResilienceRegistryMaxKeys {
+			g.breakers = make(map[string]*Breaker, constant.ResilienceRegistryMaxKeys/2)
+		}
 		b = NewBreaker(key, BreakerConfig{
 			Window:              g.cfg.CircuitWindow,
 			MinRequests:         g.cfg.CircuitMinRequests,

@@ -4,10 +4,12 @@ package resilience_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/common/resilience"
@@ -143,4 +145,28 @@ func TestGuard_BulkheadDisabled(t *testing.T) {
 		t.Fatalf("Allow: %v", err)
 	}
 	release()
+}
+
+// TestGuard_RegistryBoundedAndFunctionalAfterRebuild 验证注册表软上限：
+// 超过 ResilienceRegistryMaxKeys 个 key 后整体重建，重建后熔断功能不受影响。
+func TestGuard_RegistryBoundedAndFunctionalAfterRebuild(t *testing.T) { //nolint:paralleltest // 触发全局常量阈值的重负载用例
+	cfg := guardCfg()
+	g := resilience.NewGuard(cfg, nil)
+
+	// 灌满注册表并全部释放槽位（bulkhead MaxConcurrent=1）
+	for i := 0; i < constant.ResilienceRegistryMaxKeys+16; i++ {
+		release, err := g.Allow(context.Background(), fmt.Sprintf("k%d", i))
+		if err != nil {
+			t.Fatalf("allow k%d: %v", i, err)
+		}
+		release()
+	}
+
+	// 重建后新 key 的熔断链路完整：3 次失败（MinRequests=3, Threshold=0.5）后打开
+	for i := 0; i < 3; i++ {
+		g.Report("post-rebuild", false)
+	}
+	if _, err := g.Allow(context.Background(), "post-rebuild"); err == nil {
+		t.Fatal("expected circuit open error after rebuild, got nil")
+	}
 }

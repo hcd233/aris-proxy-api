@@ -375,13 +375,15 @@ func InitEnvironment() {
 
 	UpstreamCircuitEnabled = config.GetBool("upstream.circuit.enabled")
 	UpstreamCircuitWindow = max(config.GetDuration("upstream.circuit.window"), constant.ResilienceMinWindow)
-	UpstreamCircuitMinRequests = config.GetInt("upstream.circuit.min_requests")
-	UpstreamCircuitErrorThreshold = config.GetFloat64("upstream.circuit.error_threshold")
-	UpstreamCircuitOpenTimeout = config.GetDuration("upstream.circuit.open_timeout")
-	UpstreamCircuitHalfOpenMaxRequests = config.GetInt("upstream.circuit.halfopen_max_requests")
+	// 极端配置（0/负值/越界）会让组件行为静默退化（单次失败即熔断、熔断永不
+	// 触发、Open 立即半开、bulkhead 全拒等），统一在读取处钳制到合法区间。
+	UpstreamCircuitMinRequests = max(config.GetInt("upstream.circuit.min_requests"), constant.ResilienceMinMinRequests)
+	UpstreamCircuitErrorThreshold = min(max(config.GetFloat64("upstream.circuit.error_threshold"), constant.ResilienceMinErrorThreshold), constant.ResilienceMaxErrorThreshold)
+	UpstreamCircuitOpenTimeout = max(config.GetDuration("upstream.circuit.open_timeout"), constant.ResilienceMinOpenTimeout)
+	UpstreamCircuitHalfOpenMaxRequests = max(config.GetInt("upstream.circuit.halfopen_max_requests"), constant.ResilienceMinHalfOpenMaxRequests)
 	UpstreamBulkheadEnabled = config.GetBool("upstream.bulkhead.enabled")
-	UpstreamBulkheadMaxConcurrent = config.GetInt("upstream.bulkhead.max_concurrent")
-	UpstreamBulkheadAcquireTimeout = config.GetDuration("upstream.bulkhead.acquire_timeout")
+	UpstreamBulkheadMaxConcurrent = max(config.GetInt("upstream.bulkhead.max_concurrent"), constant.ResilienceMinMaxConcurrent)
+	UpstreamBulkheadAcquireTimeout = max(config.GetDuration("upstream.bulkhead.acquire_timeout"), constant.ResilienceMinAcquireTimeout)
 
 	Pool = PoolConfig{
 		Store: PoolGroupConfig{

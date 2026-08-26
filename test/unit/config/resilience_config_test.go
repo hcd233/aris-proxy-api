@@ -94,3 +94,67 @@ func TestUpstreamCircuitDefaults(t *testing.T) {
 		t.Fatalf("UpstreamBulkheadAcquireTimeout = %v, want 1s", config.UpstreamBulkheadAcquireTimeout)
 	}
 }
+
+// TestUpstreamResilienceClamps 验证极端配置被钳制到合法区间：
+// 极端值会让组件行为静默退化（min_requests=0 单次失败即熔断、threshold≤0 阈值
+// 失效、halfopen=0 行为退化、max_concurrent=0 服务自锁），不得原样透传。
+func TestUpstreamResilienceClamps(t *testing.T) {
+	t.Parallel()
+	if os.Getenv("_UPSTREAM_RESILIENCE_CLAMP_CHECK") == "1" {
+		config.InitEnvironment()
+		if config.UpstreamCircuitMinRequests != constant.ResilienceMinMinRequests {
+			t.Fatalf("UpstreamCircuitMinRequests = %d, want %d (clamped)", config.UpstreamCircuitMinRequests, constant.ResilienceMinMinRequests)
+		}
+		if config.UpstreamCircuitErrorThreshold != constant.ResilienceMinErrorThreshold {
+			t.Fatalf("UpstreamCircuitErrorThreshold = %v, want %v (clamped)", config.UpstreamCircuitErrorThreshold, constant.ResilienceMinErrorThreshold)
+		}
+		if config.UpstreamCircuitOpenTimeout != constant.ResilienceMinOpenTimeout {
+			t.Fatalf("UpstreamCircuitOpenTimeout = %v, want %v (clamped)", config.UpstreamCircuitOpenTimeout, constant.ResilienceMinOpenTimeout)
+		}
+		if config.UpstreamCircuitHalfOpenMaxRequests != constant.ResilienceMinHalfOpenMaxRequests {
+			t.Fatalf("UpstreamCircuitHalfOpenMaxRequests = %d, want %d (clamped)", config.UpstreamCircuitHalfOpenMaxRequests, constant.ResilienceMinHalfOpenMaxRequests)
+		}
+		if config.UpstreamBulkheadMaxConcurrent != constant.ResilienceMinMaxConcurrent {
+			t.Fatalf("UpstreamBulkheadMaxConcurrent = %d, want %d (clamped)", config.UpstreamBulkheadMaxConcurrent, constant.ResilienceMinMaxConcurrent)
+		}
+		if config.UpstreamBulkheadAcquireTimeout != constant.ResilienceMinAcquireTimeout {
+			t.Fatalf("UpstreamBulkheadAcquireTimeout = %v, want %v (clamped)", config.UpstreamBulkheadAcquireTimeout, constant.ResilienceMinAcquireTimeout)
+		}
+		return
+	}
+
+	cmd := exec.CommandContext(context.Background(), os.Args[0], "-test.run=TestUpstreamResilienceClamps")
+	cmd.Env = append(os.Environ(),
+		"UPSTREAM_CIRCUIT_MIN_REQUESTS=0",
+		"UPSTREAM_CIRCUIT_ERROR_THRESHOLD=-1",
+		"UPSTREAM_CIRCUIT_OPEN_TIMEOUT=1ms",
+		"UPSTREAM_CIRCUIT_HALFOPEN_MAX_REQUESTS=-2",
+		"UPSTREAM_BULKHEAD_MAX_CONCURRENT=0",
+		"UPSTREAM_BULKHEAD_ACQUIRE_TIMEOUT=1ns",
+		"_UPSTREAM_RESILIENCE_CLAMP_CHECK=1",
+	)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("subprocess failed: %v\n%s", err, out)
+	}
+}
+
+// TestUpstreamResilienceClampsUpperBound 验证越上界的错误率阈值被钳回 1。
+func TestUpstreamResilienceClampsUpperBound(t *testing.T) {
+	t.Parallel()
+	if os.Getenv("_UPSTREAM_RESILIENCE_CLAMP_HI_CHECK") == "1" {
+		config.InitEnvironment()
+		if config.UpstreamCircuitErrorThreshold != constant.ResilienceMaxErrorThreshold {
+			t.Fatalf("UpstreamCircuitErrorThreshold = %v, want %v (clamped to max)", config.UpstreamCircuitErrorThreshold, constant.ResilienceMaxErrorThreshold)
+		}
+		return
+	}
+
+	cmd := exec.CommandContext(context.Background(), os.Args[0], "-test.run=TestUpstreamResilienceClampsUpperBound")
+	cmd.Env = append(os.Environ(),
+		"UPSTREAM_CIRCUIT_ERROR_THRESHOLD=3.5",
+		"_UPSTREAM_RESILIENCE_CLAMP_HI_CHECK=1",
+	)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("subprocess failed: %v\n%s", err, out)
+	}
+}
