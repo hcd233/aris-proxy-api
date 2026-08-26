@@ -127,7 +127,8 @@ func parseSSEDataLine(line string) mo.Option[*dto.OpenAIChatCompletionChunk] {
 // ctx 融合 drain 广播：优雅退出 soft deadline 到达时取消上游连接，
 // 使阻塞的 SSE 读循环返回 context canceled（礼貌断流的前半段）。
 // bulkhead 槽位与熔断上报绑定到返回 body 的 Close（见 BindLease）：
-// 流式响应在整个消费阶段占用并发槽，流中断计入熔断窗口。
+// 流式响应在整个消费阶段占用并发槽；body 读错误（非 EOF）经租约翻转
+// 计入熔断失败，上游半死（断流）因此能触发熔断。
 func (p *openAIProxy) doUpstreamRequest(ctx context.Context, ep vo.UpstreamEndpoint, body []byte, pathSuffix string) (*http.Response, error) {
 	ctx = p.tracker.CancelOnDrain(ctx)
 	key := EndpointKey(ep)
