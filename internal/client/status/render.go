@@ -50,6 +50,18 @@ func Render(w io.Writer, r *Report) error {
 		lines = append(lines, indent+ui.CheckRowWarn(agent, hooksDetail+constant.ClientUIStatusHooksMissingSuffix+strings.Join(r.HooksMissing, constant.ClientUISeparatorComma)))
 	}
 
+	lines = append(lines, ui.SectionTitle(constant.ClientUISectionProviders))
+	if len(r.ProvidersFound) > 0 {
+		detail := strings.Join(r.ProvidersFound, constant.ClientUISeparatorComma)
+		if len(r.ProvidersMissing) > 0 {
+			lines = append(lines, indent+ui.CheckRowWarn(constant.ClientUIStatusProvidersLabel, detail+constant.ClientUIStatusProvidersMissingPrefix+strings.Join(r.ProvidersMissing, constant.ClientUISeparatorComma)))
+		} else {
+			lines = append(lines, indent+ui.CheckRowOK(constant.ClientUIStatusProvidersLabel, detail))
+		}
+	} else {
+		lines = append(lines, indent+ui.CheckRowWarn(constant.ClientUIStatusProvidersLabel, constant.ClientUIStatusProvidersNoneHint))
+	}
+
 	lines = append(lines, ui.SectionTitle(constant.ClientUISectionQueue))
 	if r.PendingCount == 0 && r.RejectedCount == 0 {
 		lines = append(lines, indent+ui.CheckRowOK(constant.ClientUIStatusQueueClear, ""))
@@ -91,41 +103,45 @@ func humanizeBytes(size int64) string {
 }
 
 type jsonReport struct {
-	ConfigFound     bool     `json:"configFound"`
-	Host            string   `json:"host,omitempty"`
-	Agent           string   `json:"agent,omitempty"`
-	ServerOK        bool     `json:"serverOk"`
-	ServerLatencyMs int64    `json:"serverLatencyMs,omitempty"`
-	ServerErr       string   `json:"serverErr,omitempty"`
-	AuthOK          bool     `json:"authOk"`
-	AuthMaskedKey   string   `json:"authMaskedKey,omitempty"`
-	AuthErr         string   `json:"authErr,omitempty"`
-	HooksFound      int      `json:"hooksFound"`
-	HooksTotal      int      `json:"hooksTotal"`
-	HooksMissing    []string `json:"hooksMissing,omitempty"`
-	PendingCount    int      `json:"pendingCount"`
-	PendingBytes    int64    `json:"pendingBytes"`
-	RejectedCount   int      `json:"rejectedCount"`
-	RecentErrors    int      `json:"recentErrors"`
+	ConfigFound      bool     `json:"configFound"`
+	Host             string   `json:"host,omitempty"`
+	Agent            string   `json:"agent,omitempty"`
+	ServerOK         bool     `json:"serverOk"`
+	ServerLatencyMs  int64    `json:"serverLatencyMs,omitempty"`
+	ServerErr        string   `json:"serverErr,omitempty"`
+	AuthOK           bool     `json:"authOk"`
+	AuthMaskedKey    string   `json:"authMaskedKey,omitempty"`
+	AuthErr          string   `json:"authErr,omitempty"`
+	HooksFound       int      `json:"hooksFound"`
+	HooksTotal       int      `json:"hooksTotal"`
+	HooksMissing     []string `json:"hooksMissing,omitempty"`
+	ProvidersFound   []string `json:"providersFound,omitempty"`
+	ProvidersMissing []string `json:"providersMissing,omitempty"`
+	PendingCount     int      `json:"pendingCount"`
+	PendingBytes     int64    `json:"pendingBytes"`
+	RejectedCount    int      `json:"rejectedCount"`
+	RecentErrors     int      `json:"recentErrors"`
 }
 
 func newJSONReport(r *Report) *jsonReport {
 	return &jsonReport{
-		ConfigFound:     r.ConfigFound,
-		Host:            r.Host,
-		Agent:           r.Agent,
-		ServerOK:        r.ServerOK,
-		ServerLatencyMs: r.ServerLatency.Milliseconds(),
-		ServerErr:       r.ServerErr,
-		AuthOK:          r.AuthOK,
-		AuthMaskedKey:   r.AuthMaskedKey,
-		AuthErr:         r.AuthErr,
-		HooksFound:      r.HooksFound,
-		HooksTotal:      r.HooksTotal,
-		HooksMissing:    r.HooksMissing,
-		PendingCount:    r.PendingCount,
-		PendingBytes:    r.PendingBytes,
-		RejectedCount:   r.RejectedCount,
-		RecentErrors:    r.RecentErrors,
+		ConfigFound:      r.ConfigFound,
+		Host:             r.Host,
+		Agent:            r.Agent,
+		ServerOK:         r.ServerOK,
+		ServerLatencyMs:  r.ServerLatency.Milliseconds(),
+		ServerErr:        r.ServerErr,
+		AuthOK:           r.AuthOK,
+		AuthMaskedKey:    r.AuthMaskedKey,
+		AuthErr:          r.AuthErr,
+		HooksFound:       r.HooksFound,
+		HooksTotal:       r.HooksTotal,
+		HooksMissing:     r.HooksMissing,
+		ProvidersFound:   r.ProvidersFound,
+		ProvidersMissing: r.ProvidersMissing,
+		PendingCount:     r.PendingCount,
+		PendingBytes:     r.PendingBytes,
+		RejectedCount:    r.RejectedCount,
+		RecentErrors:     r.RecentErrors,
 	}
 }

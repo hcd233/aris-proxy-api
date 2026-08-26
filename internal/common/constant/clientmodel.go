@@ -130,3 +130,11 @@ const (
 	TraceClientInstallNeedInitMessage = "Not initialized. Run `aris init` first."
 	TraceClientInstallDone            = "✓ Hooks installation complete"
 )
+
+// ClientStatusMessages status 面板 Providers 节文案
+const (
+	ClientUISectionProviders             = "Providers"
+	ClientUIStatusProvidersLabel         = "agent configs"
+	ClientUIStatusProvidersMissingPrefix = " · missing: "
+	ClientUIStatusProvidersNoneHint      = "none configured — run aris model export"
+)
