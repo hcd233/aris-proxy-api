@@ -62,8 +62,10 @@ func (h *listAPIKeysHandler) Handle(ctx context.Context, q port.ListAPIKeysQuery
 
 	usersByID, err := h.loadUsers(ctx, keys)
 	if err != nil {
-		log.Error("[APIKeyQuery] Load users failed", zap.Error(err))
-		return nil, nil, err
+		// user 列是增强字段：加载失败降级为无 user 的列表，不阻塞主功能
+		// （与 demo summary 消息加载失败的降级策略一致）
+		log.Error("[APIKeyQuery] Load users failed, degrade to list without user info", zap.Error(err))
+		usersByID = nil
 	}
 
 	views := lo.Map(keys, func(k *aggregate.ProxyAPIKey, _ int) *port.APIKeyView {
