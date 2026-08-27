@@ -1,4 +1,4 @@
-name: Release Trace Client
+name: Release Client
 
 on:
   push:
@@ -25,7 +25,7 @@ jobs:
       - name: Package binaries as tar.gz and generate checksums
         run: |
           staging=$(mktemp -d)
-          for binary in build/trace-client/aris-*; do
+          for binary in build/client/aris-*; do
             cp "$binary" "$staging/aris"
             tar -czf "$binary.tar.gz" -C "$staging" aris
             sha256sum "$binary.tar.gz" > "$binary.tar.gz.sha256"
@@ -35,5 +35,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            build/trace-client/aris-*.tar.gz
-            build/trace-client/aris-*.tar.gz.sha256
+            build/client/aris-*.tar.gz
+            build/client/aris-*.tar.gz.sha256

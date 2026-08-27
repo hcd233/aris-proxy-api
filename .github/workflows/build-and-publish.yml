@@ -1,9 +1,9 @@
-name: Docker-Publish
+name: Build and Publish
 
 # 构建 + 部署流水线（lint 见 lint.yml，PR 不触发本 workflow）。
 # 生产为单节点 amd64 k3s，只构建 linux/amd64。
 concurrency:
-  group: docker-publish-${{ github.ref }}
+  group: build-and-publish-${{ github.ref }}
   cancel-in-progress: false
 
 on:
@@ -20,7 +20,7 @@ on:
       - 'web/**'
       - 'k8s/**'
       - 'script/**'
-      - '.github/workflows/docker-publish.yml'
+      - '.github/workflows/build-and-publish.yml'
       - 'go.mod'
       - 'go.sum'
 

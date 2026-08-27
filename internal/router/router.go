@@ -93,7 +93,7 @@ func RegisterAPIRouter(humaAPI huma.API, deps APIRouterDependencies) {
 	huma.Register(humaAPI, huma.Operation{
 		OperationID: "installTraceScript", Method: http.MethodGet, Path: "/install.sh",
 		Summary:     "InstallTraceScript",
-		Description: "Return the self-contained Aris trace client install script",
+		Description: "Return the self-contained Aris client install script",
 		Tags:        []string{constant.TagTrace},
 	}, deps.TraceHandler.HandleInstallScript)
 

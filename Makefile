@@ -3,7 +3,7 @@
 APP_NAME   := aris-proxy-api
 SERVER_MAIN := ./cmd/server
 CLIENT_MAIN := ./cmd/client
-CLIENT_OUTPUT_DIR := build/trace-client
+CLIENT_OUTPUT_DIR := build/client
 OUTPUT     := $(APP_NAME)
 
 # 并行编译：默认使用全部 CPU 核心
