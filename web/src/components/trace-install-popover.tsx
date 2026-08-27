@@ -60,7 +60,7 @@ export default function TraceInstallPopover() {
         side="bottom"
         align="end"
         sideOffset={8}
-        className="w-[480px] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-xl bg-[#1A1D23] p-0 ring-1 ring-white/[0.08]"
+        className="w-[480px] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-xl bg-(--code-bg) p-0 text-(--code-text) ring-1 ring-(--code-border)"
       >
         {/* Terminal dots */}
         <div className="flex items-center gap-[5px] px-4 pt-3">
@@ -68,7 +68,7 @@ export default function TraceInstallPopover() {
           <span className="size-[7px] rounded-full bg-[#FEBC2E]" />
           <span className="size-[7px] rounded-full bg-[#28C840]" />
           {/* 装饰性终端标题，恒定短文案不会截断，无需 truncate/tooltip */}
-          <span className="ml-2 font-mono text-[11px] font-medium tracking-wide text-white/35">
+          <span className="ml-2 font-mono text-[11px] font-medium tracking-wide text-(--code-text)/35">
             ~/install.sh
           </span>
         </div>
@@ -76,12 +76,12 @@ export default function TraceInstallPopover() {
         {/* Command body */}
         <div className="relative px-4 pb-3 pt-2.5">
           <div className="flex items-start gap-2">
-            <span className="mt-px select-none font-mono text-[12.5px] leading-[1.65] text-white/20">
+            <span className="mt-px select-none font-mono text-[12.5px] leading-[1.65] text-(--code-text)/20">
               $
             </span>
             <pre className="min-w-0 flex-1 overflow-x-auto whitespace-pre text-[12.5px] leading-[1.65]">
               <code
-                className={`block font-mono whitespace-pre ${CODE_SYNTAX}`}
+                className={`block font-mono whitespace-pre text-(--code-text) ${CODE_SYNTAX}`}
                 dangerouslySetInnerHTML={{ __html: highlighted }}
               />
             </pre>
@@ -89,7 +89,7 @@ export default function TraceInstallPopover() {
               type="button"
               onClick={handleCopy}
               disabled={!host}
-              className="mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded-md border border-white/[0.08] bg-white/[0.04] text-white/35 transition-all hover:border-white/[0.15] hover:bg-white/[0.08] hover:text-white/80 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/40 disabled:pointer-events-none disabled:opacity-30"
+              className="mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded-md border border-(--code-border) bg-white/[0.04] text-(--code-text)/35 transition-all hover:border-(--code-text)/25 hover:bg-white/[0.08] hover:text-(--code-text)/80 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-(--code-text)/40 disabled:pointer-events-none disabled:opacity-30"
               aria-label={copied ? t("trace.install_copied") : t("trace.install_copy")}
             >
               {copied ? (
