@@ -30,10 +30,13 @@ const (
 	TraceClientIngestCommandSuffix = " trace ingest"
 	TraceClientHookTimeout         = 30
 
-	TraceClientSchemeHTTP           = "http"
-	TraceClientSchemeHTTPS          = "https"
-	TraceClientCheckPath            = "/api/v1/trace/client/check"
-	ClientModelsListPath            = "/api/v1/model/list"
+	TraceClientSchemeHTTP  = "http"
+	TraceClientSchemeHTTPS = "https"
+	TraceClientCheckPath   = "/api/v1/trace/client/check"
+	// ClientModelsListPath 客户端模型分发接口绝对路径（aris model export 实际请求）。
+	//
+	// 服务端注册路径由 ClientModelsRoutePath 派生，二者同源，不得各自硬编码。
+	ClientModelsListPath            = ClientModelsAPIPrefix + ClientModelsRoutePath
 	ClientModelsListMaxBodyBytes    = 1 << 20
 	TraceClientHTTPTimeout          = 5 * time.Second
 	TraceClientSpoolLimit           = 256 << 20

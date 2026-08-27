@@ -98,8 +98,9 @@ func RegisterAPIRouter(humaAPI huma.API, deps APIRouterDependencies) {
 	}, deps.TraceHandler.HandleInstallScript)
 
 	tokenGroup := huma.NewGroup(v1Group, "/token")
-	clientAPIGroup := huma.NewGroup(v1Group, "/client")
-	initClientRouter(clientAPIGroup, deps.ClientHandler, deps.DB)
+	// 客户端路由直接挂 /api/v1（无 group 前缀）：组内路径即绝对路径，
+	// 与客户端 SDK 的 constant.ClientModelsListPath 同源，避免 404
+	RegisterClientRoutes(v1Group, deps.ClientHandler, deps.DB)
 	initTokenRouter(tokenGroup, deps.TokenHandler, deps.Cache)
 
 	oauth2Group := huma.NewGroup(v1Group, "/oauth2")
