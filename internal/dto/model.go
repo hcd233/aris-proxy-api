@@ -2,10 +2,7 @@
 package dto
 
 import (
-	"time"
-
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
 )
 
 // CreateModelReq 创建 Model 请求
@@ -45,36 +42,4 @@ type UpdateModelReqBody struct {
 // DeleteModelReq 删除 Model 请求
 type DeleteModelReq struct {
 	ID uint `query:"id" required:"true" minimum:"1" doc:"Model ID"`
-}
-
-// ListModelsReq 列出 Model 请求
-//
-//	@author centonhuang
-//	@update 2026-05-27 10:00:00
-type ListModelsReq struct {
-	model.CommonParam
-	Username string `query:"username,omitempty" doc:"按归属用户名过滤(仅管理员生效)"`
-}
-
-// ListModelsRsp 列出 Model 响应
-type ListModelsRsp struct {
-	CommonRsp
-	Models   []*ModelItem    `json:"models,omitempty" doc:"Model 列表"`
-	PageInfo *model.PageInfo `json:"pageInfo,omitempty" doc:"分页信息"`
-}
-
-// ModelItem Model 列表项
-type ModelItem struct {
-	ID              uint                 `json:"id" doc:"Model ID"`
-	Username        string               `json:"username" doc:"归属用户名"`
-	Alias           string               `json:"alias" doc:"模型别名"`
-	ModelID         string               `json:"modelId" doc:"业务模型ID"`
-	UpstreamModel   string               `json:"upstreamModel" doc:"上游实际模型名"`
-	Enabled         bool                 `json:"enabled" doc:"是否启用"`
-	ContextLength   int                  `json:"contextLength" doc:"上下文窗口长度（tokens）"`
-	MaxOutputTokens int                  `json:"maxOutputTokens" doc:"最大输出长度（tokens）"`
-	Capabilities    []enum.InputModality `json:"capabilities" doc:"模型能力（输入模态集合）"`
-	Endpoint        *EndpointItem        `json:"endpoint,omitempty" doc:"关联 Endpoint 详细信息"`
-	CreatedAt       time.Time            `json:"createdAt" doc:"创建时间"`
-	UpdatedAt       time.Time            `json:"updatedAt" doc:"更新时间"`
 }

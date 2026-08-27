@@ -86,6 +86,14 @@ func (r *recordingModelRepo) Paginate(context.Context, model.CommonParam, uint) 
 	return nil, nil, nil
 }
 
+func (r *scopedEndpointRepo) FindIDsByScope(context.Context, uint) ([]uint, error) {
+	return nil, nil
+}
+
+func (r *recordingModelRepo) ListByEndpointIDs(context.Context, []uint) ([]*aggregate.Model, error) {
+	return nil, nil
+}
+
 var (
 	_ llmproxy.EndpointRepository = (*scopedEndpointRepo)(nil)
 	_ llmproxy.ModelRepository    = (*recordingModelRepo)(nil)

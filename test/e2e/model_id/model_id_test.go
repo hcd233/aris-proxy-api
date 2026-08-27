@@ -29,14 +29,16 @@ import (
 const e2eHTTPTimeout = 30 * time.Second
 
 type bizError struct {
-	Code    string `json:"code"`
+	Code    int64  `json:"code"`
 	Message string `json:"message"`
 }
 
-type listEndpointsRsp struct {
-	Endpoints []struct {
-		ID uint `json:"id"`
-	} `json:"endpoints"`
+type listUpstreamRsp struct {
+	Groups []struct {
+		Endpoint struct {
+			ID uint `json:"id"`
+		} `json:"endpoint"`
+	} `json:"groups"`
 	Error *bizError `json:"error,omitempty"`
 }
 
@@ -46,9 +48,16 @@ type modelItem struct {
 	ModelID string `json:"modelId"`
 }
 
-type listModelsRsp struct {
+type modelGroupRsp struct {
 	Models []modelItem `json:"models"`
-	Error  *bizError   `json:"error,omitempty"`
+}
+
+func flattenModelItems(g []modelGroupRsp) []modelItem {
+	var out []modelItem
+	for _, grp := range g {
+		out = append(out, grp.Models...)
+	}
+	return out
 }
 
 type commandRsp struct {
@@ -103,21 +112,21 @@ func doJSON(t *testing.T, client *http.Client, method, url, jwtToken string, req
 // pickEndpointID 选一个可用 endpoint 挂载模型。
 func pickEndpointID(t *testing.T, baseURL, jwtToken string, client *http.Client) uint {
 	t.Helper()
-	status, traceID, body := doJSON(t, client, http.MethodGet, baseURL+"/api/v1/endpoint/list?page=1&pageSize=1", jwtToken, nil)
+	status, traceID, body := doJSON(t, client, http.MethodGet, baseURL+"/api/v1/upstream/list?page=1&pageSize=1", jwtToken, nil)
 	if status != http.StatusOK {
-		t.Fatalf("list endpoints status=%d traceID=%s body=%s", status, traceID, string(body))
+		t.Fatalf("list upstream status=%d traceID=%s body=%s", status, traceID, string(body))
 	}
-	var rsp listEndpointsRsp
+	var rsp listUpstreamRsp
 	if err := sonic.Unmarshal(body, &rsp); err != nil {
-		t.Fatalf("unmarshal endpoints failed: %v body=%s", err, string(body))
+		t.Fatalf("unmarshal upstream groups failed: %v body=%s", err, string(body))
 	}
 	if rsp.Error != nil {
-		t.Fatalf("list endpoints error: code=%s msg=%s traceID=%s", rsp.Error.Code, rsp.Error.Message, traceID)
+		t.Fatalf("list upstream error: code=%d msg=%s traceID=%s", rsp.Error.Code, rsp.Error.Message, traceID)
 	}
-	if len(rsp.Endpoints) == 0 {
+	if len(rsp.Groups) == 0 {
 		t.Skip("no endpoint available to attach model")
 	}
-	return rsp.Endpoints[0].ID
+	return rsp.Groups[0].Endpoint.ID
 }
 
 // createModel 创建模型（不显式传 modelId，验证服务端默认=alias）。
@@ -164,17 +173,20 @@ func createModelWithModelID(t *testing.T, baseURL, jwtToken string, client *http
 // getModelByAlias 按别名查模型；未命中返回 nil。
 func getModelByAlias(t *testing.T, baseURL, jwtToken string, client *http.Client, alias string) *modelItem {
 	t.Helper()
-	status, traceID, raw := doJSON(t, client, http.MethodGet, baseURL+"/api/v1/model/list?page=1&pageSize=50&query="+alias, jwtToken, nil)
+	status, traceID, raw := doJSON(t, client, http.MethodGet, baseURL+"/api/v1/upstream/list?page=1&pageSize=50&query="+alias, jwtToken, nil)
 	if status != http.StatusOK {
-		t.Fatalf("list models status=%d traceID=%s body=%s", status, traceID, string(raw))
+		t.Fatalf("list upstream status=%d traceID=%s body=%s", status, traceID, string(raw))
 	}
-	var rsp listModelsRsp
+	var rsp struct {
+		Groups []modelGroupRsp `json:"groups"`
+		Error  *bizError       `json:"error,omitempty"`
+	}
 	if err := sonic.Unmarshal(raw, &rsp); err != nil {
-		t.Fatalf("unmarshal models failed: %v body=%s", err, string(raw))
+		t.Fatalf("unmarshal upstream failed: %v body=%s", err, string(raw))
 	}
-	for i := range rsp.Models {
-		if rsp.Models[i].Alias == alias {
-			return &rsp.Models[i]
+	for i := range flattenModelItems(rsp.Groups) {
+		if flattenModelItems(rsp.Groups)[i].Alias == alias {
+			return &flattenModelItems(rsp.Groups)[i]
 		}
 	}
 	return nil
@@ -198,7 +210,7 @@ func updateModelID(t *testing.T, baseURL, jwtToken string, client *http.Client, 
 		return
 	}
 	if rsp.Error != nil {
-		t.Fatalf("update model error: code=%s msg=%s traceID=%s", rsp.Error.Code, rsp.Error.Message, traceID)
+		t.Fatalf("update model error: code=%d msg=%s traceID=%s", rsp.Error.Code, rsp.Error.Message, traceID)
 	}
 }
 
@@ -226,7 +238,7 @@ func TestModelID_CreateDefaultsToAlias(t *testing.T) {
 
 	rsp, traceID := createModel(t, baseURL, jwtToken, client, endpointID, alias)
 	if rsp.Error != nil {
-		t.Fatalf("create model error: code=%s msg=%s traceID=%s", rsp.Error.Code, rsp.Error.Message, traceID)
+		t.Fatalf("create model error: code=%d msg=%s traceID=%s", rsp.Error.Code, rsp.Error.Message, traceID)
 	}
 
 	item := getModelByAlias(t, baseURL, jwtToken, client, alias)
@@ -253,7 +265,7 @@ func TestModelID_CreateExplicitModelID(t *testing.T) {
 
 	rsp, traceID := createModelWithModelID(t, baseURL, jwtToken, client, endpointID, alias, customID)
 	if rsp.Error != nil {
-		t.Fatalf("create model error: code=%s msg=%s traceID=%s", rsp.Error.Code, rsp.Error.Message, traceID)
+		t.Fatalf("create model error: code=%d msg=%s traceID=%s", rsp.Error.Code, rsp.Error.Message, traceID)
 	}
 
 	item := getModelByAlias(t, baseURL, jwtToken, client, alias)
@@ -279,7 +291,7 @@ func TestModelID_UpdateModelID(t *testing.T) {
 
 	rsp, traceID := createModel(t, baseURL, jwtToken, client, endpointID, alias)
 	if rsp.Error != nil {
-		t.Fatalf("create model error: code=%s msg=%s traceID=%s", rsp.Error.Code, rsp.Error.Message, traceID)
+		t.Fatalf("create model error: code=%d msg=%s traceID=%s", rsp.Error.Code, rsp.Error.Message, traceID)
 	}
 	item := getModelByAlias(t, baseURL, jwtToken, client, alias)
 	if item == nil {

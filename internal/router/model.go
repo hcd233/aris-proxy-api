@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
-	demoport "github.com/hcd233/aris-proxy-api/internal/application/demo/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
@@ -14,7 +13,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func initModelRouter(modelGroup huma.API, modelHandler handler.ModelHandler, db *gorm.DB, cache *redis.Client, accessSigner jwt.TokenSigner, demoAccessor demoport.DemoModuleAccessor, auditSubmitter demoport.DemoSubmitter) {
+func initModelRouter(modelGroup huma.API, modelHandler handler.ModelHandler, db *gorm.DB, cache *redis.Client, accessSigner jwt.TokenSigner) {
 	modelGroup.UseMiddleware(middleware.JwtMiddleware(db, cache, accessSigner))
 	modelGroup.UseMiddleware(middleware.TokenBucketRateLimiterMiddleware(cache, "demoAccess", "", constant.PeriodDemoAccess, constant.LimitDemoAccess, middleware.WithPermissionFilter(enum.PermissionDemo)))
 	modelGroup.UseMiddleware(middleware.TokenBucketRateLimiterMiddleware(
@@ -35,21 +34,6 @@ func initModelRouter(modelGroup huma.API, modelHandler handler.ModelHandler, db 
 			middleware.LimitUserPermissionMiddleware("createModel", enum.PermissionUser),
 		},
 	}, modelHandler.HandleCreateModel)
-
-	huma.Register(modelGroup, huma.Operation{
-		OperationID: "listModelMappings",
-		Method:      http.MethodGet,
-		Path:        constant.RoutePathList,
-		Summary:     "ListModels",
-		Description: "List all model mappings",
-		Tags:        []string{constant.TagModel},
-		Security: []map[string][]string{
-			{constant.SecuritySchemeJWT: {}},
-		},
-		Middlewares: huma.Middlewares{
-			middleware.LimitUserPermissionWithDemoMiddleware("listModels", enum.PermissionUser, enum.DemoModuleModels, demoAccessor, auditSubmitter),
-		},
-	}, modelHandler.HandleListModels)
 
 	huma.Register(modelGroup, huma.Operation{
 		OperationID: "updateModel",

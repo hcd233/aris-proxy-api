@@ -18,7 +18,6 @@ import (
 
 type EndpointHandler interface {
 	HandleCreateEndpoint(ctx context.Context, req *dto.CreateEndpointReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
-	HandleListEndpoints(ctx context.Context, req *dto.ListEndpointsReq) (*dto.HTTPResponse[*dto.ListEndpointsRsp], error)
 	HandleUpdateEndpoint(ctx context.Context, req *dto.UpdateEndpointReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
 	HandleDeleteEndpoint(ctx context.Context, req *dto.DeleteEndpointReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
 }
@@ -27,14 +26,12 @@ type EndpointDependencies struct {
 	Create port.CreateEndpointHandler
 	Update port.UpdateEndpointHandler
 	Delete port.DeleteEndpointHandler
-	List   port.ListEndpointsHandler
 }
 
 type endpointHandler struct {
 	create port.CreateEndpointHandler
 	update port.UpdateEndpointHandler
 	delete port.DeleteEndpointHandler
-	list   port.ListEndpointsHandler
 }
 
 func NewEndpointHandler(deps EndpointDependencies) EndpointHandler {
@@ -42,7 +39,6 @@ func NewEndpointHandler(deps EndpointDependencies) EndpointHandler {
 		create: deps.Create,
 		update: deps.Update,
 		delete: deps.Delete,
-		list:   deps.List,
 	}
 }
 
@@ -70,41 +66,6 @@ func (h *endpointHandler) HandleCreateEndpoint(ctx context.Context, req *dto.Cre
 	_ = result.EndpointID
 	logger.WithCtx(ctx).Info("[EndpointHandler] Create endpoint success",
 		zap.Uint("userID", userID), zap.String("name", req.Body.Name))
-	return apiutil.WrapHTTPResponse(rsp, nil)
-}
-
-func (h *endpointHandler) HandleListEndpoints(ctx context.Context, req *dto.ListEndpointsReq) (*dto.HTTPResponse[*dto.ListEndpointsRsp], error) {
-	rsp := &dto.ListEndpointsRsp{}
-
-	perm := util.CtxValuePermission(ctx)
-	isGlobalScope := perm == enum.PermissionAdmin
-	views, pageInfo, err := h.list.Handle(ctx, port.ListEndpointsQuery{
-		CommonParam: req.CommonParam,
-		IsDemo:      perm == enum.PermissionDemo,
-		ScopeUserID: lo.Ternary(isGlobalScope, 0, util.CtxValueUint(ctx, constant.CtxKeyUserID)),
-		Username:    req.Username,
-	})
-	if err != nil {
-		logger.WithCtx(ctx).Error("[EndpointHandler] List endpoints failed", zap.Error(err))
-		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
-	}
-
-	rsp.Endpoints = lo.Map(views, func(v *port.EndpointView, _ int) *dto.EndpointItem {
-		return &dto.EndpointItem{
-			ID:                          v.ID,
-			Username:                    v.Username,
-			Name:                        v.Name,
-			OpenaiBaseURL:               v.OpenaiBaseURL,
-			AnthropicBaseURL:            v.AnthropicBaseURL,
-			MaskedAPIKey:                v.MaskedAPIKey,
-			SupportOpenAIChatCompletion: v.SupportOpenAIChatCompletion,
-			SupportOpenAIResponse:       v.SupportOpenAIResponse,
-			SupportAnthropicMessage:     v.SupportAnthropicMessage,
-			CreatedAt:                   v.CreatedAt,
-			UpdatedAt:                   v.UpdatedAt,
-		}
-	})
-	rsp.PageInfo = pageInfo
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 

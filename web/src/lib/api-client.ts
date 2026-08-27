@@ -23,10 +23,9 @@ import type {
   ListAPIKeysRsp,
   CreateAPIKeyRsp,
   CreateAPIKeyReqBody,
-  ListEndpointsRsp,
+  ListUpstreamRsp,
   CreateEndpointReqBody,
   UpdateEndpointReqBody,
-  ListModelsRsp,
   CreateModelReqBody,
   UpdateModelReqBody,
   OAuth2Provider,
@@ -530,29 +529,31 @@ class ApiClient {
     });
   }
 
-  // ─── Endpoints (admin) ─────────────────────────────────────────────────────
+  // ─── Upstream (endpoint 分组视图) ──────────────────────────────────────────
 
-  async listEndpoints(
+  async listUpstream(
     page: number = 1,
-    pageSize: number = 20,
+    pageSize: number = 10,
     query?: string,
     username?: string,
-  ): Promise<ListEndpointsRsp> {
+  ): Promise<ListUpstreamRsp> {
     const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
     if (query) params.set("query", query);
     if (username) params.set("username", username);
-    return this.request<ListEndpointsRsp>(`/api/v1/endpoint/list?${params}`);
+    return this.request<ListUpstreamRsp>(`/api/v1/upstream/list?${params}`);
   }
 
-  async createEndpoint(body: CreateEndpointReqBody): Promise<ListEndpointsRsp> {
-    return this.request<ListEndpointsRsp>("/api/v1/endpoint", {
+  // ─── Endpoints (admin) ─────────────────────────────────────────────────────
+
+  async createEndpoint(body: CreateEndpointReqBody): Promise<void> {
+    await this.request("/api/v1/endpoint", {
       method: "POST",
       body: JSON.stringify(body),
     });
   }
 
-  async updateEndpoint(id: number, body: UpdateEndpointReqBody): Promise<ListEndpointsRsp> {
-    return this.request<ListEndpointsRsp>(`/api/v1/endpoint?id=${id}`, {
+  async updateEndpoint(id: number, body: UpdateEndpointReqBody): Promise<void> {
+    await this.request(`/api/v1/endpoint?id=${id}`, {
       method: "PATCH",
       body: JSON.stringify(body),
     });
@@ -566,27 +567,15 @@ class ApiClient {
 
   // ─── Models (admin) ────────────────────────────────────────────────────────
 
-  async listModels(
-    page: number = 1,
-    pageSize: number = 20,
-    query?: string,
-    username?: string,
-  ): Promise<ListModelsRsp> {
-    const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
-    if (query) params.set("query", query);
-    if (username) params.set("username", username);
-    return this.request<ListModelsRsp>(`/api/v1/model/list?${params}`);
-  }
-
-  async createModel(body: CreateModelReqBody): Promise<ListModelsRsp> {
-    return this.request<ListModelsRsp>("/api/v1/model", {
+  async createModel(body: CreateModelReqBody): Promise<void> {
+    await this.request("/api/v1/model", {
       method: "POST",
       body: JSON.stringify(body),
     });
   }
 
-  async updateModel(id: number, body: UpdateModelReqBody): Promise<ListModelsRsp> {
-    return this.request<ListModelsRsp>(`/api/v1/model?id=${id}`, {
+  async updateModel(id: number, body: UpdateModelReqBody): Promise<void> {
+    await this.request(`/api/v1/model?id=${id}`, {
       method: "PATCH",
       body: JSON.stringify(body),
     });

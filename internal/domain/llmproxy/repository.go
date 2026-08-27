@@ -20,6 +20,9 @@ type EndpointRepository interface {
 	DeleteCascade(ctx context.Context, id, scopeUserID uint) error
 	List(ctx context.Context) ([]*aggregate.Endpoint, error)
 	Paginate(ctx context.Context, param model.CommonParam, scopeUserID uint) ([]*aggregate.Endpoint, *model.PageInfo, error)
+	// FindIDsByScope 按租户范围返回全部可见 endpoint ID 列表（id 升序）；
+	// scopeUserID==0（admin 视角）不过滤。用于 upstream 分组视图的分页基数。
+	FindIDsByScope(ctx context.Context, scopeUserID uint) ([]uint, error)
 }
 
 // ModelRepository Model 聚合根仓储接口
@@ -34,6 +37,9 @@ type ModelRepository interface {
 	DeleteByEndpointID(ctx context.Context, endpointID uint) error // 级联删除前调用方已校验端点归属
 	List(ctx context.Context) ([]*aggregate.Model, error)
 	Paginate(ctx context.Context, param model.CommonParam, scopeUserID uint) ([]*aggregate.Model, *model.PageInfo, error)
+	// ListByEndpointIDs 批量拉取一组 endpoint 名下的 model 聚合（不做二次 scope 过滤，
+	// 调用方传入的 endpointIDs 必须已经过 scope 解析）。未命中的 endpointID 自然返回空集合。
+	ListByEndpointIDs(ctx context.Context, endpointIDs []uint) ([]*aggregate.Model, error)
 }
 
 // ==================== CQRS 读模型 ====================

@@ -9,9 +9,8 @@ const (
 	DemoModuleDashboard DemoModule = "dashboard"  // 首页概览（统计卡片 + 审计图表）
 	DemoModuleSessions  DemoModule = "sessions"   // 会话列表与详情（行为数据，取模抽样）
 	DemoModuleAudit     DemoModule = "audit"      // 模型调用审计（行为数据，取模抽样）
-	DemoModuleModels    DemoModule = "models"     // 模型别名配置
+	DemoModuleUpstream  DemoModule = "upstream"   // 上游配置（原 endpoints+models 合并）
 	DemoModuleTrigger   DemoModule = "trigger"    // 触发词配置
-	DemoModuleEndpoints DemoModule = "endpoints"  // 上游端点配置
 	DemoModuleMonitor   DemoModule = "monitor"    // 运行时指标
 	DemoModuleCron      DemoModule = "cron"       // 定时任务配置
 	DemoModuleCronAudit DemoModule = "cron_audit" // 定时任务执行审计
@@ -22,9 +21,8 @@ var DemoModules = []DemoModule{
 	DemoModuleDashboard,
 	DemoModuleSessions,
 	DemoModuleAudit,
-	DemoModuleModels,
+	DemoModuleUpstream,
 	DemoModuleTrigger,
-	DemoModuleEndpoints,
 	DemoModuleMonitor,
 	DemoModuleCron,
 	DemoModuleCronAudit,

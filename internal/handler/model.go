@@ -3,13 +3,11 @@ package handler
 import (
 	"context"
 
-	"github.com/samber/lo"
 	"go.uber.org/zap"
 
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
 	"github.com/hcd233/aris-proxy-api/internal/application/model/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
@@ -18,7 +16,6 @@ import (
 
 type ModelHandler interface {
 	HandleCreateModel(ctx context.Context, req *dto.CreateModelReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
-	HandleListModels(ctx context.Context, req *dto.ListModelsReq) (*dto.HTTPResponse[*dto.ListModelsRsp], error)
 	HandleUpdateModel(ctx context.Context, req *dto.UpdateModelReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
 	HandleDeleteModel(ctx context.Context, req *dto.DeleteModelReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
 }
@@ -27,14 +24,12 @@ type ModelDependencies struct {
 	Create port.CreateModelHandler
 	Update port.UpdateModelHandler
 	Delete port.DeleteModelHandler
-	List   port.ListModelsHandler
 }
 
 type modelHandler struct {
 	create port.CreateModelHandler
 	update port.UpdateModelHandler
 	delete port.DeleteModelHandler
-	list   port.ListModelsHandler
 }
 
 func NewModelHandler(deps ModelDependencies) ModelHandler {
@@ -42,7 +37,6 @@ func NewModelHandler(deps ModelDependencies) ModelHandler {
 		create: deps.Create,
 		update: deps.Update,
 		delete: deps.Delete,
-		list:   deps.List,
 	}
 }
 
@@ -67,56 +61,6 @@ func (h *modelHandler) HandleCreateModel(ctx context.Context, req *dto.CreateMod
 
 	logger.WithCtx(ctx).Info("[ModelHandler] Create model success",
 		zap.Uint("userID", userID), zap.String("alias", req.Body.Alias))
-	return apiutil.WrapHTTPResponse(rsp, nil)
-}
-
-func (h *modelHandler) HandleListModels(ctx context.Context, req *dto.ListModelsReq) (*dto.HTTPResponse[*dto.ListModelsRsp], error) {
-	rsp := &dto.ListModelsRsp{}
-
-	perm := util.CtxValuePermission(ctx)
-	isGlobalScope := perm == enum.PermissionAdmin
-	views, pageInfo, err := h.list.Handle(ctx, port.ListModelsQuery{
-		CommonParam: req.CommonParam,
-		IsDemo:      perm == enum.PermissionDemo,
-		ScopeUserID: lo.Ternary(isGlobalScope, 0, util.CtxValueUint(ctx, constant.CtxKeyUserID)),
-		Username:    req.Username,
-	})
-	if err != nil {
-		logger.WithCtx(ctx).Error("[ModelHandler] List models failed", zap.Error(err))
-		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
-	}
-
-	rsp.Models = lo.Map(views, func(v *port.ModelView, _ int) *dto.ModelItem {
-		item := &dto.ModelItem{
-			ID:              v.ID,
-			Username:        v.Username,
-			Alias:           v.Alias,
-			ModelID:         v.ModelID,
-			UpstreamModel:   v.UpstreamModel,
-			Enabled:         v.Enabled,
-			ContextLength:   v.ContextLength,
-			MaxOutputTokens: v.MaxOutputTokens,
-			Capabilities:    v.Capabilities,
-			CreatedAt:       v.CreatedAt,
-			UpdatedAt:       v.UpdatedAt,
-		}
-		if v.Endpoint != nil {
-			item.Endpoint = &dto.EndpointItem{
-				ID:                          v.Endpoint.ID,
-				Name:                        v.Endpoint.Name,
-				OpenaiBaseURL:               v.Endpoint.OpenaiBaseURL,
-				AnthropicBaseURL:            v.Endpoint.AnthropicBaseURL,
-				MaskedAPIKey:                v.Endpoint.MaskedAPIKey,
-				SupportOpenAIChatCompletion: v.Endpoint.SupportOpenAIChatCompletion,
-				SupportOpenAIResponse:       v.Endpoint.SupportOpenAIResponse,
-				SupportAnthropicMessage:     v.Endpoint.SupportAnthropicMessage,
-				CreatedAt:                   v.Endpoint.CreatedAt,
-				UpdatedAt:                   v.Endpoint.UpdatedAt,
-			}
-		}
-		return item
-	})
-	rsp.PageInfo = pageInfo
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 

@@ -96,6 +96,10 @@ func (s *stubModelRepo) List(_ context.Context) ([]*aggregate.Model, error) {
 	return nil, nil
 }
 
+func (s *stubModelRepo) ListByEndpointIDs(context.Context, []uint) ([]*aggregate.Model, error) {
+	return nil, nil
+}
+
 func (s *stubModelRepo) Paginate(_ context.Context, _ model.CommonParam, _ uint) ([]*aggregate.Model, *model.PageInfo, error) {
 	return nil, nil, nil
 }
@@ -136,6 +140,10 @@ func (s *stubEndpointRepo) List(_ context.Context) ([]*aggregate.Endpoint, error
 	return nil, nil
 }
 
+func (s *stubEndpointRepo) FindIDsByScope(context.Context, uint) ([]uint, error) {
+	return nil, nil
+}
+
 func (s *stubEndpointRepo) Paginate(_ context.Context, _ model.CommonParam, _ uint) ([]*aggregate.Endpoint, *model.PageInfo, error) {
 	return nil, nil, nil
 }
@@ -168,6 +176,10 @@ func (s *staticModelRepo) DeleteByEndpointID(_ context.Context, _ uint) error {
 	return nil
 }
 
+func (s *staticModelRepo) ListByEndpointIDs(context.Context, []uint) ([]*aggregate.Model, error) {
+	return nil, nil
+}
+
 func (s *staticModelRepo) List(_ context.Context) ([]*aggregate.Model, error) {
 	return nil, nil
 }
@@ -178,6 +190,10 @@ func (s *staticModelRepo) Paginate(_ context.Context, _ model.CommonParam, _ uin
 
 type endpointByIDRepo struct {
 	endpoints map[uint]*aggregate.Endpoint
+}
+
+func (s *endpointByIDRepo) FindIDsByScope(context.Context, uint) ([]uint, error) {
+	return nil, nil
 }
 
 func (s *endpointByIDRepo) FindByID(_ context.Context, id, _ uint) (*aggregate.Endpoint, error) {
@@ -328,6 +344,10 @@ func TestEndpointResolver_Resolve(t *testing.T) {
 type ownedModelRepo struct {
 	ownerUserID uint
 	alias       string
+}
+
+func (r *ownedModelRepo) ListByEndpointIDs(context.Context, []uint) ([]*aggregate.Model, error) {
+	return nil, nil
 }
 
 func (r *ownedModelRepo) FindByAlias(_ context.Context, alias vo.EndpointAlias, userID uint) ([]*aggregate.Model, error) {

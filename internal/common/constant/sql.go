@@ -137,6 +137,10 @@ var (
 
 	SessionMaxPageSize = 500
 
+	// UpstreamGroupModelLimit upstream 分组视图单个分组返回的模型数上限（防御性兜底）。
+	// ponytail: 上限写死 200；需要真分页时再引入组内游标
+	UpstreamGroupModelLimit = 200
+
 	// SessionListINChunkSize session 列表「空 summary fallback」批量加载消息时，
 	// 每条 SELECT ... WHERE id IN (?) 携带的 ID 上限。
 	//

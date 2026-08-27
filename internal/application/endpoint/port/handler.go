@@ -3,9 +3,6 @@ package port
 
 import (
 	"context"
-	"time"
-
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
 )
 
 // CreateEndpointCommand 创建 Endpoint 命令
@@ -63,34 +60,4 @@ type DeleteEndpointCommand struct {
 // DeleteEndpointHandler 删除命令处理器
 type DeleteEndpointHandler interface {
 	Handle(ctx context.Context, cmd DeleteEndpointCommand) error
-}
-
-// EndpointView Endpoint 只读投影
-type EndpointView struct {
-	ID                          uint
-	Username                    string // 归属用户名（admin 全局视图辨认归属）
-	Name                        string
-	OpenaiBaseURL               string
-	AnthropicBaseURL            string
-	MaskedAPIKey                string
-	SupportOpenAIChatCompletion bool
-	SupportOpenAIResponse       bool
-	SupportAnthropicMessage     bool
-	CreatedAt                   time.Time
-	UpdatedAt                   time.Time
-}
-
-// ListEndpointsQuery 列出 Endpoints 查询命令
-//
-// ScopeUserID 多租户隔离：>0 时只返回该用户的配置；==0（admin 视角）不过滤。
-type ListEndpointsQuery struct {
-	model.CommonParam
-	IsDemo      bool
-	ScopeUserID uint
-	Username    string // 仅 admin 视角生效：按归属用户名过滤
-}
-
-// ListEndpointsHandler 查询处理器
-type ListEndpointsHandler interface {
-	Handle(ctx context.Context, q ListEndpointsQuery) ([]*EndpointView, *model.PageInfo, error)
 }
