@@ -82,7 +82,6 @@ func registerMiddlewares(params middlewareParams) {
 				constant.RoutePathWellKnownSecurity,
 			},
 		}),
-		middleware.FgprofMiddleware(),
 		middleware.CORSMiddleware(),
 		middleware.CompressMiddleware(),
 		middleware.TraceMiddleware(),

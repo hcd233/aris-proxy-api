@@ -1,3 +1,4 @@
+// Package router Demo 分组视图路由
 package router
 
 import (
@@ -9,14 +10,23 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/jwt"
 	"github.com/hcd233/aris-proxy-api/internal/middleware"
-	"gorm.io/gorm"
 )
 
-func initDemoRouter(demoGroup huma.API, demoHandler handler.DemoHandler, db *gorm.DB, cache *redis.Client, accessSigner jwt.TokenSigner) {
-	// 无鉴权组：登录入口（IP 限流，参考 oauth2 callback）
-	huma.Register(demoGroup, huma.Operation{
+// initDemoRouter 初始化 Demo 分组视图路由。
+//
+// 双根结构：login/status 为公开入口挂 publicRoot（各自限流）；
+// config/sessions 受 JWT 保护挂 jwtRoot（Web 分区统一鉴权）。
+//
+//	@param publicRoot huma.API /demo 公开组
+//	@param jwtRoot huma.API /demo JWT 组
+//	@param demoHandler handler.DemoHandler
+//	@param cache *redis.Client
+//	@author centonhuang
+//	@update 2026-08-27
+func initDemoRouter(publicRoot, jwtRoot huma.API, demoHandler handler.DemoHandler, cache *redis.Client) {
+	// 公开组：登录入口（IP 限流，参考 oauth2 callback）
+	huma.Register(publicRoot, huma.Operation{
 		OperationID: "demoLogin",
 		Method:      http.MethodPost,
 		Path:        "/login",
@@ -29,7 +39,7 @@ func initDemoRouter(demoGroup huma.API, demoHandler handler.DemoHandler, db *gor
 		},
 	}, demoHandler.HandleLogin)
 
-	huma.Register(demoGroup, huma.Operation{
+	huma.Register(publicRoot, huma.Operation{
 		OperationID: "demoStatus",
 		Method:      http.MethodGet,
 		Path:        "/status",
@@ -42,9 +52,7 @@ func initDemoRouter(demoGroup huma.API, demoHandler handler.DemoHandler, db *gor
 	}, demoHandler.HandleStatus)
 
 	// JWT 组：配置读取（登录用户均可）与更新（admin）
-	demoConfigGroup := huma.NewGroup(demoGroup, "/config")
-	demoConfigGroup.UseMiddleware(middleware.JwtMiddleware(db, cache, accessSigner))
-	demoConfigGroup.UseMiddleware(middleware.TokenBucketRateLimiterMiddleware(cache, "demoAccess", "", constant.PeriodDemoAccess, constant.LimitDemoAccess, middleware.WithPermissionFilter(enum.PermissionDemo)))
+	demoConfigGroup := huma.NewGroup(jwtRoot, "/config")
 
 	huma.Register(demoConfigGroup, huma.Operation{
 		OperationID: "getDemoConfig",
@@ -73,8 +81,7 @@ func initDemoRouter(demoGroup huma.API, demoHandler handler.DemoHandler, db *gor
 		},
 	}, demoHandler.HandleUpdateConfig)
 
-	demoSessionsGroup := huma.NewGroup(demoGroup, "/sessions")
-	demoSessionsGroup.UseMiddleware(middleware.JwtMiddleware(db, cache, accessSigner))
+	demoSessionsGroup := huma.NewGroup(jwtRoot, "/sessions")
 
 	huma.Register(demoSessionsGroup, huma.Operation{
 		OperationID: "listDemoSessions",

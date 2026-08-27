@@ -138,7 +138,7 @@ class ApiClient {
       if (!refreshToken) return false;
 
       try {
-        const res = await fetch(`${API_BASE}/api/v1/token/refresh`, {
+        const res = await fetch(`${API_BASE}/api/web/v1/token/refresh`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ refreshToken }),
@@ -245,18 +245,18 @@ class ApiClient {
   // ─── Auth ──────────────────────────────────────────────────────────────────
 
   async oauth2Login(platform: OAuth2Provider): Promise<LoginRsp> {
-    return this.request<LoginRsp>(`/api/v1/oauth2/login?platform=${platform}`);
+    return this.request<LoginRsp>(`/api/web/v1/oauth2/login?platform=${platform}`);
   }
 
   async oauth2Callback(body: CallbackReqBody): Promise<CallbackRsp> {
-    return this.request<CallbackRsp>("/api/v1/oauth2/callback", {
+    return this.request<CallbackRsp>("/api/web/v1/oauth2/callback", {
       method: "POST",
       body: JSON.stringify(body),
     });
   }
 
   async refreshToken(body: RefreshTokenReqBody): Promise<RefreshTokenRsp> {
-    return this.request<RefreshTokenRsp>("/api/v1/token/refresh", {
+    return this.request<RefreshTokenRsp>("/api/web/v1/token/refresh", {
       method: "POST",
       body: JSON.stringify(body),
     });
@@ -265,19 +265,19 @@ class ApiClient {
   // ─── Demo Account ──────────────────────────────────────────────────────────
 
   async getDemoStatus(): Promise<DemoStatusRsp> {
-    return this.request<DemoStatusRsp>("/api/v1/demo/status");
+    return this.request<DemoStatusRsp>("/api/web/v1/demo/status");
   }
 
   async demoLogin(): Promise<DemoLoginRsp> {
-    return this.request<DemoLoginRsp>("/api/v1/demo/login", { method: "POST" });
+    return this.request<DemoLoginRsp>("/api/web/v1/demo/login", { method: "POST" });
   }
 
   async getDemoConfig(): Promise<GetDemoConfigRsp> {
-    return this.request<GetDemoConfigRsp>("/api/v1/demo/config");
+    return this.request<GetDemoConfigRsp>("/api/web/v1/demo/config");
   }
 
   async updateDemoConfig(body: UpdateDemoConfigReqBody): Promise<GetDemoConfigRsp> {
-    return this.request<GetDemoConfigRsp>("/api/v1/demo/config", {
+    return this.request<GetDemoConfigRsp>("/api/web/v1/demo/config", {
       method: "PATCH",
       body: JSON.stringify(body),
     });
@@ -285,19 +285,19 @@ class ApiClient {
 
   async listDemoSessions(page = 1, pageSize = 100): Promise<ListDemoSessionsRsp> {
     return this.request<ListDemoSessionsRsp>(
-      `/api/v1/demo/sessions/list?page=${page}&pageSize=${pageSize}`,
+      `/api/web/v1/demo/sessions/list?page=${page}&pageSize=${pageSize}`,
     );
   }
 
   async addDemoSessions(body: AddDemoSessionsReqBody): Promise<ListDemoSessionsRsp> {
-    return this.request<ListDemoSessionsRsp>("/api/v1/demo/sessions", {
+    return this.request<ListDemoSessionsRsp>("/api/web/v1/demo/sessions", {
       method: "POST",
       body: JSON.stringify(body),
     });
   }
 
   async removeDemoSessions(ids: number[]): Promise<CommonRsp> {
-    return this.request<CommonRsp>(`/api/v1/demo/sessions?ids=${ids.join(",")}`, {
+    return this.request<CommonRsp>(`/api/web/v1/demo/sessions?ids=${ids.join(",")}`, {
       method: "DELETE",
     });
   }
@@ -305,11 +305,11 @@ class ApiClient {
   // ─── User ───────────────────────────────────────────────────────────────────
 
   async getCurrentUser(): Promise<GetCurUserRsp> {
-    return this.request<GetCurUserRsp>("/api/v1/user/current");
+    return this.request<GetCurUserRsp>("/api/web/v1/user/current");
   }
 
   async updateUser(body: UpdateUserReqBody): Promise<GetCurUserRsp> {
-    return this.request<GetCurUserRsp>("/api/v1/user", {
+    return this.request<GetCurUserRsp>("/api/web/v1/user", {
       method: "PATCH",
       body: JSON.stringify(body),
     });
@@ -323,27 +323,27 @@ class ApiClient {
     const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
     if (opts?.query) params.set("query", opts.query);
     if (opts?.permission) params.set("permission", opts.permission);
-    return this.request<ListUsersRsp>(`/api/v1/user/list?${params}`);
+    return this.request<ListUsersRsp>(`/api/web/v1/user/list?${params}`);
   }
 
   async approveUser(id: number): Promise<CommonRsp> {
-    return this.request<CommonRsp>(`/api/v1/user/approve?id=${id}`, { method: "POST" });
+    return this.request<CommonRsp>(`/api/web/v1/user/approve?id=${id}`, { method: "POST" });
   }
 
   async demoteUser(id: number): Promise<CommonRsp> {
-    return this.request<CommonRsp>(`/api/v1/user/demote?id=${id}`, { method: "POST" });
+    return this.request<CommonRsp>(`/api/web/v1/user/demote?id=${id}`, { method: "POST" });
   }
 
   async deleteUser(id: number): Promise<CommonRsp> {
-    return this.request<CommonRsp>(`/api/v1/user/delete?id=${id}`, { method: "DELETE" });
+    return this.request<CommonRsp>(`/api/web/v1/user/delete?id=${id}`, { method: "DELETE" });
   }
 
   async setDemoUser(id: number): Promise<CommonRsp> {
-    return this.request<CommonRsp>(`/api/v1/user/demo?id=${id}`, { method: "POST" });
+    return this.request<CommonRsp>(`/api/web/v1/user/demo?id=${id}`, { method: "POST" });
   }
 
   async restoreDemoUser(id: number): Promise<CommonRsp> {
-    return this.request<CommonRsp>(`/api/v1/user/demo/restore?id=${id}`, { method: "POST" });
+    return this.request<CommonRsp>(`/api/web/v1/user/demo/restore?id=${id}`, { method: "POST" });
   }
 
   // ─── Session (JWT auth) ────────────────────────────────────────────────────
@@ -368,7 +368,7 @@ class ApiClient {
     if (params.endTime) sp.set("endTime", params.endTime);
     if (params.keyword) sp.set("keyword", params.keyword);
     if (params.filter) sp.set("filter", params.filter);
-    return this.request<ListSessionsRsp>(`/api/v1/session/list?${sp}`);
+    return this.request<ListSessionsRsp>(`/api/web/v1/session/list?${sp}`);
   }
 
   async listSessionOptions(params: SessionOptionListReq): Promise<SessionOptionListRsp> {
@@ -377,15 +377,15 @@ class ApiClient {
     if (params.keyword) sp.set("keyword", params.keyword);
     if (params.startTime) sp.set("startTime", params.startTime);
     if (params.endTime) sp.set("endTime", params.endTime);
-    return this.request<SessionOptionListRsp>(`/api/v1/session/option/list?${sp}`);
+    return this.request<SessionOptionListRsp>(`/api/web/v1/session/option/list?${sp}`);
   }
 
   async getSession(sessionId: number): Promise<GetSessionRsp> {
-    return this.request<GetSessionRsp>(`/api/v1/session?id=${sessionId}`);
+    return this.request<GetSessionRsp>(`/api/web/v1/session?id=${sessionId}`);
   }
 
   async getSessionMetadata(sessionId: number): Promise<GetSessionMetadataRsp> {
-    return this.request<GetSessionMetadataRsp>(`/api/v1/session/metadata?id=${sessionId}`);
+    return this.request<GetSessionMetadataRsp>(`/api/web/v1/session/metadata?id=${sessionId}`);
   }
 
   async listSessionMessages(
@@ -394,7 +394,7 @@ class ApiClient {
     pageSize: number = 50,
   ): Promise<ListSessionMessagesRsp> {
     return this.request<ListSessionMessagesRsp>(
-      `/api/v1/session/message/list?id=${sessionId}&page=${page}&pageSize=${pageSize}`,
+      `/api/web/v1/session/message/list?id=${sessionId}&page=${page}&pageSize=${pageSize}`,
     );
   }
 
@@ -404,21 +404,21 @@ class ApiClient {
     pageSize: number = 20,
   ): Promise<ListSessionToolsRsp> {
     return this.request<ListSessionToolsRsp>(
-      `/api/v1/session/tool/list?id=${sessionId}&page=${page}&pageSize=${pageSize}`,
+      `/api/web/v1/session/tool/list?id=${sessionId}&page=${page}&pageSize=${pageSize}`,
     );
   }
 
   // ─── Session Score ─────────────────────────────────────────────────────────
 
   async scoreSession(body: ScoreSessionReqBody): Promise<ScoreSessionRsp> {
-    return this.request<ScoreSessionRsp>("/api/v1/session/score", {
+    return this.request<ScoreSessionRsp>("/api/web/v1/session/score", {
       method: "POST",
       body: JSON.stringify(body),
     });
   }
 
   async deleteScoreSession(sessionId: number): Promise<CommonRsp> {
-    return this.request<CommonRsp>(`/api/v1/session/score?id=${sessionId}`, {
+    return this.request<CommonRsp>(`/api/web/v1/session/score?id=${sessionId}`, {
       method: "DELETE",
     });
   }
@@ -426,7 +426,7 @@ class ApiClient {
   // ─── Session Share ─────────────────────────────────────────────────────────
 
   async createShare(body: CreateShareReqBody): Promise<CreateShareRsp> {
-    return this.request<CreateShareRsp>("/api/v1/session/share", {
+    return this.request<CreateShareRsp>("/api/web/v1/session/share", {
       method: "POST",
       body: JSON.stringify(body),
     });
@@ -434,12 +434,12 @@ class ApiClient {
 
   async listShares(page: number = 1, pageSize: number = 20): Promise<ListSharesRsp> {
     return this.request<ListSharesRsp>(
-      `/api/v1/session/share/list?page=${page}&pageSize=${pageSize}`,
+      `/api/web/v1/session/share/list?page=${page}&pageSize=${pageSize}`,
     );
   }
 
   async deleteShare(shareId: string): Promise<CommonRsp> {
-    return this.request<CommonRsp>(`/api/v1/session/share?id=${encodeURIComponent(shareId)}`, {
+    return this.request<CommonRsp>(`/api/web/v1/session/share?id=${encodeURIComponent(shareId)}`, {
       method: "DELETE",
     });
   }
@@ -447,11 +447,13 @@ class ApiClient {
   // ─── Session Delete ──────────────────────────────────────────────────────
 
   async deleteSession(sessionId: number): Promise<DeleteSessionRsp> {
-    return this.request<DeleteSessionRsp>(`/api/v1/session?ids=${sessionId}`, { method: "DELETE" });
+    return this.request<DeleteSessionRsp>(`/api/web/v1/session?ids=${sessionId}`, {
+      method: "DELETE",
+    });
   }
 
   async batchDeleteSessions(ids: number[]): Promise<DeleteSessionRsp> {
-    return this.request<DeleteSessionRsp>(`/api/v1/session?ids=${ids.join(",")}`, {
+    return this.request<DeleteSessionRsp>(`/api/web/v1/session?ids=${ids.join(",")}`, {
       method: "DELETE",
     });
   }
@@ -474,7 +476,7 @@ class ApiClient {
    */
   async getShareMetadata(shareId: string): Promise<GetShareMetadataRsp> {
     return this.publicGet<GetShareMetadataRsp>(
-      `/api/v1/session/share/metadata?id=${encodeURIComponent(shareId)}`,
+      `/api/web/v1/session/share/metadata?id=${encodeURIComponent(shareId)}`,
     );
   }
 
@@ -487,7 +489,7 @@ class ApiClient {
     pageSize: number = 50,
   ): Promise<ListShareMessagesRsp> {
     return this.publicGet<ListShareMessagesRsp>(
-      `/api/v1/session/share/message/list?id=${encodeURIComponent(shareId)}&page=${page}&pageSize=${pageSize}`,
+      `/api/web/v1/session/share/message/list?id=${encodeURIComponent(shareId)}&page=${page}&pageSize=${pageSize}`,
     );
   }
 
@@ -500,7 +502,7 @@ class ApiClient {
     pageSize: number = 20,
   ): Promise<ListShareToolsRsp> {
     return this.publicGet<ListShareToolsRsp>(
-      `/api/v1/session/share/tool/list?id=${encodeURIComponent(shareId)}&page=${page}&pageSize=${pageSize}`,
+      `/api/web/v1/session/share/tool/list?id=${encodeURIComponent(shareId)}&page=${page}&pageSize=${pageSize}`,
     );
   }
 
@@ -513,18 +515,18 @@ class ApiClient {
   ): Promise<ListAPIKeysRsp> {
     const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
     if (query) params.set("query", query);
-    return this.request<ListAPIKeysRsp>(`/api/v1/apikey/list?${params}`);
+    return this.request<ListAPIKeysRsp>(`/api/web/v1/apikey/list?${params}`);
   }
 
   async createAPIKey(body: CreateAPIKeyReqBody): Promise<CreateAPIKeyRsp> {
-    return this.request<CreateAPIKeyRsp>("/api/v1/apikey", {
+    return this.request<CreateAPIKeyRsp>("/api/web/v1/apikey", {
       method: "POST",
       body: JSON.stringify(body),
     });
   }
 
   async deleteAPIKey(id: number): Promise<void> {
-    await this.request(`/api/v1/apikey?id=${id}`, {
+    await this.request(`/api/web/v1/apikey?id=${id}`, {
       method: "DELETE",
     });
   }
@@ -540,27 +542,27 @@ class ApiClient {
     const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
     if (query) params.set("query", query);
     if (username) params.set("username", username);
-    return this.request<ListUpstreamRsp>(`/api/v1/upstream/list?${params}`);
+    return this.request<ListUpstreamRsp>(`/api/web/v1/upstream/list?${params}`);
   }
 
   // ─── Endpoints (admin) ─────────────────────────────────────────────────────
 
   async createEndpoint(body: CreateEndpointReqBody): Promise<void> {
-    await this.request("/api/v1/endpoint", {
+    await this.request("/api/web/v1/endpoint", {
       method: "POST",
       body: JSON.stringify(body),
     });
   }
 
   async updateEndpoint(id: number, body: UpdateEndpointReqBody): Promise<void> {
-    await this.request(`/api/v1/endpoint?id=${id}`, {
+    await this.request(`/api/web/v1/endpoint?id=${id}`, {
       method: "PATCH",
       body: JSON.stringify(body),
     });
   }
 
   async deleteEndpoint(id: number): Promise<void> {
-    await this.request(`/api/v1/endpoint?id=${id}`, {
+    await this.request(`/api/web/v1/endpoint?id=${id}`, {
       method: "DELETE",
     });
   }
@@ -568,21 +570,21 @@ class ApiClient {
   // ─── Models (admin) ────────────────────────────────────────────────────────
 
   async createModel(body: CreateModelReqBody): Promise<void> {
-    await this.request("/api/v1/model", {
+    await this.request("/api/web/v1/model", {
       method: "POST",
       body: JSON.stringify(body),
     });
   }
 
   async updateModel(id: number, body: UpdateModelReqBody): Promise<void> {
-    await this.request(`/api/v1/model?id=${id}`, {
+    await this.request(`/api/web/v1/model?id=${id}`, {
       method: "PATCH",
       body: JSON.stringify(body),
     });
   }
 
   async deleteModel(id: number): Promise<void> {
-    await this.request(`/api/v1/model?id=${id}`, {
+    await this.request(`/api/web/v1/model?id=${id}`, {
       method: "DELETE",
     });
   }
@@ -609,7 +611,7 @@ class ApiClient {
     if (params.startTime) sp.set("startTime", params.startTime);
     if (params.endTime) sp.set("endTime", params.endTime);
     if (params.filter) sp.set("filter", params.filter);
-    return this.request<ListAuditLogsRsp>(`/api/v1/audit/model/log/list?${sp}`);
+    return this.request<ListAuditLogsRsp>(`/api/web/v1/audit/model/log/list?${sp}`);
   }
 
   async listAuditOptions(params: AuditOptionListReq): Promise<AuditOptionListRsp> {
@@ -618,7 +620,7 @@ class ApiClient {
     if (params.keyword) sp.set("keyword", params.keyword);
     if (params.startTime) sp.set("startTime", params.startTime);
     if (params.endTime) sp.set("endTime", params.endTime);
-    return this.request<AuditOptionListRsp>(`/api/v1/audit/model/option/list?${sp}`);
+    return this.request<AuditOptionListRsp>(`/api/web/v1/audit/model/option/list?${sp}`);
   }
 
   async fetchModelTrend(params: {
@@ -627,7 +629,7 @@ class ApiClient {
     granularity: Granularity;
   }): Promise<ModelTrendRsp> {
     const sp = new URLSearchParams(params);
-    return this.request<ModelTrendRsp>(`/api/v1/audit/stats/model/trend?${sp}`);
+    return this.request<ModelTrendRsp>(`/api/web/v1/audit/stats/model/trend?${sp}`);
   }
 
   async fetchRequestRate(params: {
@@ -636,7 +638,7 @@ class ApiClient {
     granularity: Granularity;
   }): Promise<RequestRateRsp> {
     const sp = new URLSearchParams(params);
-    return this.request<RequestRateRsp>(`/api/v1/audit/stats/request/rate?${sp}`);
+    return this.request<RequestRateRsp>(`/api/web/v1/audit/stats/request/rate?${sp}`);
   }
 
   async fetchTokenThroughput(params: {
@@ -645,7 +647,7 @@ class ApiClient {
     granularity: Granularity;
   }): Promise<TokenThroughputRsp> {
     const sp = new URLSearchParams(params);
-    return this.request<TokenThroughputRsp>(`/api/v1/audit/stats/token/throughput?${sp}`);
+    return this.request<TokenThroughputRsp>(`/api/web/v1/audit/stats/token/throughput?${sp}`);
   }
 
   async fetchTokenRate(params: {
@@ -654,7 +656,7 @@ class ApiClient {
     granularity: Granularity;
   }): Promise<TokenRateRsp> {
     const sp = new URLSearchParams(params);
-    return this.request<TokenRateRsp>(`/api/v1/audit/stats/token/rate?${sp}`);
+    return this.request<TokenRateRsp>(`/api/web/v1/audit/stats/token/rate?${sp}`);
   }
 
   async fetchModelUsage(params: {
@@ -663,7 +665,7 @@ class ApiClient {
     granularity: Granularity;
   }): Promise<ModelUsageRsp> {
     const sp = new URLSearchParams(params);
-    return this.request<ModelUsageRsp>(`/api/v1/audit/stats/model/usage?${sp}`);
+    return this.request<ModelUsageRsp>(`/api/web/v1/audit/stats/model/usage?${sp}`);
   }
 
   async fetchFirstTokenLatency(params: {
@@ -672,13 +674,13 @@ class ApiClient {
     granularity: Granularity;
   }): Promise<FirstTokenLatencyRsp> {
     const sp = new URLSearchParams(params);
-    return this.request<FirstTokenLatencyRsp>(`/api/v1/audit/stats/token/latency?${sp}`);
+    return this.request<FirstTokenLatencyRsp>(`/api/web/v1/audit/stats/token/latency?${sp}`);
   }
 
   // ─── Trigger Words ─────────────────────────────────────────────────────
 
   async createTrigger(body: CreateTriggerReqBody): Promise<CommonRsp> {
-    return this.request<CommonRsp>("/api/v1/trigger", {
+    return this.request<CommonRsp>("/api/web/v1/trigger", {
       method: "POST",
       body: JSON.stringify(body),
     });
@@ -687,21 +689,21 @@ class ApiClient {
   async listTrigger(page: number, pageSize: number, query?: string): Promise<ListTriggerRsp> {
     const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
     if (query) params.set("query", query);
-    return this.request<ListTriggerRsp>(`/api/v1/trigger/list?${params}`);
+    return this.request<ListTriggerRsp>(`/api/web/v1/trigger/list?${params}`);
   }
 
   async deleteTrigger(id: number): Promise<DeleteTriggerRsp> {
-    return this.request<DeleteTriggerRsp>(`/api/v1/trigger?ids=${id}`, { method: "DELETE" });
+    return this.request<DeleteTriggerRsp>(`/api/web/v1/trigger?ids=${id}`, { method: "DELETE" });
   }
 
   async batchDeleteTrigger(ids: number[]): Promise<DeleteTriggerRsp> {
-    return this.request<DeleteTriggerRsp>(`/api/v1/trigger?ids=${ids.join(",")}`, {
+    return this.request<DeleteTriggerRsp>(`/api/web/v1/trigger?ids=${ids.join(",")}`, {
       method: "DELETE",
     });
   }
 
   async updateTrigger(id: number, body: UpdateTriggerReqBody): Promise<CommonRsp> {
-    return this.request<CommonRsp>(`/api/v1/trigger?id=${id}`, {
+    return this.request<CommonRsp>(`/api/web/v1/trigger?id=${id}`, {
       method: "PATCH",
       body: JSON.stringify(body),
     });
@@ -716,11 +718,11 @@ class ApiClient {
   ): Promise<ListTracesRsp> {
     const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
     if (query) params.set("query", query);
-    return this.request<ListTracesRsp>(`/api/v1/trace/list?${params}`);
+    return this.request<ListTracesRsp>(`/api/web/v1/trace/list?${params}`);
   }
 
   async getTrace(id: number): Promise<GetTraceRsp> {
-    return this.request<GetTraceRsp>(`/api/v1/trace?id=${id}`);
+    return this.request<GetTraceRsp>(`/api/web/v1/trace?id=${id}`);
   }
 
   async listTraceEvents(
@@ -733,15 +735,17 @@ class ApiClient {
       page: String(page),
       pageSize: String(pageSize),
     });
-    return this.request<ListTraceEventsRsp>(`/api/v1/trace/event/list?${params}`);
+    return this.request<ListTraceEventsRsp>(`/api/web/v1/trace/event/list?${params}`);
   }
 
   async deleteTrace(traceId: number): Promise<DeleteTraceRsp> {
-    return this.request<DeleteTraceRsp>(`/api/v1/trace?ids=${traceId}`, { method: "DELETE" });
+    return this.request<DeleteTraceRsp>(`/api/web/v1/trace?ids=${traceId}`, { method: "DELETE" });
   }
 
   async batchDeleteTraces(ids: number[]): Promise<DeleteTraceRsp> {
-    return this.request<DeleteTraceRsp>(`/api/v1/trace?ids=${ids.join(",")}`, { method: "DELETE" });
+    return this.request<DeleteTraceRsp>(`/api/web/v1/trace?ids=${ids.join(",")}`, {
+      method: "DELETE",
+    });
   }
 
   // ─── Cron (admin) ──────────────────────────────────────────────────────────
@@ -760,21 +764,21 @@ class ApiClient {
     if (params.query) sp.set("query", params.query);
     if (params.sort) sp.set("sort", params.sort);
     if (params.sortField) sp.set("sortField", params.sortField);
-    return this.request<ListCronJobsRsp>(`/api/v1/cron/list?${sp}`);
+    return this.request<ListCronJobsRsp>(`/api/web/v1/cron/list?${sp}`);
   }
 
   async updateCronJob(body: UpdateCronJobReqBody): Promise<CommonRsp> {
     const payload: Record<string, unknown> = {};
     if (body.enabled !== undefined) payload.enabled = body.enabled;
     if (body.spec !== undefined) payload.spec = body.spec;
-    return this.request<CommonRsp>(`/api/v1/cron?name=${encodeURIComponent(body.name)}`, {
+    return this.request<CommonRsp>(`/api/web/v1/cron?name=${encodeURIComponent(body.name)}`, {
       method: "PATCH",
       body: JSON.stringify(payload),
     });
   }
 
   async triggerCronJob(name: string): Promise<CommonRsp> {
-    return this.request<CommonRsp>(`/api/v1/cron/trigger?name=${encodeURIComponent(name)}`, {
+    return this.request<CommonRsp>(`/api/web/v1/cron/trigger?name=${encodeURIComponent(name)}`, {
       method: "POST",
     });
   }
@@ -799,7 +803,7 @@ class ApiClient {
     if (params.startTime) sp.set("startTime", params.startTime);
     if (params.endTime) sp.set("endTime", params.endTime);
     if (params.filter) sp.set("filter", params.filter);
-    return this.request<ListCronCallAuditsRsp>(`/api/v1/audit/cron/log/list?${sp}`);
+    return this.request<ListCronCallAuditsRsp>(`/api/web/v1/audit/cron/log/list?${sp}`);
   }
 
   async listCronCallAuditOptions(
@@ -810,7 +814,7 @@ class ApiClient {
     if (params.keyword) sp.set("keyword", params.keyword);
     if (params.startTime) sp.set("startTime", params.startTime);
     if (params.endTime) sp.set("endTime", params.endTime);
-    return this.request<CronCallAuditOptionListRsp>(`/api/v1/audit/cron/option/list?${sp}`);
+    return this.request<CronCallAuditOptionListRsp>(`/api/web/v1/audit/cron/option/list?${sp}`);
   }
 
   async listDemoAccessAudits(params: {
@@ -833,7 +837,7 @@ class ApiClient {
     if (params.startTime) sp.set("startTime", params.startTime);
     if (params.endTime) sp.set("endTime", params.endTime);
     if (params.filter) sp.set("filter", params.filter);
-    return this.request<ListDemoAccessAuditsRsp>(`/api/v1/audit/demo/log/list?${sp}`);
+    return this.request<ListDemoAccessAuditsRsp>(`/api/web/v1/audit/demo/log/list?${sp}`);
   }
 
   async listDemoAccessAuditOptions(
@@ -844,13 +848,13 @@ class ApiClient {
     if (params.keyword) sp.set("keyword", params.keyword);
     if (params.startTime) sp.set("startTime", params.startTime);
     if (params.endTime) sp.set("endTime", params.endTime);
-    return this.request<DemoAccessAuditOptionListRsp>(`/api/v1/audit/demo/option/list?${sp}`);
+    return this.request<DemoAccessAuditOptionListRsp>(`/api/web/v1/audit/demo/option/list?${sp}`);
   }
 
   async getRuntimeMetrics(params: { range: string; since?: number }): Promise<RuntimeMetricsRsp> {
     const sp = new URLSearchParams({ range: params.range });
     if (params.since && params.since > 0) sp.set("since", String(params.since));
-    return this.request<RuntimeMetricsRsp>(`/api/v1/metrics/runtime?${sp}`);
+    return this.request<RuntimeMetricsRsp>(`/api/web/v1/metrics/runtime?${sp}`);
   }
 
   // ─── Dataset ───────────────────────────────────────────────────────────────────
@@ -867,7 +871,7 @@ class ApiClient {
       sp.set("modelIds", params.modelIds.join(","));
     if (params.startTime) sp.set("startTime", params.startTime);
     if (params.endTime) sp.set("endTime", params.endTime);
-    return this.request<DatasetPreviewRsp>(`/api/v1/dataset/preview?${sp}`);
+    return this.request<DatasetPreviewRsp>(`/api/web/v1/dataset/preview?${sp}`);
   }
 
   async previewDatasetFormat(params: {
@@ -884,7 +888,7 @@ class ApiClient {
     if (params.startTime) sp.set("startTime", params.startTime);
     if (params.endTime) sp.set("endTime", params.endTime);
     if (params.offset !== undefined) sp.set("offset", String(params.offset));
-    return this.request<DatasetFormatPreviewRsp>(`/api/v1/dataset/sample?${sp}`);
+    return this.request<DatasetFormatPreviewRsp>(`/api/web/v1/dataset/sample?${sp}`);
   }
 
   async exportDatasetStream(
@@ -905,7 +909,7 @@ class ApiClient {
     if (params.endTime) sp.set("endTime", params.endTime);
 
     const doFetch = () =>
-      fetch(`${API_BASE}/api/v1/dataset/export?${sp}`, {
+      fetch(`${API_BASE}/api/web/v1/dataset/export?${sp}`, {
         headers: { ...this.getHeaders() },
         signal,
       });

@@ -38,7 +38,7 @@ func createTriggerWord(t *testing.T, baseURL, adminToken, word, action string) u
 		t.Fatalf("failed to marshal create body: %v", err)
 	}
 
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, baseURL+"/api/v1/trigger", strings.NewReader(string(payload)))
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, baseURL+"/api/web/v1/trigger", strings.NewReader(string(payload)))
 	if err != nil {
 		t.Fatalf("failed to create request: %v", err)
 	}
@@ -82,7 +82,7 @@ func createTriggerWord(t *testing.T, baseURL, adminToken, word, action string) u
 // findTriggerID 在分页列表中查找指定触发词的 ID。
 func findTriggerID(t *testing.T, baseURL, adminToken, word string) (uint, bool) {
 	t.Helper()
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, baseURL+"/api/v1/trigger/list?page=1&pageSize=100", http.NoBody)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, baseURL+"/api/web/v1/trigger/list?page=1&pageSize=100", http.NoBody)
 	if err != nil {
 		t.Fatalf("failed to create list request: %v", err)
 	}
@@ -126,7 +126,7 @@ func updateTriggerAction(t *testing.T, baseURL, adminToken string, id uint, acti
 		t.Fatalf("failed to marshal update body: %v", err)
 	}
 
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodPatch, fmt.Sprintf("%s/api/v1/trigger?id=%d", baseURL, id), strings.NewReader(string(payload)))
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPatch, fmt.Sprintf("%s/api/web/v1/trigger?id=%d", baseURL, id), strings.NewReader(string(payload)))
 	if err != nil {
 		t.Fatalf("failed to create request: %v", err)
 	}
@@ -147,7 +147,7 @@ func updateTriggerAction(t *testing.T, baseURL, adminToken string, id uint, acti
 // deleteTriggerWord 删除触发词（管理接口，admin JWT）。
 func deleteTriggerWord(t *testing.T, baseURL, adminToken string, id uint) {
 	t.Helper()
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodDelete, fmt.Sprintf("%s/api/v1/trigger?ids=%d", baseURL, id), http.NoBody)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodDelete, fmt.Sprintf("%s/api/web/v1/trigger?ids=%d", baseURL, id), http.NoBody)
 	if err != nil {
 		t.Fatalf("failed to create request: %v", err)
 	}
@@ -451,7 +451,7 @@ func TestTrigger_DuplicateCreate_Returns409(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to marshal duplicate create body: %v", err)
 	}
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, baseURL+"/api/v1/trigger", strings.NewReader(string(payload)))
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, baseURL+"/api/web/v1/trigger", strings.NewReader(string(payload)))
 	if err != nil {
 		t.Fatalf("failed to create request: %v", err)
 	}
@@ -482,7 +482,7 @@ func TestTrigger_DuplicateCreate_Returns409(t *testing.T) {
 	}
 }
 
-// TestTrigger_BatchDelete 验证 DELETE /api/v1/trigger?ids=1,2,3 批量删除及 deletedCount 返回。
+// TestTrigger_BatchDelete 验证 DELETE /api/web/v1/trigger?ids=1,2,3 批量删除及 deletedCount 返回。
 func TestTrigger_BatchDelete(t *testing.T) {
 	t.Parallel()
 	baseURL, _, adminToken := mustTriggerE2EEnv(t)
@@ -492,7 +492,7 @@ func TestTrigger_BatchDelete(t *testing.T) {
 	id2 := createTriggerWord(t, baseURL, adminToken, uniqueWord("e2ebatch"), "omit")
 
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodDelete,
-		fmt.Sprintf("%s/api/v1/trigger?ids=%d,%d", baseURL, id1, id2), http.NoBody)
+		fmt.Sprintf("%s/api/web/v1/trigger?ids=%d,%d", baseURL, id1, id2), http.NoBody)
 	if err != nil {
 		t.Fatalf("failed to create batch delete request: %v", err)
 	}
@@ -828,7 +828,7 @@ func TestE2E_TriggerDeleteNoPermission(t *testing.T) {
 		t.Skip("USER_TOKEN is required for no-permission trigger delete e2e test")
 	}
 
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodDelete, baseURL+"/api/v1/trigger?ids=1", http.NoBody)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodDelete, baseURL+"/api/web/v1/trigger?ids=1", http.NoBody)
 	if err != nil {
 		t.Fatalf("failed to create request: %v", err)
 	}

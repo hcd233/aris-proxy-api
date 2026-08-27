@@ -2,13 +2,13 @@
 //
 // 回归背景（bugfix/session-share-body-2026-05-28）：
 //   - CreateShareReq DTO 没有遵循 huma 的 Body 包装规范，
-//     导致 POST /api/v1/session/share 时 sessionId 始终是零值 0；
-//   - 0 写入 redis 后，GET /api/v1/session/share/metadata?id=xxx 拿到 0，
+//     导致 POST /api/web/v1/session/share 时 sessionId 始终是零值 0；
+//   - 0 写入 redis 后，GET /api/web/v1/session/share/metadata?id=xxx 拿到 0，
 //     再传给 GORM 由于零值 where 条件被忽略，返回了别人的 session。
 //
 // 本测试覆盖：
-//  1. 用 JWT 调用 POST /api/v1/session/share 携带 sessionId
-//  2. 用返回的 shareId 公开访问 GET /api/v1/session/share/metadata?id=xxx
+//  1. 用 JWT 调用 POST /api/web/v1/session/share 携带 sessionId
+//  2. 用返回的 shareId 公开访问 GET /api/web/v1/session/share/metadata?id=xxx
 //  3. 断言 response.session.id == 请求传入的 sessionId
 //
 // 环境变量：
@@ -87,7 +87,7 @@ func TestSessionShare_CreateAndAccess_SessionIDConsistency(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal create body failed: %v", err)
 	}
-	createReq, err := http.NewRequestWithContext(context.Background(), http.MethodPost, baseURL+"/api/v1/session/share", bytes.NewReader(createBody))
+	createReq, err := http.NewRequestWithContext(context.Background(), http.MethodPost, baseURL+"/api/web/v1/session/share", bytes.NewReader(createBody))
 	if err != nil {
 		t.Fatalf("build create request failed: %v", err)
 	}
@@ -130,7 +130,7 @@ func TestSessionShare_CreateAndAccess_SessionIDConsistency(t *testing.T) {
 	}
 
 	// Step 2: 公开访问分享元数据
-	getReq, err := http.NewRequestWithContext(context.Background(), http.MethodGet, baseURL+"/api/v1/session/share/metadata?id="+created.ShareID, http.NoBody)
+	getReq, err := http.NewRequestWithContext(context.Background(), http.MethodGet, baseURL+"/api/web/v1/session/share/metadata?id="+created.ShareID, http.NoBody)
 	if err != nil {
 		t.Fatalf("build get request failed: %v", err)
 	}
@@ -191,7 +191,7 @@ func TestSessionShare_Create_RejectsZeroSessionID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal body failed: %v", err)
 	}
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, baseURL+"/api/v1/session/share", bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, baseURL+"/api/web/v1/session/share", bytes.NewReader(body))
 	if err != nil {
 		t.Fatalf("build request failed: %v", err)
 	}

@@ -99,7 +99,7 @@ func TestE2E_DemoAccessAudit(t *testing.T) {
 			Modules      []string `json:"modules"`
 		} `json:"config"`
 	}
-	status, body := doJSON(t, client, http.MethodGet, baseURL+"/api/v1/demo/config", adminToken)
+	status, body := doJSON(t, client, http.MethodGet, baseURL+"/api/web/v1/demo/config", adminToken)
 	if status != http.StatusOK {
 		t.Fatalf("get demo config expected 200, got %d: %s", status, body)
 	}
@@ -113,7 +113,7 @@ func TestE2E_DemoAccessAudit(t *testing.T) {
 			"modules":      origConfig.Config.Modules,
 		}}
 		rb, _ := sonic.Marshal(restorePatch)
-		_, _ = doJSONBody(t, client, http.MethodPatch, baseURL+"/api/v1/demo/config", adminToken, rb)
+		_, _ = doJSONBody(t, client, http.MethodPatch, baseURL+"/api/web/v1/demo/config", adminToken, rb)
 	})
 
 	// 1. 开放入口 + 仅开放 sessions（其余模块全部锁定，供探测）
@@ -122,13 +122,13 @@ func TestE2E_DemoAccessAudit(t *testing.T) {
 		"modules":      []string{"sessions"},
 	}}
 	ob, _ := sonic.Marshal(openPatch)
-	status, body = doJSONBody(t, client, http.MethodPatch, baseURL+"/api/v1/demo/config", adminToken, ob)
+	status, body = doJSONBody(t, client, http.MethodPatch, baseURL+"/api/web/v1/demo/config", adminToken, ob)
 	if status != http.StatusOK {
 		t.Fatalf("open demo config expected 200, got %d: %s", status, body)
 	}
 
 	// 2. demo 登录（产生 login 审计）
-	status, body = doJSON(t, client, http.MethodPost, baseURL+"/api/v1/demo/login", "")
+	status, body = doJSON(t, client, http.MethodPost, baseURL+"/api/web/v1/demo/login", "")
 	if status != http.StatusOK {
 		t.Fatalf("demo login expected 200, got %d: %s", status, body)
 	}
@@ -141,13 +141,13 @@ func TestE2E_DemoAccessAudit(t *testing.T) {
 	demoToken := login.AccessToken
 
 	// 3. 访问开放模块 sessions 列表（产生 module_access 审计）
-	status, _ = doJSON(t, client, http.MethodGet, baseURL+"/api/v1/session/list?page=1&pageSize=10", demoToken)
+	status, _ = doJSON(t, client, http.MethodGet, baseURL+"/api/web/v1/session/list?page=1&pageSize=10", demoToken)
 	if status != http.StatusOK {
 		t.Fatalf("demo list sessions expected 200, got %d", status)
 	}
 
 	// 4. 探测锁定模块 models（产生 module_denied 审计）
-	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/v1/model/list?page=1&pageSize=10", demoToken)
+	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/web/v1/model/list?page=1&pageSize=10", demoToken)
 	if status == http.StatusOK && !strings.Contains(string(body), "error") {
 		t.Fatalf("demo probe locked module expected business error, got 200: %s", body)
 	}
@@ -196,7 +196,7 @@ func TestE2E_DemoAccessAudit(t *testing.T) {
 	}
 
 	// 6. demo 查询审计列表被拒
-	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/v1/audit/demo/log/list?page=1&pageSize=10", demoToken)
+	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/web/v1/audit/demo/log/list?page=1&pageSize=10", demoToken)
 	if status == http.StatusOK && !strings.Contains(string(body), "error") {
 		t.Fatalf("demo query demo access audits expected business error, got 200: %s", body)
 	}
@@ -216,7 +216,7 @@ type demoAuditListRsp struct {
 
 func queryDemoAccessAudits(t *testing.T, client *http.Client, baseURL, adminToken, filter string) demoAuditListRsp {
 	t.Helper()
-	url := baseURL + "/api/v1/audit/demo/log/list?page=1&pageSize=100&sort=desc&sortField=created_at"
+	url := baseURL + "/api/web/v1/audit/demo/log/list?page=1&pageSize=100&sort=desc&sortField=created_at"
 	if filter != "" {
 		url += "&filter=" + filter
 	}

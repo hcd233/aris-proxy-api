@@ -32,7 +32,7 @@ const (
 
 	TraceClientSchemeHTTP  = "http"
 	TraceClientSchemeHTTPS = "https"
-	TraceClientCheckPath   = "/api/v1/trace/client/check"
+	TraceClientCheckPath   = "/api/cli/v1/trace/client/check"
 	// ClientModelsListPath 客户端模型分发接口绝对路径（aris model export 实际请求）。
 	//
 	// 服务端注册路径由 ClientModelsRoutePath 派生，二者同源，不得各自硬编码。
@@ -43,7 +43,7 @@ const (
 	TraceClientBatchMaxRecords      = 500
 	TraceClientBatchMaxBytes        = 4 << 20
 	TraceClientRejectedRetention    = 7 * 24 * time.Hour
-	TraceClientIngestPath           = "/api/v1/trace/event"
+	TraceClientIngestPath           = "/api/cli/v1/trace/event"
 	TraceClientRecordFileSuffix     = ".json"
 	TraceClientSpoolLockFile        = "spool.lock"
 	TraceClientStateLockFile        = "client.lock"

@@ -1,4 +1,4 @@
-// Package audit_filter_ua 验证 GET /api/v1/audit/model/log/list?filter=ua:... 的端到端行为。
+// Package audit_filter_ua 验证 GET /api/web/v1/audit/model/log/list?filter=ua:... 的端到端行为。
 //
 // 环境变量：
 //   - BASE_URL    API 根地址（必填）
@@ -57,7 +57,7 @@ func doListAuditLogs(t *testing.T, client *http.Client, baseURL, jwtToken, filte
 	if filter != "" {
 		q.Set("filter", filter)
 	}
-	endpoint := fmt.Sprintf("%s/api/v1/audit/model/log/list?%s", baseURL, q.Encode())
+	endpoint := fmt.Sprintf("%s/api/web/v1/audit/model/log/list?%s", baseURL, q.Encode())
 
 	ctx, cancel := context.WithTimeout(context.Background(), httpTimeout)
 	defer cancel()
@@ -92,7 +92,7 @@ func doListAuditOptions(t *testing.T, client *http.Client, baseURL, jwtToken, fi
 	t.Helper()
 	q := url.Values{}
 	q.Set("field", field)
-	endpoint := fmt.Sprintf("%s/api/v1/audit/model/option/list?%s", baseURL, q.Encode())
+	endpoint := fmt.Sprintf("%s/api/web/v1/audit/model/option/list?%s", baseURL, q.Encode())
 
 	ctx, cancel := context.WithTimeout(context.Background(), httpTimeout)
 	defer cancel()
@@ -153,7 +153,7 @@ func TestAuditListFilterUA_NoCrash(t *testing.T) {
 	}
 }
 
-// TestAuditListFilterUA_OptionList 验证 /api/v1/audit/model/option/list?field=ua 返回正常。
+// TestAuditListFilterUA_OptionList 验证 /api/web/v1/audit/model/option/list?field=ua 返回正常。
 //
 //	@author centonhuang
 //	@update 2026-08-10 16:00:00

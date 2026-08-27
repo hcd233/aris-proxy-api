@@ -23,7 +23,7 @@ type currentUserRsp struct {
 func adminSelfID(t *testing.T, baseURL, adminToken string) uint {
 	t.Helper()
 	client := &http.Client{Timeout: e2eHTTPTimeout}
-	status, body := doJSON(t, client, http.MethodGet, baseURL+"/api/v1/user/current", adminToken)
+	status, body := doJSON(t, client, http.MethodGet, baseURL+"/api/web/v1/user/current", adminToken)
 	if status != http.StatusOK {
 		t.Fatalf("get current user expected 200, got %d: %s", status, body)
 	}
@@ -43,8 +43,8 @@ func TestE2E_RegularUserCannotManageUsers(t *testing.T) {
 		method string
 		url    string
 	}{
-		{http.MethodPost, baseURL + "/api/v1/user/demote?id=1"},
-		{http.MethodDelete, baseURL + "/api/v1/user/delete?id=1"},
+		{http.MethodPost, baseURL + "/api/web/v1/user/demote?id=1"},
+		{http.MethodDelete, baseURL + "/api/web/v1/user/delete?id=1"},
 	} {
 		status, body := doJSON(t, client, tc.method, tc.url, userToken)
 		if status != http.StatusOK {
@@ -67,7 +67,7 @@ func TestE2E_AdminDemoteThenReapprove(t *testing.T) {
 	client := &http.Client{Timeout: e2eHTTPTimeout}
 
 	// 找第一个 user 权限用户
-	status, body := doJSON(t, client, http.MethodGet, baseURL+"/api/v1/user/list?page=1&pageSize=20&permission=user", adminToken)
+	status, body := doJSON(t, client, http.MethodGet, baseURL+"/api/web/v1/user/list?page=1&pageSize=20&permission=user", adminToken)
 	if status != http.StatusOK {
 		t.Fatalf("list user-permission users expected 200, got %d: %s", status, body)
 	}
@@ -81,13 +81,13 @@ func TestE2E_AdminDemoteThenReapprove(t *testing.T) {
 	target := rsp.Items[0]
 
 	// 降级 → 200
-	status, body = doJSON(t, client, http.MethodPost, fmt.Sprintf("%s/api/v1/user/demote?id=%d", baseURL, target.ID), adminToken)
+	status, body = doJSON(t, client, http.MethodPost, fmt.Sprintf("%s/api/web/v1/user/demote?id=%d", baseURL, target.ID), adminToken)
 	if status != http.StatusOK {
 		t.Fatalf("demote user expected 200, got %d: %s", status, body)
 	}
 
 	// 恢复：批准 → 200（闭环无副作用）
-	status, body = doJSON(t, client, http.MethodPost, fmt.Sprintf("%s/api/v1/user/approve?id=%d", baseURL, target.ID), adminToken)
+	status, body = doJSON(t, client, http.MethodPost, fmt.Sprintf("%s/api/web/v1/user/approve?id=%d", baseURL, target.ID), adminToken)
 	if status != http.StatusOK {
 		t.Fatalf("re-approve after demote expected 200, got %d: %s", status, body)
 	}
@@ -99,7 +99,7 @@ func TestE2E_AdminCannotDeleteSelf(t *testing.T) {
 	client := &http.Client{Timeout: e2eHTTPTimeout}
 
 	adminID := adminSelfID(t, baseURL, adminToken)
-	status, body := doJSON(t, client, http.MethodDelete, fmt.Sprintf("%s/api/v1/user/delete?id=%d", baseURL, adminID), adminToken)
+	status, body := doJSON(t, client, http.MethodDelete, fmt.Sprintf("%s/api/web/v1/user/delete?id=%d", baseURL, adminID), adminToken)
 	if status == http.StatusOK {
 		t.Fatalf("delete self expected non-200, got 200: %s", body)
 	}
@@ -110,7 +110,7 @@ func TestE2E_AdminDeleteNonexistentUser(t *testing.T) {
 	baseURL, adminToken, _ := mustE2EEnv(t)
 	client := &http.Client{Timeout: e2eHTTPTimeout}
 
-	status, body := doJSON(t, client, http.MethodDelete, baseURL+"/api/v1/user/delete?id=99999999", adminToken)
+	status, body := doJSON(t, client, http.MethodDelete, baseURL+"/api/web/v1/user/delete?id=99999999", adminToken)
 	if status == http.StatusOK {
 		t.Fatalf("delete nonexistent user expected non-200, got 200: %s", body)
 	}

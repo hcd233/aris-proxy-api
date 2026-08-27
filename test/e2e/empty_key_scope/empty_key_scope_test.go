@@ -84,7 +84,7 @@ func TestEmptyKeyUser_SeesNoPlatformData(t *testing.T) {
 	// 对照（可选）：admin 查近一年模型趋势，有数据才证明环境可验证隔离
 	if adminToken := os.Getenv("ADMIN_TOKEN"); adminToken != "" {
 		status, body := doGetJSON(t, client,
-			baseURL+"/api/v1/audit/stats/model/trend?"+statsReqParams, adminToken)
+			baseURL+"/api/web/v1/audit/stats/model/trend?"+statsReqParams, adminToken)
 		if status != http.StatusOK {
 			t.Fatalf("admin model trend expected 200, got %d: %s", status, body)
 		}
@@ -101,12 +101,12 @@ func TestEmptyKeyUser_SeesNoPlatformData(t *testing.T) {
 
 	// 1. audit 六个图表接口：无 Key 用户必须拿到空 data
 	statsPaths := []string{
-		"/api/v1/audit/stats/model/trend",
-		"/api/v1/audit/stats/request/rate",
-		"/api/v1/audit/stats/token/throughput",
-		"/api/v1/audit/stats/token/rate",
-		"/api/v1/audit/stats/model/usage",
-		"/api/v1/audit/stats/token/latency",
+		"/api/web/v1/audit/stats/model/trend",
+		"/api/web/v1/audit/stats/request/rate",
+		"/api/web/v1/audit/stats/token/throughput",
+		"/api/web/v1/audit/stats/token/rate",
+		"/api/web/v1/audit/stats/model/usage",
+		"/api/web/v1/audit/stats/token/latency",
 	}
 	for _, p := range statsPaths {
 		status, body := doGetJSON(t, client, baseURL+p+"?"+statsReqParams, userToken)
@@ -132,7 +132,7 @@ func TestEmptyKeyUser_SeesNoPlatformData(t *testing.T) {
 
 	// 2. trace 列表：无 Key 用户必须拿到空列表
 	status, body := doGetJSON(t, client,
-		baseURL+"/api/v1/trace/list?page=1&pageSize=10", userToken)
+		baseURL+"/api/web/v1/trace/list?page=1&pageSize=10", userToken)
 	if status != http.StatusOK {
 		t.Fatalf("trace list expected 200, got %d: %s", status, body)
 	}
@@ -154,7 +154,7 @@ func TestEmptyKeyUser_SeesNoPlatformData(t *testing.T) {
 	previewQuery.Set("startTime", "2025-09-01T00:00:00Z")
 	previewQuery.Set("endTime", "2026-09-01T00:00:00Z")
 	status, body = doGetJSON(t, client,
-		baseURL+"/api/v1/dataset/preview?"+previewQuery.Encode(), userToken)
+		baseURL+"/api/web/v1/dataset/preview?"+previewQuery.Encode(), userToken)
 	if status != http.StatusOK {
 		t.Fatalf("dataset preview expected 200, got %d: %s", status, body)
 	}
@@ -175,9 +175,9 @@ func TestEmptyKeyUser_SeesNoPlatformData(t *testing.T) {
 	// （用户名/邮箱等），与列表接口的 owner 隔离语义不一致；现在无 Key 用户
 	// 必须拿到空选项列表。
 	optionPaths := []string{
-		"/api/v1/audit/model/option/list?field=user&startTime=2025-09-01T00:00:00Z&endTime=2026-09-01T00:00:00Z",
-		"/api/v1/audit/model/option/list?field=model&startTime=2025-09-01T00:00:00Z&endTime=2026-09-01T00:00:00Z",
-		"/api/v1/session/option/list?field=model&startTime=2025-09-01T00:00:00Z&endTime=2026-09-01T00:00:00Z",
+		"/api/web/v1/audit/model/option/list?field=user&startTime=2025-09-01T00:00:00Z&endTime=2026-09-01T00:00:00Z",
+		"/api/web/v1/audit/model/option/list?field=model&startTime=2025-09-01T00:00:00Z&endTime=2026-09-01T00:00:00Z",
+		"/api/web/v1/session/option/list?field=model&startTime=2025-09-01T00:00:00Z&endTime=2026-09-01T00:00:00Z",
 	}
 	for _, p := range optionPaths {
 		status, body := doGetJSON(t, client, baseURL+p, userToken)

@@ -112,7 +112,7 @@ func doJSON(t *testing.T, client *http.Client, method, url, jwtToken string, req
 // pickEndpointID 选一个可用 endpoint 挂载模型。
 func pickEndpointID(t *testing.T, baseURL, jwtToken string, client *http.Client) uint {
 	t.Helper()
-	status, traceID, body := doJSON(t, client, http.MethodGet, baseURL+"/api/v1/upstream/list?page=1&pageSize=1", jwtToken, nil)
+	status, traceID, body := doJSON(t, client, http.MethodGet, baseURL+"/api/web/v1/upstream/list?page=1&pageSize=1", jwtToken, nil)
 	if status != http.StatusOK {
 		t.Fatalf("list upstream status=%d traceID=%s body=%s", status, traceID, string(body))
 	}
@@ -132,7 +132,7 @@ func pickEndpointID(t *testing.T, baseURL, jwtToken string, client *http.Client)
 // createModel 创建模型（不显式传 modelId，验证服务端默认=alias）。
 func createModel(t *testing.T, baseURL, jwtToken string, client *http.Client, endpointID uint, alias string) (rsp *commandRsp, traceID string) {
 	t.Helper()
-	status, traceID, raw := doJSON(t, client, http.MethodPost, baseURL+"/api/v1/model", jwtToken, map[string]any{
+	status, traceID, raw := doJSON(t, client, http.MethodPost, baseURL+"/api/web/v1/model", jwtToken, map[string]any{
 		"alias":           alias,
 		"upstreamModel":   "e2e-upstream-model",
 		"endpointID":      endpointID,
@@ -152,7 +152,7 @@ func createModel(t *testing.T, baseURL, jwtToken string, client *http.Client, en
 // createModelWithModelID 创建模型（显式传 modelId，验证服务端按传入值落库）。
 func createModelWithModelID(t *testing.T, baseURL, jwtToken string, client *http.Client, endpointID uint, alias, modelID string) (rsp *commandRsp, traceID string) {
 	t.Helper()
-	status, traceID, raw := doJSON(t, client, http.MethodPost, baseURL+"/api/v1/model", jwtToken, map[string]any{
+	status, traceID, raw := doJSON(t, client, http.MethodPost, baseURL+"/api/web/v1/model", jwtToken, map[string]any{
 		"alias":           alias,
 		"modelId":         modelID,
 		"upstreamModel":   "e2e-upstream-model",
@@ -173,7 +173,7 @@ func createModelWithModelID(t *testing.T, baseURL, jwtToken string, client *http
 // getModelByAlias 按别名查模型；未命中返回 nil。
 func getModelByAlias(t *testing.T, baseURL, jwtToken string, client *http.Client, alias string) *modelItem {
 	t.Helper()
-	status, traceID, raw := doJSON(t, client, http.MethodGet, baseURL+"/api/v1/upstream/list?page=1&pageSize=50&query="+alias, jwtToken, nil)
+	status, traceID, raw := doJSON(t, client, http.MethodGet, baseURL+"/api/web/v1/upstream/list?page=1&pageSize=50&query="+alias, jwtToken, nil)
 	if status != http.StatusOK {
 		t.Fatalf("list upstream status=%d traceID=%s body=%s", status, traceID, string(raw))
 	}
@@ -195,7 +195,7 @@ func getModelByAlias(t *testing.T, baseURL, jwtToken string, client *http.Client
 // updateModelID PATCH 更新 modelId；expectError=true 时断言返回业务错误。
 func updateModelID(t *testing.T, baseURL, jwtToken string, client *http.Client, modelID uint, modelIDValue string, expectError bool) {
 	t.Helper()
-	status, traceID, raw := doJSON(t, client, http.MethodPatch, fmt.Sprintf("%s/api/v1/model?id=%d", baseURL, modelID), jwtToken, map[string]any{"modelId": modelIDValue})
+	status, traceID, raw := doJSON(t, client, http.MethodPatch, fmt.Sprintf("%s/api/web/v1/model?id=%d", baseURL, modelID), jwtToken, map[string]any{"modelId": modelIDValue})
 	if status != http.StatusOK {
 		t.Fatalf("update model status=%d traceID=%s body=%s", status, traceID, string(raw))
 	}
@@ -219,7 +219,7 @@ func cleanupModel(t *testing.T, baseURL, jwtToken string, client *http.Client, m
 	if modelID == nil || *modelID == 0 {
 		return
 	}
-	status, traceID, raw := doJSON(t, client, http.MethodDelete, fmt.Sprintf("%s/api/v1/model?id=%d", baseURL, *modelID), jwtToken, nil)
+	status, traceID, raw := doJSON(t, client, http.MethodDelete, fmt.Sprintf("%s/api/web/v1/model?id=%d", baseURL, *modelID), jwtToken, nil)
 	if status != http.StatusOK {
 		t.Logf("cleanup delete model id=%d failed: status=%d traceID=%s body=%s", *modelID, status, traceID, string(raw))
 	}
