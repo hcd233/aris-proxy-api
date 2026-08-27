@@ -57,7 +57,8 @@
 - `/health`、`/ready`、`/ssehealth`：已有，迁入独立 ops 注册文件
 - `/docs`、`/openapi.json`：已有，非生产限定逻辑保留
 - `/install.sh`：从 `RegisterAPIRouter` 移到 ops 注册
-- **新增 pprof（fgprof）**：`/debug/pprof/*` 及 fgprof 挂载，仅在 `config.Env != EnvProduction` 时注册，实现方式与 `RegisterDocsRouter` 相同（`bootstrap` 中环境判断或注册函数内部判断）
+- **fgprof（`/debug/pprof/*`）**：现状为全局中间件无条件挂载（含生产）。本次收归 ops 注册并加非生产限定
+- **pprof（fgprof）**：已存在于 `internal/bootstrap/container.go`（`middleware.FgprofMiddleware()` 全局挂载，默认服务 `/debug/pprof`，当前无环境判断）。本次按 `/docs` 模式改造：从全局中间件链中移出，改为非生产环境才注册（实现方式与 `RegisterDocsRouter` 的环境判断一致），落实生产不暴露
 
 ## 3. 代码组织改动
 
