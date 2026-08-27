@@ -70,9 +70,9 @@ func newRouteTestDB(t *testing.T) *gorm.DB {
 
 // TestClientModelsRouteMatchesSDKPath 客户端 SDK 常量路径必须在服务端真实注册。
 //
-// 回归背景：commit d80f04d5 把客户端模型分发接口更名为 /api/v1/model/list，
-// 只同步了 SDK 常量与组内路径，但 clientGroup 仍挂载在 /api/v1/client 下，
-// 实际注册路径是 /api/v1/client/model/list，二者不一致导致 aris model export 报
+// 回归背景：commit d80f04d5 把客户端模型分发接口更名为 /api/web/v1/model/list，
+// 只同步了 SDK 常量与组内路径，但 clientGroup 仍挂载在 /api/web/v1/client 下，
+// 实际注册路径是 /api/web/v1/client/model/list，二者不一致导致 aris model export 报
 // "list models rejected with status 404"。
 //
 // 本用例直接调用生产装配入口 router.RegisterAPIRouter（而非复刻分组），

@@ -1,4 +1,4 @@
-// Package session_list_filter_model 验证 GET /api/v1/session/list?filter=model:... 的端到端行为。
+// Package session_list_filter_model 验证 GET /api/web/v1/session/list?filter=model:... 的端到端行为。
 //
 // 环境变量：
 //   - BASE_URL    API 根地址（必填）
@@ -62,7 +62,7 @@ func doListSessions(t *testing.T, client *http.Client, baseURL, jwtToken, filter
 	if filter != "" {
 		q.Set("filter", filter)
 	}
-	endpoint := fmt.Sprintf("%s/api/v1/session/list?%s", baseURL, q.Encode())
+	endpoint := fmt.Sprintf("%s/api/web/v1/session/list?%s", baseURL, q.Encode())
 
 	ctx, cancel := context.WithTimeout(context.Background(), httpTimeout)
 	defer cancel()
@@ -97,7 +97,7 @@ func doListSessionOptions(t *testing.T, client *http.Client, baseURL, jwtToken, 
 	t.Helper()
 	q := url.Values{}
 	q.Set("field", field)
-	endpoint := fmt.Sprintf("%s/api/v1/session/option/list?%s", baseURL, q.Encode())
+	endpoint := fmt.Sprintf("%s/api/web/v1/session/option/list?%s", baseURL, q.Encode())
 
 	ctx, cancel := context.WithTimeout(context.Background(), httpTimeout)
 	defer cancel()
@@ -158,7 +158,7 @@ func TestSessionListFilterModel_NoCrash(t *testing.T) {
 	}
 }
 
-// TestSessionListFilterModel_OptionList 验证 /api/v1/session/option/list?field=model 返回正常。
+// TestSessionListFilterModel_OptionList 验证 /api/web/v1/session/option/list?field=model 返回正常。
 //
 //	@author centonhuang
 //	@update 2026-06-16 15:00:00

@@ -7,19 +7,14 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/jwt"
 	"github.com/hcd233/aris-proxy-api/internal/middleware"
-	"github.com/redis/go-redis/v9"
-	"gorm.io/gorm"
 )
 
 // initDatasetRouter 注册数据集导出路由
 //
 //	@author centonhuang
 //	@update 2026-07-03 10:00:00
-func initDatasetRouter(datasetGroup huma.API, datasetHandler handler.DatasetHandler, db *gorm.DB, cache *redis.Client, accessSigner jwt.TokenSigner) {
-	datasetGroup.UseMiddleware(middleware.JwtMiddleware(db, cache, accessSigner))
-
+func initDatasetRouter(datasetGroup huma.API, datasetHandler handler.DatasetHandler) {
 	huma.Register(datasetGroup, huma.Operation{
 		OperationID: "previewDataset",
 		Method:      http.MethodGet,

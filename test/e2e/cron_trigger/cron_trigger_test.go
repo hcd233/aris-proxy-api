@@ -78,7 +78,7 @@ func TestE2E_CronManualTrigger_ProducesManualAudit(t *testing.T) {
 	client := newE2EClient()
 
 	// 1. 取第一个任务名
-	status, traceID, body := doJSON(t, client, http.MethodGet, baseURL+"/api/v1/cron/list?page=1&pageSize=20", jwtToken)
+	status, traceID, body := doJSON(t, client, http.MethodGet, baseURL+"/api/web/v1/cron/list?page=1&pageSize=20", jwtToken)
 	if status != http.StatusOK {
 		t.Fatalf("list cron jobs status=%d traceID=%s body=%s", status, traceID, string(body))
 	}
@@ -93,7 +93,7 @@ func TestE2E_CronManualTrigger_ProducesManualAudit(t *testing.T) {
 	t.Logf("triggering cron job: %s", name)
 
 	// 2. 触发
-	status, traceID, body = doJSON(t, client, http.MethodPost, baseURL+"/api/v1/cron/trigger?name="+name, jwtToken)
+	status, traceID, body = doJSON(t, client, http.MethodPost, baseURL+"/api/web/v1/cron/trigger?name="+name, jwtToken)
 	if status != http.StatusOK {
 		t.Fatalf("trigger cron job status=%d traceID=%s body=%s", status, traceID, string(body))
 	}
@@ -105,7 +105,7 @@ func TestE2E_CronManualTrigger_ProducesManualAudit(t *testing.T) {
 	defer ticker.Stop()
 	for range ticker.C {
 		status, traceID, body = doJSON(t, client, http.MethodGet,
-			fmt.Sprintf("%s/api/v1/cron/log/list?page=1&pageSize=20&sort=desc&sortField=created_at&startTime=%s", baseURL, start),
+			fmt.Sprintf("%s/api/web/v1/cron/log/list?page=1&pageSize=20&sort=desc&sortField=created_at&startTime=%s", baseURL, start),
 			jwtToken)
 		if status != http.StatusOK {
 			t.Fatalf("list cron audits status=%d traceID=%s body=%s", status, traceID, string(body))
@@ -130,7 +130,7 @@ func TestE2E_CronTrigger_NotFound(t *testing.T) {
 	t.Parallel()
 	baseURL, jwtToken := mustE2EEnv(t)
 	client := newE2EClient()
-	status, traceID, body := doJSON(t, client, http.MethodPost, baseURL+"/api/v1/cron/trigger?name=non-existent-job", jwtToken)
+	status, traceID, body := doJSON(t, client, http.MethodPost, baseURL+"/api/web/v1/cron/trigger?name=non-existent-job", jwtToken)
 	if status != http.StatusOK {
 		t.Fatalf("unified contract: expected 200 for unknown cron job, got status=%d traceID=%s body=%s", status, traceID, string(body))
 	}

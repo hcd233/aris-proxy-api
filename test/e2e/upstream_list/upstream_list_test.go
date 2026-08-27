@@ -1,4 +1,4 @@
-// Package upstream_list 验证 GET /api/v1/upstream/list 分组分页、keyword 整组聚合、
+// Package upstream_list 验证 GET /api/web/v1/upstream/list 分组分页、keyword 整组聚合、
 // 嵌套 user 回填与用户隔离的全链路行为。
 //
 // 需求背景（feature/upstream-maas-web-redesign）：
@@ -113,7 +113,7 @@ func doJSON(t *testing.T, method, url, token string, body []byte) (status int, d
 
 func mustListUpstream(t *testing.T, baseURL, token, query string) listUpstreamRsp {
 	t.Helper()
-	url := baseURL + "/api/v1/upstream/list?page=1&pageSize=100"
+	url := baseURL + "/api/web/v1/upstream/list?page=1&pageSize=100"
 	if query != "" {
 		url += "&query=" + query
 	}
@@ -143,7 +143,7 @@ func TestUpstreamList_GroupPaginationAndTotals(t *testing.T) {
 	aliasB := fmt.Sprintf("e2e-upl-mb-%d", stamp)
 
 	createBody := fmt.Sprintf(`{"name":%q,"apiKey":"sk-e2e","openaiBaseURL":"https://o.example.com/v1","supportOpenAIChatCompletion":true}`, epName)
-	status, data := doJSON(t, http.MethodPost, baseURL+"/api/v1/endpoint", token, []byte(createBody))
+	status, data := doJSON(t, http.MethodPost, baseURL+"/api/web/v1/endpoint", token, []byte(createBody))
 	if status != http.StatusOK {
 		t.Fatalf("create endpoint: status=%d body=%s", status, data)
 	}
@@ -155,7 +155,7 @@ func TestUpstreamList_GroupPaginationAndTotals(t *testing.T) {
 		rsp := mustListUpstream(t, baseURL, token, epName)
 		for _, g := range rsp.Groups {
 			if g.Endpoint.Name == epName {
-				doJSON(t, http.MethodDelete, fmt.Sprintf("%s/api/v1/endpoint?id=%d", baseURL, g.Endpoint.ID), token, nil)
+				doJSON(t, http.MethodDelete, fmt.Sprintf("%s/api/web/v1/endpoint?id=%d", baseURL, g.Endpoint.ID), token, nil)
 			}
 		}
 	}
@@ -163,7 +163,7 @@ func TestUpstreamList_GroupPaginationAndTotals(t *testing.T) {
 
 	for _, alias := range []string{aliasA, aliasB} {
 		body := fmt.Sprintf(`{"alias":%q,"upstreamModel":"up-%s","endpointID":%d}`, alias, epName, mustEndpointIDByName(t, baseURL, token, epName))
-		status, data = doJSON(t, http.MethodPost, baseURL+"/api/v1/model", token, []byte(body))
+		status, data = doJSON(t, http.MethodPost, baseURL+"/api/web/v1/model", token, []byte(body))
 		if status != http.StatusOK {
 			t.Fatalf("create model %s: status=%d body=%s", alias, status, data)
 		}
@@ -201,7 +201,7 @@ func TestUpstreamList_KeywordAggregatesWholeGroup(t *testing.T) {
 	aliasA := fmt.Sprintf("e2e-upk-aa-%d", stamp)
 	aliasB := fmt.Sprintf("e2e-upk-bb-%d", stamp)
 
-	status, data := doJSON(t, http.MethodPost, baseURL+"/api/v1/endpoint", token,
+	status, data := doJSON(t, http.MethodPost, baseURL+"/api/web/v1/endpoint", token,
 		[]byte(fmt.Sprintf(`{"name":%q,"apiKey":"sk-e2e","openaiBaseURL":"https://o.example.com/v1","supportOpenAIChatCompletion":true}`, epName)))
 	if status != http.StatusOK {
 		t.Fatalf("create endpoint: status=%d body=%s", status, data)
@@ -210,7 +210,7 @@ func TestUpstreamList_KeywordAggregatesWholeGroup(t *testing.T) {
 		rsp := mustListUpstream(t, baseURL, token, epName)
 		for _, g := range rsp.Groups {
 			if g.Endpoint.Name == epName {
-				doJSON(t, http.MethodDelete, fmt.Sprintf("%s/api/v1/endpoint?id=%d", baseURL, g.Endpoint.ID), token, nil)
+				doJSON(t, http.MethodDelete, fmt.Sprintf("%s/api/web/v1/endpoint?id=%d", baseURL, g.Endpoint.ID), token, nil)
 			}
 		}
 	}
@@ -219,7 +219,7 @@ func TestUpstreamList_KeywordAggregatesWholeGroup(t *testing.T) {
 	epID := mustEndpointIDByName(t, baseURL, token, epName)
 	for _, alias := range []string{aliasA, aliasB} {
 		body := fmt.Sprintf(`{"alias":%q,"upstreamModel":"up-%s","endpointID":%d}`, alias, alias, epID)
-		status, data = doJSON(t, http.MethodPost, baseURL+"/api/v1/model", token, []byte(body))
+		status, data = doJSON(t, http.MethodPost, baseURL+"/api/web/v1/model", token, []byte(body))
 		if status != http.StatusOK {
 			t.Fatalf("create model %s: status=%d body=%s", alias, status, data)
 		}
@@ -243,7 +243,7 @@ func TestUpstreamList_NestedUserObject(t *testing.T) {
 	stamp := time.Now().UnixNano()
 	epName := fmt.Sprintf("e2e-upu-ep-%d", stamp)
 
-	status, data := doJSON(t, http.MethodPost, baseURL+"/api/v1/endpoint", token,
+	status, data := doJSON(t, http.MethodPost, baseURL+"/api/web/v1/endpoint", token,
 		[]byte(fmt.Sprintf(`{"name":%q,"apiKey":"sk-e2e","openaiBaseURL":"https://o.example.com/v1","supportOpenAIChatCompletion":true}`, epName)))
 	if status != http.StatusOK {
 		t.Fatalf("create endpoint: status=%d body=%s", status, data)
@@ -252,7 +252,7 @@ func TestUpstreamList_NestedUserObject(t *testing.T) {
 		rsp := mustListUpstream(t, baseURL, token, epName)
 		for _, g := range rsp.Groups {
 			if g.Endpoint.Name == epName {
-				doJSON(t, http.MethodDelete, fmt.Sprintf("%s/api/v1/endpoint?id=%d", baseURL, g.Endpoint.ID), token, nil)
+				doJSON(t, http.MethodDelete, fmt.Sprintf("%s/api/web/v1/endpoint?id=%d", baseURL, g.Endpoint.ID), token, nil)
 			}
 		}
 	}
@@ -281,14 +281,14 @@ func TestUpstreamList_ScopeIsolationAndCascadingDelete(t *testing.T) {
 	epName := fmt.Sprintf("e2e-ups-ep-%d", stamp)
 	alias := fmt.Sprintf("e2e-ups-m-%d", stamp)
 
-	status, data := doJSON(t, http.MethodPost, baseURL+"/api/v1/endpoint", token,
+	status, data := doJSON(t, http.MethodPost, baseURL+"/api/web/v1/endpoint", token,
 		[]byte(fmt.Sprintf(`{"name":%q,"apiKey":"sk-e2e","openaiBaseURL":"https://o.example.com/v1","supportOpenAIChatCompletion":true}`, epName)))
 	if status != http.StatusOK {
 		t.Fatalf("create endpoint: status=%d body=%s", status, data)
 	}
 
 	epID := mustEndpointIDByName(t, baseURL, token, epName)
-	status, data = doJSON(t, http.MethodPost, baseURL+"/api/v1/model", token,
+	status, data = doJSON(t, http.MethodPost, baseURL+"/api/web/v1/model", token,
 		[]byte(fmt.Sprintf(`{"alias":%q,"upstreamModel":"up-%d","endpointID":%d}`, alias, stamp, epID)))
 	if status != http.StatusOK {
 		t.Fatalf("create model: status=%d body=%s", status, data)
@@ -300,7 +300,7 @@ func TestUpstreamList_ScopeIsolationAndCascadingDelete(t *testing.T) {
 		t.Fatalf("before delete: expected 1 group with 1 model, got %+v", before.Groups)
 	}
 
-	status, data = doJSON(t, http.MethodDelete, fmt.Sprintf("%s/api/v1/endpoint?id=%d", baseURL, epID), token, nil)
+	status, data = doJSON(t, http.MethodDelete, fmt.Sprintf("%s/api/web/v1/endpoint?id=%d", baseURL, epID), token, nil)
 	if status != http.StatusOK {
 		t.Fatalf("delete endpoint: status=%d body=%s", status, data)
 	}

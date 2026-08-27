@@ -41,10 +41,10 @@ var _ handler.Oauth2Handler = (*fakeOauth2Handler)(nil)
 // TestOAuth2LoginRouteNotAPIKeyProtected 公共登录入口不得被 API Key 中间件拦截。
 //
 // 回归背景：commit 214fa450 修复 model export 404 时，把 client 路由从
-// /api/v1/client group 改挂 v1Group，但 RegisterClientRoutes 内的
+// /api/web/v1/client group 改挂 v1Group，但 RegisterClientRoutes 内的
 // UseMiddleware(APIKeyMiddleware) 作用到了 v1Group 上。huma 的
 // Group.Middlewares() 会把父组中间件并入之后注册的每个路由，导致
-// /api/v1/oauth2/login、/api/v1/token/refresh 等全部公共路由对无凭据
+// /api/web/v1/oauth2/login、/api/web/v1/token/refresh 等全部公共路由对无凭据
 // 请求（及仅持 JWT 的请求）返回 401，GitHub/Google 登录全线失败。
 //
 // 本用例与 TestClientModelsRouteMatchesSDKPath 互补：前者守护
@@ -79,7 +79,7 @@ func TestOAuth2LoginRouteNotAPIKeyProtected(t *testing.T) {
 	})
 
 	// 无 Authorization 头：未登录用户发起 GitHub 登录的真实形态
-	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/oauth2/login?platform=github", http.NoBody)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/web/v1/oauth2/login?platform=github", http.NoBody)
 	resp, err := app.Test(req)
 	if err != nil {
 		t.Fatalf("app.Test error: %v", err)

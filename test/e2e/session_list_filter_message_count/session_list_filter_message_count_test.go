@@ -1,5 +1,5 @@
-// Package session_list_filter_message_count 验证 GET /api/v1/session/option/list?field=messageCount
-// 与 GET /api/v1/session/list?filter=messageCount:min-max 的端到端行为。
+// Package session_list_filter_message_count 验证 GET /api/web/v1/session/option/list?field=messageCount
+// 与 GET /api/web/v1/session/list?filter=messageCount:min-max 的端到端行为。
 //
 // 环境变量：
 //   - BASE_URL    API 根地址（必填）
@@ -64,7 +64,7 @@ func doListSessions(t *testing.T, client *http.Client, baseURL, jwtToken, filter
 	if filter != "" {
 		q.Set("filter", filter)
 	}
-	endpoint := fmt.Sprintf("%s/api/v1/session/list?%s", baseURL, q.Encode())
+	endpoint := fmt.Sprintf("%s/api/web/v1/session/list?%s", baseURL, q.Encode())
 
 	ctx, cancel := context.WithTimeout(context.Background(), httpTimeout)
 	defer cancel()
@@ -99,7 +99,7 @@ func doListSessionOptions(t *testing.T, client *http.Client, baseURL, jwtToken, 
 	t.Helper()
 	q := url.Values{}
 	q.Set("field", field)
-	endpoint := fmt.Sprintf("%s/api/v1/session/option/list?%s", baseURL, q.Encode())
+	endpoint := fmt.Sprintf("%s/api/web/v1/session/option/list?%s", baseURL, q.Encode())
 
 	ctx, cancel := context.WithTimeout(context.Background(), httpTimeout)
 	defer cancel()
@@ -137,7 +137,7 @@ func parseRange(t *testing.T, v string) (minVal, maxVal int) {
 	return minVal, maxVal
 }
 
-// TestSessionListFilterMessageCount_OptionList 验证 /api/v1/session/option/list?field=messageCount
+// TestSessionListFilterMessageCount_OptionList 验证 /api/web/v1/session/option/list?field=messageCount
 // 返回 200 且 items 均为合法 "min-max" 区间。
 //
 //	@author centonhuang

@@ -111,7 +111,7 @@ func doJSON(t *testing.T, client *http.Client, method, url, jwtToken string, req
 // pickEndpointID 选一个可用 endpoint 挂载模型。
 func pickEndpointID(t *testing.T, baseURL, jwtToken string, client *http.Client) uint {
 	t.Helper()
-	status, traceID, body := doJSON(t, client, http.MethodGet, baseURL+"/api/v1/upstream/list?page=1&pageSize=1", jwtToken, nil)
+	status, traceID, body := doJSON(t, client, http.MethodGet, baseURL+"/api/web/v1/upstream/list?page=1&pageSize=1", jwtToken, nil)
 	if status != http.StatusOK {
 		t.Fatalf("list upstream status=%d traceID=%s body=%s", status, traceID, string(body))
 	}
@@ -141,7 +141,7 @@ func createModel(t *testing.T, baseURL, jwtToken string, client *http.Client, en
 	if capabilities != nil {
 		body["capabilities"] = capabilities
 	}
-	status, traceID, raw := doJSON(t, client, http.MethodPost, baseURL+"/api/v1/model", jwtToken, body)
+	status, traceID, raw := doJSON(t, client, http.MethodPost, baseURL+"/api/web/v1/model", jwtToken, body)
 	if status != http.StatusOK {
 		t.Fatalf("create model alias=%s status=%d traceID=%s body=%s", alias, status, traceID, string(raw))
 	}
@@ -155,7 +155,7 @@ func createModel(t *testing.T, baseURL, jwtToken string, client *http.Client, en
 // getModelByAlias 按别名查模型；未命中返回 nil。
 func getModelByAlias(t *testing.T, baseURL, jwtToken string, client *http.Client, alias string) *modelItem {
 	t.Helper()
-	status, traceID, raw := doJSON(t, client, http.MethodGet, baseURL+"/api/v1/upstream/list?page=1&pageSize=50&query="+alias, jwtToken, nil)
+	status, traceID, raw := doJSON(t, client, http.MethodGet, baseURL+"/api/web/v1/upstream/list?page=1&pageSize=50&query="+alias, jwtToken, nil)
 	if status != http.StatusOK {
 		t.Fatalf("list upstream status=%d traceID=%s body=%s", status, traceID, string(raw))
 	}
@@ -174,7 +174,7 @@ func getModelByAlias(t *testing.T, baseURL, jwtToken string, client *http.Client
 
 func updateCapabilities(t *testing.T, baseURL, jwtToken string, client *http.Client, modelID uint, capabilities []string) {
 	t.Helper()
-	status, traceID, raw := doJSON(t, client, http.MethodPatch, fmt.Sprintf("%s/api/v1/model?id=%d", baseURL, modelID), jwtToken, map[string]any{"capabilities": capabilities})
+	status, traceID, raw := doJSON(t, client, http.MethodPatch, fmt.Sprintf("%s/api/web/v1/model?id=%d", baseURL, modelID), jwtToken, map[string]any{"capabilities": capabilities})
 	if status != http.StatusOK {
 		t.Fatalf("update model status=%d traceID=%s body=%s", status, traceID, string(raw))
 	}
@@ -192,7 +192,7 @@ func cleanupModel(t *testing.T, baseURL, jwtToken string, client *http.Client, m
 	if modelID == nil || *modelID == 0 {
 		return
 	}
-	status, traceID, raw := doJSON(t, client, http.MethodDelete, fmt.Sprintf("%s/api/v1/model?id=%d", baseURL, *modelID), jwtToken, nil)
+	status, traceID, raw := doJSON(t, client, http.MethodDelete, fmt.Sprintf("%s/api/web/v1/model?id=%d", baseURL, *modelID), jwtToken, nil)
 	if status != http.StatusOK {
 		t.Logf("cleanup delete model id=%d failed: status=%d traceID=%s body=%s", *modelID, status, traceID, string(raw))
 	}

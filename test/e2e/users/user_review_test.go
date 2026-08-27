@@ -89,7 +89,7 @@ func TestE2E_AdminCanListUsers(t *testing.T) {
 	client := &http.Client{Timeout: e2eHTTPTimeout}
 
 	// admin 列表接口可达且结构正确
-	status, body := doJSON(t, client, http.MethodGet, baseURL+"/api/v1/user/list?page=1&pageSize=20", adminToken)
+	status, body := doJSON(t, client, http.MethodGet, baseURL+"/api/web/v1/user/list?page=1&pageSize=20", adminToken)
 	if status != http.StatusOK {
 		t.Fatalf("list users expected 200, got %d: %s", status, body)
 	}
@@ -99,7 +99,7 @@ func TestE2E_AdminCanListUsers(t *testing.T) {
 	}
 
 	// 权限筛选 pending 用户
-	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/v1/user/list?page=1&pageSize=20&permission=pending", adminToken)
+	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/web/v1/user/list?page=1&pageSize=20&permission=pending", adminToken)
 	if status != http.StatusOK {
 		t.Fatalf("list pending users expected 200, got %d: %s", status, body)
 	}
@@ -122,7 +122,7 @@ func TestE2E_ApprovePendingUserFlow(t *testing.T) {
 	client := &http.Client{Timeout: e2eHTTPTimeout}
 
 	// 找到第一个 pending 用户并批准
-	status, body := doJSON(t, client, http.MethodGet, baseURL+"/api/v1/user/list?page=1&pageSize=20&permission=pending", adminToken)
+	status, body := doJSON(t, client, http.MethodGet, baseURL+"/api/web/v1/user/list?page=1&pageSize=20&permission=pending", adminToken)
 	if status != http.StatusOK {
 		t.Fatalf("list pending users expected 200, got %d: %s", status, body)
 	}
@@ -136,13 +136,13 @@ func TestE2E_ApprovePendingUserFlow(t *testing.T) {
 	target := pending.Items[0]
 
 	// 批准 → 200
-	status, body = doJSON(t, client, http.MethodPost, fmt.Sprintf("%s/api/v1/user/approve?id=%d", baseURL, target.ID), adminToken)
+	status, body = doJSON(t, client, http.MethodPost, fmt.Sprintf("%s/api/web/v1/user/approve?id=%d", baseURL, target.ID), adminToken)
 	if status != http.StatusOK {
 		t.Fatalf("approve user expected 200, got %d: %s", status, body)
 	}
 
 	// 重复批准同一用户应失败（业务错误，非 200）
-	status, body = doJSON(t, client, http.MethodPost, fmt.Sprintf("%s/api/v1/user/approve?id=%d", baseURL, target.ID), adminToken)
+	status, body = doJSON(t, client, http.MethodPost, fmt.Sprintf("%s/api/web/v1/user/approve?id=%d", baseURL, target.ID), adminToken)
 	if status == http.StatusOK {
 		t.Fatalf("re-approve expected non-200, got 200: %s", body)
 	}
@@ -153,13 +153,13 @@ func TestE2E_RegularUserGetsForbidden(t *testing.T) {
 	baseURL, _, userToken := mustE2EEnv(t)
 	client := &http.Client{Timeout: e2eHTTPTimeout}
 
-	status, body := doJSON(t, client, http.MethodGet, baseURL+"/api/v1/user/list?page=1&pageSize=20", userToken)
+	status, body := doJSON(t, client, http.MethodGet, baseURL+"/api/web/v1/user/list?page=1&pageSize=20", userToken)
 	if status != http.StatusOK {
 		t.Fatalf("regular user list unified contract expected 200, got %d: %s", status, body)
 	}
 	assertErrorCode(t, body, 10002, 10001)
 
-	status, body = doJSON(t, client, http.MethodPost, baseURL+"/api/v1/user/approve?id=1", userToken)
+	status, body = doJSON(t, client, http.MethodPost, baseURL+"/api/web/v1/user/approve?id=1", userToken)
 	if status != http.StatusOK {
 		t.Fatalf("regular user approve unified contract expected 200, got %d: %s", status, body)
 	}
