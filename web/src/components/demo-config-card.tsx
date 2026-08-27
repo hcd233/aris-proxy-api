@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api-client";
 import { showErrorToast } from "@/lib/api-error-handler";
+import { DEMO_MODULES, normalizeDemoModules } from "@/lib/demo-modules";
 import { useT } from "@/lib/i18n";
 import type { DemoConfig, DemoModule } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -10,17 +11,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-
-const DEMO_MODULES: DemoModule[] = [
-  "dashboard",
-  "sessions",
-  "audit",
-  "upstream",
-  "trigger",
-  "monitor",
-  "cron",
-  "cron_audit",
-];
 
 /** Demo 演示配置卡片：admin 配置 demo 登录开关与开放模块 */
 export function DemoConfigCard() {
@@ -31,7 +21,9 @@ export function DemoConfigCard() {
   const fetchConfig = useCallback(async () => {
     try {
       const rsp = await api.getDemoConfig();
-      setConfig(rsp.config ?? null);
+      setConfig(
+        rsp.config ? { ...rsp.config, modules: normalizeDemoModules(rsp.config.modules) } : null,
+      );
     } catch (err) {
       showErrorToast(err, { title: t("demo.load_error") });
     }

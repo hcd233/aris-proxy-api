@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { api } from "./api-client";
+import { normalizeDemoModules } from "./demo-modules";
 import type { DemoModule, DetailedUser, OAuth2Provider } from "./types";
 
 interface AuthContextValue {
@@ -52,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (rsp.user?.permission === "demo") {
         try {
           const cfgRsp = await api.getDemoConfig();
-          setDemoModules(cfgRsp.config?.modules ?? []);
+          setDemoModules(normalizeDemoModules(cfgRsp.config?.modules));
         } catch {
           setDemoModules([]);
         }
