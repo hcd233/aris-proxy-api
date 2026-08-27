@@ -99,8 +99,14 @@ func RegisterAPIRouter(humaAPI huma.API, deps APIRouterDependencies) {
 
 	tokenGroup := huma.NewGroup(v1Group, "/token")
 	// 客户端路由直接挂 /api/v1（无 group 前缀）：组内路径即绝对路径，
-	// 与客户端 SDK 的 constant.ClientModelsListPath 同源，避免 404
-	RegisterClientRoutes(v1Group, deps.ClientHandler, deps.DB)
+	// 与客户端 SDK 的 constant.ClientModelsListPath 同源，避免 404。
+	// 必须挂在独立的无前缀 group 上，不能直接复用 v1Group：
+	// RegisterClientRoutes 会在组上挂 API Key 中间件，而 huma 的
+	// Group.Middlewares() 会把父组中间件并入子组注册的每个路由，
+	// 复用 v1Group 会把鉴权泄漏到之后注册的全部 /api/v1 路由，
+	// 导致 oauth2/login 等公共入口被 401 拦截。
+	clientGroup := huma.NewGroup(v1Group)
+	RegisterClientRoutes(clientGroup, deps.ClientHandler, deps.DB)
 	initTokenRouter(tokenGroup, deps.TokenHandler, deps.Cache)
 
 	oauth2Group := huma.NewGroup(v1Group, "/oauth2")
