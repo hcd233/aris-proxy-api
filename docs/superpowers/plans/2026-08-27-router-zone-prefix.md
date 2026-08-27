@@ -39,12 +39,12 @@
 	ClientModelsRoutePath = "/model/list"
 ```
 
-- [ ] **Step 2: 编译验证**
+- [x] **Step 2: 编译验证**
 
 Run: `cd .worktrees/router-zone-prefixes && go build ./internal/common/...`
 Expected: 无输出（成功）。全仓库可能因旧前缀断言失败，属预期，后续任务修复。
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 rtk git add internal/common/constant/string.go && rtk git commit -m "refactor(constant): 客户端模型分发接口前缀迁移至 CLI 分区"
@@ -65,7 +65,7 @@ rtk git add internal/common/constant/string.go && rtk git commit -m "refactor(co
 - Consumes: `handler.PingHandler`、`handler.TraceHandler`、`middleware.FgprofMiddleware()`、`config.Env == enum.EnvProduction`
 - Produces: `router.RegisterOpsRouter(app *fiber.App, humaAPI huma.API, pingHandler handler.PingHandler, traceHandler handler.TraceHandler)` —— Task 3 的 `RegisterAPIRouter` 不再负责根路径路由
 
-- [ ] **Step 1: 创建 ops.go 并清空 health.go**
+- [x] **Step 1: 创建 ops.go 并清空 health.go**
 
 `internal/router/ops.go`：
 
@@ -168,7 +168,7 @@ func registerDocs(app *fiber.App) {
 
 然后整文件删除 `internal/router/health.go`（内容已并入 ops.go），并从 `router.go` 中删除原 `RegisterDocsRouter` 整个函数及 `RegisterAPIRouter` 内的 `initHealthRouter(...)` 调用与 `install.sh` 注册块（`RegisterAPIRouter` 其余部分在 Task 3 重写，此处先保证编译）。
 
-- [ ] **Step 2: 修改 bootstrap**
+- [x] **Step 2: 修改 bootstrap**
 
 `internal/bootstrap/container.go`：删除中间件链中的 `middleware.FgprofMiddleware(),` 一行及其上方必要注释（其余保持）。
 
@@ -184,12 +184,12 @@ func registerDocs(app *fiber.App) {
 
 同时删除 `appenum` import 若不再被使用（编译器会提示）。
 
-- [ ] **Step 3: 编译验证**
+- [x] **Step 3: 编译验证**
 
 Run: `go build ./...`
 Expected: 若 router.go 尚有 initHealthRouter 引用残留则修复后再验证通过。
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 rtk git add -A internal/router internal/bootstrap && rtk git commit -m "refactor(router): 收敛运维分区路由并将 fgprof 收归非生产限定"
@@ -206,7 +206,7 @@ rtk git add -A internal/router internal/bootstrap && rtk git commit -m "refactor
 - Consumes: `router.RegisterOpsRouter`（Task 2）、各模块 `initXxxRouter`（签名暂不变）
 - Produces: `router.RegisterAPIRouter(humaAPI huma.API, deps APIRouterDependencies)` 仅做分区编排；内部调用 Task 4 的 `RegisterWebAPIRoutes(webRoot huma.API, deps APIRouterDependencies)` 与 Task 5 的 `RegisterCLIAPIRoutes(cliGroup huma.API, deps APIRouterDependencies)`
 
-- [ ] **Step 1: 重写 RegisterAPIRouter 函数体**
+- [x] **Step 1: 重写 RegisterAPIRouter 函数体**
 
 保留 `APIRouterDependencies` 结构体不动。函数体替换为：
 
@@ -242,11 +242,11 @@ func RegisterAPIRouter(humaAPI huma.API, deps APIRouterDependencies) {
 }
 ```
 
-- [ ] **Step 2: 编译验证（会因 web/cli 未建而失败，属预期）**
+- [x] **Step 2: 编译验证（会因 web/cli 未建而失败，属预期）**
 
 Run: `go build ./internal/router/...` Expected: undefined: RegisterWebAPIRoutes / RegisterCLIAPIRoutes → 由 Task 4、Task 5 消除。
 
-- [ ] **Step 3: Commit（连同 Task 4、5 合并提交亦可，此处单独提交需先完成后续任务）**
+- [x] **Step 3: Commit（连同 Task 4、5 合并提交亦可，此处单独提交需先完成后续任务）**
 
 建议 Task 3~5 完成后统一提交一次：
 ```bash
@@ -266,7 +266,7 @@ rtk git add internal/router && rtk git commit -m "refactor(router): 路由按一
 - Consumes: 各 `initXxxRouter` 现有签名不变；`deps` 字段
 - Produces: `RegisterWebAPIRoutes(webRoot huma.API, deps APIRouterDependencies)`
 
-- [ ] **Step 1: 创建 web.go**
+- [x] **Step 1: 创建 web.go**
 
 ```go
 // Package router Web 分区路由（/api/web/v1，session JWT 鉴权）
@@ -347,7 +347,7 @@ func RegisterWebAPIRoutes(webRoot huma.API, deps APIRouterDependencies) {
 3. `deps.AccessSigner` 类型是 `jwt.TokenSigner`（bootstrap 注入 identityservice 实现时已有 name tag 绑定），与现 init 函数参数类型一致。
 4. `initTokenRouter` 第一参从 tokenGroup 改传 publicGroup：其内部只注册 `/refresh` 一条路由，无需子组包装。
 
-- [ ] **Step 2: 各模块 init 函数去除重复中间件行**
+- [x] **Step 2: 各模块 init 函数去除重复中间件行**
 
 规则 A（删两行）：凡包含下面两行的函数，将两行删除（JWT 与 demoAccess 限流已上收至 jwtGroup）：
 ```go
@@ -362,7 +362,7 @@ xxx.UseMiddleware(middleware.TokenBucketRateLimiterMiddleware(cache, "demoAccess
 - `demo.go`：见 Step 3
 - 函数参数（db/cache/signer）一律保留不删，最小化 diff（Go 允许未用形参）
 
-- [ ] **Step 3: demo.go 双根改造**
+- [x] **Step 3: demo.go 双根改造**
 
 ```go
 // initDemoRouter 初始化 Demo 分组视图路由：
@@ -384,7 +384,7 @@ func initDemoRouter(publicRoot huma.API, jwtRoot huma.API, demoHandler handler.D
 
 注意原 config/sessions 组内的 `JwtMiddleware` 与 demoAccess 限流行删除（规则 A），login/status 的专属限流（demoLogin/demoStatus）保留在各自路由 Middlewares 里。
 
-- [ ] **Step 4: trace.go 拆分查询侧**
+- [x] **Step 4: trace.go 拆分查询侧**
 
 `trace.go` 改为仅含查询路由，签名更名并去掉 report 部分：
 
@@ -399,12 +399,12 @@ func initTraceQueryRouter(traceGroup huma.API, traceHandler handler.TraceHandler
 ```
 （原 `initTraceRouter` 中 reportGroup 三条路由与 `/client/check` 移入 Task 5；函数名相应更名后，web.go 引用同步为 `initTraceQueryRouter`。）
 
-- [ ] **Step 5: 编译 + 离线回归测试**
+- [x] **Step 5: 编译 + 离线回归测试**
 
 Run: `go build ./... && go test ./test/e2e/client_models/... ./internal/...`
 Expected: BUILD OK；离线用例中路径断言失败者在 Task 7 修复，本步允许少量 FAIL，但不得有编译错误。
 
-- [ ] **Step 6: Commit（与 Task 3/5 合并为一个提交）**
+- [x] **Step 6: Commit（与 Task 3/5 合并为一个提交）**
 
 ```bash
 rtk git add internal/router && rtk git commit -m "refactor(router): Web 分区前置 /api/web/v1 并重组 JWT/公开双组结构"
@@ -423,7 +423,7 @@ rtk git add internal/router && rtk git commit -m "refactor(router): Web 分区�
 - Consumes: `handler.ClientHandler.HandleListModels`、`handler.TraceHandler.{HandleReportTraceEvent,HandleCheckTraceClientAPIKey}`、`middleware.APIKeyMiddleware(db)`
 - Produces: `RegisterCLIAPIRoutes(cliGroup huma.API, deps APIRouterDependencies)`
 
-- [ ] **Step 1: 创建 cli.go**
+- [x] **Step 1: 创建 cli.go**
 
 ```go
 // Package router CLI 分区路由（/api/cli/v1，API Key 鉴权）
@@ -475,16 +475,16 @@ func RegisterCLIAPIRoutes(cliGroup huma.API, deps APIRouterDependencies) {
 }
 ```
 
-- [ ] **Step 2: 清理**
+- [x] **Step 2: 清理**
 
 - 整文件删除 `internal/router/client.go`
 - `trace.go` 中 `initTraceRouter` 已更名为 `initTraceQueryRouter`（Task 4 Step 4）并删除 reportGroup 部分
 
-- [ ] **Step 3: 编译验证**
+- [x] **Step 3: 编译验证**
 
 Run: `go build ./...` Expected: 成功（e2e 断言失败留给 Task 7）。
 
-- [ ] **Step 4: Commit（与 Task 3/4 同一提交）**
+- [x] **Step 4: Commit（与 Task 3/4 同一提交）**
 
 ---
 
@@ -493,22 +493,22 @@ Run: `go build ./...` Expected: 成功（e2e 断言失败留给 Task 7）。
 **Files:**
 - Modify: `web/src/lib/api-client.ts`（约 74 处）
 
-- [ ] **Step 1: 批量替换**
+- [x] **Step 1: 批量替换**
 
 ```bash
 sed -i '' 's|/api/v1/|/api/web/v1/|g' web/src/lib/api-client.ts
 ```
 
-- [ ] **Step 2: 验证零残留**
+- [x] **Step 2: 验证零残留**
 
 Run: `grep -n '"/api/v1' web/src/lib/api-client.ts | wc -l` Expected: `0`；
 Run: `rg "'/api/openai|'/api/anthropic'" web/src/lib/api-client.ts | wc -l` Expected: `0`（前端本就不直连 proxy）
 
-- [ ] **Step 3: 前端静态检查**
+- [x] **Step 3: 前端静态检查**
 
 Run: `cd web && npx tsc --noEmit`（或项目既有 `pnpm lint`）Expected: 通过（纯字符串改动，理论上无影响面）
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 rtk git add web/src/lib/api-client.ts && rtk git commit -m "refactor(web): API 路径迁移至 /api/web/v1 分区前缀"
@@ -524,7 +524,7 @@ rtk git add web/src/lib/api-client.ts && rtk git commit -m "refactor(web): API �
 **Interfaces:**
 - Consumes: `constant.ClientModelsListPath`（已是新值）
 
-- [ ] **Step 1: 批量替换 + CLI 路径回改**
+- [x] **Step 1: 批量替换 + CLI 路径回改**
 
 ```bash
 # 1) 全局迁移到 web 分区
@@ -537,19 +537,19 @@ grep -rl '"/api/web/v1/trace/event"\|"/api/web/v1/trace/client/check"' test/e2e 
       -e 's|/api/web/v1/trace/client/check|/api/cli/v1/trace/client/check|g'
 ```
 
-- [ ] **Step 3: 手工核对特例**
+- [x] **Step 3: 手工核对特例**
 
 - `test/e2e/client_models/client_models_test.go:51,103` 本地注册用例：`Path: "/api/web/v1/model/list"` → 改回 `constant.ClientModelsListPath`（与服务端同源）；`:130` 在线用例拼串处同理
 - `test/e2e/client_models/oauth2_route_leak_test.go:82`：请求路径改为 `/api/web/v1/oauth2/login?platform=github`
 - `test/e2e/client_models/client_route_test.go` 使用 `constant.ClientModelsListPath`，应自动跟随 Task 1；如无自动跟随则手工修正
 - 全部测试中的注释文字里出现的旧路径说明同步顺一遍（可读性）
 
-- [ ] **Step 4: 全量单测 + 构建**
+- [x] **Step 4: 全量单测 + 构建**
 
 Run: `go build ./... && go vet ./... && go test ./...`
 Expected: 全绿。若有 fail：逐条核对新旧映射表（见 spec 第 2 节）修复。
 
-- [ ] **Step 5: 运行态抽查（可选，本地起服）**
+- [x] **Step 5: 运行态抽查（可选，本地起服）**
 
 Run: 起 dev server 后依次 curl：
 ```bash
@@ -560,7 +560,7 @@ curl -s -o /dev/null -w '%{http_code}\n' localhost:8080/debug/pprof/            
 ```
 任何 500/404 视为分区编排错误，回查 Task 3~5。
 
-- [ ] **Step 6: ponytail-review 自审 + 最终提交**
+- [x] **Step 6: ponytail-review 自审 + 最终提交**
 
 对照 diff 检查：投机抽象（辅助函数应已被否决）、重复限流挂载（同一请求不应经过两个相同 name 的 demoAccess 令牌桶）、遗留死代码（client.go 已删、router.go 无多余 import）。然后：
 
