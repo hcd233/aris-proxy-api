@@ -65,6 +65,8 @@ func RunExport(ctx context.Context, opts ExportOptions) error {
 	if len(models) == 0 {
 		return ierr.New(ierr.ErrValidation, constant.ClientModelExportEmptyModelsMessage)
 	}
+	// 回显拉取结果（spinner 结束会清屏，保留上下文到终端输出）
+	printLine(out, ui.CheckRowOK(fmt.Sprintf(constant.ClientModelExportFetchDoneFormat, len(models)), ""))
 
 	selectedIdx := map[string]bool{}
 	options := make([]huh.Option[string], 0, len(models))
@@ -102,8 +104,10 @@ func RunExport(ctx context.Context, opts ExportOptions) error {
 			})
 		}
 	}
-	if formErr := newForm(ttyIn, ttyOut, field).Run(); formErr != nil {
-		return formErr
+	// 回显选中模型（huh 表单结束会清屏，保留交互上下文到终端输出）
+	printLine(out, ui.SectionTitle(constant.ClientModelExportSelectedTitle))
+	for _, m := range selected {
+		printLine(out, fmt.Sprintf(constant.ClientModelExportSelectedFormat, m.Alias))
 	}
 
 	targets := Targets()
@@ -133,6 +137,8 @@ func RunExport(ctx context.Context, opts ExportOptions) error {
 		return ierr.Wrap(ierr.ErrInternal, homeErr, "resolve home directory")
 	}
 	path := target.ConfigPath(home)
+	// 回显目标选择（huh 表单结束会清屏，保留交互上下文到终端输出）
+	printLine(out, ui.CheckRowOK(fmt.Sprintf(constant.ClientModelExportTargetResultFormat, target.Label()), ""))
 	writeErr := ui.RunWithSpinner(ttyIn, ttyOut, fmt.Sprintf(constant.ClientModelExportWritingFormat, target.Label()), func() error {
 		return target.Write(path, host, cfg.APIKey, selected)
 	})

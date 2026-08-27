@@ -34,6 +34,8 @@ func Targets() []Target {
 	return []Target{
 		OpenCodeTarget{},
 		PiTarget{},
+		CodexTarget{},
+		ClaudeCodeTarget{},
 	}
 }
 

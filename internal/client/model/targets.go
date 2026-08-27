@@ -161,7 +161,7 @@ func (PiTarget) ConfigPath(home string) string {
 	return filepath.Join(home, constant.ClientModelPiPath)
 }
 
-// Write merge 模型到 pi provider 的 models 列表
+// Write merge 模型到 providers.<providerID>.models 列表（Pi models.json 顶层为 providers 包裹）
 func (PiTarget) Write(path, host, apiKey string, models []TargetModel) error {
 	var cfg piConfig
 	if err := readJSONFile(path, &cfg); err != nil {
@@ -170,15 +170,20 @@ func (PiTarget) Write(path, host, apiKey string, models []TargetModel) error {
 	if cfg.Raw == nil {
 		cfg.Raw = map[string]any{}
 	}
-	provider, _ := cfg.Raw[constant.ClientModelProviderID].(map[string]any)
+	providers, _ := cfg.Raw[constant.ClientModelKeyProviders].(map[string]any)
+	if providers == nil {
+		providers = map[string]any{}
+		cfg.Raw[constant.ClientModelKeyProviders] = providers
+	}
+	provider, _ := providers[constant.ClientModelProviderID].(map[string]any)
 	if provider == nil {
 		provider = map[string]any{
 			constant.ClientModelKeyName:    constant.ClientModelProviderID,
-			constant.ClientModelKeyBaseURL: host,
+			constant.ClientModelKeyBaseUrl: host,
 			constant.ClientModelKeyAPIKey:  apiKey,
 			constant.ClientModelKeyAPI:     constant.ClientModelAPIOpenAI,
 		}
-		cfg.Raw[constant.ClientModelProviderID] = provider
+		providers[constant.ClientModelProviderID] = provider
 	}
 	rawModels, _ := provider[constant.ClientModelKeyModels].([]any)
 	byID := map[string]bool{}
