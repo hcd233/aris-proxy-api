@@ -147,7 +147,9 @@ func LogMiddleware(cfg LogMiddlewareConfig) fiber.Handler {
 
 	return func(c fiber.Ctx) error {
 		start := time.Now().UTC()
-		path := c.Path()
+		// c.Path() 零拷贝引用 fasthttp 可复用缓冲区，此处作为采样器 map 的长期 key，
+		// 并被后续异步上报引用，必须拷贝。
+		path := strings.Clone(c.Path())
 		query := string(c.Request().URI().QueryString())
 
 		err := c.Next()

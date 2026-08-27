@@ -6,6 +6,7 @@ import (
 	"os"
 	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/bytedance/sonic"
@@ -125,24 +126,29 @@ func (c *clsCore) Check(entry zapcore.Entry, ce *zapcore.CheckedEntry) *zapcore.
 
 // Write 将日志条目和字段转换为 CLS 日志并异步发送。
 //
+// 注意：SendLog 将日志放入异步队列后再序列化，而字段中的字符串可能是
+// fiber/fasthttp 字节缓冲区的零拷贝引用，请求结束后缓冲区会被后续请求复用
+// 覆盖（如 /ready 探活导致 path 粘连成 /readypenai/...）。因此所有进入
+// contents 的字符串必须在此处深拷贝。
+//
 //	@author centonhuang
 //	@update 2026-04-25 10:00:00
 func (c *clsCore) Write(entry zapcore.Entry, fields []zapcore.Field) error {
 	contents := make(map[string]string, len(c.fields)+len(fields)+4)
 
-	contents[constant.CLSFieldMessage] = entry.Message
+	contents[constant.CLSFieldMessage] = strings.Clone(entry.Message)
 	contents[constant.CLSFieldLevel] = entry.Level.String()
 	contents[constant.CLSFieldTimestamp] = entry.Time.Format(time.RFC3339Nano)
 	if entry.Caller.Defined {
 		contents[constant.CLSFieldCaller] = entry.Caller.String()
 	}
 	if entry.Stack != "" {
-		contents[constant.CLSFieldStack] = entry.Stack
+		contents[constant.CLSFieldStack] = strings.Clone(entry.Stack)
 	}
 
 	allFields := slices.Concat(c.fields, fields)
 
-	for k, v := range encodeFields(allFields) {
+	for k, v := range EncodeCLSFields(allFields) {
 		if _, exists := contents[k]; !exists {
 			contents[k] = v
 		}
@@ -165,17 +171,22 @@ func (c *clsCore) Sync() error {
 	return nil
 }
 
-// encodeFields 将 zapcore.Field 列表转换为 map[string]string。
+// EncodeCLSFields 将 zapcore.Field 列表转换为深拷贝后的 map[string]string。
+//
+// 返回的 map 及其 key/value 均与输入中可能存在的字节缓冲区零拷贝引用隔离，
+// 可安全地交给异步消费者（如 CLS 异步生产者）。
 //
 //	@author centonhuang
 //	@update 2026-04-25 10:00:00
-func encodeFields(fields []zapcore.Field) map[string]string {
+func EncodeCLSFields(fields []zapcore.Field) map[string]string {
 	enc := zapcore.NewMapObjectEncoder()
 	for _, f := range fields {
 		f.AddTo(enc)
 	}
 
-	return lo.MapValues(enc.Fields, func(v any, _ string) string { return valueToString(v) })
+	return lo.MapEntries(enc.Fields, func(k string, v any) (string, string) {
+		return strings.Clone(k), valueToString(v)
+	})
 }
 
 // valueToString 将任意值转换为字符串表示。
@@ -185,7 +196,7 @@ func encodeFields(fields []zapcore.Field) map[string]string {
 func valueToString(v any) string {
 	switch val := v.(type) {
 	case string:
-		return val
+		return strings.Clone(val)
 	case int:
 		return strconv.FormatInt(int64(val), constant.DecimalBase)
 	case int8:
