@@ -1822,6 +1822,53 @@ git commit -m "fix(web): polish upstream list per cross-theme and a11y review"
 - `ModelListFilter` 三字段 `Status/EndpointID/Capability` 全程一致
 - `port.ListModelView` 字段名与 Task 3 的 `toModelListItem` 映射一一对应
 - 前端 `ModelListItem`（Task 4）→ `FlatView` 消费（Task 7）字段一致
+
+---
+
+## 实施偏差记录（Task 1–3 完成后回填）
+
+计划里有三处在实施中被证伪，已按实际代码修正。**后续任务若引用被修正的条目，以本节为准。**
+
+**偏差 1：`ListModelsReq` 不得嵌入 `model.CommonParam`**
+
+计划原写 `type ListModelsReq struct { model.CommonParam; ... }`。实际不成立：
+`model.SortParam.SortField` 只有 `json:"sortField"` 而无 `query` 标签，而 huma 只认
+`path`/`query`/`header`/`form`/`cookie` 这类**来源**标签（huma.go:145-180，无匹配时
+`return nil, false`），`json` 标签不被当作来源。项目未开启 `RejectUnknownQueryParameters`，
+所以参数被**静默忽略**而非报 422——按原计划写，平铺视图的排序会静默失效。
+
+修正：按 `dto/audit.go` / `session.go` / `cron.go` 的既有惯例，显式声明
+`Page/PageSize/Query/Sort/SortField` 五个 `query` 字段。
+
+连带发现：`dto/upstream.go` 的 `ListUpstreamReq` 也嵌了 `CommonParam`，其 `sortField`
+同样绑不上。属既有缺陷，但分组视图当前无排序列故未暴露，本次未动。
+
+**偏差 2：`scopeFor` 不满足"userID==0 → 401"**
+
+计划写"复用 `internal/handler/endpoint.go:118` 的 `scopeFor`"。实际该函数签名是
+`scopeFor(ctx, perm) uint`（**不返回 error**），admin 返回 0、其余返回 `CtxValueUint`。
+它对"非 admin 但未拿到 userID"也返回 0，与 admin 的"全量"同义；直接把 0 映射成
+`*uint` 的 nil 会让认证缺失退化为全平台可见——正是 spec 要防的事。
+
+修正：新增 `scopePtrFor(ctx, perm) (*uint, error)`，admin → `nil`，非 admin 且
+`userID==0` → 返回 `ierr.ErrUnauthorized`。两个函数并存，旧调用点不动。
+
+**偏差 3：OperationID 不能叫 `listModels`**
+
+该 ID 已被 OpenAI 兼容路由 `GET /api/openai/v1/models` 占用（Anthropic 侧用
+`anthropicListModels`），重复会让 huma 直接 `panic: duplicate operation ID`。
+既有 e2e `test/e2e/client_models` 当场捕获。
+
+修正：命名为 `listWebModels`（沿用前缀式命名），限流中间件的 serviceName 同步。
+
+**补充：鉴权失败的响应形态**
+
+本项目鉴权失败是 **HTTP 200 + body `{"error":{"code":10001,"message":"Unauthorized"}}`**，
+不是 HTTP 401（前端 `api-client` 对 `code=10001` 抛 `ApiError(401)`）。
+e2e 断言须判 `error.code == constant.BizErrorCodeUnauthorized`，不能判 HTTP 状态码。
+路由缺失则是 HTTP 404 + 纯文本 `Not Found`。
+另：既有 e2e 里 `bizError.Code` 声明为 `string`，与实际的数值 code 不符（那些用例从未
+走到错误分支故未暴露），新 e2e 声明为 `int`。
 - `ModelListSortField` 六个字面量与后端 `constant.ModelListSortFields` 六个值逐字对应
 - DTO `ListModelsRsp.Items` 的 JSON 名 `items` 与前端 `ListModelsPageRsp.items` 一致
 - `nextSortState` / `buildModelListParams` 在测试与实现中同名
