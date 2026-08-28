@@ -63,10 +63,11 @@ func (h *upstreamHandler) HandleListUpstream(ctx context.Context, req *dto.ListU
 
 	rsp.Groups = lo.Map(groups, func(g *upstreamport.UpstreamGroupView, _ int) *dto.UpstreamGroupItem {
 		return &dto.UpstreamGroupItem{
-			Endpoint:   toUpstreamEndpointItem(g.Endpoint),
-			Models:     lo.Map(g.Models, func(m *upstreamport.UpstreamModelView, _ int) *dto.UpstreamModelItem { return toUpstreamModelItem(m) }),
-			ModelCount: g.ModelCount,
-			Truncated:  g.Truncated,
+			Endpoint:        toUpstreamEndpointItem(g.Endpoint),
+			Models:          lo.Map(g.Models, func(m *upstreamport.UpstreamModelView, _ int) *dto.UpstreamModelItem { return toUpstreamModelItem(m) }),
+			ModelCount:      g.ModelCount,
+			TotalModelCount: g.TotalModelCount,
+			Truncated:       g.Truncated,
 		}
 	})
 	rsp.ModelTotal = modelTotal

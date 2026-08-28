@@ -133,16 +133,20 @@ func (h *listUpstreamHandler) toGroupView(ep *llmagg.Endpoint, models []*llmagg.
 	mvs := lo.Map(models, func(m *llmagg.Model, _ int) *port.UpstreamModelView {
 		return toModelView(m, usersByID, isDemo)
 	})
+	// totalModelCount 是截断前口径：UI 据此显示"N 中显示 M"，
+	// 否则用户无法判断该端点到底有多少模型被藏起来了。
+	totalModelCount := len(mvs)
 	truncated := false
-	if len(mvs) > constant.UpstreamGroupModelLimit {
+	if totalModelCount > constant.UpstreamGroupModelLimit {
 		mvs = mvs[:constant.UpstreamGroupModelLimit]
 		truncated = true
 	}
 	return &port.UpstreamGroupView{
-		Endpoint:   toEndpointView(ep, usersByID, isDemo),
-		Models:     mvs,
-		ModelCount: len(mvs),
-		Truncated:  truncated,
+		Endpoint:        toEndpointView(ep, usersByID, isDemo),
+		Models:          mvs,
+		ModelCount:      len(mvs),
+		TotalModelCount: totalModelCount,
+		Truncated:       truncated,
 	}
 }
 
