@@ -2,11 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  TooltipRoot,
-  TooltipTrigger,
-  TooltipContent,
-} from "@/components/ui/tooltip";
+import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
   Table,
   TableBody,
@@ -202,10 +198,7 @@ export function FlatView({
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               {m.endpoint && <EndpointCell name={m.endpoint.name} user={m.user} />}
-              <SpecBadges
-                contextLength={m.contextLength}
-                maxOutputTokens={m.maxOutputTokens}
-              />
+              <SpecBadges contextLength={m.contextLength} maxOutputTokens={m.maxOutputTokens} />
               <CapabilityBadges capabilities={m.capabilities} />
             </div>
           </div>
@@ -316,10 +309,7 @@ export function FlatView({
               )}
             </TableCell>
             <TableCell>
-              <SpecBadges
-                contextLength={m.contextLength}
-                maxOutputTokens={m.maxOutputTokens}
-              />
+              <SpecBadges contextLength={m.contextLength} maxOutputTokens={m.maxOutputTokens} />
             </TableCell>
             <TableCell>
               <CapabilityBadges capabilities={m.capabilities} />
@@ -360,4 +350,3 @@ export function FlatView({
     </Table>
   );
 }
-

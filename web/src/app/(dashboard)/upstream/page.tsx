@@ -47,7 +47,6 @@ const VALID_PAGE_SIZES = [10, 20, 50];
 // admin 代建下拉的用户列表一次性拉取上限
 const USER_FETCH_LIMIT = 500;
 
-
 export default function UpstreamPage() {
   const t = useT();
   const { isDemo, isAdmin } = useAuth();
@@ -133,8 +132,7 @@ export default function UpstreamPage() {
         label: t("upstream.filter_endpoint"),
         // 选项取自已加载的端点分组（平铺接口按 ID 精确过滤，值为 ID 字符串）
         options: groups.map((g) => String(g.endpoint.id)),
-        formatValue: (v) =>
-          groups.find((g) => String(g.endpoint.id) === v)?.endpoint.name ?? v,
+        formatValue: (v) => groups.find((g) => String(g.endpoint.id) === v)?.endpoint.name ?? v,
         target: "param",
         single: true,
       },
@@ -185,11 +183,11 @@ export default function UpstreamPage() {
       setLoading(true);
       try {
         const rsp = await api.listUpstream(
-        page,
-        safeSize,
-        query,
-        groupedQueryParams.params.username,
-      );
+          page,
+          safeSize,
+          query,
+          groupedQueryParams.params.username,
+        );
         setGroups(rsp.groups ?? []);
         if (rsp.modelTotal !== undefined) {
           setModelTotal(rsp.modelTotal);
@@ -467,7 +465,6 @@ export default function UpstreamPage() {
 
   /* ─── 共享渲染片段 ──────────────────────────────────────────── */
 
-
   return (
     <PermissionGuard module="upstream">
       <TooltipProvider>
@@ -539,14 +536,10 @@ export default function UpstreamPage() {
                       onDeleteModel={(m) => deleteModelConfirm.openDelete({ model: m })}
                       onCopyAlias={handleCopyAlias}
                       deletingEndpointID={
-                        deleteEndpointConfirm.loading
-                          ? deleteEndpointConfirm.target?.id
-                          : undefined
+                        deleteEndpointConfirm.loading ? deleteEndpointConfirm.target?.id : undefined
                       }
                       deletingModelID={
-                        deleteModelConfirm.loading
-                          ? deleteModelConfirm.target?.model.id
-                          : undefined
+                        deleteModelConfirm.loading ? deleteModelConfirm.target?.model.id : undefined
                       }
                     />
 
@@ -577,9 +570,7 @@ export default function UpstreamPage() {
                     onDeleteModel={(m) => deleteModelConfirm.openDelete({ model: m })}
                     onCopyAlias={handleCopyAlias}
                     deletingModelID={
-                      deleteModelConfirm.loading
-                        ? deleteModelConfirm.target?.model.id
-                        : undefined
+                      deleteModelConfirm.loading ? deleteModelConfirm.target?.model.id : undefined
                     }
                   />
 

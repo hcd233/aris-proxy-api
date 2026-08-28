@@ -4,11 +4,7 @@ import { Fragment } from "react";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  TooltipRoot,
-  TooltipTrigger,
-  TooltipContent,
-} from "@/components/ui/tooltip";
+import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
   Table,
   TableBody,
@@ -268,11 +264,7 @@ export function GroupedView({
                                 </p>
                               }
                             />
-                            <TooltipContent
-                              side="top"
-                              align="start"
-                              className="max-w-xs break-all"
-                            >
+                            <TooltipContent side="top" align="start" className="max-w-xs break-all">
                               {m.upstreamModel}
                             </TooltipContent>
                           </TooltipRoot>
@@ -347,9 +339,7 @@ export function GroupedView({
                       type="button"
                       className="shrink-0 text-muted-foreground hover:text-foreground"
                       aria-expanded={open}
-                      aria-label={
-                        open ? t("upstream.collapse_group") : t("upstream.expand_group")
-                      }
+                      aria-label={open ? t("upstream.collapse_group") : t("upstream.expand_group")}
                       onClick={() => toggleCollapse(ep.id)}
                     >
                       {open ? (
@@ -483,11 +473,7 @@ export function GroupedView({
                                 </span>
                               }
                             />
-                            <TooltipContent
-                              side="top"
-                              align="start"
-                              className="max-w-xs break-all"
-                            >
+                            <TooltipContent side="top" align="start" className="max-w-xs break-all">
                               {m.modelId}
                             </TooltipContent>
                           </TooltipRoot>

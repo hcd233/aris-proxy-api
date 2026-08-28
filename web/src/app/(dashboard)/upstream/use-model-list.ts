@@ -57,9 +57,7 @@ export function useModelList(opts: {
     if (!enabled) return;
     setLoading(true);
     api
-      .listModelsPage(
-        buildModelListParams({ page, pageSize, freeText, params, sortField, sort }),
-      )
+      .listModelsPage(buildModelListParams({ page, pageSize, freeText, params, sortField, sort }))
       .then((res) => {
         setItems(res.items ?? []);
         setPageInfo(res.pageInfo ?? { page, pageSize, total: 0 });

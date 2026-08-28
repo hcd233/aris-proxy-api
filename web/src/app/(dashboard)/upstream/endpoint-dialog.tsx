@@ -163,11 +163,7 @@ export function EndpointDialog({
             {t("common.cancel")}
           </Button>
           <Button onClick={onSave} disabled={!form.name.trim() || saving}>
-            {saving
-              ? t("common.saving")
-              : editingId
-                ? t("endpoints.update")
-                : t("common.create")}
+            {saving ? t("common.saving") : editingId ? t("endpoints.update") : t("common.create")}
           </Button>
         </DialogFooter>
       </DialogContent>

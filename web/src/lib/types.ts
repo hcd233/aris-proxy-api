@@ -504,12 +504,7 @@ export interface ListModelsPageRsp extends CommonRsp {
  * 传错不会失败但排序结果会出乎意料。
  */
 export type ModelListSortField =
-  | "alias"
-  | "context_length"
-  | "max_output_tokens"
-  | "created_at"
-  | "endpoint_id"
-  | "enabled";
+  "alias" | "context_length" | "max_output_tokens" | "created_at" | "endpoint_id" | "enabled";
 
 // ─── Audit ─────────────────────────────────────────────────────────────────────
 
