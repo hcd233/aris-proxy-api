@@ -43,18 +43,23 @@ function EndpointDetailPopover({ endpoint }: { endpoint: UpstreamEndpointItem })
     );
   };
 
-  const field = (label: string, value: string) => (
+  // copyable=false 的字段（掩码凭据、创建日期）复制无意义，渲染为纯文本
+  const field = (label: string, value: string, copyable = true) => (
     <div className="min-w-0 rounded-md border border-border bg-background px-2 py-1.5">
       <p className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground">{label}</p>
       {value ? (
-        <button
-          type="button"
-          className="mt-0.5 flex w-full items-start gap-1 text-left font-mono text-[11px] break-all text-foreground hover:text-primary"
-          onClick={() => copy(value)}
-        >
-          <Copy className="mt-0.5 size-3 shrink-0 text-muted-foreground" />
-          <span className="min-w-0">{value}</span>
-        </button>
+        copyable ? (
+          <button
+            type="button"
+            className="mt-0.5 flex w-full items-start gap-1 text-left font-mono text-[11px] break-all text-foreground hover:text-primary"
+            onClick={() => copy(value)}
+          >
+            <Copy className="mt-0.5 size-3 shrink-0 text-muted-foreground" />
+            <span className="min-w-0">{value}</span>
+          </button>
+        ) : (
+          <p className="mt-0.5 font-mono text-[11px] break-all text-foreground">{value}</p>
+        )
       ) : (
         <p className="mt-0.5 text-[11px] text-muted-foreground">—</p>
       )}
@@ -84,14 +89,36 @@ function EndpointDetailPopover({ endpoint }: { endpoint: UpstreamEndpointItem })
         <div className="grid grid-cols-1 gap-1.5">
           {field("OpenAI", endpoint.openaiBaseURL)}
           {field("Anthropic", endpoint.anthropicBaseURL)}
-          {field("API Key", endpoint.maskedAPIKey)}
+          {field("API Key", endpoint.maskedAPIKey, false)}
           {field(
             t("upstream.created_at"),
             endpoint.createdAt ? new Date(endpoint.createdAt).toLocaleDateString() : "",
+            false,
           )}
         </div>
       </PopoverContent>
     </Popover>
+  );
+}
+
+/** 组头协议徽标：图标本身不够自明（两种 OpenAI 协议同图标），悬停展示协议名 */
+function ProtocolBadge({ protocol, label }: { protocol: string; label: string }) {
+  return (
+    <TooltipRoot>
+      <TooltipTrigger
+        render={
+          <Badge
+            variant="secondary"
+            className="cursor-default gap-1 px-1 py-0 text-[10px] font-normal"
+          >
+            <ProviderIcon protocol={protocol} size={12} />
+          </Badge>
+        }
+      />
+      <TooltipContent side="top" align="start">
+        {label}
+      </TooltipContent>
+    </TooltipRoot>
   );
 }
 
@@ -223,14 +250,8 @@ export function GroupedView({
                     </p>
                   ) : (
                     group.models.map((m) => (
-                      <div
-                        key={m.id}
-                        className={cn(
-                          "flex items-center justify-between gap-2 py-2",
-                          !m.enabled && "opacity-45",
-                        )}
-                      >
-                        <div className="min-w-0">
+                      <div key={m.id} className="flex items-center justify-between gap-2 py-2">
+                        <div className={cn("min-w-0", !m.enabled && "opacity-45")}>
                           <p className="flex items-center gap-1.5 text-sm font-medium">
                             <ProviderIcon protocol={m.alias} size={14} className="shrink-0" />
                             <TooltipRoot>
@@ -318,8 +339,10 @@ export function GroupedView({
       <TableHeader>
         <TableRow>
           <TableHead>{t("upstream.col_model")}</TableHead>
+          <TableHead>{t("upstream.col_id")}</TableHead>
           <TableHead>{t("upstream.col_upstream")}</TableHead>
           <TableHead>{t("upstream.col_spec")}</TableHead>
+          <TableHead>{t("upstream.col_capabilities")}</TableHead>
           <TableHead>{t("upstream.col_status")}</TableHead>
           <TableHead>{t("upstream.col_created")}</TableHead>
           <TableHead className="text-right">{t("upstream.col_actions")}</TableHead>
@@ -333,7 +356,7 @@ export function GroupedView({
             <Fragment key={ep.id}>
               {/* 组头：白底 + 左侧主色条，与模型行区分层级 */}
               <TableRow className="bg-card hover:bg-card">
-                <TableCell colSpan={6} className="border-l-[3px] border-l-primary pl-3">
+                <TableCell colSpan={8} className="border-l-[3px] border-l-primary pl-3">
                   <div className="flex min-w-0 items-center gap-2.5 py-0.5">
                     <button
                       type="button"
@@ -362,28 +385,22 @@ export function GroupedView({
                       </TooltipRoot>
                       <span className="flex shrink-0 items-center gap-1">
                         {ep.supportOpenAIChatCompletion && (
-                          <Badge
-                            variant="secondary"
-                            className="gap-1 px-1 py-0 text-[10px] font-normal"
-                          >
-                            <ProviderIcon protocol="openai-chat-completion" size={12} />
-                          </Badge>
+                          <ProtocolBadge
+                            protocol="openai-chat-completion"
+                            label={t("endpoints.openai_chat_label")}
+                          />
                         )}
                         {ep.supportOpenAIResponse && (
-                          <Badge
-                            variant="secondary"
-                            className="gap-1 px-1 py-0 text-[10px] font-normal"
-                          >
-                            <ProviderIcon protocol="openai-response" size={12} />
-                          </Badge>
+                          <ProtocolBadge
+                            protocol="openai-response"
+                            label={t("endpoints.openai_response_label")}
+                          />
                         )}
                         {ep.supportAnthropicMessage && (
-                          <Badge
-                            variant="secondary"
-                            className="gap-1 px-1 py-0 text-[10px] font-normal"
-                          >
-                            <ProviderIcon protocol="anthropic-message" size={12} />
-                          </Badge>
+                          <ProtocolBadge
+                            protocol="anthropic-message"
+                            label={t("endpoints.anthropic_messages_label")}
+                          />
                         )}
                       </span>
                       <EndpointDetailPopover endpoint={ep} />
@@ -430,7 +447,7 @@ export function GroupedView({
 
               {open && group.models.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="pl-8 text-xs text-muted-foreground">
+                  <TableCell colSpan={8} className="pl-8 text-xs text-muted-foreground">
                     {t("upstream.no_models_in_group")}
                   </TableCell>
                 </TableRow>
@@ -438,12 +455,14 @@ export function GroupedView({
 
               {open &&
                 group.models.map((m) => (
-                  <TableRow
-                    key={m.id}
-                    className={cn("hover:bg-muted/40", !m.enabled && "opacity-45")}
-                  >
-                    {/* 虚线树枝 + 缩进，让归属关系不依赖背景色 */}
-                    <TableCell className="border-l border-dashed border-border pl-8">
+                  <TableRow key={m.id} className="hover:bg-muted/40">
+                    {/* 虚线树枝 + 缩进，让归属关系不依赖背景色；停用行只降权内容列，操作列保持可点的视觉 */}
+                    <TableCell
+                      className={cn(
+                        "border-l border-dashed border-border pl-8",
+                        !m.enabled && "opacity-45",
+                      )}
+                    >
                       <div className="flex min-w-0 items-center gap-1.5">
                         <ProviderIcon protocol={m.alias} size={14} className="shrink-0" />
                         <TooltipRoot>
@@ -464,23 +483,25 @@ export function GroupedView({
                             {`${t("models.click_to_copy")}: ${m.alias}`}
                           </TooltipContent>
                         </TooltipRoot>
-                        {m.modelId && m.modelId !== m.alias && (
-                          <TooltipRoot>
-                            <TooltipTrigger
-                              render={
-                                <span className="max-w-[10ch] shrink-0 truncate font-mono text-[10px] text-muted-foreground">
-                                  {`· id: ${m.modelId}`}
-                                </span>
-                              }
-                            />
-                            <TooltipContent side="top" align="start" className="max-w-xs break-all">
-                              {m.modelId}
-                            </TooltipContent>
-                          </TooltipRoot>
-                        )}
                       </div>
                     </TableCell>
-                    <TableCell className="font-mono text-xs">
+                    <TableCell className={cn("font-mono text-xs", !m.enabled && "opacity-45")}>
+                      {m.modelId && m.modelId !== m.alias ? (
+                        <TooltipRoot>
+                          <TooltipTrigger
+                            render={
+                              <span className="block max-w-[20ch] truncate">{m.modelId}</span>
+                            }
+                          />
+                          <TooltipContent side="top" align="start" className="max-w-xs break-all">
+                            {m.modelId}
+                          </TooltipContent>
+                        </TooltipRoot>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className={cn("font-mono text-xs", !m.enabled && "opacity-45")}>
                       <TooltipRoot>
                         <TooltipTrigger
                           render={
@@ -492,14 +513,14 @@ export function GroupedView({
                         </TooltipContent>
                       </TooltipRoot>
                     </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1.5">
-                        <SpecBadges
-                          contextLength={m.contextLength}
-                          maxOutputTokens={m.maxOutputTokens}
-                        />
-                        <CapabilityBadges capabilities={m.capabilities} />
-                      </div>
+                    <TableCell className={cn(!m.enabled && "opacity-45")}>
+                      <SpecBadges
+                        contextLength={m.contextLength}
+                        maxOutputTokens={m.maxOutputTokens}
+                      />
+                    </TableCell>
+                    <TableCell className={cn(!m.enabled && "opacity-45")}>
+                      <CapabilityBadges capabilities={m.capabilities} />
                     </TableCell>
                     <TableCell>
                       <Switch

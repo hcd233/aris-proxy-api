@@ -128,15 +128,9 @@ export function FlatView({
     return (
       <div className="space-y-3">
         {items.map((m) => (
-          <div
-            key={m.id}
-            className={cn(
-              "rounded-lg border border-border bg-card p-3",
-              !m.enabled && "opacity-45",
-            )}
-          >
+          <div key={m.id} className="rounded-lg border border-border bg-card p-3">
             <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
+              <div className={cn("min-w-0", !m.enabled && "opacity-45")}>
                 <p className="flex items-center gap-1.5 text-sm font-medium">
                   <ProviderIcon protocol={m.alias} size={14} className="shrink-0" />
                   <TooltipRoot>
@@ -196,7 +190,9 @@ export function FlatView({
                 </div>
               </div>
             </div>
-            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            <div
+              className={cn("mt-2 flex flex-wrap items-center gap-1.5", !m.enabled && "opacity-45")}
+            >
               {m.endpoint && <EndpointCell name={m.endpoint.name} user={m.user} />}
               <SpecBadges contextLength={m.contextLength} maxOutputTokens={m.maxOutputTokens} />
               <CapabilityBadges capabilities={m.capabilities} />
@@ -218,6 +214,7 @@ export function FlatView({
             sort={sort}
             onSort={onSort}
           />
+          <TableHead>{t("upstream.col_id")}</TableHead>
           <TableHead>{t("upstream.col_upstream")}</TableHead>
           <SortableHead
             label={t("upstream.col_endpoint")}
@@ -253,8 +250,9 @@ export function FlatView({
       </TableHeader>
       <TableBody>
         {items.map((m) => (
-          <TableRow key={m.id} className={cn("hover:bg-muted/40", !m.enabled && "opacity-45")}>
-            <TableCell>
+          <TableRow key={m.id} className="hover:bg-muted/40">
+            {/* 停用行只降权内容列，操作列保持可点的视觉 */}
+            <TableCell className={cn(!m.enabled && "opacity-45")}>
               <div className="flex min-w-0 items-center gap-1.5">
                 <ProviderIcon protocol={m.alias} size={14} className="shrink-0" />
                 <TooltipRoot>
@@ -275,23 +273,23 @@ export function FlatView({
                     {`${t("models.click_to_copy")}: ${m.alias}`}
                   </TooltipContent>
                 </TooltipRoot>
-                {m.modelId && m.modelId !== m.alias && (
-                  <TooltipRoot>
-                    <TooltipTrigger
-                      render={
-                        <span className="max-w-[10ch] shrink-0 truncate font-mono text-[10px] text-muted-foreground">
-                          {`· id: ${m.modelId}`}
-                        </span>
-                      }
-                    />
-                    <TooltipContent side="top" align="start" className="max-w-xs break-all">
-                      {m.modelId}
-                    </TooltipContent>
-                  </TooltipRoot>
-                )}
               </div>
             </TableCell>
-            <TableCell className="font-mono text-xs">
+            <TableCell className={cn("font-mono text-xs", !m.enabled && "opacity-45")}>
+              {m.modelId && m.modelId !== m.alias ? (
+                <TooltipRoot>
+                  <TooltipTrigger
+                    render={<span className="block max-w-[20ch] truncate">{m.modelId}</span>}
+                  />
+                  <TooltipContent side="top" align="start" className="max-w-xs break-all">
+                    {m.modelId}
+                  </TooltipContent>
+                </TooltipRoot>
+              ) : (
+                <span className="text-muted-foreground">—</span>
+              )}
+            </TableCell>
+            <TableCell className={cn("font-mono text-xs", !m.enabled && "opacity-45")}>
               <TooltipRoot>
                 <TooltipTrigger
                   render={<span className="block max-w-[20ch] truncate">{m.upstreamModel}</span>}
@@ -301,17 +299,17 @@ export function FlatView({
                 </TooltipContent>
               </TooltipRoot>
             </TableCell>
-            <TableCell>
+            <TableCell className={cn(!m.enabled && "opacity-45")}>
               {m.endpoint ? (
                 <EndpointCell name={m.endpoint.name} user={m.user} />
               ) : (
                 <span className="text-muted-foreground">—</span>
               )}
             </TableCell>
-            <TableCell>
+            <TableCell className={cn(!m.enabled && "opacity-45")}>
               <SpecBadges contextLength={m.contextLength} maxOutputTokens={m.maxOutputTokens} />
             </TableCell>
-            <TableCell>
+            <TableCell className={cn(!m.enabled && "opacity-45")}>
               <CapabilityBadges capabilities={m.capabilities} />
             </TableCell>
             <TableCell>
