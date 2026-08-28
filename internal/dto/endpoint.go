@@ -1,12 +1,6 @@
 // Package dto Endpoint DTO
 package dto
 
-import (
-	"time"
-
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
-)
-
 // CreateEndpointReq 创建 Endpoint 请求
 type CreateEndpointReq struct {
 	Body *CreateEndpointReqBody `json:"body" doc:"Request body"`
@@ -44,35 +38,4 @@ type UpdateEndpointReqBody struct {
 // DeleteEndpointReq 删除 Endpoint 请求
 type DeleteEndpointReq struct {
 	ID uint `query:"id" required:"true" minimum:"1" doc:"Endpoint ID"`
-}
-
-// ListEndpointsReq 列出 Endpoint 请求
-//
-//	@author centonhuang
-//	@update 2026-05-27 10:00:00
-type ListEndpointsReq struct {
-	model.CommonParam
-	Username string `query:"username,omitempty" doc:"按归属用户名过滤(仅管理员生效)"`
-}
-
-// ListEndpointsRsp 列出 Endpoint 响应
-type ListEndpointsRsp struct {
-	CommonRsp
-	Endpoints []*EndpointItem `json:"endpoints,omitempty" doc:"Endpoint 列表"`
-	PageInfo  *model.PageInfo `json:"pageInfo,omitempty" doc:"分页信息"`
-}
-
-// EndpointItem Endpoint 列表项
-type EndpointItem struct {
-	ID                          uint      `json:"id" doc:"Endpoint ID"`
-	Username                    string    `json:"username" doc:"归属用户名"`
-	Name                        string    `json:"name" doc:"Endpoint 名称"`
-	OpenaiBaseURL               string    `json:"openaiBaseURL" doc:"OpenAI Base URL"`
-	AnthropicBaseURL            string    `json:"anthropicBaseURL" doc:"Anthropic Base URL"`
-	MaskedAPIKey                string    `json:"maskedAPIKey" doc:"Masked API Key"`
-	SupportOpenAIChatCompletion bool      `json:"supportOpenAIChatCompletion" doc:"是否支持 OpenAI Chat Completion"`
-	SupportOpenAIResponse       bool      `json:"supportOpenAIResponse" doc:"是否支持 OpenAI Response"`
-	SupportAnthropicMessage     bool      `json:"supportAnthropicMessage" doc:"是否支持 Anthropic Message"`
-	CreatedAt                   time.Time `json:"createdAt" doc:"创建时间"`
-	UpdatedAt                   time.Time `json:"updatedAt" doc:"更新时间"`
 }

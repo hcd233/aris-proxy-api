@@ -156,6 +156,7 @@ const (
 	TagMonitor   = "Monitor"
 	TagOpenAI    = "OpenAI"
 	TagSession   = "Session"
+	TagUpstream  = "Upstream"
 	TagTrace     = "Trace"
 	TagTrigger   = "Trigger"
 	TagDataset   = "Dataset"
@@ -163,6 +164,14 @@ const (
 
 	// Router sub-paths
 	RoutePathList = "/list"
+
+	// ClientModelsAPIPrefix / ClientModelsRoutePath 客户端模型分发接口的路径契约：
+	// 服务端以 ClientModelsRoutePath 为组内路径注册，客户端以二者拼接后的
+	// ClientModelsListPath 请求。任一改名只需改这里，避免两侧脱节（#165 曾因
+	// 只改 SDK 路径、未改 group 前缀导致 /api/v1/client/model/list 而 404）。
+	// 2026-08-27 路由分区治理：客户端路由归入 CLI 分区，前缀改为 /api/cli/v1。
+	ClientModelsAPIPrefix = "/api/cli/v1"
+	ClientModelsRoutePath = "/model/list"
 
 	// Router path/query/field constants
 	WhereIDEquals = "id = ?"

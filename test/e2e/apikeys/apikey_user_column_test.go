@@ -84,7 +84,7 @@ func TestE2E_AdminListAPIKeysUserNesting(t *testing.T) {
 	baseURL, adminToken, _ := mustE2EEnv(t)
 	client := &http.Client{Timeout: e2eHTTPTimeout}
 
-	status, body := doJSON(t, client, http.MethodGet, baseURL+"/api/v1/apikey/list?page=1&pageSize=50", adminToken)
+	status, body := doJSON(t, client, http.MethodGet, baseURL+"/api/web/v1/apikey/list?page=1&pageSize=50", adminToken)
 	if status != http.StatusOK {
 		t.Fatalf("list apikeys expected 200, got %d: %s", status, body)
 	}
@@ -113,7 +113,7 @@ func TestE2E_UserListAPIKeysMatchesCurrentUser(t *testing.T) {
 	baseURL, _, userToken := mustE2EEnv(t)
 	client := &http.Client{Timeout: e2eHTTPTimeout}
 
-	status, body := doJSON(t, client, http.MethodGet, baseURL+"/api/v1/user/current", userToken)
+	status, body := doJSON(t, client, http.MethodGet, baseURL+"/api/web/v1/user/current", userToken)
 	if status != http.StatusOK {
 		t.Fatalf("get current user expected 200, got %d: %s", status, body)
 	}
@@ -125,7 +125,7 @@ func TestE2E_UserListAPIKeysMatchesCurrentUser(t *testing.T) {
 		t.Fatalf("current user ID is zero: %s", body)
 	}
 
-	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/v1/apikey/list?page=1&pageSize=50", userToken)
+	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/web/v1/apikey/list?page=1&pageSize=50", userToken)
 	if status != http.StatusOK {
 		t.Fatalf("list apikeys expected 200, got %d: %s", status, body)
 	}

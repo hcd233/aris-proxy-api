@@ -1,4 +1,4 @@
-// Package session_list_keyword 验证 GET /api/v1/session/list?keyword=... 的端到端行为。
+// Package session_list_keyword 验证 GET /api/web/v1/session/list?keyword=... 的端到端行为。
 //
 // 回归背景（bugfix/session-keyword-jsonb-2026-06-07）：
 //   - 旧 SQL 用了 messages.id = ANY(sessions.message_ids)，
@@ -75,7 +75,7 @@ func doListSessions(t *testing.T, client *http.Client, baseURL, jwtToken, keywor
 	if keyword != "" {
 		q.Set("keyword", keyword)
 	}
-	endpoint := fmt.Sprintf("%s/api/v1/session/list?%s", baseURL, q.Encode())
+	endpoint := fmt.Sprintf("%s/api/web/v1/session/list?%s", baseURL, q.Encode())
 
 	ctx, cancel := context.WithTimeout(context.Background(), httpTimeout)
 	defer cancel()

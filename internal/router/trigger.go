@@ -8,16 +8,10 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/jwt"
 	"github.com/hcd233/aris-proxy-api/internal/middleware"
-	"github.com/redis/go-redis/v9"
-	"gorm.io/gorm"
 )
 
-func initTriggerRouter(group huma.API, handler handler.TriggerHandler, db *gorm.DB, cache *redis.Client, accessSigner jwt.TokenSigner, demoAccessor demoport.DemoModuleAccessor, auditSubmitter demoport.DemoSubmitter) {
-	group.UseMiddleware(middleware.JwtMiddleware(db, cache, accessSigner))
-	group.UseMiddleware(middleware.TokenBucketRateLimiterMiddleware(cache, "demoAccess", "", constant.PeriodDemoAccess, constant.LimitDemoAccess, middleware.WithPermissionFilter(enum.PermissionDemo)))
-
+func initTriggerRouter(group huma.API, handler handler.TriggerHandler, demoAccessor demoport.DemoModuleAccessor, auditSubmitter demoport.DemoSubmitter) {
 	huma.Register(group, huma.Operation{
 		OperationID: "createTrigger",
 		Method:      http.MethodPost,

@@ -1,6 +1,22 @@
 # Go 后端编码契约
 
 > **使用场景**：编写或修改 Go 后端代码时加载。涵盖测试、代码风格、Context、DTO/API、路由命名全部硬约束。
+>
+> **Skill 前置**：动手前按 [workflow.md](workflow.md) 的「Go 后端 Skill 加载清单」加载 `use-modern-go` / `golang-naming` / `golang-code-style` / `golang-samber-lo` / `golang-samber-mo`。本文件的硬约束**优先级高于**任何 skill 的通用建议。
+
+## 与 `use-modern-go` 建议冲突时的项目硬约束
+
+`use-modern-go` CLI 返回的指南在通用 Go 场景下具有权威性，但下列条目在本项目被更严的约束覆盖，**以本项目为准**：
+
+| CLI 指南 | 本项目约束 |
+|---------|-----------|
+| `any`：用 `any` 替代 `interface{}` | DTO 层**两者皆禁**，用 `sonic.NoCopyRawMessage` 或具体结构体；由 `lint conv` 的 DTO 规则强制 |
+| `errors_join` / `errors_is` | 业务错误的创建与包装统一走 `internal/common/ierr`；禁止 `errors.New` / `fmt.Errorf`。`errors.Is` 仅用于判定标准库或第三方 sentinel |
+| `json_omitzero` 等 `encoding/json` 相关 | 全项目统一 `github.com/bytedance/sonic`；禁止 `encoding/json` |
+| `http_servemux_patterns` | HTTP 层是 fiber v3 + huma，不使用标准库 `ServeMux`；路由规范见下文 |
+| 各类局部常量/字面量改写 | 业务包禁止本地 `const` 块，常量放 `internal/common/constant/` 或 `internal/common/enum/` |
+
+其余指南（`min_max`、`range_over_int`、`slices_*`、`maps_*`、`sync_once_value`、`sync_waitgroup_go`、`testing_t_context`、`testing_b_loop`、`cmp_or`、`atomic_types`、`time_since` 等）无冲突，应直接采纳；`.golangci.yml` 已启用 `modernize` linter 作为兜底拦截（测试目录放宽）。
 
 ## 测试契约
 

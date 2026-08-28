@@ -51,7 +51,7 @@ func (c *Client) CheckHealth(ctx context.Context) (time.Duration, error) {
 	return time.Since(start), nil
 }
 
-// clientModelsList /api/v1/client/list 响应信封（仅客户端内部消费）
+// clientModelsList 客户端模型分发接口响应信封（仅客户端内部消费）
 type clientModelsList struct {
 	Models []ClientModel `json:"models"`
 }
@@ -65,7 +65,7 @@ type ClientModel struct {
 	Capabilities    []string `json:"capabilities"`
 }
 
-// ListModels 拉取服务端启用模型列表（GET /api/v1/client/list，API Key 鉴权）
+// ListModels 拉取服务端启用模型列表（GET /api/cli/v1/model/list，API Key 鉴权）
 func (c *Client) ListModels(ctx context.Context) ([]ClientModel, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+constant.ClientModelsListPath, http.NoBody)
 	if err != nil {
@@ -91,7 +91,7 @@ func (c *Client) ListModels(ctx context.Context) ([]ClientModel, error) {
 	return rsp.Models, nil
 }
 
-// CheckAPIKey 请求 GET {base}/api/v1/trace/client/check 校验 API Key；2xx 视为有效
+// CheckAPIKey 请求 GET {base}/api/cli/v1/trace/client/check 校验 API Key；2xx 视为有效
 func (c *Client) CheckAPIKey(ctx context.Context) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+constant.TraceClientCheckPath, http.NoBody)
 	if err != nil {

@@ -9,7 +9,7 @@ func newStatusCommand() *cobra.Command {
 	var jsonOutput bool
 	cmd := &cobra.Command{
 		Use:   "status",
-		Short: "Show aris trace client status",
+		Short: "Show aris client status",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return status.RunStatus(cmd.Context(), status.StatusOptions{

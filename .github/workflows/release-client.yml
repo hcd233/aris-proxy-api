@@ -1,0 +1,39 @@
+name: Release Client
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.1'
+
+      - name: Build client binaries
+        run: make build-client-all
+
+      - name: Package binaries as tar.gz and generate checksums
+        run: |
+          staging=$(mktemp -d)
+          for binary in build/client/aris-*; do
+            cp "$binary" "$staging/aris"
+            tar -czf "$binary.tar.gz" -C "$staging" aris
+            sha256sum "$binary.tar.gz" > "$binary.tar.gz.sha256"
+            rm "$binary"
+          done
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            build/client/aris-*.tar.gz
+            build/client/aris-*.tar.gz.sha256

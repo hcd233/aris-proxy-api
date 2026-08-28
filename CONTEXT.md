@@ -13,11 +13,11 @@ _Avoid_: account, member, operator
 _Avoid_: role, role group
 
 **DemoAccount（演示账户）**:
-全局单例的只读演示用户（permission=demo），供潜在用户免 OAuth 体验产品。由 admin 在用户管理页将 pending/user 账户「设为 Demo」产生（事务内替换已有 Demo，旧 Demo 回 pending，部分唯一索引保证活跃 Demo 单例，双方 JWT 缓存提交后失效）。通过登录页「以 Demo 账户继续」按钮经 `POST /api/v1/demo/login`（无 OAuth，IP 限流）签发 token pair；多访客共用同一账户互不影响。demo 账户的存量 API Key 在转发链路被拒绝（只读，不可调用 LLM）。
+全局单例的只读演示用户（permission=demo），供潜在用户免 OAuth 体验产品。由 admin 在用户管理页将 pending/user 账户「设为 Demo」产生（事务内替换已有 Demo，旧 Demo 回 pending，部分唯一索引保证活跃 Demo 单例，双方 JWT 缓存提交后失效）。通过登录页「以 Demo 账户继续」按钮经 `POST /api/web/v1/demo/login`（无 OAuth，IP 限流）签发 token pair；多访客共用同一账户互不影响。demo 账户的存量 API Key 在转发链路被拒绝（只读，不可调用 LLM）。
 _Avoid_: guest account, trial account, sandbox user
 
 **DemoConfig（演示配置）**:
-Demo 演示行为的单行配置表（`demo_configs`，固定 ID=1）：`loginEnabled`（登录入口开关，关闭后登录页按钮隐藏且登录接口拒绝）、`sampleModulus`（行为数据取模抽样模数，SQL `id % K == 0`，最小 2——demo 不能看全量真实数据；作用于 sessions 列表/详情/筛选选项及模型审计日志/筛选选项/聚合图表，详情类接口对非抽样 sessionID 返回不存在以防遍历越权）、`modules`（开放模块白名单：dashboard/sessions/audit/models/trigger/endpoints/monitor/cron/cron_audit；配置类数据与运行指标全量只读，无隐私问题）。读取失败 fail-closed（模块关闭、请求拒绝）。admin 经 `PATCH /api/v1/demo/config` 修改；任意登录用户可读（前端渲染 demo 导航用）。
+Demo 演示行为的单行配置表（`demo_configs`，固定 ID=1）：`loginEnabled`（登录入口开关，关闭后登录页按钮隐藏且登录接口拒绝）、`sampleModulus`（行为数据取模抽样模数，SQL `id % K == 0`，最小 2——demo 不能看全量真实数据；作用于 sessions 列表/详情/筛选选项及模型审计日志/筛选选项/聚合图表，详情类接口对非抽样 sessionID 返回不存在以防遍历越权）、`modules`（开放模块白名单：dashboard/sessions/audit/models/trigger/endpoints/monitor/cron/cron_audit；配置类数据与运行指标全量只读，无隐私问题）。读取失败 fail-closed（模块关闭、请求拒绝）。admin 经 `PATCH /api/web/v1/demo/config` 修改；任意登录用户可读（前端渲染 demo 导航用）。
 _Avoid_: demo settings, showcase config
 
 **ProxyAPIKey（代理密钥）**:
@@ -129,7 +129,7 @@ _Avoid_: interval, time unit, bucket size
 ## Trigger Words（触发词）
 
 **Trigger（触发词）**:
-管理员配置的词表条目（2026-08-15 由「敏感词 Blocked Words」全量更名而来：表 `trigger_words`、路由 `/api/v1/trigger`、Redis key `trigger:*`）。每条记录一个 `word`（触发词内容）、`action`（命中处理动作）和 `hitCount`（命中次数）。通过 Aho-Corasick 自动机做 O(n) 子串匹配，全文扫描（含 system prompt）。三种 action：`deny` 命中即拦截返回 403 并记录审计；`omit` 照常转发但不落库 session/message/tool（审计照常）；`capture`（2026-08-15 新增）保存触发消息之前的对话历史至 session（无 assistant 回复、不保存触发消息本身）、不请求上游、返回固定回复（`Context saved.` / 无历史时 `No conversation history to save.`，stream 跟随请求参数按协议 SSE 吐出）。capture 仅当触发词位于「最后一条 role=user 且无 tool_call_id 的消息」时生效，只出现在历史消息/system 中不触发。混合命中优先级：deny > capture > omit；同请求同时命中 omit 与 capture 词且 capture 词未落在最后一条用户提问（未短路）时，capture 的上下文保存照常执行（保存最后一条用户提问之前的历史）、omit 的跳过存储照常生效、请求照常转发（两个逻辑都跑，不短路打断对话）。
+管理员配置的词表条目（2026-08-15 由「敏感词 Blocked Words」全量更名而来：表 `trigger_words`、路由 `/api/web/v1/trigger`、Redis key `trigger:*`）。每条记录一个 `word`（触发词内容）、`action`（命中处理动作）和 `hitCount`（命中次数）。通过 Aho-Corasick 自动机做 O(n) 子串匹配，全文扫描（含 system prompt）。三种 action：`deny` 命中即拦截返回 403 并记录审计；`omit` 照常转发但不落库 session/message/tool（审计照常）；`capture`（2026-08-15 新增）保存触发消息之前的对话历史至 session（无 assistant 回复、不保存触发消息本身）、不请求上游、返回固定回复（`Context saved.` / 无历史时 `No conversation history to save.`，stream 跟随请求参数按协议 SSE 吐出）。capture 仅当触发词位于「最后一条 role=user 且无 tool_call_id 的消息」时生效，只出现在历史消息/system 中不触发。混合命中优先级：deny > capture > omit；同请求同时命中 omit 与 capture 词且 capture 词未落在最后一条用户提问（未短路）时，capture 的上下文保存照常执行（保存最后一条用户提问之前的历史）、omit 的跳过存储照常生效、请求照常转发（两个逻辑都跑，不短路打断对话）。
 _Avoid_: blocked word, ban word, forbidden term, sensitive word
 
 **TriggerService（触发词服务）**:
@@ -227,7 +227,7 @@ _Avoid_: trace cli, codex hook script, install script
 _Avoid_: trace queue, pending records, ingest buffer
 
 **TraceEvent（Trace 事件）**:
-Trace 的原始记录单元，由 `aris trace ingest` 上报，经 `GET /api/v1/trace/event/list` 分页查询，供 Web 前端按事件时间线渲染（消息/工具调用/session_meta 可读化展示，原始 payload 可展开）。
+Trace 的原始记录单元，由 `aris trace ingest` 上报，经 `GET /api/web/v1/trace/event/list` 分页查询，供 Web 前端按事件时间线渲染（消息/工具调用/session_meta 可读化展示，原始 payload 可展开）。
 
 ## Infrastructure（基础设施）
 

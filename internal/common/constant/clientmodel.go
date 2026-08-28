@@ -32,13 +32,16 @@ const (
 
 // ClientModelJSONKeys harness 配置 JSON 键名
 const (
-	ClientModelKeyModels  = "models"
-	ClientModelKeyName    = "name"
-	ClientModelKeyBaseURL = "baseURL"
-	ClientModelKeyAPIKey  = "apiKey"
-	ClientModelKeyAPI     = "api"
-	ClientModelAPIOpenAI  = "openai-completions"
-	ClientModelKeyID      = "id"
+	ClientModelKeyModels = "models"
+	ClientModelKeyName   = "name"
+	ClientModelKeyAPIKey = "apiKey"
+	ClientModelKeyAPI    = "api"
+	ClientModelAPIOpenAI = "openai-completions"
+	ClientModelKeyID     = "id"
+	// ClientModelKeyProviders Pi models.json 顶层 provider 包裹键
+	ClientModelKeyProviders = "providers"
+	// ClientModelKeyBaseUrl Pi provider 的 baseUrl 字段（Pi 用小写 url，与 OpenCode 的 baseURL 不同）
+	ClientModelKeyBaseUrl = "baseUrl"
 )
 
 // ClientModelPaths 各 harness 默认配置路径片段
@@ -115,6 +118,10 @@ const (
 	ClientModelExportDoneFormat            = "✓ %s configured with %d model(s)"
 	ClientModelExportConfigPathPrefix      = "Config: "
 	ClientModelExportBackupHint            = "Previous config backed up as *.bak"
+	ClientModelExportFetchDoneFormat       = "✓ %d model(s) available"
+	ClientModelExportSelectedTitle         = "Selected models"
+	ClientModelExportSelectedFormat        = "  • %s"
+	ClientModelExportTargetResultFormat    = "✓ Target: %s"
 )
 
 // ClientInitMessages aris init 瘦身后的新文案

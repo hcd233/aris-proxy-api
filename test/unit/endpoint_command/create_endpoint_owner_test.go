@@ -36,6 +36,10 @@ func (f *capturingEndpointRepo) Paginate(context.Context, model.CommonParam, uin
 	return nil, nil, nil
 }
 
+func (f *capturingEndpointRepo) FindIDsByScope(context.Context, uint) ([]uint, error) {
+	return nil, nil
+}
+
 var _ llmproxy.EndpointRepository = (*capturingEndpointRepo)(nil)
 
 func TestCreateEndpoint_RejectsZeroOwner(t *testing.T) {

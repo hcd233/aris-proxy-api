@@ -5,20 +5,15 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/redis/go-redis/v9"
-	"gorm.io/gorm"
 
 	demoport "github.com/hcd233/aris-proxy-api/internal/application/demo/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/jwt"
 	"github.com/hcd233/aris-proxy-api/internal/middleware"
 )
 
-func initSessionJWTRouter(sessionGroup huma.API, sessionHandler handler.SessionHandler, db *gorm.DB, cache *redis.Client, accessSigner jwt.TokenSigner, demoAccessor demoport.DemoModuleAccessor, auditSubmitter demoport.DemoSubmitter) {
-	sessionGroup.UseMiddleware(middleware.JwtMiddleware(db, cache, accessSigner))
-	sessionGroup.UseMiddleware(middleware.TokenBucketRateLimiterMiddleware(cache, "demoAccess", "", constant.PeriodDemoAccess, constant.LimitDemoAccess, middleware.WithPermissionFilter(enum.PermissionDemo)))
-
+func initSessionJWTRouter(sessionGroup huma.API, sessionHandler handler.SessionHandler, demoAccessor demoport.DemoModuleAccessor, auditSubmitter demoport.DemoSubmitter) {
 	huma.Register(sessionGroup, huma.Operation{
 		OperationID: "listSessions",
 		Method:      http.MethodGet,

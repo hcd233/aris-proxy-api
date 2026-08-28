@@ -1,7 +1,7 @@
 // Package session_detail_perf 验证 Session 详情接口性能优化的端到端行为：
-//   - GET /api/v1/session/metadata：返回 messageCount/toolCount，不含 IDs 数组
-//   - GET /api/v1/session/message/list：page+pageSize 分页，返回 PageInfo
-//   - GET /api/v1/session/tool/list：同上
+//   - GET /api/web/v1/session/metadata：返回 messageCount/toolCount，不含 IDs 数组
+//   - GET /api/web/v1/session/message/list：page+pageSize 分页，返回 PageInfo
+//   - GET /api/web/v1/session/tool/list：同上
 //
 // 环境变量：
 //   - BASE_URL    API 根地址（必填）
@@ -69,7 +69,7 @@ func TestSessionDetailPerf_GetMetadata_Success(t *testing.T) {
 	baseURL, jwt, sessID := mustEnv(t)
 	client := newClient()
 
-	url := fmt.Sprintf("%s/api/v1/session/metadata?sessionId=%d", baseURL, sessID)
+	url := fmt.Sprintf("%s/api/web/v1/session/metadata?sessionId=%d", baseURL, sessID)
 	var rsp struct {
 		Error   *struct{ Code int } `json:"error"`
 		Session *struct {
@@ -103,7 +103,7 @@ func TestSessionDetailPerf_ListMessages_Pagination(t *testing.T) {
 	baseURL, jwt, sessID := mustEnv(t)
 	client := newClient()
 
-	url := fmt.Sprintf("%s/api/v1/session/message/list?sessionId=%d&page=1&pageSize=10", baseURL, sessID)
+	url := fmt.Sprintf("%s/api/web/v1/session/message/list?sessionId=%d&page=1&pageSize=10", baseURL, sessID)
 	var rsp struct {
 		Error    *struct{ Code int } `json:"error"`
 		Messages []map[string]any    `json:"messages"`
@@ -136,7 +136,7 @@ func TestSessionDetailPerf_ListMessages_PageSizeRejected(t *testing.T) {
 	baseURL, jwt, sessID := mustEnv(t)
 	client := newClient()
 
-	url := fmt.Sprintf("%s/api/v1/session/message/list?sessionId=%d&page=1&pageSize=999", baseURL, sessID)
+	url := fmt.Sprintf("%s/api/web/v1/session/message/list?sessionId=%d&page=1&pageSize=999", baseURL, sessID)
 	status := doGetJSON(t, client, url, jwt, nil)
 	if status == http.StatusOK {
 		t.Errorf("expected 4xx for pageSize=999, got 200")
@@ -148,7 +148,7 @@ func TestSessionDetailPerf_ListTools_Pagination(t *testing.T) {
 	baseURL, jwt, sessID := mustEnv(t)
 	client := newClient()
 
-	url := fmt.Sprintf("%s/api/v1/session/tool/list?sessionId=%d&page=1&pageSize=10", baseURL, sessID)
+	url := fmt.Sprintf("%s/api/web/v1/session/tool/list?sessionId=%d&page=1&pageSize=10", baseURL, sessID)
 	var rsp struct {
 		Error    *struct{ Code int } `json:"error"`
 		Tools    []map[string]any    `json:"tools"`
@@ -175,7 +175,7 @@ func TestSessionDetailPerf_CacheConsistency(t *testing.T) {
 	baseURL, jwt, sessID := mustEnv(t)
 	client := newClient()
 
-	url := fmt.Sprintf("%s/api/v1/session/metadata?sessionId=%d", baseURL, sessID)
+	url := fmt.Sprintf("%s/api/web/v1/session/metadata?sessionId=%d", baseURL, sessID)
 	var first, second struct {
 		Session *struct {
 			ID           uint   `json:"id"`

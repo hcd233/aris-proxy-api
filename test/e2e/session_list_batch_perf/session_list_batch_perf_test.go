@@ -1,4 +1,4 @@
-// Package session_list_batch_perf 验证 GET /api/v1/session/list 在
+// Package session_list_batch_perf 验证 GET /api/web/v1/session/list 在
 // 「空 summary fallback」场景下完成时间显著低于 6.1s 基准（traceID
 // efe54869-d52d-4375-9ea4-366b26923283）。
 //
@@ -77,7 +77,7 @@ func doListSessions(t *testing.T, client *http.Client, baseURL, jwtToken string,
 	q := url.Values{}
 	q.Set("page", "1")
 	q.Set("pageSize", strconv.Itoa(pageSize))
-	endpoint := fmt.Sprintf("%s/api/v1/session/list?%s", baseURL, q.Encode())
+	endpoint := fmt.Sprintf("%s/api/web/v1/session/list?%s", baseURL, q.Encode())
 
 	ctx, cancel := context.WithTimeout(context.Background(), httpTimeout)
 	defer cancel()

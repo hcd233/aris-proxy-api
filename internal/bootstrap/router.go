@@ -8,8 +8,6 @@ import (
 	"gorm.io/gorm"
 
 	demoport "github.com/hcd233/aris-proxy-api/internal/application/demo/port"
-	appenum "github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/config"
 	identityservice "github.com/hcd233/aris-proxy-api/internal/domain/identity/service"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
 	"github.com/hcd233/aris-proxy-api/internal/router"
@@ -44,12 +42,11 @@ type routeParams struct {
 	DatasetHandler     handler.DatasetHandler
 	TraceHandler       handler.TraceHandler
 	ClientHandler      handler.ClientHandler
+	UpstreamHandler    handler.UpstreamHandler
 }
 
 func registerRoutes(params routeParams) {
-	if config.Env != appenum.EnvProduction {
-		router.RegisterDocsRouter(params.App)
-	}
+	router.RegisterOpsRouter(params.App, params.HumaAPI, params.PingHandler, params.TraceHandler)
 	router.RegisterAPIRouter(params.HumaAPI, router.APIRouterDependencies{
 		DB:                 params.DB,
 		Cache:              params.Cache,
@@ -74,6 +71,7 @@ func registerRoutes(params routeParams) {
 		DatasetHandler:     params.DatasetHandler,
 		TraceHandler:       params.TraceHandler,
 		ClientHandler:      params.ClientHandler,
+		UpstreamHandler:    params.UpstreamHandler,
 	})
 
 	router.RegisterWebRouter(params.App, web.DistFS)

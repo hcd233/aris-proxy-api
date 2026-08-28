@@ -23,7 +23,6 @@ import (
 	demoauditquery "github.com/hcd233/aris-proxy-api/internal/application/demoaccessaudit/query"
 	endpointcommand "github.com/hcd233/aris-proxy-api/internal/application/endpoint/command"
 	endpointport "github.com/hcd233/aris-proxy-api/internal/application/endpoint/port"
-	endpointquery "github.com/hcd233/aris-proxy-api/internal/application/endpoint/query"
 	identitycommand "github.com/hcd233/aris-proxy-api/internal/application/identity/command"
 	identityport "github.com/hcd233/aris-proxy-api/internal/application/identity/port"
 	identityquery "github.com/hcd233/aris-proxy-api/internal/application/identity/query"
@@ -46,6 +45,8 @@ import (
 	triggercommand "github.com/hcd233/aris-proxy-api/internal/application/trigger/command"
 	triggerport "github.com/hcd233/aris-proxy-api/internal/application/trigger/port"
 	triggerquery "github.com/hcd233/aris-proxy-api/internal/application/trigger/query"
+	upstreamport "github.com/hcd233/aris-proxy-api/internal/application/upstream/port"
+	upstreamquery "github.com/hcd233/aris-proxy-api/internal/application/upstream/query"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	cronpkg "github.com/hcd233/aris-proxy-api/internal/cron"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
@@ -77,11 +78,11 @@ var ApplicationModule = fx.Module(constant.DigNameApplicationModule,
 		NewCreateEndpointHandler,
 		NewUpdateEndpointHandler,
 		NewDeleteEndpointHandler,
-		NewListEndpointsHandler,
 		NewCreateModelHandler,
 		NewUpdateModelHandler,
 		NewDeleteModelHandler,
-		NewListModelsHandler,
+		NewListModelHandler,
+		NewListUpstreamHandler,
 		NewRefreshTokensHandler,
 		NewUpdateProfileHandler,
 		NewGetCurrentUserHandler,
@@ -227,10 +228,6 @@ func NewDeleteEndpointHandler(endpointRepo llmproxy.EndpointRepository) endpoint
 	return endpointcommand.NewDeleteEndpointHandler(endpointRepo)
 }
 
-func NewListEndpointsHandler(repo llmproxy.EndpointRepository, userRepo identity.UserRepository) endpointport.ListEndpointsHandler {
-	return endpointquery.NewListEndpointsHandler(repo, userRepo)
-}
-
 func NewCreateModelHandler(endpointRepo llmproxy.EndpointRepository, modelRepo llmproxy.ModelRepository) modelport.CreateModelHandler {
 	return modelcommand.NewCreateModelHandler(endpointRepo, modelRepo)
 }
@@ -243,8 +240,12 @@ func NewDeleteModelHandler(repo llmproxy.ModelRepository) modelport.DeleteModelH
 	return modelcommand.NewDeleteModelHandler(repo)
 }
 
-func NewListModelsHandler(repo llmproxy.ModelRepository, endpointRepo llmproxy.EndpointRepository, userRepo identity.UserRepository) modelport.ListModelsHandler {
-	return modelquery.NewListModelsHandler(repo, endpointRepo, userRepo)
+func NewListModelHandler(endpointRepo llmproxy.EndpointRepository, modelRepo llmproxy.ModelRepository, userRepo identity.UserRepository) modelport.ListModelHandler {
+	return modelquery.NewListModelHandler(modelRepo, endpointRepo, userRepo)
+}
+
+func NewListUpstreamHandler(endpointRepo llmproxy.EndpointRepository, modelRepo llmproxy.ModelRepository, userRepo identity.UserRepository) upstreamport.ListUpstreamHandler {
+	return upstreamquery.NewListUpstreamHandler(endpointRepo, modelRepo, userRepo)
 }
 
 func NewUpdateProfileHandler(repo identity.UserRepository) identityport.UpdateProfileHandler {

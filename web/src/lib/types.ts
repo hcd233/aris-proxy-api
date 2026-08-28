@@ -24,15 +24,7 @@ export type Permission = "pending" | "demo" | "user" | "admin";
 // ─── Demo Account ──────────────────────────────────────────────────────────────
 
 export type DemoModule =
-  | "dashboard"
-  | "sessions"
-  | "audit"
-  | "models"
-  | "trigger"
-  | "endpoints"
-  | "monitor"
-  | "cron"
-  | "cron_audit";
+  "dashboard" | "sessions" | "audit" | "upstream" | "trigger" | "monitor" | "cron" | "cron_audit";
 
 export interface DemoStatusRsp extends CommonRsp {
   loginEnabled: boolean;
@@ -381,20 +373,6 @@ export interface ListAPIKeysRsp extends CommonRsp {
 
 // ─── Endpoint ──────────────────────────────────────────────────────────────────
 
-export interface EndpointItem {
-  id: number;
-  username: string;
-  name: string;
-  openaiBaseURL: string;
-  anthropicBaseURL: string;
-  maskedAPIKey: string;
-  supportOpenAIChatCompletion: boolean;
-  supportOpenAIResponse: boolean;
-  supportAnthropicMessage: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export interface CreateEndpointReqBody {
   ownerUserID?: number;
   name: string;
@@ -416,18 +394,31 @@ export interface UpdateEndpointReqBody {
   supportAnthropicMessage?: boolean;
 }
 
-export interface ListEndpointsRsp extends CommonRsp {
-  endpoints?: EndpointItem[];
-  pageInfo?: PageInfo;
+// ─── Upstream (endpoint 分组视图) ─────────────────────────────────────────────
+
+export interface UpstreamUser {
+  id: number;
+  name: string;
+  avatar: string;
 }
 
-// ─── Model ─────────────────────────────────────────────────────────────────────
-
-export type ModelCapability = "text" | "image";
-
-export interface ModelItem {
+export interface UpstreamEndpointItem {
   id: number;
-  username: string;
+  user?: UpstreamUser;
+  name: string;
+  openaiBaseURL: string;
+  anthropicBaseURL: string;
+  maskedAPIKey: string;
+  supportOpenAIChatCompletion: boolean;
+  supportOpenAIResponse: boolean;
+  supportAnthropicMessage: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpstreamModelItem {
+  id: number;
+  user?: UpstreamUser;
   alias: string;
   modelId: string;
   upstreamModel: string;
@@ -435,10 +426,28 @@ export interface ModelItem {
   contextLength: number;
   maxOutputTokens: number;
   capabilities: ModelCapability[];
-  endpoint: EndpointItem;
   createdAt: string;
   updatedAt: string;
 }
+
+export interface UpstreamGroupItem {
+  endpoint: UpstreamEndpointItem;
+  models: UpstreamModelItem[];
+  modelCount: number;
+  /** 截断前口径；未截断时等于 modelCount */
+  totalModelCount?: number;
+  truncated?: boolean;
+}
+
+export interface ListUpstreamRsp extends CommonRsp {
+  groups?: UpstreamGroupItem[];
+  pageInfo?: PageInfo;
+  modelTotal?: number;
+}
+
+// ─── Model ─────────────────────────────────────────────────────────────────────
+
+export type ModelCapability = "text" | "image";
 
 export interface CreateModelReqBody {
   alias: string;
@@ -461,10 +470,41 @@ export interface UpdateModelReqBody {
   capabilities?: ModelCapability[];
 }
 
-export interface ListModelsRsp extends CommonRsp {
-  models?: ModelItem[];
+// ─── Model flat list（平铺视图，GET /api/web/v1/model/list） ───────────────────
+
+/** 平铺列表中的所属端点（仅展示所需最小字段，不含 baseURL / apiKey） */
+export interface ModelListEndpoint {
+  id: number;
+  name: string;
+}
+
+export interface ModelListItem {
+  id: number;
+  user?: UpstreamUser;
+  endpoint?: ModelListEndpoint;
+  alias: string;
+  modelId: string;
+  upstreamModel: string;
+  enabled: boolean;
+  contextLength: number;
+  maxOutputTokens: number;
+  capabilities: ModelCapability[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ListModelsPageRsp extends CommonRsp {
+  items?: ModelListItem[];
   pageInfo?: PageInfo;
 }
+
+/**
+ * 后端排序白名单（constant.ModelListSortFields）。
+ * 前端不得传白名单外的值——后端对非法值静默回退默认列（不报错），
+ * 传错不会失败但排序结果会出乎意料。
+ */
+export type ModelListSortField =
+  "alias" | "context_length" | "max_output_tokens" | "created_at" | "endpoint_id" | "enabled";
 
 // ─── Audit ─────────────────────────────────────────────────────────────────────
 

@@ -26,8 +26,6 @@ import {
   LayoutDashboard,
   MessageSquare,
   Key,
-  Server,
-  Cpu,
   User,
   LogOut,
   Menu,
@@ -43,6 +41,7 @@ import {
   Settings2,
   ChevronDown,
   Footprints,
+  Layers,
 } from "lucide-react";
 
 interface NavItem {
@@ -100,16 +99,10 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { labelKey: "nav.api_keys", href: "/apikeys/", icon: <Key className="size-4" /> },
       {
-        labelKey: "nav.endpoints",
-        href: "/endpoints/",
-        icon: <Server className="size-4" />,
-        demoModule: "endpoints",
-      },
-      {
-        labelKey: "nav.models",
-        href: "/models/",
-        icon: <Cpu className="size-4" />,
-        demoModule: "models",
+        labelKey: "nav.upstream",
+        href: "/upstream/",
+        icon: <Layers className="size-4" />,
+        demoModule: "upstream",
       },
       {
         labelKey: "nav.trigger",

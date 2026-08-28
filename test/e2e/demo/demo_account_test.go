@@ -177,7 +177,7 @@ func TestE2E_DemoStatusPublic(t *testing.T) {
 	baseURL, _, _ := mustE2EEnv(t)
 	client := &http.Client{Timeout: e2eHTTPTimeout}
 
-	status, body := doJSON(t, client, http.MethodGet, baseURL+"/api/v1/demo/status", "")
+	status, body := doJSON(t, client, http.MethodGet, baseURL+"/api/web/v1/demo/status", "")
 	if status != http.StatusOK {
 		t.Fatalf("demo status expected 200, got %d: %s", status, body)
 	}
@@ -197,7 +197,7 @@ func TestE2E_DemoConfigPermission(t *testing.T) {
 	client := &http.Client{Timeout: e2eHTTPTimeout}
 
 	// 任意登录用户可读
-	status, body := doJSON(t, client, http.MethodGet, baseURL+"/api/v1/demo/config", userToken)
+	status, body := doJSON(t, client, http.MethodGet, baseURL+"/api/web/v1/demo/config", userToken)
 	if status != http.StatusOK {
 		t.Fatalf("user get demo config expected 200, got %d: %s", status, body)
 	}
@@ -205,7 +205,7 @@ func TestE2E_DemoConfigPermission(t *testing.T) {
 	// 普通用户 PATCH 拒绝
 	patch := map[string]any{"config": map[string]any{"loginEnabled": true}}
 	patchBody, _ := sonic.Marshal(patch)
-	status, body = doJSONBody(t, client, http.MethodPatch, baseURL+"/api/v1/demo/config", userToken, patchBody)
+	status, body = doJSONBody(t, client, http.MethodPatch, baseURL+"/api/web/v1/demo/config", userToken, patchBody)
 	if status != http.StatusOK && bizErrorCode(body) == 0 {
 		t.Fatalf("user patch demo config expected business error, got %d: %s", status, body)
 	}
@@ -220,7 +220,7 @@ func TestE2E_DemoAccountLifecycle(t *testing.T) {
 	client := &http.Client{Timeout: e2eHTTPTimeout}
 
 	// 1. 找一个普通用户（非 admin、非操作者本人）
-	status, body := doJSON(t, client, http.MethodGet, baseURL+"/api/v1/user/list?page=1&pageSize=50&permission=user", adminToken)
+	status, body := doJSON(t, client, http.MethodGet, baseURL+"/api/web/v1/user/list?page=1&pageSize=50&permission=user", adminToken)
 	if status != http.StatusOK {
 		t.Fatalf("list users expected 200, got %d: %s", status, body)
 	}
@@ -240,14 +240,14 @@ func TestE2E_DemoAccountLifecycle(t *testing.T) {
 			Modules      []string `json:"modules"`
 		} `json:"config"`
 	}
-	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/v1/demo/config", adminToken)
+	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/web/v1/demo/config", adminToken)
 	if status == http.StatusOK {
 		_ = sonic.Unmarshal(body, &origConfig)
 	}
 
 	// 若已有 demo 用户，先记下以便结束恢复
 	var demoBefore uint
-	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/v1/user/list?page=1&pageSize=50&permission=demo", adminToken)
+	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/web/v1/user/list?page=1&pageSize=50&permission=demo", adminToken)
 	if status == http.StatusOK {
 		var demoUsers listUsersRsp
 		if err := sonic.Unmarshal(body, &demoUsers); err == nil && len(demoUsers.Items) > 0 {
@@ -264,19 +264,19 @@ func TestE2E_DemoAccountLifecycle(t *testing.T) {
 				"modules":      origConfig.Config.Modules,
 			}}
 			rb, _ := sonic.Marshal(restorePatch)
-			_, _ = doJSONBody(t, client, http.MethodPatch, baseURL+"/api/v1/demo/config", adminToken, rb)
+			_, _ = doJSONBody(t, client, http.MethodPatch, baseURL+"/api/web/v1/demo/config", adminToken, rb)
 		}
 		// 恢复 demo 账户状态
 		if demoBefore > 0 {
-			_, _ = doJSON(t, client, http.MethodPost, baseURL+"/api/v1/user/demo/restore?id="+itoa(demoBefore), adminToken)
+			_, _ = doJSON(t, client, http.MethodPost, baseURL+"/api/web/v1/user/demo/restore?id="+itoa(demoBefore), adminToken)
 		} else {
-			_, _ = doJSON(t, client, http.MethodPost, baseURL+"/api/v1/user/demo/restore?id="+itoa(target.ID), adminToken)
+			_, _ = doJSON(t, client, http.MethodPost, baseURL+"/api/web/v1/user/demo/restore?id="+itoa(target.ID), adminToken)
 		}
 	}
 	t.Cleanup(func() { restore(t) })
 
 	// 2. 设为 demo
-	status, body = doJSON(t, client, http.MethodPost, baseURL+"/api/v1/user/demo?id="+itoa(target.ID), adminToken)
+	status, body = doJSON(t, client, http.MethodPost, baseURL+"/api/web/v1/user/demo?id="+itoa(target.ID), adminToken)
 	if status != http.StatusOK {
 		t.Fatalf("set demo user expected 200, got %d: %s", status, body)
 	}
@@ -287,13 +287,13 @@ func TestE2E_DemoAccountLifecycle(t *testing.T) {
 		"modules":      []string{"sessions"},
 	}}
 	ob, _ := sonic.Marshal(openPatch)
-	status, body = doJSONBody(t, client, http.MethodPatch, baseURL+"/api/v1/demo/config", adminToken, ob)
+	status, body = doJSONBody(t, client, http.MethodPatch, baseURL+"/api/web/v1/demo/config", adminToken, ob)
 	if status != http.StatusOK {
 		t.Fatalf("open demo config expected 200, got %d: %s", status, body)
 	}
 
 	// 4. demo 登录
-	status, body = doJSON(t, client, http.MethodPost, baseURL+"/api/v1/demo/login", "")
+	status, body = doJSON(t, client, http.MethodPost, baseURL+"/api/web/v1/demo/login", "")
 	if status != http.StatusOK {
 		t.Fatalf("demo login expected 200, got %d: %s", status, body)
 	}
@@ -307,7 +307,7 @@ func TestE2E_DemoAccountLifecycle(t *testing.T) {
 	demoToken := login.AccessToken
 
 	// 5. 当前用户 permission=demo
-	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/v1/user/current", demoToken)
+	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/web/v1/user/current", demoToken)
 	if status != http.StatusOK {
 		t.Fatalf("demo get current user expected 200, got %d: %s", status, body)
 	}
@@ -324,25 +324,25 @@ func TestE2E_DemoAccountLifecycle(t *testing.T) {
 	}
 
 	// 6. 开放模块（sessions）可访问
-	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/v1/session/list?page=1&pageSize=5", demoToken)
+	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/web/v1/session/list?page=1&pageSize=5", demoToken)
 	if status != http.StatusOK {
 		t.Fatalf("demo list sessions (open module) expected 200, got %d: %s", status, body)
 	}
 
 	// 7. shares 接口拒绝（shares 不在 demo 模块白名单，越权回归：修复前 demo 可直调）
-	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/v1/session/share/list", demoToken)
+	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/web/v1/session/share/list", demoToken)
 	if status == http.StatusOK && bizErrorCode(body) == 0 {
 		t.Fatalf("demo list shares expected error, got 200: %s", body)
 	}
 	createSharePayload := map[string]any{"body": map[string]any{"sessionId": 1}}
 	csb, _ := sonic.Marshal(createSharePayload)
-	status, body = doJSONBody(t, client, http.MethodPost, baseURL+"/api/v1/session/share", demoToken, csb)
+	status, body = doJSONBody(t, client, http.MethodPost, baseURL+"/api/web/v1/session/share", demoToken, csb)
 	if status == http.StatusOK && bizErrorCode(body) == 0 {
 		t.Fatalf("demo create share expected error, got 200: %s", body)
 	}
 
 	// 8. 未开放模块（audit 图表）拒绝
-	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/v1/audit/stats/model/trend?startTime=2026-01-01T00:00:00Z&endTime=2026-12-31T23:59:59Z&granularity=day", demoToken)
+	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/web/v1/audit/stats/model/trend?startTime=2026-01-01T00:00:00Z&endTime=2026-12-31T23:59:59Z&granularity=day", demoToken)
 	if status == http.StatusOK && bizErrorCode(body) == 0 {
 		t.Fatalf("demo closed-module audit expected error, got 200: %s", body)
 	}
@@ -350,13 +350,13 @@ func TestE2E_DemoAccountLifecycle(t *testing.T) {
 	// 9. 写接口拒绝（签发 API Key）
 	createKey := map[string]any{"body": map[string]any{"name": "e2e-demo-should-fail"}}
 	cb, _ := sonic.Marshal(createKey)
-	status, body = doJSONBody(t, client, http.MethodPost, baseURL+"/api/v1/apikey", demoToken, cb)
+	status, body = doJSONBody(t, client, http.MethodPost, baseURL+"/api/web/v1/apikey", demoToken, cb)
 	if status == http.StatusOK && bizErrorCode(body) == 0 {
 		t.Fatalf("demo write apikey expected error, got 200: %s", body)
 	}
 
 	// 10. 恢复 demo → user，入口失效
-	status, body = doJSON(t, client, http.MethodPost, baseURL+"/api/v1/user/demo/restore?id="+itoa(target.ID), adminToken)
+	status, body = doJSON(t, client, http.MethodPost, baseURL+"/api/web/v1/user/demo/restore?id="+itoa(target.ID), adminToken)
 	if status != http.StatusOK {
 		t.Fatalf("restore demo user expected 200, got %d: %s", status, body)
 	}
@@ -383,7 +383,7 @@ func TestE2E_DemoSessionsWhitelistMaskingRateLimit(t *testing.T) {
 	client := &http.Client{Timeout: e2eHTTPTimeout}
 
 	// 1. 找一个普通用户作为 demo 账户目标
-	status, body := doJSON(t, client, http.MethodGet, baseURL+"/api/v1/user/list?page=1&pageSize=50&permission=user", adminToken)
+	status, body := doJSON(t, client, http.MethodGet, baseURL+"/api/web/v1/user/list?page=1&pageSize=50&permission=user", adminToken)
 	if status != http.StatusOK {
 		t.Fatalf("list users expected 200, got %d: %s", status, body)
 	}
@@ -397,7 +397,7 @@ func TestE2E_DemoSessionsWhitelistMaskingRateLimit(t *testing.T) {
 	targetUser := users.Items[0]
 
 	// 2. 找一个存在的 session 作为白名单目标，并准备一个非白名单 session ID
-	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/v1/session/list?page=1&pageSize=5", adminToken)
+	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/web/v1/session/list?page=1&pageSize=5", adminToken)
 	if status != http.StatusOK {
 		t.Fatalf("admin list sessions expected 200, got %d: %s", status, body)
 	}
@@ -422,13 +422,13 @@ func TestE2E_DemoSessionsWhitelistMaskingRateLimit(t *testing.T) {
 		} `json:"config"`
 	}
 	origConfigOK := false
-	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/v1/demo/config", adminToken)
+	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/web/v1/demo/config", adminToken)
 	if status == http.StatusOK {
 		origConfigOK = sonic.Unmarshal(body, &origConfig) == nil
 	}
 
 	var demoBefore uint
-	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/v1/user/list?page=1&pageSize=50&permission=demo", adminToken)
+	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/web/v1/user/list?page=1&pageSize=50&permission=demo", adminToken)
 	if status == http.StatusOK {
 		var demoUsers listUsersRsp
 		if err := sonic.Unmarshal(body, &demoUsers); err == nil && len(demoUsers.Items) > 0 {
@@ -437,7 +437,7 @@ func TestE2E_DemoSessionsWhitelistMaskingRateLimit(t *testing.T) {
 	}
 
 	var originalDemoSessions []uint
-	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/v1/demo/sessions/list?page=1&pageSize=500", adminToken)
+	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/web/v1/demo/sessions/list?page=1&pageSize=500", adminToken)
 	if status != http.StatusOK {
 		t.Fatalf("admin list demo sessions expected 200, got %d: %s", status, body)
 	}
@@ -461,15 +461,15 @@ func TestE2E_DemoSessionsWhitelistMaskingRateLimit(t *testing.T) {
 				"modules":      modules,
 			}
 			rb, _ := sonic.Marshal(map[string]any{"config": cfg})
-			_, _ = doJSONBody(t, client, http.MethodPatch, baseURL+"/api/v1/demo/config", adminToken, rb)
+			_, _ = doJSONBody(t, client, http.MethodPatch, baseURL+"/api/web/v1/demo/config", adminToken, rb)
 		}
 		// 恢复 demo 账户：先还原本次设置的 demo 用户，再恢复原 demo 用户（若有）
-		_, _ = doJSON(t, client, http.MethodPost, baseURL+"/api/v1/user/demo/restore?id="+itoa(targetUser.ID), adminToken)
+		_, _ = doJSON(t, client, http.MethodPost, baseURL+"/api/web/v1/user/demo/restore?id="+itoa(targetUser.ID), adminToken)
 		if demoBefore > 0 {
-			_, _ = doJSON(t, client, http.MethodPost, baseURL+"/api/v1/user/demo?id="+itoa(demoBefore), adminToken)
+			_, _ = doJSON(t, client, http.MethodPost, baseURL+"/api/web/v1/user/demo?id="+itoa(demoBefore), adminToken)
 		}
 		// 恢复 demo sessions 白名单：清空当前白名单后重新加入原始项
-		_, body := doJSON(t, client, http.MethodGet, baseURL+"/api/v1/demo/sessions/list?page=1&pageSize=500", adminToken)
+		_, body := doJSON(t, client, http.MethodGet, baseURL+"/api/web/v1/demo/sessions/list?page=1&pageSize=500", adminToken)
 		var cur demoSessionsListRsp
 		if err := sonic.Unmarshal(body, &cur); err == nil {
 			var curIDs []uint
@@ -477,18 +477,18 @@ func TestE2E_DemoSessionsWhitelistMaskingRateLimit(t *testing.T) {
 				curIDs = append(curIDs, s.ID)
 			}
 			if len(curIDs) > 0 {
-				_, _ = doJSON(t, client, http.MethodDelete, baseURL+"/api/v1/demo/sessions?ids="+joinIDs(curIDs), adminToken)
+				_, _ = doJSON(t, client, http.MethodDelete, baseURL+"/api/web/v1/demo/sessions?ids="+joinIDs(curIDs), adminToken)
 			}
 		}
 		if len(originalDemoSessions) > 0 {
 			addBody := map[string]any{"sessionIds": originalDemoSessions}
 			ab, _ := sonic.Marshal(addBody)
-			_, _ = doJSONBody(t, client, http.MethodPost, baseURL+"/api/v1/demo/sessions", adminToken, ab)
+			_, _ = doJSONBody(t, client, http.MethodPost, baseURL+"/api/web/v1/demo/sessions", adminToken, ab)
 		}
 	})
 
 	// 4. 设置 demo 账户 + 开放 sessions/audit 模块
-	status, body = doJSON(t, client, http.MethodPost, baseURL+"/api/v1/user/demo?id="+itoa(targetUser.ID), adminToken)
+	status, body = doJSON(t, client, http.MethodPost, baseURL+"/api/web/v1/user/demo?id="+itoa(targetUser.ID), adminToken)
 	if status != http.StatusOK {
 		t.Fatalf("set demo user expected 200, got %d: %s", status, body)
 	}
@@ -497,14 +497,14 @@ func TestE2E_DemoSessionsWhitelistMaskingRateLimit(t *testing.T) {
 		"modules":      []string{"sessions", "audit"},
 	}}
 	ob, _ := sonic.Marshal(openPatch)
-	status, body = doJSONBody(t, client, http.MethodPatch, baseURL+"/api/v1/demo/config", adminToken, ob)
+	status, body = doJSONBody(t, client, http.MethodPatch, baseURL+"/api/web/v1/demo/config", adminToken, ob)
 	if status != http.StatusOK {
 		t.Fatalf("open demo config expected 200, got %d: %s", status, body)
 	}
 
 	// 5. 清空现有白名单，保证后续断言确定
 	if len(originalDemoSessions) > 0 {
-		status, body = doJSON(t, client, http.MethodDelete, baseURL+"/api/v1/demo/sessions?ids="+joinIDs(originalDemoSessions), adminToken)
+		status, body = doJSON(t, client, http.MethodDelete, baseURL+"/api/web/v1/demo/sessions?ids="+joinIDs(originalDemoSessions), adminToken)
 		if status != http.StatusOK {
 			t.Fatalf("clear demo sessions expected 200, got %d: %s", status, body)
 		}
@@ -513,11 +513,11 @@ func TestE2E_DemoSessionsWhitelistMaskingRateLimit(t *testing.T) {
 	// 6. 批量添加白名单会话 → list 含该会话
 	addBody := map[string]any{"sessionIds": []uint{targetSessionID}}
 	ab, _ := sonic.Marshal(addBody)
-	status, body = doJSONBody(t, client, http.MethodPost, baseURL+"/api/v1/demo/sessions", adminToken, ab)
+	status, body = doJSONBody(t, client, http.MethodPost, baseURL+"/api/web/v1/demo/sessions", adminToken, ab)
 	if status != http.StatusOK {
 		t.Fatalf("add demo sessions expected 200, got %d: %s", status, body)
 	}
-	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/v1/demo/sessions/list?page=1&pageSize=500", adminToken)
+	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/web/v1/demo/sessions/list?page=1&pageSize=500", adminToken)
 	if status != http.StatusOK {
 		t.Fatalf("list demo sessions expected 200, got %d: %s", status, body)
 	}
@@ -530,7 +530,7 @@ func TestE2E_DemoSessionsWhitelistMaskingRateLimit(t *testing.T) {
 	}
 
 	// 7. demo 登录
-	status, body = doJSON(t, client, http.MethodPost, baseURL+"/api/v1/demo/login", "")
+	status, body = doJSON(t, client, http.MethodPost, baseURL+"/api/web/v1/demo/login", "")
 	if status != http.StatusOK {
 		t.Fatalf("demo login expected 200, got %d: %s", status, body)
 	}
@@ -543,7 +543,7 @@ func TestE2E_DemoSessionsWhitelistMaskingRateLimit(t *testing.T) {
 	demoToken := login.AccessToken
 
 	// 8. 白名单 session 可读，非白名单 session 返回"不存在"
-	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/v1/session?id="+itoa(targetSessionID), demoToken)
+	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/web/v1/session?id="+itoa(targetSessionID), demoToken)
 	if status != http.StatusOK || bizErrorCode(body) != 0 {
 		t.Fatalf("demo get whitelisted session expected 200, got %d: %s", status, body)
 	}
@@ -552,13 +552,13 @@ func TestE2E_DemoSessionsWhitelistMaskingRateLimit(t *testing.T) {
 		t.Fatalf("demo get whitelisted session returned unexpected body: %s", body)
 	}
 
-	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/v1/session?id="+itoa(nonWhitelistedID), demoToken)
+	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/web/v1/session?id="+itoa(nonWhitelistedID), demoToken)
 	if status != http.StatusOK || bizErrorCode(body) != constant.BizErrorCodeDataNotExists {
 		t.Fatalf("demo get non-whitelisted session expected not-found(10003), got %d: %s", status, body)
 	}
 
 	// 9. audit 视角敏感字段脱敏
-	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/v1/audit/model/log/list?page=1&pageSize=20", demoToken)
+	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/web/v1/audit/model/log/list?page=1&pageSize=20", demoToken)
 	if status != http.StatusOK || bizErrorCode(body) != 0 {
 		t.Fatalf("demo list audit logs expected 200, got %d: %s", status, body)
 	}
@@ -579,7 +579,7 @@ func TestE2E_DemoSessionsWhitelistMaskingRateLimit(t *testing.T) {
 	}
 
 	// 10. demo 接口高频访问触发 IP 限流（429 + Retry-After）
-	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/v1/session/list?page=1&pageSize=1", demoToken)
+	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/web/v1/session/list?page=1&pageSize=1", demoToken)
 	if status != http.StatusOK || bizErrorCode(body) != 0 {
 		t.Fatalf("demo list sessions before rate limit expected 200, got %d: %s", status, body)
 	}
@@ -590,7 +590,7 @@ func TestE2E_DemoSessionsWhitelistMaskingRateLimit(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			results <- doJSONRaw(client, http.MethodGet, baseURL+"/api/v1/session/list?page=1&pageSize=1", demoToken)
+			results <- doJSONRaw(client, http.MethodGet, baseURL+"/api/web/v1/session/list?page=1&pageSize=1", demoToken)
 		}()
 	}
 	wg.Wait()
@@ -617,11 +617,11 @@ func TestE2E_DemoSessionsWhitelistMaskingRateLimit(t *testing.T) {
 	}
 
 	// 11. 批量移除白名单会话 → list 为空
-	status, body = doJSON(t, client, http.MethodDelete, baseURL+"/api/v1/demo/sessions?ids="+itoa(targetSessionID), adminToken)
+	status, body = doJSON(t, client, http.MethodDelete, baseURL+"/api/web/v1/demo/sessions?ids="+itoa(targetSessionID), adminToken)
 	if status != http.StatusOK {
 		t.Fatalf("remove demo sessions expected 200, got %d: %s", status, body)
 	}
-	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/v1/demo/sessions/list?page=1&pageSize=500", adminToken)
+	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/web/v1/demo/sessions/list?page=1&pageSize=500", adminToken)
 	if status != http.StatusOK {
 		t.Fatalf("list demo sessions after remove expected 200, got %d: %s", status, body)
 	}

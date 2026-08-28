@@ -30,14 +30,17 @@ import (
 const e2eHTTPTimeout = 30 * time.Second
 
 type bizError struct {
-	Code    string `json:"code"`
+	Code    int64  `json:"code"`
 	Message string `json:"message"`
 }
 
-type listEndpointsRsp struct {
-	Endpoints []struct {
-		ID uint `json:"id"`
-	} `json:"endpoints"`
+type listUpstreamRsp struct {
+	Groups []struct {
+		Endpoint struct {
+			ID uint `json:"id"`
+		} `json:"endpoint"`
+		Models []modelItem `json:"models"`
+	} `json:"groups"`
 	Error *bizError `json:"error,omitempty"`
 }
 
@@ -47,9 +50,13 @@ type modelItem struct {
 	Capabilities []string `json:"capabilities"`
 }
 
-type listModelsRsp struct {
-	Models []modelItem `json:"models"`
-	Error  *bizError   `json:"error,omitempty"`
+// flattenModels 展平分组视图中的模型列表。
+func flattenModels(g listUpstreamRsp) []modelItem {
+	var out []modelItem
+	for _, grp := range g.Groups {
+		out = append(out, grp.Models...)
+	}
+	return out
 }
 
 type commandRsp struct {
@@ -104,21 +111,21 @@ func doJSON(t *testing.T, client *http.Client, method, url, jwtToken string, req
 // pickEndpointID 选一个可用 endpoint 挂载模型。
 func pickEndpointID(t *testing.T, baseURL, jwtToken string, client *http.Client) uint {
 	t.Helper()
-	status, traceID, body := doJSON(t, client, http.MethodGet, baseURL+"/api/v1/endpoint/list?page=1&pageSize=1", jwtToken, nil)
+	status, traceID, body := doJSON(t, client, http.MethodGet, baseURL+"/api/web/v1/upstream/list?page=1&pageSize=1", jwtToken, nil)
 	if status != http.StatusOK {
-		t.Fatalf("list endpoints status=%d traceID=%s body=%s", status, traceID, string(body))
+		t.Fatalf("list upstream status=%d traceID=%s body=%s", status, traceID, string(body))
 	}
-	var rsp listEndpointsRsp
+	var rsp listUpstreamRsp
 	if err := sonic.Unmarshal(body, &rsp); err != nil {
-		t.Fatalf("unmarshal endpoints failed: %v body=%s", err, string(body))
+		t.Fatalf("unmarshal upstream groups failed: %v body=%s", err, string(body))
 	}
 	if rsp.Error != nil {
-		t.Fatalf("list endpoints error: code=%s msg=%s traceID=%s", rsp.Error.Code, rsp.Error.Message, traceID)
+		t.Fatalf("list upstream error: code=%d msg=%s traceID=%s", rsp.Error.Code, rsp.Error.Message, traceID)
 	}
-	if len(rsp.Endpoints) == 0 {
+	if len(rsp.Groups) == 0 {
 		t.Skip("no endpoint available to attach model")
 	}
-	return rsp.Endpoints[0].ID
+	return rsp.Groups[0].Endpoint.ID
 }
 
 // createModel 创建模型；capabilities 传 nil 表示不显式发送该字段。
@@ -134,7 +141,7 @@ func createModel(t *testing.T, baseURL, jwtToken string, client *http.Client, en
 	if capabilities != nil {
 		body["capabilities"] = capabilities
 	}
-	status, traceID, raw := doJSON(t, client, http.MethodPost, baseURL+"/api/v1/model", jwtToken, body)
+	status, traceID, raw := doJSON(t, client, http.MethodPost, baseURL+"/api/web/v1/model", jwtToken, body)
 	if status != http.StatusOK {
 		t.Fatalf("create model alias=%s status=%d traceID=%s body=%s", alias, status, traceID, string(raw))
 	}
@@ -148,17 +155,18 @@ func createModel(t *testing.T, baseURL, jwtToken string, client *http.Client, en
 // getModelByAlias 按别名查模型；未命中返回 nil。
 func getModelByAlias(t *testing.T, baseURL, jwtToken string, client *http.Client, alias string) *modelItem {
 	t.Helper()
-	status, traceID, raw := doJSON(t, client, http.MethodGet, baseURL+"/api/v1/model/list?page=1&pageSize=50&query="+alias, jwtToken, nil)
+	status, traceID, raw := doJSON(t, client, http.MethodGet, baseURL+"/api/web/v1/upstream/list?page=1&pageSize=50&query="+alias, jwtToken, nil)
 	if status != http.StatusOK {
-		t.Fatalf("list models status=%d traceID=%s body=%s", status, traceID, string(raw))
+		t.Fatalf("list upstream status=%d traceID=%s body=%s", status, traceID, string(raw))
 	}
-	var rsp listModelsRsp
+	var rsp listUpstreamRsp
 	if err := sonic.Unmarshal(raw, &rsp); err != nil {
-		t.Fatalf("unmarshal models failed: %v body=%s", err, string(raw))
+		t.Fatalf("unmarshal upstream failed: %v body=%s", err, string(raw))
 	}
-	for i := range rsp.Models {
-		if rsp.Models[i].Alias == alias {
-			return &rsp.Models[i]
+	items := flattenModels(rsp)
+	for i := range items {
+		if items[i].Alias == alias {
+			return &items[i]
 		}
 	}
 	return nil
@@ -166,7 +174,7 @@ func getModelByAlias(t *testing.T, baseURL, jwtToken string, client *http.Client
 
 func updateCapabilities(t *testing.T, baseURL, jwtToken string, client *http.Client, modelID uint, capabilities []string) {
 	t.Helper()
-	status, traceID, raw := doJSON(t, client, http.MethodPatch, fmt.Sprintf("%s/api/v1/model?id=%d", baseURL, modelID), jwtToken, map[string]any{"capabilities": capabilities})
+	status, traceID, raw := doJSON(t, client, http.MethodPatch, fmt.Sprintf("%s/api/web/v1/model?id=%d", baseURL, modelID), jwtToken, map[string]any{"capabilities": capabilities})
 	if status != http.StatusOK {
 		t.Fatalf("update model status=%d traceID=%s body=%s", status, traceID, string(raw))
 	}
@@ -175,7 +183,7 @@ func updateCapabilities(t *testing.T, baseURL, jwtToken string, client *http.Cli
 		t.Fatalf("unmarshal update rsp failed: %v body=%s", err, string(raw))
 	}
 	if rsp.Error != nil {
-		t.Fatalf("update model error: code=%s msg=%s traceID=%s", rsp.Error.Code, rsp.Error.Message, traceID)
+		t.Fatalf("update model error: code=%d msg=%s traceID=%s", rsp.Error.Code, rsp.Error.Message, traceID)
 	}
 }
 
@@ -184,7 +192,7 @@ func cleanupModel(t *testing.T, baseURL, jwtToken string, client *http.Client, m
 	if modelID == nil || *modelID == 0 {
 		return
 	}
-	status, traceID, raw := doJSON(t, client, http.MethodDelete, fmt.Sprintf("%s/api/v1/model?id=%d", baseURL, *modelID), jwtToken, nil)
+	status, traceID, raw := doJSON(t, client, http.MethodDelete, fmt.Sprintf("%s/api/web/v1/model?id=%d", baseURL, *modelID), jwtToken, nil)
 	if status != http.StatusOK {
 		t.Logf("cleanup delete model id=%d failed: status=%d traceID=%s body=%s", *modelID, status, traceID, string(raw))
 	}
@@ -203,7 +211,7 @@ func TestModelCapabilities_RoundTrip(t *testing.T) {
 
 	rsp, traceID := createModel(t, baseURL, jwtToken, client, endpointID, alias, []string{"text", "image"})
 	if rsp.Error != nil {
-		t.Fatalf("create model error: code=%s msg=%s traceID=%s", rsp.Error.Code, rsp.Error.Message, traceID)
+		t.Fatalf("create model error: code=%d msg=%s traceID=%s", rsp.Error.Code, rsp.Error.Message, traceID)
 	}
 
 	item := getModelByAlias(t, baseURL, jwtToken, client, alias)
@@ -236,7 +244,7 @@ func TestModelCapabilities_CreateDefaultsToText(t *testing.T) {
 
 	rsp, traceID := createModel(t, baseURL, jwtToken, client, endpointID, alias, nil)
 	if rsp.Error != nil {
-		t.Fatalf("create model error: code=%s msg=%s traceID=%s", rsp.Error.Code, rsp.Error.Message, traceID)
+		t.Fatalf("create model error: code=%d msg=%s traceID=%s", rsp.Error.Code, rsp.Error.Message, traceID)
 	}
 
 	item := getModelByAlias(t, baseURL, jwtToken, client, alias)

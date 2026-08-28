@@ -10,18 +10,55 @@
 - **生产配置更新 / api.env / K8s ConfigMap**：使用 `update-prod-config`；SSH 到 `api.lvlvko.top` 修改配置，禁止使用裸 IP 地址。
 - **发布 / 部署**：推送到 `master` 或合并 PR 到 `master` 自动触发 `docker-publish.yml` 构建镜像并部署到 K8s；不需要额外手动部署步骤。
 - **写或改 `internal/dto/**` / 新增 huma 路由 / 排查 "field 总是零值" 类问题**：使用 `huma-dto-conventions`；它沉淀了 huma 的 path/query/body 绑定规则、Body 包装模板、响应 unwrap 行为和反模式速查。
-- **编写 Go 代码**：使用 `golang-code-style`（代码风格）、`golang-naming`（命名规范）、`golang-modernize`（现代 Go 特性）、`golang-design-patterns`（设计模式）。
+- **编写 Go 代码**：必须加载 `use-modern-go`（现代 Go 惯用法，权威 CLI）、`golang-code-style`（代码风格）、`golang-naming`（命名规范）、`golang-samber-lo`、`golang-samber-mo`。详细加载清单与调用方式见下文「Go 后端 Skill 加载清单」。
 - **修改 `go.uber.org/fx` 相关代码**：使用 `golang-uber-fx`。
 - **修改 `github.com/spf13/cobra` 相关代码**：使用 `golang-spf13-cobra`。
 - **修改 `github.com/spf13/viper` 相关代码**：使用 `golang-spf13-viper`。
-- **使用 `github.com/samber/lo` 函数式编程**：使用 `golang-samber-lo`。
-- **使用 `github.com/samber/mo` Monadic 类型**：使用 `golang-samber-mo`。
 - **需求 / 设计方案评审**：在动手编码前，使用 `brainstorming`（superpowers）对设计方案进行压力测试——逐步澄清问题、提出 2-3 个方案及权衡、输出设计文档（`docs/superpowers/specs/`），暴露假设、权衡和边界。
 - **superpowers 文档语言**：由 superpowers 生成的设计、实施计划及其他项目文档必须使用中文撰写；代码标识符、命令、路径、配置键和协议原文可保留其必要的英文形式。
 - **需求澄清 / 快速决策**：在 `brainstorming` 中按"一次一个问题"的交互式方式厘清需求与设计分支。
 - **实现阶段 / 防止过度工程**：使用 `ponytail`（默认 `full` 级别）强制走最简可行阶梯：YAGNI → 复用已有代码 → 标准库 → 原生平台特性 → 已有依赖 → 一行代码 → 最小可行代码。刻意简化处用 `// ponytail: <ceiling>, <upgrade path>` 注释标记。
 - **diff 过度工程审查**：实现完成后、提交前，使用 `ponytail-review` 审查 diff 中的过度工程（投机抽象、重复造轮子、死代码），逐行列出可删项。与 lint 互补——lint 查规范，ponytail-review 查复杂度。
 - 专项流程细节放在对应 skill，主文档只保留触发条件和项目级硬约束。
+
+## Go 后端 Skill 加载清单
+
+> 触发条件：任何**编写、修改、重构 Go 代码**的任务（含 bugfix 改动 Go 文件）。以下为**必须**加载项，不得以"改动很小""我知道怎么写"为理由跳过。
+
+| Skill | 职责 | 加载时机 |
+|-------|------|---------|
+| `use-modern-go` | 现代 Go 惯用法的**唯一权威来源**（JetBrains CLI，按 `go.mod` 版本动态返回指南） | 编辑 Go 文件**之前** |
+| `golang-naming` | 命名规范（包/构造函数/接口/枚举/错误/接收者/测试名） | 新增或重命名符号时 |
+| `golang-code-style` | 需人工判断的风格（换行、控制流清晰度、注释何时有害） | 编写或审查 Go 代码时 |
+| `golang-samber-lo` | `github.com/samber/lo` 函数式工具正确用法 | 涉及切片/映射变换时 |
+| `golang-samber-mo` | `github.com/samber/mo` Monadic 类型 | 涉及 `Option`/`Result` 时 |
+| `golang-uber-fx` | DI 装配（`fx.Provide` / `fx.Invoke` / 生命周期钩子） | 改 `internal/bootstrap/modules/**` 时 |
+| `golang-spf13-cobra` / `golang-spf13-viper` | CLI 命令树 / 配置分层 | 改 `cmd/**` 或 `internal/config/**` 时 |
+| `huma-dto-conventions` | huma 的 path/query/body 绑定规则 | 改 `internal/dto/**` 或新增 huma 路由时 |
+
+### `use-modern-go` 调用规范
+
+1. **编辑 Go 文件前**先跑 `list`，读完整输出（输出按版本倒序，旧版本指南仍可能适用）：
+
+   ```sh
+   sh ".agents/skills/external/use-modern-go/scripts/run-tool.sh" list --file-path internal/path/to/file.go
+   ```
+
+2. 禁止把输出通过 `head` / `tail` / `grep` / `rtk` 等截断或过滤，否则会漏掉适用指南。
+3. 只对准备评估或应用的具体 guideline ID 调 `explain`，禁止无参数调用：
+
+   ```sh
+   sh ".agents/skills/external/use-modern-go/scripts/run-tool.sh" explain sync_waitgroup_go errors_is
+   ```
+
+4. 返回的指南对本次改动**具有权威性**：即使邻近代码或仓库既有写法更旧，也应遵循；仅当无法编译、会改变行为或明显不适用时才跳过，跳过前先 `explain` 确认。
+5. 与项目硬约束冲突时，**项目约束优先**（例：CLI 建议 `any` 替代 `interface{}`，但本项目 DTO 层两者皆禁，须用 `sonic.NoCopyRawMessage` 或具体结构体；CLI 建议 `errors.Join`，本项目业务错误统一走 `internal/common/ierr`）。冲突详情见 [go-backend.md](go-backend.md)。
+
+### 设计模式与架构
+
+本项目**不使用**通用 Go 设计模式/架构 skill。DDD 分层、依赖注入、仓储边界一律以 [architecture.md](architecture.md) 与 `internal/tool/lintconv` 的自定义 lint 规则为准，避免通用建议与项目硬约束互相拉扯。
+
+`golang-code-style` / `golang-samber-mo` 内部存在指向 `samber/cc-skills-golang@golang-design-patterns`、`@golang-structs-interfaces`、`@golang-lint`、`@golang-concurrency` 等未安装 skill 的交叉引用，**直接忽略**，不要尝试加载或联网抓取；这些主题在本项目由 `docs/agents/` 与 `.golangci.yml` + `lint conv` 覆盖。
 
 ## 开发工作流
 
@@ -30,7 +67,7 @@
 - **分支示例**：`feature/session-share-2026-05-28`、`bugfix/token-expiry-2026-05-28`、`refactor/split-endpoint-model-2026-05-28`。
 - **Brainstorming-first 设计先行**：收到需求或 bug 任务后，在着手编码前优先加载 `brainstorming`（superpowers）skill 对设计方案进行压力测试。需求模糊或存在多种方案时先进入 brainstorming 的澄清循环厘清。process skill（设计评审、调试等）优先于 implementation skill。禁止以"这不是正式任务""我先收集信息"等理由跳过设计评审。
 - **开发前先读 `CONTEXT.md`**：动手前阅读根 `CONTEXT.md`（涉前端时一并读 `web/CONTEXT.md`），确认相关领域概念与术语；开发中新出现的领域概念、术语或语义边界，及时回写 `CONTEXT.md`。
-- **编写或修改 Go 代码时，必须加载 `golang-samber-lo` 和 `golang-samber-mo` skill**，确保正确使用 `github.com/samber/lo` 函数式编程工具和 `github.com/samber/mo` Monadic 类型。
+- **编写或修改 Go 代码时，必须按上文「Go 后端 Skill 加载清单」加载对应 skill**：`use-modern-go`（编辑文件前先跑 `list`）、`golang-naming`、`golang-code-style`、`golang-samber-lo`、`golang-samber-mo`，以及按改动范围触发的 `golang-uber-fx` / `golang-spf13-*` / `huma-dto-conventions`。
 - **实现阶段激活 `ponytail`（默认 `full`）**：编码时强制走最简可行阶梯，不建投机抽象、不造标准库已有的轮子、不做未被要求的"灵活性"。刻意简化处用 `// ponytail: <ceiling>, <upgrade path>` 注释标记，便于后续 `ponytail-debt` 追踪。`ponytail` 不适用于安全、输入校验、数据防损等不可简化的场景。
 - 需求不清时先说明假设并推进；只有边界会影响实现时才向用户确认。
 - 设计方案不确定时，优先启动 `brainstorming` 做快速方案验证，在设计文档中记录决策。

@@ -1,0 +1,160 @@
+name: Build and Publish
+
+# 构建 + 部署流水线（lint 见 lint.yml，PR 不触发本 workflow）。
+# 生产为单节点 amd64 k3s，只构建 linux/amd64。
+concurrency:
+  group: build-and-publish-${{ github.ref }}
+  cancel-in-progress: false
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '26 21 * * *'
+  push:
+    branches: [ "master" ]
+    tags: [ 'v*.*.*' ]
+    paths:
+      - 'internal/**'
+      - 'docker/**'
+      - 'cmd/**'
+      - 'web/**'
+      - 'k8s/**'
+      - 'script/**'
+      - '.github/workflows/build-and-publish.yml'
+      - 'go.mod'
+      - 'go.sum'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # 步骤一：构建。Go 在 runner 上增量编译（缓存），镜像内只打包二进制；
+  # push 完成后后台预热拉取到生产节点，与 publish job 启动并行。
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      digest: ${{ steps.image.outputs.digest }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Compute web hash
+        id: web-hash
+        run: echo "key=frontend-${{ hashFiles('web/**') }}" >> "$GITHUB_OUTPUT"
+
+      - name: Cache frontend build
+        id: web-cache
+        uses: actions/cache@v4
+        with:
+          path: web/out
+          key: ${{ steps.web-hash.outputs.key }}
+
+      - name: Build frontend (on cache miss)
+        if: steps.web-cache.outputs.cache-hit != 'true'
+        run: cd web && npm ci && npm run build
+
+      # 与 Makefile web-build 保持一致：embed 前对所有静态文件 gzip 预压缩
+      # （服务端按 Accept-Encoding 直发压缩内容；未压缩产物也能由 readStatic 回退兜底）
+      - name: Gzip frontend assets for embed
+        run: find web/out -type f -exec gzip -9 {} +
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.1'
+          cache: false
+
+      - name: Cache Go modules and build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: go-${{ runner.os }}-${{ hashFiles('go.mod') }}-${{ github.run_id }}
+          restore-keys: |
+            go-${{ runner.os }}-${{ hashFiles('go.mod') }}-
+            go-${{ runner.os }}-
+
+      - name: Build server binary
+        run: |
+          # embed 真实前端产物（web/out 已 gzip），对齐 Makefile web-build 的产物形态；
+          # binary-prebuilt 路径不经过 docker 内的 frontend-final 注入，必须在此拷入
+          rm -rf internal/web/dist
+          cp -r web/out internal/web/dist
+          CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o aris-proxy-api ./cmd/server
+
+      # runner 预装 docker/buildx，直接原生构建推送（免去 setup-buildx/login/metadata 三个 action）
+      - name: Build and push image
+        id: image
+        env:
+          IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
+
+          FIRST_TAG="master"
+          TAG_ARGS=(--tag="${IMAGE}:master" --tag="${IMAGE}:sha-${GITHUB_SHA:0:7}")
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+            FIRST_TAG="${VERSION}"
+            TAG_ARGS=(--tag="${IMAGE}:${VERSION}" --tag="${IMAGE}:${VERSION%.*}")
+          fi
+
+          docker buildx build -f docker/dockerfile \
+            --build-arg FRONTEND_SOURCE=frontend-prebuilt \
+            --build-arg BINARY_SOURCE=binary-prebuilt \
+            "${TAG_ARGS[@]}" --push .
+
+          DIGEST="$(docker buildx imagetools inspect "${IMAGE}:${FIRST_TAG}" --format '{{.Manifest.Digest}}')"
+          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
+          echo "pushed ${IMAGE}:${FIRST_TAG} (${DIGEST})"
+
+      # 后台预热：镜像 push 完成即让生产节点开始拉取（跨境带宽 0.6~1.3MB/s，48MB 层需 35~80s），
+      # 与本 job 收尾和 publish job 启动并行；预拉未完成时部署侧自行拉取，幂等安全
+      - name: Pre-pull image on production node
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/master') || github.event_name == 'workflow_dispatch'
+        env:
+          PREPULL_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.image.outputs.digest }}
+        run: |
+          echo "${{ secrets.PRODUCTION_SSH_KEY }}" > /tmp/prepull_key
+          chmod 600 /tmp/prepull_key
+          nohup ssh -i /tmp/prepull_key -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+            ${{ secrets.PRODUCTION_USERNAME }}@${{ secrets.PRODUCTION_HOST }} \
+            "nohup sudo k3s ctr images pull '${PREPULL_IMAGE}' >/tmp/ghcr-prepull.log 2>&1 &" \
+            >/dev/null 2>&1 &
+          echo "prepull started: ${PREPULL_IMAGE}"
+
+  # 步骤二：发布。推送生产 k3s 并滚动更新（master push 或手动 dispatch）。
+  publish:
+    runs-on: ubuntu-latest
+    needs:
+      - build
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/master') || github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Deploy to k3s via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USERNAME }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          command_timeout: 10m
+          script: |
+            set -euo pipefail
+            cd ${{ secrets.PRODUCTION_REPO_PATH }}
+            git fetch --prune origin
+            git reset --hard origin/master
+            export DEPLOY_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ needs.build.outputs.digest }}"
+            bash script/deploy-k8s.sh
+            for i in $(seq 1 60); do
+              if curl -kfsS --max-time 5 https://api.lvlvko.top/health; then
+                break
+              fi
+              echo "waiting for production domain health (${i}/60)" >&2
+              sleep 1
+            done
+            # Web 前端 embed 验收：曾因 binary-prebuilt 未注入前端产物静默 404
+            curl -kfsS --max-time 5 -o /dev/null https://api.lvlvko.top/web/
+            exit 0

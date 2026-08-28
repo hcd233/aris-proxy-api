@@ -51,7 +51,7 @@ func TestRuntimeMetricsEndpoint_RequiresAuth(t *testing.T) {
 	t.Parallel()
 	baseURL := mustE2EEnv(t)
 
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, baseURL+"/api/v1/metrics/runtime?range=15m", http.NoBody)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, baseURL+"/api/web/v1/metrics/runtime?range=15m", http.NoBody)
 	if err != nil {
 		t.Fatalf("failed to create request: %v", err)
 	}
@@ -87,7 +87,7 @@ func TestRuntimeMetricsEndpoint_AdminReturnsSeries(t *testing.T) {
 		t.Skip("ADMIN_TOKEN is required for admin e2e test")
 	}
 
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, baseURL+"/api/v1/metrics/runtime?range=15m", http.NoBody)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, baseURL+"/api/web/v1/metrics/runtime?range=15m", http.NoBody)
 	if err != nil {
 		t.Fatalf("failed to create request: %v", err)
 	}

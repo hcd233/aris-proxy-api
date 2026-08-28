@@ -31,29 +31,28 @@ import (
 const e2eHTTPTimeout = 30 * time.Second
 
 type bizError struct {
-	Code    string `json:"code"`
+	Code    int64  `json:"code"`
 	Message string `json:"message"`
 }
 
-type endpointItem struct {
-	ID       uint   `json:"id"`
-	Username string `json:"username"`
-	Name     string `json:"name"`
+type upstreamGroupItem struct {
+	Endpoint struct {
+		ID   uint `json:"id"`
+		User *struct {
+			Name string `json:"name"`
+		} `json:"user"`
+		Name string `json:"name"`
+	} `json:"endpoint"`
+	Models []struct {
+		Alias string `json:"alias"`
+	} `json:"models"`
+	ModelCount int `json:"modelCount"`
 }
 
-type listEndpointsRsp struct {
-	Endpoints []endpointItem `json:"endpoints"`
-	Error     *bizError      `json:"error,omitempty"`
-}
-
-type modelItem struct {
-	ID    uint   `json:"id"`
-	Alias string `json:"alias"`
-}
-
-type listModelsRsp struct {
-	Models []modelItem `json:"models"`
-	Error  *bizError   `json:"error,omitempty"`
+type listUpstreamRsp struct {
+	Groups     []upstreamGroupItem `json:"groups"`
+	ModelTotal int64               `json:"modelTotal"`
+	Error      *bizError           `json:"error,omitempty"`
 }
 
 type commandRsp struct {
@@ -109,8 +108,8 @@ func TestUserScope_ConfigLifecycle(t *testing.T) {
 	}
 
 	// 1. admin 代建 endpoint（ownerUserID 指定自身）
-	createBody := fmt.Sprintf(`{"body":{"ownerUserID":1,"name":%q,"apiKey":"sk-e2e","openaiBaseURL":"https://o.example.com/v1","supportOpenAIChatCompletion":true}}`, epName)
-	status, data := doJSON(t, http.MethodPost, baseURL+"/api/v1/endpoint", token, []byte(createBody))
+	createBody := fmt.Sprintf(`{"ownerUserID":1,"name":%q,"apiKey":"sk-e2e","openaiBaseURL":"https://o.example.com/v1","supportOpenAIChatCompletion":true}`, epName)
+	status, data := doJSON(t, http.MethodPost, baseURL+"/api/web/v1/endpoint", token, []byte(createBody))
 	if status != http.StatusOK {
 		t.Fatalf("create endpoint: status=%d body=%s", status, data)
 	}
@@ -123,88 +122,91 @@ func TestUserScope_ConfigLifecycle(t *testing.T) {
 	}
 	cleanup := func() {
 		// 按 name 找到 id 后删除
-		_, listData := doJSON(t, http.MethodGet, baseURL+"/api/v1/endpoint/list?query="+epName+"&pageSize=100", token, nil)
-		var list listEndpointsRsp
+		_, listData := doJSON(t, http.MethodGet, baseURL+"/api/web/v1/upstream/list?page=1&pageSize=100&query="+epName, token, nil)
+		var list listUpstreamRsp
 		if err := sonic.Unmarshal(listData, &list); err != nil {
 			return
 		}
-		for _, ep := range list.Endpoints {
+		for _, g := range list.Groups {
+			ep := g.Endpoint
 			if ep.Name != epName {
 				continue
 			}
 			// 删除该端点下的 models（cascade 由后端处理）
-			doJSON(t, http.MethodDelete, fmt.Sprintf("%s/api/v1/endpoint?id=%d", baseURL, ep.ID), token, nil)
+			doJSON(t, http.MethodDelete, fmt.Sprintf("%s/api/web/v1/endpoint?id=%d", baseURL, ep.ID), token, nil)
 		}
 	}
 	t.Cleanup(cleanup)
 
 	// 2. username 过滤：命中 admin 名下的端点且响应带归属用户名
 	status, data = doJSON(t, http.MethodGet,
-		fmt.Sprintf("%s/api/v1/endpoint/list?query=%s&username=%s&pageSize=100", baseURL, epName, adminName), token, nil)
+		fmt.Sprintf("%s/api/web/v1/upstream/list?page=1&pageSize=100&query=%s&username=%s", baseURL, epName, adminName), token, nil)
 	if status != http.StatusOK {
-		t.Fatalf("list endpoints by username: status=%d body=%s", status, data)
+		t.Fatalf("list upstream by username: status=%d body=%s", status, data)
 	}
-	var listRsp listEndpointsRsp
+	var listRsp listUpstreamRsp
 	if err := sonic.Unmarshal(data, &listRsp); err != nil {
-		t.Fatalf("unmarshal list rsp: %v", err)
+		t.Fatalf("unmarshal upstream rsp: %v", err)
 	}
 	if listRsp.Error != nil {
-		t.Fatalf("list endpoints biz error: %+v", listRsp.Error)
+		t.Fatalf("list upstream biz error: %+v", listRsp.Error)
 	}
-	var found *endpointItem
-	for i := range listRsp.Endpoints {
-		if listRsp.Endpoints[i].Name == epName {
-			found = &listRsp.Endpoints[i]
+	var found *upstreamGroupItem
+	for i := range listRsp.Groups {
+		if listRsp.Groups[i].Endpoint.Name == epName {
+			found = &listRsp.Groups[i]
 			break
 		}
 	}
 	if found == nil {
 		t.Fatalf("created endpoint not found under username=%q", adminName)
 	}
-	if found.Username == "" || !strings.EqualFold(found.Username, adminName) && found.Username != adminName {
-		t.Logf("warn: endpoint.username = %q, expected %q (admin 用户名可能不同)", found.Username, adminName)
+	if found.Endpoint.User == nil || (found.Endpoint.User.Name != adminName && !strings.EqualFold(found.Endpoint.User.Name, adminName)) {
+		t.Logf("warn: endpoint.user.name = %v, expected %q (admin 用户名可能不同)", found.Endpoint.User, adminName)
 	}
-	endpointID := found.ID
+	endpointID := found.Endpoint.ID
 
 	// 3. 不存在的 username → 空列表而非错误
 	status, data = doJSON(t, http.MethodGet,
-		fmt.Sprintf("%s/api/v1/endpoint/list?query=%s&username=%s", baseURL, epName, "no-such-user-xyz-"+strconv.FormatInt(stamp, 10)), token, nil)
+		fmt.Sprintf("%s/api/web/v1/upstream/list?page=1&pageSize=20&query=%s&username=%s", baseURL, epName, "no-such-user-xyz-"+strconv.FormatInt(stamp, 10)), token, nil)
 	if status != http.StatusOK {
 		t.Fatalf("list with unknown username: status=%d body=%s", status, data)
 	}
-	var emptyList listEndpointsRsp
+	var emptyList listUpstreamRsp
 	if err := sonic.Unmarshal(data, &emptyList); err != nil {
-		t.Fatalf("unmarshal empty list rsp: %v", err)
+		t.Fatalf("unmarshal empty upstream rsp: %v", err)
 	}
 	if emptyList.Error != nil {
-		t.Fatalf("unknown username should return empty list, got error: %+v", emptyList.Error)
+		t.Fatalf("unknown username should return empty groups, got error: %+v", emptyList.Error)
 	}
-	if len(emptyList.Endpoints) != 0 {
-		t.Fatalf("unknown username should yield 0 endpoints, got %d", len(emptyList.Endpoints))
+	if len(emptyList.Groups) != 0 {
+		t.Fatalf("unknown username should yield 0 endpoint groups, got %d", len(emptyList.Groups))
 	}
 
 	// 4. 在该端点上创建 model
-	modelBody := fmt.Sprintf(`{"body":{"alias":%q,"upstreamModel":"upstream-%d","endpointID":%d}}`, alias, stamp, endpointID)
-	status, data = doJSON(t, http.MethodPost, baseURL+"/api/v1/model", token, []byte(modelBody))
+	modelBody := fmt.Sprintf(`{"alias":%q,"upstreamModel":"upstream-%d","endpointID":%d}`, alias, stamp, endpointID)
+	status, data = doJSON(t, http.MethodPost, baseURL+"/api/web/v1/model", token, []byte(modelBody))
 	if status != http.StatusOK {
 		t.Fatalf("create model: status=%d body=%s", status, data)
 	}
 
 	// 5. username 过滤可见该 model
 	status, data = doJSON(t, http.MethodGet,
-		fmt.Sprintf("%s/api/v1/model/list?query=%s&username=%s&pageSize=100", baseURL, alias, adminName), token, nil)
+		fmt.Sprintf("%s/api/web/v1/upstream/list?page=1&pageSize=100&query=%s&username=%s", baseURL, alias, adminName), token, nil)
 	if status != http.StatusOK {
-		t.Fatalf("list models by username: status=%d body=%s", status, data)
+		t.Fatalf("list models via upstream by username: status=%d body=%s", status, data)
 	}
-	var modelsRsp listModelsRsp
+	var modelsRsp listUpstreamRsp
 	if err := sonic.Unmarshal(data, &modelsRsp); err != nil {
-		t.Fatalf("unmarshal models rsp: %v", err)
+		t.Fatalf("unmarshal upstream rsp for model: %v", err)
 	}
 	var foundModel bool
-	for _, m := range modelsRsp.Models {
-		if m.Alias == alias {
-			foundModel = true
-			break
+	for _, g := range modelsRsp.Groups {
+		for _, m := range g.Models {
+			if m.Alias == alias {
+				foundModel = true
+				break
+			}
 		}
 	}
 	if !foundModel {

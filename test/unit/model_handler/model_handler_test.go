@@ -13,7 +13,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/application/model/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
 )
@@ -35,7 +34,6 @@ func newModelHandlerWithCapture(t *testing.T) (handler.ModelHandler, *captureCre
 		Create: c,
 		Update: &captureUpdateHandler{},
 		Delete: &captureDeleteHandler{},
-		List:   &captureListHandler{},
 	})
 	return h, c
 }
@@ -50,12 +48,6 @@ type captureDeleteHandler struct{}
 
 func (c *captureDeleteHandler) Handle(_ context.Context, cmd port.DeleteModelCommand) error {
 	return nil
-}
-
-type captureListHandler struct{}
-
-func (c *captureListHandler) Handle(_ context.Context, _ port.ListModelsQuery) ([]*port.ModelView, *model.PageInfo, error) {
-	return nil, nil, nil
 }
 
 // TestHandleCreateModel_PassesCapabilities

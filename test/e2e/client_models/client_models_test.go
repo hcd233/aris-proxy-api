@@ -48,11 +48,11 @@ func TestClientListModels_ReturnsTrimmedItems(t *testing.T) {
 	app := fiber.New()
 	api := humafiber.New(app, huma.DefaultConfig("client models test", "1.0"))
 	huma.Register(api, huma.Operation{
-		OperationID: "listClientModels", Method: http.MethodGet, Path: "/api/v1/client/list",
+		OperationID: "listClientModels", Method: http.MethodGet, Path: constant.ClientModelsListPath,
 		Tags: []string{constant.TagClient},
 	}, h.HandleListModels)
 
-	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/client/list", http.NoBody)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, constant.ClientModelsListPath, http.NoBody)
 	resp, err := app.Test(req)
 	if err != nil {
 		t.Fatal(err)
@@ -100,10 +100,10 @@ func TestClientListModels_HandlerError(t *testing.T) {
 	app := fiber.New()
 	api := humafiber.New(app, huma.DefaultConfig("t", "1"))
 	huma.Register(api, huma.Operation{
-		OperationID: "listClientModels", Method: http.MethodGet, Path: "/api/v1/client/list",
+		OperationID: "listClientModels", Method: http.MethodGet, Path: constant.ClientModelsListPath,
 	}, h.HandleListModels)
 
-	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/client/list", http.NoBody)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, constant.ClientModelsListPath, http.NoBody)
 	resp, err := app.Test(req)
 	if err != nil {
 		t.Fatal(err)
@@ -127,7 +127,7 @@ func TestClientModels_E2E(t *testing.T) {
 	}
 	ctx, cancel := context.WithTimeout(t.Context(), e2eHTTPTimeout)
 	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, strings.TrimRight(baseURL, "/")+"/api/v1/client/list", http.NoBody)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, strings.TrimRight(baseURL, "/")+constant.ClientModelsListPath, http.NoBody)
 	if err != nil {
 		t.Fatal(err)
 	}
