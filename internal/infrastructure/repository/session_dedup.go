@@ -239,3 +239,38 @@ func applyMergeInTx(tx *gorm.DB, sessionDAO *dao.SessionDAO, result MergeResult)
 
 	return mergedCount, nil
 }
+
+// DeduplicateSessionGroup 在单个短事务内锁定同组会话并执行前缀去重
+//
+// 由 session 插入路径在主事务提交后调用（store_pool）：组行 FOR UPDATE 串行化
+// 同组并发写入；空组竞态下并发首插各留一份，下次同组插入自愈。
+// ::jsonb 为 PG 专有语法，sqlite 不可用，行为由 e2e 覆盖。
+//
+//	@param db *gorm.DB
+//	@param firstMessageID uint 组键（新会话的首条消息 ID）
+//	@return int 软删的冗余会话数
+//	@return error
+//	@author centonhuang
+//	@update 2026-08-29 10:00:00
+func DeduplicateSessionGroup(db *gorm.DB, firstMessageID uint) (int, error) {
+	var deduped int
+	err := db.Transaction(func(tx *gorm.DB) error {
+		sessions, err := dao.GetSessionDAO().FindGroupForUpdate(tx, firstMessageID)
+		if err != nil {
+			return err
+		}
+
+		result := FindRedundantSessions(sessions)
+		if len(result.RedundantIDs) == 0 {
+			return nil
+		}
+		deduped = len(result.RedundantIDs)
+
+		_, err = applyMergeInTx(tx, dao.GetSessionDAO(), result)
+		return err
+	})
+	if err != nil {
+		return 0, err
+	}
+	return deduped, nil
+}
