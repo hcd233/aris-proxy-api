@@ -15,18 +15,7 @@ import type {
 } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   TooltipProvider,
   TooltipRoot,
@@ -41,21 +30,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-  PopoverHeader,
-  PopoverTitle,
-  PopoverDescription,
-} from "@/components/ui/popover";
 import { DeleteButton } from "@/components/delete-button";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { Switch } from "@/components/ui/switch";
@@ -69,191 +43,28 @@ import { useDeleteConfirm } from "@/hooks/use-delete-confirm";
 import { FilterBar } from "@/components/filter-bar/filter-bar";
 import { useFilterBar } from "@/components/filter-bar/use-filter-bar";
 import type { FacetDef } from "@/components/filter-bar/types";
-import {
-  Plus,
-  Pencil,
-  ArrowLeftRight,
-  ArrowUpFromLine,
-  Type,
-  Image as ImageIcon,
-  SlidersHorizontal,
-  Layers,
-} from "lucide-react";
+import { Plus, Pencil, ArrowLeftRight, ArrowUpFromLine, Layers } from "lucide-react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useT } from "@/lib/i18n";
 import { copyTextToClipboard } from "@/lib/clipboard";
+
+import {
+  OwnerCell,
+  CapabilityBadges,
+  formatTokens,
+  emptyEndpointForm,
+  emptyModelForm,
+} from "./shared";
+import type { EndpointForm, ModelForm } from "./shared";
+import { EndpointDialog } from "./endpoint-dialog";
+import { ModelDialog } from "./model-dialog";
 
 const DEFAULT_PAGE_SIZE = 10;
 const VALID_PAGE_SIZES = [10, 20, 50];
 // admin 代建下拉的用户列表一次性拉取上限
 const USER_FETCH_LIMIT = 500;
 
-// 常用 token 预设档位：点击即写入表单，替代上下箭头微调
-const CONTEXT_LENGTH_PRESETS = [256_000, 512_000, 1_000_000];
-const MAX_OUTPUT_PRESETS = [4_096, 8_192, 16_384, 32_768, 65_536, 131_072];
-
-interface EndpointForm {
-  name: string;
-  openaiBaseURL: string;
-  anthropicBaseURL: string;
-  apiKey: string;
-  supportOpenAIChatCompletion: boolean;
-  supportOpenAIResponse: boolean;
-  supportAnthropicMessage: boolean;
-  ownerUserID?: number;
-}
-
-interface ModelForm {
-  alias: string;
-  modelId: string;
-  upstreamModel: string;
-  contextLength: number;
-  maxOutputTokens: number;
-  supportText: boolean;
-  supportImage: boolean;
-}
-
-const emptyEndpointForm: EndpointForm = {
-  name: "",
-  openaiBaseURL: "",
-  anthropicBaseURL: "",
-  apiKey: "",
-  supportOpenAIChatCompletion: true,
-  supportOpenAIResponse: false,
-  supportAnthropicMessage: false,
-};
-
-const emptyModelForm: ModelForm = {
-  alias: "",
-  modelId: "",
-  upstreamModel: "",
-  contextLength: 256000,
-  maxOutputTokens: 65536,
-  supportText: true,
-  supportImage: false,
-};
-
-// 将 token 数格式化为紧凑可读形式：128000 -> 128K，1048576 -> 1M
-function formatTokens(n: number): string {
-  if (!n || n <= 0) return "—";
-  if (n >= 1_000_000) {
-    const v = n / 1_000_000;
-    return `${Number.isInteger(v) ? v : v.toFixed(1)}M`;
-  }
-  if (n >= 1_000) {
-    const v = n / 1_000;
-    return `${Number.isInteger(v) ? v : v.toFixed(1)}K`;
-  }
-  return String(n);
-}
-
-// 归属用户展示单元：头像 + 用户名；user 缺省显示占位 —（恒定短占位不加 tooltip）
-function OwnerCell({ user }: { user?: UpstreamEndpointItem["user"] }) {
-  if (!user) {
-    return <span className="text-muted-foreground">—</span>;
-  }
-  return (
-    <TooltipRoot>
-      <TooltipTrigger
-        render={
-          <span className="flex max-w-[14ch] items-center gap-1.5">
-            <Avatar size="sm">
-              {user.avatar && <AvatarImage src={user.avatar} alt={user.name} />}
-              <AvatarFallback className="text-[10px]">
-                {user.name.charAt(0).toUpperCase() || "?"}
-              </AvatarFallback>
-            </Avatar>
-            <span className="truncate text-xs text-muted-foreground">{user.name}</span>
-          </span>
-        }
-      />
-      <TooltipContent side="top" align="start" className="max-w-xs break-all">
-        {user.name}
-      </TooltipContent>
-    </TooltipRoot>
-  );
-}
-
-// 能力徽标：按模型输入模态渲染图标（text / image），未知模态回退为 Type 图标
-function CapabilityBadges({ capabilities }: { capabilities?: string[] }) {
-  const caps = capabilities && capabilities.length > 0 ? capabilities : ["text"];
-  return (
-    <div className="flex items-center gap-1.5">
-      {caps.map((cap) => (
-        <TooltipRoot key={cap}>
-          <TooltipTrigger
-            render={
-              <span className="inline-flex items-center gap-1 rounded-md bg-secondary px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-secondary-foreground">
-                {cap === "image" ? (
-                  <ImageIcon className="size-3 text-muted-foreground" />
-                ) : (
-                  <Type className="size-3 text-muted-foreground" />
-                )}
-              </span>
-            }
-          />
-          <TooltipContent side="top">{cap}</TooltipContent>
-        </TooltipRoot>
-      ))}
-    </div>
-  );
-}
-
-// 预设值 Popover：锚定在输入框旁，点选预设即写入表单并关闭；当前值高亮为主色，其余为 outline
-interface TokenPresetPopoverProps {
-  label: string;
-  description: string;
-  value: number;
-  presets: number[];
-  onSelect: (v: number) => void;
-}
-
-function TokenPresetPopover({
-  label,
-  description,
-  value,
-  presets,
-  onSelect,
-}: TokenPresetPopoverProps) {
-  const [open, setOpen] = useState(false);
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
-        render={<Button type="button" variant="outline" size="icon" aria-label={label} />}
-      >
-        <SlidersHorizontal className="size-4" />
-      </PopoverTrigger>
-      <PopoverContent align="end" sideOffset={8} className="w-64 p-2.5">
-        <PopoverHeader className="px-0.5 pb-1">
-          <PopoverTitle className="text-xs">{label}</PopoverTitle>
-          <PopoverDescription className="text-[11px]">{description}</PopoverDescription>
-        </PopoverHeader>
-        <div className="grid grid-cols-3 gap-1.5">
-          {presets.map((preset) => {
-            const active = preset === value;
-            return (
-              <Button
-                key={preset}
-                type="button"
-                size="sm"
-                variant={active ? "default" : "outline"}
-                aria-pressed={active}
-                className="font-mono tabular-nums"
-                onClick={() => {
-                  onSelect(preset);
-                  setOpen(false);
-                }}
-              >
-                {formatTokens(preset)}
-              </Button>
-            );
-          })}
-        </div>
-      </PopoverContent>
-    </Popover>
-  );
-}
 
 export default function UpstreamPage() {
   const t = useT();
@@ -1029,306 +840,29 @@ export default function UpstreamPage() {
             loadingLabel={t("common.deleting")}
           />
 
-          {/* 端点新建/编辑弹窗（admin 新建支持代建） */}
-          <Dialog open={endpointDialogOpen} onOpenChange={setEndpointDialogOpen}>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>
-                  {editingEndpointId ? t("endpoints.edit") : t("endpoints.create")}
-                </DialogTitle>
-                <DialogDescription className="min-h-[2.5rem]">
-                  {editingEndpointId
-                    ? t("endpoints.edit_description")
-                    : t("endpoints.create_description")}
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-3">
-                <div className="space-y-1">
-                  <Label htmlFor="ep-name">{t("endpoints.name")}</Label>
-                  <Input
-                    id="ep-name"
-                    placeholder={t("endpoints.name") + "..."}
-                    value={endpointForm.name}
-                    onChange={(e) => setEndpointForm((f) => ({ ...f, name: e.target.value }))}
-                  />
-                </div>
-                {!editingEndpointId && isAdmin() && (
-                  <div className="space-y-1">
-                    <Label htmlFor="ep-owner">{t("upstream.owner")}</Label>
-                    <Select
-                      value={endpointForm.ownerUserID ? String(endpointForm.ownerUserID) : ""}
-                      onValueChange={(value) =>
-                        setEndpointForm((f) => ({
-                          ...f,
-                          ownerUserID: value ? Number(value) : undefined,
-                        }))
-                      }
-                    >
-                      <SelectTrigger id="ep-owner">
-                        <SelectValue placeholder={t("upstream.owner_default")} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {userOptions.map((u) => (
-                          <SelectItem key={u.id} value={String(u.id)}>
-                            {u.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-[11px] text-muted-foreground">
-                      {t("upstream.owner_default")}
-                    </p>
-                  </div>
-                )}
-                <div className="space-y-1">
-                  <Label htmlFor="ep-openai-url">{t("endpoints.openai_base_url")}</Label>
-                  <Input
-                    id="ep-openai-url"
-                    placeholder="https://api.openai.com/v1"
-                    value={endpointForm.openaiBaseURL}
-                    onChange={(e) =>
-                      setEndpointForm((f) => ({ ...f, openaiBaseURL: e.target.value }))
-                    }
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="ep-anthropic-url">{t("endpoints.anthropic_base_url")}</Label>
-                  <Input
-                    id="ep-anthropic-url"
-                    placeholder="https://api.anthropic.com/v1"
-                    value={endpointForm.anthropicBaseURL}
-                    onChange={(e) =>
-                      setEndpointForm((f) => ({ ...f, anthropicBaseURL: e.target.value }))
-                    }
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="ep-apikey">{t("endpoints.api_key")}</Label>
-                  <Input
-                    id="ep-apikey"
-                    type="password"
-                    placeholder={
-                      editingEndpointId ? t("endpoints.keep_current") : t("endpoints.enter_api_key")
-                    }
-                    value={endpointForm.apiKey}
-                    onChange={(e) => setEndpointForm((f) => ({ ...f, apiKey: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>{t("endpoints.capabilities")}</Label>
-                  <div className="flex flex-col gap-2">
-                    <label className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={endpointForm.supportOpenAIChatCompletion}
-                        onChange={(e) =>
-                          setEndpointForm((f) => ({
-                            ...f,
-                            supportOpenAIChatCompletion: e.target.checked,
-                          }))
-                        }
-                        className="rounded"
-                      />
-                      {t("endpoints.openai_chat_label")}
-                    </label>
-                    <label className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={endpointForm.supportOpenAIResponse}
-                        onChange={(e) =>
-                          setEndpointForm((f) => ({
-                            ...f,
-                            supportOpenAIResponse: e.target.checked,
-                          }))
-                        }
-                        className="rounded"
-                      />
-                      {t("endpoints.openai_response_label")}
-                    </label>
-                    <label className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={endpointForm.supportAnthropicMessage}
-                        onChange={(e) =>
-                          setEndpointForm((f) => ({
-                            ...f,
-                            supportAnthropicMessage: e.target.checked,
-                          }))
-                        }
-                        className="rounded"
-                      />
-                      {t("endpoints.anthropic_messages_label")}
-                    </label>
-                  </div>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setEndpointDialogOpen(false)}>
-                  {t("common.cancel")}
-                </Button>
-                <Button onClick={handleSaveEndpoint} disabled={!endpointForm.name.trim() || saving}>
-                  {saving
-                    ? t("common.saving")
-                    : editingEndpointId
-                      ? t("endpoints.update")
-                      : t("common.create")}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <EndpointDialog
+            open={endpointDialogOpen}
+            onOpenChange={setEndpointDialogOpen}
+            editingId={editingEndpointId}
+            form={endpointForm}
+            setForm={setEndpointForm}
+            userOptions={userOptions}
+            isAdmin={isAdmin()}
+            saving={saving}
+            onSave={handleSaveEndpoint}
+          />
 
-          {/* 模型新建/编辑弹窗：无 endpoint 选择器（绑定不可移动） */}
-          <Dialog open={modelDialogOpen} onOpenChange={setModelDialogOpen}>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>{editingModel ? t("models.edit") : t("models.create")}</DialogTitle>
-                <DialogDescription className="min-h-[2.5rem]">
-                  {editingModel ? t("models.edit_desc") : t("upstream.create_model_desc")}
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-3">
-                <div className="space-y-1">
-                  <Label htmlFor="model-alias">{t("models.alias")}</Label>
-                  <Input
-                    id="model-alias"
-                    placeholder={t("models.alias_placeholder")}
-                    value={modelForm.alias}
-                    onChange={(e) => {
-                      const alias = e.target.value;
-                      setModelForm((f) => ({
-                        ...f,
-                        alias,
-                        // 未手动改过 modelId 时新建表单跟随 alias 同步输入
-                        ...(modelIdTouched ? {} : { modelId: alias }),
-                      }));
-                    }}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="model-id">{t("models.model_id")}</Label>
-                  <Input
-                    id="model-id"
-                    placeholder={t("models.model_id_placeholder")}
-                    value={modelForm.modelId}
-                    onChange={(e) => {
-                      setModelIdTouched(true);
-                      setModelForm((f) => ({ ...f, modelId: e.target.value }));
-                    }}
-                  />
-                  <p className="text-[11px] text-muted-foreground">{t("models.model_id_hint")}</p>
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="model-upstream">{t("models.upstream_model")}</Label>
-                  <Input
-                    id="model-upstream"
-                    placeholder={t("models.upstream_model_placeholder")}
-                    value={modelForm.upstreamModel}
-                    onChange={(e) => setModelForm((f) => ({ ...f, upstreamModel: e.target.value }))}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <Label htmlFor="model-context-length">{t("models.context_length")}</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="model-context-length"
-                        type="number"
-                        min={0}
-                        step={1000}
-                        inputMode="numeric"
-                        placeholder="256000"
-                        className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                        value={modelForm.contextLength || ""}
-                        onChange={(e) =>
-                          setModelForm((f) => ({
-                            ...f,
-                            contextLength: Number(e.target.value) || 0,
-                          }))
-                        }
-                      />
-                      <TokenPresetPopover
-                        label={t("models.context_length_presets")}
-                        description={t("models.preset_desc")}
-                        value={modelForm.contextLength}
-                        presets={CONTEXT_LENGTH_PRESETS}
-                        onSelect={(v) => setModelForm((f) => ({ ...f, contextLength: v }))}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="model-max-output">{t("models.max_output")}</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="model-max-output"
-                        type="number"
-                        min={0}
-                        step={1000}
-                        inputMode="numeric"
-                        placeholder="65536"
-                        className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                        value={modelForm.maxOutputTokens || ""}
-                        onChange={(e) =>
-                          setModelForm((f) => ({
-                            ...f,
-                            maxOutputTokens: Number(e.target.value) || 0,
-                          }))
-                        }
-                      />
-                      <TokenPresetPopover
-                        label={t("models.max_output_presets")}
-                        description={t("models.preset_desc")}
-                        value={modelForm.maxOutputTokens}
-                        presets={MAX_OUTPUT_PRESETS}
-                        onSelect={(v) => setModelForm((f) => ({ ...f, maxOutputTokens: v }))}
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <Label>{t("models.capabilities")}</Label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="flex items-center justify-between rounded-lg border border-input px-3 py-2">
-                      <span className="flex items-center gap-1.5 text-sm">
-                        <Type className="size-3.5 text-muted-foreground" />
-                        {t("models.capability_text")}
-                      </span>
-                      <Switch
-                        size="sm"
-                        checked={modelForm.supportText}
-                        onCheckedChange={(v) => setModelForm((f) => ({ ...f, supportText: v }))}
-                      />
-                    </div>
-                    <div className="flex items-center justify-between rounded-lg border border-input px-3 py-2">
-                      <span className="flex items-center gap-1.5 text-sm">
-                        <ImageIcon className="size-3.5 text-muted-foreground" />
-                        {t("models.capability_image")}
-                      </span>
-                      <Switch
-                        size="sm"
-                        checked={modelForm.supportImage}
-                        onCheckedChange={(v) => setModelForm((f) => ({ ...f, supportImage: v }))}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setModelDialogOpen(false)}>
-                  {t("common.cancel")}
-                </Button>
-                <Button
-                  onClick={handleSaveModel}
-                  disabled={!modelForm.alias.trim() || !modelForm.upstreamModel.trim() || saving}
-                >
-                  {saving
-                    ? t("common.saving")
-                    : editingModel
-                      ? t("common.update")
-                      : t("common.create")}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <ModelDialog
+            open={modelDialogOpen}
+            onOpenChange={setModelDialogOpen}
+            editing={editingModel !== null}
+            form={modelForm}
+            setForm={setModelForm}
+            onModelIdTouched={() => setModelIdTouched(true)}
+            modelIdTouched={modelIdTouched}
+            saving={saving}
+            onSave={handleSaveModel}
+          />
         </div>
       </TooltipProvider>
     </PermissionGuard>
