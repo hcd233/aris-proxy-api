@@ -33,13 +33,15 @@ const (
 	CronAuditFilterTypeSQLColumn   = "cron_name"
 	CronAuditFilterStatusSQLColumn = "status"
 
-	CronDescriptionSessionDeduplicate = "Clean up redundant sessions whose message IDs are contained by other sessions"
-	CronDescriptionSoftDeletePurge    = "Permanently delete soft-deleted records past retention period"
-	CronDescriptionThinkExtract       = "Extract and cache think content from sessions"
-	CronDescriptionTriggerHitSync     = "Sync trigger word hit counts to database"
+	CronDescriptionSessionTerminalCleanup = "Scan sessions created in the last 24h interrupted at an assistant tool_call and remove them"
+	CronDescriptionSoftDeletePurge        = "Permanently delete soft-deleted records past retention period"
+	CronDescriptionThinkExtract           = "Extract and cache think content from sessions"
+	CronDescriptionTriggerHitSync         = "Sync trigger word hit counts to database"
 
 	// CronLockDefaultTTL 默认 cron 任务分布式锁 TTL
 	CronLockDefaultTTL = 5 * time.Minute
+	// CronTerminalCleanupWindow 终态清理扫描窗口（最近 24 小时）
+	CronTerminalCleanupWindow = 24 * time.Hour
 	// CronLockDefaultRenewDivisor 当 RenewInterval<=0 时回退到 TTL/Divisor
 	CronLockDefaultRenewDivisor = 3
 	// CronLockMaxConsecutiveRenewFailures 续期连续失败最大次数

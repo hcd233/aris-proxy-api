@@ -167,9 +167,9 @@ var (
 	//	@update 2026-04-25 10:00:00
 	CLSLevel string
 
-	// CronSessionDeduplicateEnabled bool 是否启用 Session 去重定时任务
-	//	@update 2026-05-01 10:00:00
-	CronSessionDeduplicateEnabled bool
+	// CronSessionTerminalCleanupEnabled bool 是否启用 Session 终态清理定时任务
+	//	@update 2026-08-29 10:00:00
+	CronSessionTerminalCleanupEnabled bool
 
 	// CronSoftDeletePurgeEnabled bool 是否启用软删除清理定时任务
 	//	@update 2026-05-01 10:00:00
@@ -288,7 +288,7 @@ func InitEnvironment() {
 	config.SetDefault("postgres.sslmode", "disable")
 
 	config.SetDefault("trusted.proxies", "172.18.0.1")
-	config.SetDefault("cron.session.deduplicate.enabled", true)
+	config.SetDefault("cron.session.terminal_cleanup.enabled", true)
 	config.SetDefault("cron.soft.delete.purge.enabled", true)
 
 	config.SetDefault("upstream.retry.max_attempts", 5)
@@ -364,7 +364,7 @@ func InitEnvironment() {
 	CLSTopicID = config.GetString("cls.topic.id")
 	CLSLevel = config.GetString("cls.level")
 
-	CronSessionDeduplicateEnabled = config.GetBool("cron.session.deduplicate.enabled")
+	CronSessionTerminalCleanupEnabled = config.GetBool("cron.session.terminal_cleanup.enabled")
 	CronSoftDeletePurgeEnabled = config.GetBool("cron.soft.delete.purge.enabled")
 	CronThinkExtractEnabled = config.GetBool("cron.think.extract.enabled")
 

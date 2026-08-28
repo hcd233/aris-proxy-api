@@ -31,6 +31,15 @@ type SessionPurgeView struct {
 	ToolIDs    []uint
 }
 
+// SessionTerminalScanView 终态清理窗口扫描所需的会话数据视图
+//
+//	cron 包不允许依赖 dbmodel（lintconv architecture.database_model_dependency），
+//	窗口扫描类查询经此视图暴露。
+type SessionTerminalScanView struct {
+	ID         uint
+	MessageIDs []uint
+}
+
 // FindAllForPurge 查询会话数据用于软删除清理
 func (dao *SessionDAO) FindAllForPurge(db *gorm.DB, softDeleted bool) ([]SessionPurgeView, error) {
 	var models []*dbmodel.Session
@@ -105,14 +114,17 @@ func (dao *SessionDAO) CreatedSinceQuery(db *gorm.DB, since time.Time) *gorm.DB 
 //
 //	@param db *gorm.DB
 //	@param since time.Time 创建时间下界
-//	@return []*dbmodel.Session
+//	@return []SessionTerminalScanView
 //	@return error
 //	@author centonhuang
 //	@update 2026-08-29 10:00:00
-func (dao *SessionDAO) FindCreatedSince(db *gorm.DB, since time.Time) ([]*dbmodel.Session, error) {
+func (dao *SessionDAO) FindCreatedSince(db *gorm.DB, since time.Time) ([]SessionTerminalScanView, error) {
 	var models []*dbmodel.Session
 	if err := dao.CreatedSinceQuery(db, since).Find(&models).Error; err != nil {
 		return nil, err
 	}
-	return models, nil
+	views := lo.Map(models, func(m *dbmodel.Session, _ int) SessionTerminalScanView {
+		return SessionTerminalScanView{ID: m.ID, MessageIDs: m.MessageIDs}
+	})
+	return views, nil
 }
