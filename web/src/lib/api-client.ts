@@ -24,6 +24,9 @@ import type {
   CreateAPIKeyRsp,
   CreateAPIKeyReqBody,
   ListUpstreamRsp,
+  ListModelsPageRsp,
+  ModelListSortField,
+  ModelCapability,
   CreateEndpointReqBody,
   UpdateEndpointReqBody,
   CreateModelReqBody,
@@ -543,6 +546,35 @@ class ApiClient {
     if (query) params.set("query", query);
     if (username) params.set("username", username);
     return this.request<ListUpstreamRsp>(`/api/web/v1/upstream/list?${params}`);
+  }
+
+  /**
+   * 平铺模型列表（独立于分组视图的真分页）。
+   * sortField 必须在 ModelListSortField 白名单内；后端对非法值静默回退默认列。
+   */
+  async listModelsPage(params: {
+    page: number;
+    pageSize: number;
+    query?: string;
+    sortField?: ModelListSortField;
+    sort?: "asc" | "desc";
+    status?: "enabled" | "disabled";
+    endpointID?: number;
+    capability?: ModelCapability;
+    username?: string;
+  }): Promise<ListModelsPageRsp> {
+    const sp = new URLSearchParams({
+      page: String(params.page),
+      pageSize: String(params.pageSize),
+    });
+    if (params.query) sp.set("query", params.query);
+    if (params.sortField) sp.set("sortField", params.sortField);
+    if (params.sort) sp.set("sort", params.sort);
+    if (params.status) sp.set("status", params.status);
+    if (params.endpointID) sp.set("endpointID", String(params.endpointID));
+    if (params.capability) sp.set("capability", params.capability);
+    if (params.username) sp.set("username", params.username);
+    return this.request<ListModelsPageRsp>(`/api/web/v1/model/list?${sp}`);
   }
 
   // ─── Endpoints (admin) ─────────────────────────────────────────────────────

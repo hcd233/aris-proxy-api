@@ -373,20 +373,6 @@ export interface ListAPIKeysRsp extends CommonRsp {
 
 // ─── Endpoint ──────────────────────────────────────────────────────────────────
 
-export interface EndpointItem {
-  id: number;
-  username: string;
-  name: string;
-  openaiBaseURL: string;
-  anthropicBaseURL: string;
-  maskedAPIKey: string;
-  supportOpenAIChatCompletion: boolean;
-  supportOpenAIResponse: boolean;
-  supportAnthropicMessage: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export interface CreateEndpointReqBody {
   ownerUserID?: number;
   name: string;
@@ -406,11 +392,6 @@ export interface UpdateEndpointReqBody {
   supportOpenAIChatCompletion?: boolean;
   supportOpenAIResponse?: boolean;
   supportAnthropicMessage?: boolean;
-}
-
-export interface ListEndpointsRsp extends CommonRsp {
-  endpoints?: EndpointItem[];
-  pageInfo?: PageInfo;
 }
 
 // ─── Upstream (endpoint 分组视图) ─────────────────────────────────────────────
@@ -466,21 +447,6 @@ export interface ListUpstreamRsp extends CommonRsp {
 
 export type ModelCapability = "text" | "image";
 
-export interface ModelItem {
-  id: number;
-  username: string;
-  alias: string;
-  modelId: string;
-  upstreamModel: string;
-  enabled: boolean;
-  contextLength: number;
-  maxOutputTokens: number;
-  capabilities: ModelCapability[];
-  endpoint: EndpointItem;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export interface CreateModelReqBody {
   alias: string;
   modelId?: string;
@@ -502,10 +468,46 @@ export interface UpdateModelReqBody {
   capabilities?: ModelCapability[];
 }
 
-export interface ListModelsRsp extends CommonRsp {
-  models?: ModelItem[];
+// ─── Model flat list（平铺视图，GET /api/web/v1/model/list） ───────────────────
+
+/** 平铺列表中的所属端点（仅展示所需最小字段，不含 baseURL / apiKey） */
+export interface ModelListEndpoint {
+  id: number;
+  name: string;
+}
+
+export interface ModelListItem {
+  id: number;
+  user?: UpstreamUser;
+  endpoint?: ModelListEndpoint;
+  alias: string;
+  modelId: string;
+  upstreamModel: string;
+  enabled: boolean;
+  contextLength: number;
+  maxOutputTokens: number;
+  capabilities: ModelCapability[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ListModelsPageRsp extends CommonRsp {
+  items?: ModelListItem[];
   pageInfo?: PageInfo;
 }
+
+/**
+ * 后端排序白名单（constant.ModelListSortFields）。
+ * 前端不得传白名单外的值——后端对非法值静默回退默认列（不报错），
+ * 传错不会失败但排序结果会出乎意料。
+ */
+export type ModelListSortField =
+  | "alias"
+  | "context_length"
+  | "max_output_tokens"
+  | "created_at"
+  | "endpoint_id"
+  | "enabled";
 
 // ─── Audit ─────────────────────────────────────────────────────────────────────
 
