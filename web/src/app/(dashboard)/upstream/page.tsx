@@ -156,8 +156,10 @@ export default function UpstreamPage() {
     freeTextPlaceholder: t("upstream.search_placeholder"),
   });
 
+  // 工具条渲染用当前视图的实例；数据请求各自绑定自己的实例——
+  // 若分组请求跟随 activeFilterBar，平铺视图改筛选会连带重拉分组接口。
   const activeFilterBar = view === "grouped" ? groupedFilterBar : flatFilterBar;
-  const { queryParams } = activeFilterBar;
+  const groupedQueryParams = groupedFilterBar.queryParams;
 
   // 切换视图：带走共有维度（关键词 + username），各自特有维度留在原实例
   const handleViewChange = (next: string) => {
@@ -182,7 +184,12 @@ export default function UpstreamPage() {
       const safeSize = VALID_PAGE_SIZES.includes(pageSize) ? pageSize : DEFAULT_PAGE_SIZE;
       setLoading(true);
       try {
-        const rsp = await api.listUpstream(page, safeSize, query, queryParams.params.username);
+        const rsp = await api.listUpstream(
+        page,
+        safeSize,
+        query,
+        groupedQueryParams.params.username,
+      );
         setGroups(rsp.groups ?? []);
         if (rsp.modelTotal !== undefined) {
           setModelTotal(rsp.modelTotal);
@@ -200,17 +207,17 @@ export default function UpstreamPage() {
         setLoading(false);
       }
     },
-    [t, setPersistedPage, setPersistedPageSize, queryParams.params.username],
+    [t, setPersistedPage, setPersistedPageSize, groupedQueryParams.params.username],
   );
 
   /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- 关键词 token 变化回到第 1 页查询；挂载时以持久化关键词发起首次查询 */
   useEffect(() => {
-    fetchUpstream(1, pageInfo.pageSize, queryParams.freeText || undefined);
-  }, [queryParams]);
+    fetchUpstream(1, pageInfo.pageSize, groupedQueryParams.freeText || undefined);
+  }, [groupedQueryParams]);
   /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
   const refresh = (page: number, pageSize?: number) =>
-    fetchUpstream(page, pageSize ?? pageInfo.pageSize, queryParams.freeText || undefined);
+    fetchUpstream(page, pageSize ?? pageInfo.pageSize, groupedQueryParams.freeText || undefined);
 
   const groupByEndpointID = useMemo(() => {
     const map = new Map<number, UpstreamGroupItem>();
