@@ -15,26 +15,9 @@ import type {
 } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import {
-  TooltipProvider,
-  TooltipRoot,
-  TooltipTrigger,
-  TooltipContent,
-} from "@/components/ui/tooltip";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { DeleteButton } from "@/components/delete-button";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
-import { Switch } from "@/components/ui/switch";
 import { PaginationBar } from "@/components/pagination-bar";
-import { ProviderIcon } from "@/components/provider-icon";
 import TraceInstallPopover from "@/components/trace-install-popover";
 import { PageHeader } from "@/components/page-header";
 import { ListEmptyState } from "@/components/list-empty-state";
@@ -43,22 +26,17 @@ import { useDeleteConfirm } from "@/hooks/use-delete-confirm";
 import { FilterBar } from "@/components/filter-bar/filter-bar";
 import { useFilterBar } from "@/components/filter-bar/use-filter-bar";
 import type { FacetDef } from "@/components/filter-bar/types";
-import { Plus, Pencil, ArrowLeftRight, ArrowUpFromLine, Layers } from "lucide-react";
+import { Plus, Layers } from "lucide-react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useT } from "@/lib/i18n";
 import { copyTextToClipboard } from "@/lib/clipboard";
 
-import {
-  OwnerCell,
-  CapabilityBadges,
-  formatTokens,
-  emptyEndpointForm,
-  emptyModelForm,
-} from "./shared";
+import { emptyEndpointForm, emptyModelForm } from "./shared";
 import type { EndpointForm, ModelForm } from "./shared";
 import { EndpointDialog } from "./endpoint-dialog";
 import { ModelDialog } from "./model-dialog";
+import { GroupedView } from "./grouped-view";
 
 const DEFAULT_PAGE_SIZE = 10;
 const VALID_PAGE_SIZES = [10, 20, 50];
@@ -365,208 +343,6 @@ export default function UpstreamPage() {
 
   /* ─── 共享渲染片段 ──────────────────────────────────────────── */
 
-  // 组头行内容：归属人、端点名、协议 badges、计数、截断提示、操作区
-  const renderGroupHead = (
-    group: UpstreamGroupItem,
-    actions: { editEp: () => void; deleteEp: () => void; addModel: () => void },
-  ) => {
-    const ep = group.endpoint;
-    return (
-      <>
-        <OwnerCell user={ep.user} />
-        <span className="flex min-w-0 items-center gap-2">
-          <TooltipRoot>
-            <TooltipTrigger
-              render={<span className="max-w-[16ch] truncate font-medium">{ep.name}</span>}
-            />
-            <TooltipContent side="top" align="start" className="max-w-xs break-all">
-              {ep.name}
-            </TooltipContent>
-          </TooltipRoot>
-          <span className="flex shrink-0 items-center gap-1">
-            {ep.supportOpenAIChatCompletion && (
-              <Badge variant="secondary" className="gap-1 px-1 py-0 text-[10px] font-normal">
-                <ProviderIcon protocol="openai-chat-completion" size={12} />
-              </Badge>
-            )}
-            {ep.supportOpenAIResponse && (
-              <Badge variant="secondary" className="gap-1 px-1 py-0 text-[10px] font-normal">
-                <ProviderIcon protocol="openai-response" size={12} />
-              </Badge>
-            )}
-            {ep.supportAnthropicMessage && (
-              <Badge variant="secondary" className="gap-1 px-1 py-0 text-[10px] font-normal">
-                <ProviderIcon protocol="anthropic-message" size={12} />
-              </Badge>
-            )}
-          </span>
-          {group.truncated && (
-            <Badge variant="outline" className="shrink-0 text-[10px] font-normal">
-              {t("upstream.truncated")}
-            </Badge>
-          )}
-        </span>
-        <span className="ml-auto flex items-center gap-1.5">
-          <span className="font-mono text-xs tabular-nums text-muted-foreground">
-            {t("upstream.model_count").replace("{count}", String(group.modelCount))}
-          </span>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={actions.editEp}
-            aria-label={t("common.edit")}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <Pencil className="size-3.5" />
-          </Button>
-          <DeleteButton
-            label={t("common.delete")}
-            locked={isDemo()}
-            disabled={deleteEndpointConfirm.loading && deleteEndpointConfirm.target?.id === ep.id}
-            onClick={actions.deleteEp}
-          />
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-7 gap-1 px-2 text-xs"
-            onClick={actions.addModel}
-          >
-            <Plus className="size-3" />
-            {t("upstream.add_model")}
-          </Button>
-        </span>
-      </>
-    );
-  };
-
-  // 模型行单元格（桌面表）：alias/modelId/upstream/limits/caps/enabled/created/actions
-  const renderModelRow = (m: UpstreamModelItem) => (
-    <TableRow key={m.id}>
-      <TableCell>
-        <TooltipRoot>
-          <TooltipTrigger
-            render={
-              <span className="flex max-w-[16ch] items-center gap-1.5 font-medium">
-                <ProviderIcon protocol={m.alias} size={14} className="shrink-0" />
-                <span
-                  className="cursor-pointer truncate underline-offset-2 hover:underline"
-                  onClick={() => handleCopyAlias(m.alias)}
-                >
-                  {m.alias}
-                </span>
-              </span>
-            }
-          />
-          <TooltipContent side="top" align="start" className="max-w-xs break-all">
-            {t("models.click_to_copy")}
-          </TooltipContent>
-        </TooltipRoot>
-      </TableCell>
-      <TableCell className="font-mono text-xs">
-        {m.modelId ? (
-          <TooltipRoot>
-            <TooltipTrigger
-              render={<span className="block max-w-[12ch] truncate">{m.modelId}</span>}
-            />
-            <TooltipContent side="top" align="start" className="max-w-xs break-all">
-              {m.modelId}
-            </TooltipContent>
-          </TooltipRoot>
-        ) : (
-          // 恒定占位符不会截断，无需 truncate/tooltip
-          <span>—</span>
-        )}
-      </TableCell>
-      <TableCell className="font-mono text-xs">
-        <TooltipRoot>
-          <TooltipTrigger
-            render={<span className="block max-w-[20ch] truncate">{m.upstreamModel}</span>}
-          />
-          <TooltipContent side="top" align="start" className="max-w-xs break-all">
-            {m.upstreamModel}
-          </TooltipContent>
-        </TooltipRoot>
-      </TableCell>
-      <TableCell>
-        <div className="flex items-center gap-1.5">
-          <TooltipRoot>
-            <TooltipTrigger
-              render={
-                <span className="inline-flex items-center gap-1 rounded-md bg-secondary px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-secondary-foreground">
-                  <ArrowLeftRight className="size-3 text-muted-foreground" />
-                  {formatTokens(m.contextLength)}
-                </span>
-              }
-            />
-            <TooltipContent side="top" align="start">
-              {`${t("models.context_length")}: ${m.contextLength.toLocaleString()}`}
-            </TooltipContent>
-          </TooltipRoot>
-          <TooltipRoot>
-            <TooltipTrigger
-              render={
-                <span className="inline-flex items-center gap-1 rounded-md bg-secondary px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-secondary-foreground">
-                  <ArrowUpFromLine className="size-3 text-muted-foreground" />
-                  {formatTokens(m.maxOutputTokens)}
-                </span>
-              }
-            />
-            <TooltipContent side="top" align="start">
-              {`${t("models.max_output")}: ${m.maxOutputTokens.toLocaleString()}`}
-            </TooltipContent>
-          </TooltipRoot>
-          <CapabilityBadges capabilities={m.capabilities} />
-        </div>
-      </TableCell>
-      <TableCell>{null}</TableCell>
-      <TableCell>
-        <Switch
-          size="sm"
-          checked={m.enabled}
-          disabled={toggleEnabled.updatingKey !== null}
-          onCheckedChange={() => toggleEnabled.apply(m, { enabled: !m.enabled })}
-          aria-label={m.enabled ? t("models.enabled") : t("models.disabled")}
-        />
-      </TableCell>
-      <TableCell className="text-muted-foreground">
-        {new Date(m.createdAt).toLocaleDateString()}
-      </TableCell>
-      <TableCell className="text-right">
-        <div className="flex items-center justify-end gap-1">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={() => openEditModelFromRow(m)}
-            aria-label={t("common.edit")}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <Pencil className="size-3.5" />
-          </Button>
-          <DeleteButton
-            label={t("common.delete")}
-            locked={isDemo()}
-            disabled={deleteModelConfirm.loading && deleteModelConfirm.target?.model.id === m.id}
-            onClick={() => deleteModelConfirm.openDelete({ model: m })}
-          />
-        </div>
-      </TableCell>
-    </TableRow>
-  );
-
-  // 由模型 ID 反查所属组的 endpoint（当前页数据内）
-  const findModelOwner = (modelId: number): UpstreamEndpointItem | null => {
-    for (const g of groups) {
-      if (g.models.some((m) => m.id === modelId)) return g.endpoint;
-    }
-    return null;
-  };
-
-  // 行内编辑：反查所属组以注入 targetEndpointID
-  const openEditModelFromRow = (m: UpstreamModelItem) => {
-    const owner = findModelOwner(m.id);
-    if (!owner) return;
-    openEditModel(m, owner);
-  };
 
   return (
     <PermissionGuard module="upstream">
@@ -616,186 +392,28 @@ export default function UpstreamPage() {
                 />
               ) : (
                 <>
-                  {isMobile ? (
-                    <div className="space-y-4">
-                      {groups.map((group) => (
-                        <div
-                          key={group.endpoint.id}
-                          className="rounded-lg border border-border bg-card p-4"
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0 space-y-1.5">
-                              <OwnerCell user={group.endpoint.user} />
-                              <TooltipRoot>
-                                <TooltipTrigger
-                                  render={
-                                    <p className="line-clamp-1 text-sm font-medium">
-                                      {group.endpoint.name}
-                                    </p>
-                                  }
-                                />
-                                <TooltipContent
-                                  side="top"
-                                  align="start"
-                                  className="max-w-xs break-all"
-                                >
-                                  {group.endpoint.name}
-                                </TooltipContent>
-                              </TooltipRoot>
-                              <p className="text-xs text-muted-foreground">
-                                {t("upstream.model_count").replace(
-                                  "{count}",
-                                  String(group.modelCount),
-                                )}
-                              </p>
-                            </div>
-                            <div className="flex shrink-0 items-center gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon-sm"
-                                onClick={() => openEditEndpoint(group.endpoint)}
-                                className="text-muted-foreground hover:text-foreground"
-                              >
-                                <Pencil className="size-3.5" />
-                              </Button>
-                              <DeleteButton
-                                label={t("common.delete")}
-                                locked={isDemo()}
-                                disabled={
-                                  deleteEndpointConfirm.loading &&
-                                  deleteEndpointConfirm.target?.id === group.endpoint.id
-                                }
-                                onClick={() => deleteEndpointConfirm.openDelete(group.endpoint)}
-                              />
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-7 gap-1 px-2 text-xs"
-                                onClick={() => openCreateModel(group.endpoint)}
-                              >
-                                <Plus className="size-3" />
-                                {t("upstream.add_model")}
-                              </Button>
-                            </div>
-                          </div>
-                          <div className="mt-3 divide-y divide-border">
-                            {group.models.map((m) => (
-                              <div
-                                key={m.id}
-                                className="flex items-center justify-between gap-2 py-2"
-                              >
-                                <div className="min-w-0">
-                                  <p className="flex items-center gap-1.5 text-sm font-medium">
-                                    <ProviderIcon
-                                      protocol={m.alias}
-                                      size={14}
-                                      className="shrink-0"
-                                    />
-                                    <TooltipRoot>
-                                      <TooltipTrigger
-                                        render={
-                                          <span
-                                            className="cursor-pointer truncate underline-offset-2 hover:underline"
-                                            onClick={() => handleCopyAlias(m.alias)}
-                                          >
-                                            {m.alias}
-                                          </span>
-                                        }
-                                      />
-                                      <TooltipContent
-                                        side="top"
-                                        align="start"
-                                        className="max-w-xs break-all"
-                                      >
-                                        {m.alias}
-                                      </TooltipContent>
-                                    </TooltipRoot>
-                                  </p>
-                                  <TooltipRoot>
-                                    <TooltipTrigger
-                                      render={
-                                        <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">
-                                          {m.upstreamModel}
-                                        </p>
-                                      }
-                                    />
-                                    <TooltipContent
-                                      side="top"
-                                      align="start"
-                                      className="max-w-xs break-all"
-                                    >
-                                      {m.upstreamModel}
-                                    </TooltipContent>
-                                  </TooltipRoot>
-                                  <div className="mt-1 flex items-center gap-1.5">
-                                    <span className="inline-flex items-center gap-1 rounded-md bg-secondary px-1.5 py-0.5 font-mono text-[10px] tabular-nums text-secondary-foreground">
-                                      <ArrowLeftRight className="size-3 text-muted-foreground" />
-                                      {formatTokens(m.contextLength)}
-                                    </span>
-                                    <CapabilityBadges capabilities={m.capabilities} />
-                                  </div>
-                                </div>
-                                <div className="flex shrink-0 flex-col items-end gap-1.5">
-                                  <Switch
-                                    size="sm"
-                                    checked={m.enabled}
-                                    disabled={toggleEnabled.updatingKey !== null}
-                                    onCheckedChange={() =>
-                                      toggleEnabled.apply(m, { enabled: !m.enabled })
-                                    }
-                                    aria-label={
-                                      m.enabled ? t("models.enabled") : t("models.disabled")
-                                    }
-                                  />
-                                  <div className="flex items-center gap-1">
-                                    <Button
-                                      variant="ghost"
-                                      size="icon-sm"
-                                      onClick={() => openEditModel(m, group.endpoint)}
-                                      className="text-muted-foreground hover:text-foreground"
-                                    >
-                                      <Pencil className="size-3.5" />
-                                    </Button>
-                                    <DeleteButton
-                                      label={t("common.delete")}
-                                      locked={isDemo()}
-                                      disabled={
-                                        deleteModelConfirm.loading &&
-                                        deleteModelConfirm.target?.model.id === m.id
-                                      }
-                                      onClick={() => deleteModelConfirm.openDelete({ model: m })}
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead colSpan={9} className="bg-transparent" />
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {groups.map((group) => (
-                          <TableRowGroup
-                            key={group.endpoint.id}
-                            group={group}
-                            head={renderGroupHead(group, {
-                              editEp: () => openEditEndpoint(group.endpoint),
-                              deleteEp: () => deleteEndpointConfirm.openDelete(group.endpoint),
-                              addModel: () => openCreateModel(group.endpoint),
-                            })}
-                            renderModelRow={renderModelRow}
-                          />
-                        ))}
-                      </TableBody>
-                    </Table>
-                  )}
+                <GroupedView
+                  groups={groups}
+                  isMobile={isMobile}
+                  isDemo={isDemo()}
+                  togglePending={toggleEnabled.updatingKey !== null}
+                  onToggleEnabled={(m) => toggleEnabled.apply(m, { enabled: !m.enabled })}
+                  onEditEndpoint={openEditEndpoint}
+                  onDeleteEndpoint={(ep) => deleteEndpointConfirm.openDelete(ep)}
+                  onAddModel={openCreateModel}
+                  onEditModel={openEditModel}
+                  onDeleteModel={(m) => deleteModelConfirm.openDelete({ model: m })}
+                  onCopyAlias={handleCopyAlias}
+                  deletingEndpointID={
+                    deleteEndpointConfirm.loading ? deleteEndpointConfirm.target?.id : undefined
+                  }
+                  deletingModelID={
+                    deleteModelConfirm.loading
+                      ? deleteModelConfirm.target?.model.id
+                      : undefined
+                  }
+                />
+
 
                   <PaginationBar
                     pageInfo={pageInfo}
@@ -866,27 +484,5 @@ export default function UpstreamPage() {
         </div>
       </TooltipProvider>
     </PermissionGuard>
-  );
-}
-
-// TableRowGroup 渲染一个组头行（bg-muted）+ 该组全部模型行
-function TableRowGroup({
-  group,
-  head,
-  renderModelRow,
-}: {
-  group: UpstreamGroupItem;
-  head: React.ReactNode;
-  renderModelRow: (m: UpstreamModelItem) => React.ReactNode;
-}) {
-  return (
-    <>
-      <TableRow className="bg-muted/60 hover:bg-muted/60">
-        <TableCell colSpan={9}>
-          <div className="flex min-w-0 items-center gap-2.5 py-0.5">{head}</div>
-        </TableCell>
-      </TableRow>
-      {group.models.map((m) => renderModelRow(m))}
-    </>
   );
 }

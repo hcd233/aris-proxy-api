@@ -434,6 +434,8 @@ export interface UpstreamGroupItem {
   endpoint: UpstreamEndpointItem;
   models: UpstreamModelItem[];
   modelCount: number;
+  /** 截断前口径；未截断时等于 modelCount */
+  totalModelCount?: number;
   truncated?: boolean;
 }
 
