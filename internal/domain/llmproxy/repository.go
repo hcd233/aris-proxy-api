@@ -40,6 +40,23 @@ type ModelRepository interface {
 	// ListByEndpointIDs 批量拉取一组 endpoint 名下的 model 聚合（不做二次 scope 过滤，
 	// 调用方传入的 endpointIDs 必须已经过 scope 解析）。未命中的 endpointID 自然返回空集合。
 	ListByEndpointIDs(ctx context.Context, endpointIDs []uint) ([]*aggregate.Model, error)
+	// PaginateWithFilter 带筛选的分页查询（Web 平铺模型列表专用）。
+	//
+	// scopeUserID 采用 *uint 三态：nil（admin 视角）不过滤；非 nil 精确匹配 user_id。
+	// 禁止用零值兼作全量哨兵（==0 的 uint 在这里会退化成"查共享池"而非"查全部"）。
+	// filter 各字段为零值时该维度不过滤；param.SortField 必须落在 constant.ModelListSortFields
+	// 内，否则回退 ModelListDefaultSortField，不报错。
+	PaginateWithFilter(ctx context.Context, param model.CommonParam, filter ModelListFilter, scopeUserID *uint) ([]*aggregate.Model, *model.PageInfo, error)
+}
+
+// ModelListFilter 模型列表筛选条件（零值表示该维度不过滤）
+//
+// Status 取 constant.ModelStatusEnabled / ModelStatusDisabled，其余值视为不过滤；
+// Capability 取 enum.InputModality 成员的字符串形式，未知值视为不过滤。
+type ModelListFilter struct {
+	Status     string
+	EndpointID uint
+	Capability string
 }
 
 // ==================== CQRS 读模型 ====================

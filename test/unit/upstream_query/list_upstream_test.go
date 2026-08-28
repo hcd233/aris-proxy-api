@@ -68,6 +68,10 @@ type fakeModelRepo struct {
 	models []*llmagg.Model
 }
 
+func (f *fakeModelRepo) PaginateWithFilter(context.Context, model.CommonParam, llmproxy.ModelListFilter, *uint) ([]*llmagg.Model, *model.PageInfo, error) {
+	return nil, nil, nil
+}
+
 func (f *fakeModelRepo) ListByEndpointIDs(_ context.Context, endpointIDs []uint) ([]*llmagg.Model, error) {
 	set := make(map[uint]struct{}, len(endpointIDs))
 	for _, id := range endpointIDs {
