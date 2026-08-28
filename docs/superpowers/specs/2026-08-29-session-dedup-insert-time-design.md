@@ -98,10 +98,10 @@
 ## 7. 测试计划
 
 - `test/unit/session_dedup` 表驱动用例整体迁移到新包路径，fixtures 不动；删除 `terminal_msg_ids` 相关用例（`apply_terminal` 类），其余前缀/分叉/保护用例一一对应保留；
-- `ApplyMergeResult` 写回行为测试保持；
+- `ApplyMergeResult` 写回行为测试保持（sqlite）；
 - 新增 SQL 形态护栏测试（仿 `session_keyword_filter` 护栏风格）：`FindGroupForUpdate` 必须含 `::jsonb->>0`、`FOR UPDATE`、`deleted_at = 0`；`FindCreatedSince` 必须含 `created_at >=` 与列收窄；
-- store_pool 去重流程单测：keeper 为新 session 的合并路径、新 session 自身判冗余被软删路径、去重失败不影响已提交数据的路径；
-- 部署后跑 `test/e2e/` 会话相关用例验证（连续两轮请求后列表仅保留最新快照）。
+- store_pool 去重流程**不做 sqlite 单测**——组查询依赖 `::jsonb`（PG 专有），sqlite 不可执行（沿用 `FilterTerminalToolCallIDs` "SQL 由 e2e 覆盖"先例）；keeper 为新 session 的合并路径、新 session 自身判冗余被软删路径由 `FindRedundantSessions` 表驱动用例 + `ApplyMergeResult` sqlite 用例覆盖，端到端链路由 e2e 验证；
+- e2e：`test/e2e/session_dedup/`——同一对话连续两轮请求（随机标记 keyword 隔离），轮询断言列表仅剩 1 条、messageCount 等于轮次2消息数。
 
 ## 8. 明确不做（YAGNI）
 
