@@ -189,8 +189,8 @@ func NewEndpointDependencies(create endpointport.CreateEndpointHandler, update e
 	return handler.EndpointDependencies{Create: create, Update: update, Delete: deleteHandler}
 }
 
-func NewModelDependencies(create modelport.CreateModelHandler, update modelport.UpdateModelHandler, deleteHandler modelport.DeleteModelHandler) handler.ModelDependencies {
-	return handler.ModelDependencies{Create: create, Update: update, Delete: deleteHandler}
+func NewModelDependencies(create modelport.CreateModelHandler, update modelport.UpdateModelHandler, deleteHandler modelport.DeleteModelHandler, list modelport.ListModelHandler) handler.ModelDependencies {
+	return handler.ModelDependencies{Create: create, Update: update, Delete: deleteHandler, List: list}
 }
 
 func NewUpstreamDependencies(list upstreamport.ListUpstreamHandler) handler.UpstreamDependencies {

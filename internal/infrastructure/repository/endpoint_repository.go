@@ -10,6 +10,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
@@ -347,6 +348,70 @@ func (r *modelRepository) Paginate(ctx context.Context, param model.CommonParam,
 	)
 	if err != nil {
 		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "paginate models")
+	}
+	out, convErr := util.MapErr(records, func(m *dbmodel.Model, _ int) (*aggregate.Model, error) {
+		return toModelAggregate(m)
+	})
+	if convErr != nil {
+		return nil, nil, convErr
+	}
+	return out, pageInfo, nil
+}
+
+// PaginateWithFilter 带筛选的模型分页查询（Web 平铺模型列表专用）
+//
+//	@receiver r *modelRepository
+//	@param ctx context.Context
+//	@param param model.CommonParam
+//	@param filter llmproxy.ModelListFilter
+//	@param scopeUserID *uint nil 表示 admin 全量视角，非 nil 精确匹配 user_id
+//	@return []*aggregate.Model
+//	@return *model.PageInfo
+//	@return error
+//	@author centonhuang
+//	@update 2026-08-28 10:00:00
+//
+// capabilities 是 text 列 + serializer:json（非 PG 原生 jsonb），且 enum.InputModalities
+// 是封闭枚举，故 LIKE '%"image"%' 在 PG 与 sqlite 上语法与行为一致，无需分库写法。
+// 代价是不走索引；models 表千行量级可接受。
+//
+// 排序列走显式白名单：不能用 util.SafeSortField 代替（它只校验字符集，
+// api_key 之类敏感列同样放行），白名单外取值回退默认列而非报错。
+func (r *modelRepository) PaginateWithFilter(ctx context.Context, param model.CommonParam, filter llmproxy.ModelListFilter, scopeUserID *uint) ([]*aggregate.Model, *model.PageInfo, error) {
+	db := r.db.WithContext(ctx)
+	if scopeUserID != nil {
+		db = db.Where(constant.FieldUserID, *scopeUserID)
+	}
+	switch filter.Status {
+	case constant.ModelStatusEnabled:
+		db = db.Where(constant.WhereModelEnabledEquals, true)
+	case constant.ModelStatusDisabled:
+		db = db.Where(constant.WhereModelEnabledEquals, false)
+	}
+	if filter.EndpointID != 0 {
+		db = db.Where(constant.WhereEndpointIDEquals, filter.EndpointID)
+	}
+	// 未知能力值视为不过滤，避免前端拼错参数导致整页空白
+	if lo.Contains(enum.InputModalities, filter.Capability) {
+		db = db.Where(constant.WhereCapabilitiesLike, `%"`+filter.Capability+`"%`)
+	}
+	if !lo.Contains(constant.ModelListSortFields, param.SortField) {
+		param.SortField = constant.ModelListDefaultSortField
+		param.Sort = enum.SortDesc
+	}
+
+	records, pageInfo, err := r.dao.Paginate(
+		db,
+		&dbmodel.Model{},
+		constant.ModelRepoFieldsFull,
+		&dao.CommonParam{
+			PageParam:  dao.PageParam{Page: param.Page, PageSize: param.PageSize},
+			QueryParam: dao.QueryParam{Query: param.Query, QueryFields: []string{constant.FieldAlias, constant.FieldModelID, constant.FieldModelUpstreamModel}},
+			SortParam:  dao.SortParam{Sort: param.Sort, SortField: param.SortField},
+		},
+	)
+	if err != nil {
+		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "paginate models with filter")
 	}
 	out, convErr := util.MapErr(records, func(m *dbmodel.Model, _ int) (*aggregate.Model, error) {
 		return toModelAggregate(m)

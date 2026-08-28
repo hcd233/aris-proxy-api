@@ -85,6 +85,9 @@ func (r *recordingModelRepo) List(context.Context) ([]*aggregate.Model, error) {
 func (r *recordingModelRepo) Paginate(context.Context, model.CommonParam, uint) ([]*aggregate.Model, *model.PageInfo, error) {
 	return nil, nil, nil
 }
+func (r *recordingModelRepo) PaginateWithFilter(context.Context, model.CommonParam, llmproxy.ModelListFilter, *uint) ([]*aggregate.Model, *model.PageInfo, error) {
+	return nil, nil, nil
+}
 
 func (r *scopedEndpointRepo) FindIDsByScope(context.Context, uint) ([]uint, error) {
 	return nil, nil

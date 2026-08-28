@@ -16,6 +16,23 @@ func initModelRouter(modelGroup huma.API, modelHandler handler.ModelHandler, cac
 		cache, "modelManage", constant.CtxKeyUserID, constant.PeriodManageAPIKey, constant.LimitManageAPIKey,
 	))
 
+	// OperationID 不能叫 listModels：该 ID 已被 OpenAI 兼容路由 /models 占用
+	// （huma 对重复 OperationID 直接 panic）。沿用 anthropicListModels 的前缀式命名。
+	huma.Register(modelGroup, huma.Operation{
+		OperationID: "listWebModels",
+		Method:      http.MethodGet,
+		Path:        "/list",
+		Summary:     "ListWebModels",
+		Description: "List models in a flat paginated view",
+		Tags:        []string{constant.TagModel},
+		Security: []map[string][]string{
+			{constant.SecuritySchemeJWT: {}},
+		},
+		Middlewares: huma.Middlewares{
+			middleware.LimitUserPermissionMiddleware("listWebModels", enum.PermissionUser),
+		},
+	}, modelHandler.HandleListModels)
+
 	huma.Register(modelGroup, huma.Operation{
 		OperationID: "createModel",
 		Method:      http.MethodPost,

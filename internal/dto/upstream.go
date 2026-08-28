@@ -35,10 +35,11 @@ type ListUpstreamRsp struct {
 //	@author centonhuang
 //	@update 2026-08-27 10:00:00
 type UpstreamGroupItem struct {
-	Endpoint   *UpstreamEndpointItem `json:"endpoint" required:"true" doc:"端点详情"`
-	Models     []*UpstreamModelItem  `json:"models" doc:"端点下模型（组内不分页，上限 200）"`
-	ModelCount int                   `json:"modelCount" doc:"模型数量(截断后口径)"`
-	Truncated  bool                  `json:"truncated,omitempty" doc:"组内模型是否被截断"`
+	Endpoint        *UpstreamEndpointItem `json:"endpoint" required:"true" doc:"端点详情"`
+	Models          []*UpstreamModelItem  `json:"models" doc:"端点下模型（组内不分页，上限 200）"`
+	ModelCount      int                   `json:"modelCount" doc:"模型数量(截断后口径)"`
+	TotalModelCount int                   `json:"totalModelCount" doc:"模型总数(截断前口径；未截断时等于 modelCount)"`
+	Truncated       bool                  `json:"truncated,omitempty" doc:"组内模型是否被截断"`
 }
 
 // UpstreamUserItem Upstream 归属用户信息（列表嵌套展示）

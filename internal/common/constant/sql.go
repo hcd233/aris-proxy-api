@@ -85,6 +85,24 @@ const (
 	WhereFieldCheckSum = "check_sum"
 )
 
+const (
+	// ModelStatusEnabled 模型列表 status 筛选取值：仅启用
+	ModelStatusEnabled = "enabled"
+	// ModelStatusDisabled 模型列表 status 筛选取值：仅停用
+	ModelStatusDisabled = "disabled"
+	// ModelListDefaultSortField 模型列表默认排序列（配合 enum.SortDesc）
+	ModelListDefaultSortField = "created_at"
+)
+
+const (
+	// WhereModelEnabledEquals 按启用状态筛选
+	WhereModelEnabledEquals = "enabled = ?"
+	// WhereEndpointIDEquals 按所属端点筛选
+	WhereEndpointIDEquals = "endpoint_id = ?"
+	// WhereCapabilitiesLike 按输入模态筛选（capabilities 是 text 列 + serializer:json）
+	WhereCapabilitiesLike = "capabilities LIKE ?"
+)
+
 var (
 	MessageRepoFieldsChecksum = []string{FieldID, FieldCheckSum}
 	MessageRepoFieldsFull     = []string{FieldID, FieldModelID, FieldMessage, FieldCheckSum, FieldCreatedAt}
@@ -130,6 +148,12 @@ var (
 	AuditFilterFieldModel  = "model"
 	AuditFilterFieldStatus = "status"
 	AuditFilterFieldUA     = "ua"
+
+	// ModelListSortFields 模型列表允许的排序列白名单。
+	//
+	// 不可用 util.SafeSortField 代替：它只校验字符集，api_key 之类敏感列同样放行。
+	// 白名单外的取值回退 ModelListDefaultSortField，不报错（避免前端拼错导致整页 500）。
+	ModelListSortFields = []string{"alias", "context_length", "max_output_tokens", "created_at", "endpoint_id", "enabled"}
 
 	TriggerRepoFieldsFull = []string{FieldID, FieldWord, FieldHitCount, FieldAction, FieldCreatedAt, FieldUpdatedAt}
 

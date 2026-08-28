@@ -48,10 +48,11 @@ type UpstreamModelView struct {
 
 // UpstreamGroupView 单个 endpoint 及其名下全部模型的分组视图
 type UpstreamGroupView struct {
-	Endpoint   *UpstreamEndpointView
-	Models     []*UpstreamModelView
-	ModelCount int  // 展示计数（截断后口径）
-	Truncated  bool // 组内模型是否超过单组上限被截断
+	Endpoint        *UpstreamEndpointView
+	Models          []*UpstreamModelView
+	ModelCount      int  // 展示计数（截断后口径）
+	TotalModelCount int  // 截断前口径；未截断时等于 ModelCount
+	Truncated       bool // 组内模型是否超过单组上限被截断
 }
 
 // ListUpstreamQuery 列出 upstream 分组的查询命令
