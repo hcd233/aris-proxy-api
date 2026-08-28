@@ -1,6 +1,6 @@
 # Upstream 列表重设计 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 重做 `/upstream` 页列表展示为「带列名的缩进树表」，并新增后端模型分页接口以支撑可切换的「平铺」全部模型视图。
 
@@ -81,7 +81,7 @@
   - `llmproxy.ModelListFilter{ Status string; EndpointID uint; Capability string }`
   - `llmproxy.ModelRepository.PaginateWithFilter(ctx context.Context, param model.CommonParam, filter ModelListFilter, scopeUserID *uint) ([]*aggregate.Model, *model.PageInfo, error)`
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 创建 `test/unit/model_list_repo/paginate_filter_test.go`：
 
@@ -246,7 +246,7 @@ func TestPaginateWithFilter_SortFieldWhitelist(t *testing.T) {
 
 补 import：文件顶部需加 `"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"`（`aliasesOf` 用到）。
 
-- [ ] **Step 2: 运行测试确认失败**
+- [x] **Step 2: 运行测试确认失败**
 
 ```bash
 go test ./test/unit/model_list_repo/ -run TestPaginateWithFilter -v
@@ -254,7 +254,7 @@ go test ./test/unit/model_list_repo/ -run TestPaginateWithFilter -v
 
 Expected: 编译失败 —— `repo.PaginateWithFilter undefined` 与 `llmproxy.ModelListFilter undefined`。
 
-- [ ] **Step 3: 加常量**
+- [x] **Step 3: 加常量**
 
 在 `internal/common/constant/sql.go` 的 upstream 常量附近追加：
 
@@ -275,7 +275,7 @@ var ModelListSortFields = []string{
 }
 ```
 
-- [ ] **Step 4: 加领域接口**
+- [x] **Step 4: 加领域接口**
 
 `internal/domain/llmproxy/repository.go` 中 `ModelRepository` 接口内追加（紧随 `Paginate` 之后）：
 
@@ -301,7 +301,7 @@ type ModelListFilter struct {
 }
 ```
 
-- [ ] **Step 5: 实现仓储方法**
+- [x] **Step 5: 实现仓储方法**
 
 在 `internal/infrastructure/repository/endpoint_repository.go` 的 `Paginate` 方法之后插入：
 
@@ -372,7 +372,7 @@ WhereCapabilitiesLike   = "capabilities LIKE ?"
 
 同时确认 `internal/infrastructure/repository/endpoint_repository.go` 已 import `enum`（`github.com/hcd233/aris-proxy-api/internal/common/enum`），无则补。
 
-- [ ] **Step 6: 运行测试确认通过**
+- [x] **Step 6: 运行测试确认通过**
 
 ```bash
 go test ./test/unit/model_list_repo/ -v
@@ -380,7 +380,7 @@ go test ./test/unit/model_list_repo/ -v
 
 Expected: 3 个测试全 PASS。
 
-- [ ] **Step 7: 验证测试能捕获缺陷**
+- [x] **Step 7: 验证测试能捕获缺陷**
 
 临时把 Step 5 的白名单守卫改为 `if false {`，重跑：
 
@@ -392,7 +392,7 @@ Expected: FAIL（sqlite 报 `no such column: api_key`）。确认后**改回**�
 
 同理把 capability 守卫的 `lo.Contains(...)` 改成 `filter.Capability != ""`，重跑 `TestPaginateWithFilter_StatusAndCapability`，Expected: FAIL（unknown capability 返回 0 条而非 2 条）。确认后改回。
 
-- [ ] **Step 8: 提交**
+- [x] **Step 8: 提交**
 
 ```bash
 git add internal/common/constant/sql.go internal/domain/llmproxy/repository.go \
@@ -420,7 +420,7 @@ git commit -m "feat(model): add PaginateWithFilter with sort whitelist and capab
   - `port.ListModelHandler.Handle(ctx, q) ([]*ListModelView, *model.PageInfo, error)`
   - `query.NewListModelHandler(modelRepo llmproxy.ModelRepository, endpointRepo llmproxy.EndpointRepository, userRepo identity.UserRepository) port.ListModelHandler`
 
-- [ ] **Step 1: 写 port 契约**
+- [x] **Step 1: 写 port 契约**
 
 创建 `internal/application/model/port/list_model.go`：
 
@@ -484,7 +484,7 @@ type ListModelHandler interface {
 }
 ```
 
-- [ ] **Step 2: 写失败测试**
+- [x] **Step 2: 写失败测试**
 
 创建 `test/unit/model_list_query/list_model_test.go`：
 
@@ -723,7 +723,7 @@ func TestListModel_FilterPassthrough(t *testing.T) {
 
 注：`llmagg.CreateModel` / `llmagg.CreateEndpoint` 的实际签名以 `internal/domain/llmproxy/aggregate` 为准；若参数不同（如需 vo 包装或有 Restore 变体），按该包实际签名调整，测试语义不变。`useragg.RestoreUser` 的 9 参数顺序已在 `mustUser` 注释中固定，可直接照用。
 
-- [ ] **Step 3: 运行测试确认失败**
+- [x] **Step 3: 运行测试确认失败**
 
 ```bash
 go test ./test/unit/model_list_query/ -v
@@ -731,7 +731,7 @@ go test ./test/unit/model_list_query/ -v
 
 Expected: 编译失败 —— `query.NewListModelHandler undefined`。
 
-- [ ] **Step 4: 实现 handler**
+- [x] **Step 4: 实现 handler**
 
 创建 `internal/application/model/query/list_model.go`：
 
@@ -855,7 +855,7 @@ func toListModelView(m *llmagg.Model, epsByID map[uint]*llmagg.Endpoint, usersBy
 }
 ```
 
-- [ ] **Step 5: 运行测试确认通过**
+- [x] **Step 5: 运行测试确认通过**
 
 ```bash
 go test ./test/unit/model_list_query/ -v
@@ -863,7 +863,7 @@ go test ./test/unit/model_list_query/ -v
 
 Expected: 4 个测试全 PASS。
 
-- [ ] **Step 6: 验证测试能捕获缺陷**
+- [x] **Step 6: 验证测试能捕获缺陷**
 
 临时把 Step 4 中「用户不存在」分支的 `return` 删掉（让流程带着 `scope=nil` 继续），重跑：
 
@@ -873,7 +873,7 @@ go test ./test/unit/model_list_query/ -run TestListModel_UsernameResolvesToScope
 
 Expected: FAIL（scope 为 nil 意味着 admin 全量，越权）。确认后改回。
 
-- [ ] **Step 7: 提交**
+- [x] **Step 7: 提交**
 
 ```bash
 git add internal/application/model/port/list_model.go \
@@ -902,7 +902,7 @@ git commit -m "feat(model): add list model query handler with nested endpoint/us
   - `handler.ModelHandler.HandleListModels(ctx, *dto.ListModelsReq) (*dto.HTTPResponse[*dto.ListModelsRsp], error)`
   - 路由 `GET /api/web/v1/model/list`
 
-- [ ] **Step 1: 写 DTO**
+- [x] **Step 1: 写 DTO**
 
 在 `internal/dto/model.go` 末尾追加（`UpstreamUserItem` 已在 `dto/upstream.go` 定义，同包直接复用，勿重复定义）：
 
@@ -962,7 +962,7 @@ type ModelListItem struct {
 
 确认 `internal/dto/model.go` 已 import `time`、`enum`、`model`，缺则补。
 
-- [ ] **Step 2: 写 handler**
+- [x] **Step 2: 写 handler**
 
 `internal/handler/model.go` 改动三处。
 
@@ -1059,7 +1059,7 @@ func toModelListItem(v *port.ListModelView) *dto.ModelListItem {
 
 补 import：`"github.com/samber/lo"`、`"github.com/hcd233/aris-proxy-api/internal/common/enum"`。
 
-- [ ] **Step 3: 注册路由**
+- [x] **Step 3: 注册路由**
 
 `internal/router/model.go` 的 `initModelRouter` 内，在 `createModel` 注册之前插入：
 
@@ -1080,11 +1080,11 @@ func toModelListItem(v *port.ListModelView) *dto.ModelListItem {
 	}, modelHandler.HandleListModels)
 ```
 
-- [ ] **Step 4: DI 装配**
+- [x] **Step 4: DI 装配**
 
 在 `internal/bootstrap/modules/application.go` 中，找到已有的 model command handler 装配（`NewCreateModelHandler` 等）附近，加入 `modelquery.NewListModelHandler` 的 Provide，并把它接到 `handler.ModelDependencies.List`。参照同文件内 `NewListUpstreamHandler` 的写法（同样需要 endpointRepo + modelRepo + userRepo 三个依赖）。若该文件用 wrapper 函数把仓储转小接口，沿用同一风格。
 
-- [ ] **Step 5: 编译 + 全量测试 + lint**
+- [x] **Step 5: 编译 + 全量测试 + lint**
 
 ```bash
 go build ./... && go test ./test/unit/... && go run ./cmd/server lint conv ./... && go run ./cmd/server lint static ./...
@@ -1092,7 +1092,7 @@ go build ./... && go test ./test/unit/... && go run ./cmd/server lint conv ./...
 
 Expected: 全部通过。若 conv lint 报 `style.local_const`，把常量移到 `internal/common/constant`。
 
-- [ ] **Step 6: 写 e2e 测试**
+- [x] **Step 6: 写 e2e 测试**
 
 创建 `test/e2e/model_list/model_list_test.go`。**必须走生产入口 `router.RegisterAPIRouter`**，不得自己拼 group 前缀（#165 教训：自拼路径的测试注入缺陷后仍 PASS）。
 
@@ -1106,7 +1106,7 @@ Expected: 全部通过。若 conv lint 报 `style.local_const`，把常量移到
 6. `sortField=api_key` → 200（回退默认排序，不 500）
 7. 每行 `endpoint.name` 非空（当端点存在时），且 `endpoint` 不含 baseURL/apiKey 字段（最小暴露面）
 
-- [ ] **Step 7: 运行 e2e**
+- [x] **Step 7: 运行 e2e**
 
 ```bash
 go test ./test/e2e/model_list/ -v
@@ -1114,7 +1114,7 @@ go test ./test/e2e/model_list/ -v
 
 Expected: 全 PASS。
 
-- [ ] **Step 8: 提交**
+- [x] **Step 8: 提交**
 
 ```bash
 git add internal/dto/model.go internal/handler/model.go internal/router/model.go \
@@ -1139,7 +1139,7 @@ git commit -m "feat(api): add GET /api/web/v1/model/list flat model list endpoin
   - `ModelListSortField = "alias" | "context_length" | "max_output_tokens" | "created_at" | "endpoint_id" | "enabled"`
   - `api.listModelsPage(params: ListModelsPageParams): Promise<ListModelsPageRsp>`
 
-- [ ] **Step 1: 删死类型、加新类型**
+- [x] **Step 1: 删死类型、加新类型**
 
 在 `web/src/lib/types.ts` 中**删除** `EndpointItem`、`ListEndpointsRsp`、`ModelItem`、`ListModelsRsp` 四个接口（经全量检索，除注释外零引用；其扁平 `username` 口径与本页嵌套 `user` 惯例冲突，不得复用）。
 
@@ -1186,7 +1186,7 @@ export type ModelListSortField =
 
 注意 `ModelCapability` 定义在被删除的 `ModelItem` 附近，**必须保留**该 type alias。
 
-- [ ] **Step 2: 加 API 方法**
+- [x] **Step 2: 加 API 方法**
 
 在 `web/src/lib/api-client.ts` 的 `listUpstream` 之后追加：
 
@@ -1219,7 +1219,7 @@ export type ModelListSortField =
 
 在文件顶部的 type import 块中加入 `ListModelsPageRsp`、`ModelListSortField`、`ModelCapability`，并移除已删类型的 import（`ListEndpointsRsp` / `ListModelsRsp` 等，若存在）。
 
-- [ ] **Step 3: 类型检查**
+- [x] **Step 3: 类型检查**
 
 ```bash
 cd web && npx tsc --noEmit
@@ -1227,7 +1227,7 @@ cd web && npx tsc --noEmit
 
 Expected: 无错误。若报某处仍引用已删类型，说明该处是活引用——改为新类型或恢复该类型（勿盲目删）。
 
-- [ ] **Step 4: 提交**
+- [x] **Step 4: 提交**
 
 ```bash
 git add web/src/lib/types.ts web/src/lib/api-client.ts
@@ -1254,7 +1254,7 @@ git commit -m "feat(web): add model flat list types and api client, drop dead le
   - `ModelDialog(props: ModelDialogProps)`
   - `EndpointForm` / `ModelForm` interfaces、`emptyEndpointForm` / `emptyModelForm`
 
-- [ ] **Step 1: 建 shared.tsx**
+- [x] **Step 1: 建 shared.tsx**
 
 把 `page.tsx` 现有的 `formatTokens`（138-149 行）、`OwnerCell`（152-176）、`CapabilityBadges`（179-201）原样移入新文件并 `export`。`OwnerCell` 的 props 类型从 `UpstreamEndpointItem["user"]` 改为直接用 `UpstreamUser`（语义相同，解耦）。
 
@@ -1305,7 +1305,7 @@ export function SpecBadges({
 
 同时把 `EndpointForm` / `ModelForm` 接口与 `emptyEndpointForm` / `emptyModelForm` 常量移入 shared.tsx 并导出。
 
-- [ ] **Step 2: 建 endpoint-dialog.tsx**
+- [x] **Step 2: 建 endpoint-dialog.tsx**
 
 把 `page.tsx` 1033-1178 行的端点 Dialog 整块移入，包成组件：
 
@@ -1325,7 +1325,7 @@ export interface EndpointDialogProps {
 
 JSX 完全照搬，仅把 `endpointForm` → `form`、`setEndpointForm` → `setForm`、`editingEndpointId` → `editingId`、`isAdmin()` → `isAdmin`、`setEndpointDialogOpen(false)` → `onOpenChange(false)`、`handleSaveEndpoint` → `onSave`。
 
-- [ ] **Step 3: 建 model-dialog.tsx**
+- [x] **Step 3: 建 model-dialog.tsx**
 
 把 `TokenPresetPopover`（212-256 行）与模型 Dialog（1181-1331 行）整块移入。`CONTEXT_LENGTH_PRESETS` / `MAX_OUTPUT_PRESETS` 两个常量一并移入。
 
@@ -1343,11 +1343,11 @@ export interface ModelDialogProps {
 }
 ```
 
-- [ ] **Step 4: page.tsx 改为消费这些组件**
+- [x] **Step 4: page.tsx 改为消费这些组件**
 
 删除已移出的定义，改为 `import`；渲染处换成 `<EndpointDialog ... />` 与 `<ModelDialog ... />`。此步**不改任何行为**。
 
-- [ ] **Step 5: 验证零行为变更**
+- [x] **Step 5: 验证零行为变更**
 
 ```bash
 cd web && npm run lint && npx tsc --noEmit && npm run build
@@ -1355,7 +1355,7 @@ cd web && npm run lint && npx tsc --noEmit && npm run build
 
 Expected: 全绿。人工确认 `page.tsx` 行数明显下降（约 -450 行）。
 
-- [ ] **Step 6: 提交**
+- [x] **Step 6: 提交**
 
 ```bash
 git add "web/src/app/(dashboard)/upstream/"
@@ -1378,7 +1378,7 @@ git commit -m "refactor(web): extract upstream shared cells and dialogs into mod
     `GroupedViewProps = { groups: UpstreamGroupItem[]; isMobile: boolean; isDemo: boolean; togglePending: boolean; onToggleEnabled: (m: UpstreamModelItem) => void; onEditEndpoint: (ep: UpstreamEndpointItem) => void; onDeleteEndpoint: (ep: UpstreamEndpointItem) => void; onAddModel: (ep: UpstreamEndpointItem) => void; onEditModel: (m: UpstreamModelItem, ep: UpstreamEndpointItem) => void; onDeleteModel: (m: UpstreamModelItem) => void; onCopyAlias: (alias: string) => void; deletingEndpointID?: number; deletingModelID?: number }`
   - `EndpointDetailPopover({ endpoint }: { endpoint: UpstreamEndpointItem })`
 
-- [ ] **Step 1: 加 i18n 文案**
+- [x] **Step 1: 加 i18n 文案**
 
 三个 locale 文件各加（以 zh 为例，en/ja 同键位对应翻译）：
 
@@ -1409,7 +1409,7 @@ git commit -m "refactor(web): extract upstream shared cells and dialogs into mod
 "upstream.no_models_in_group": "该端点下暂无模型"
 ```
 
-- [ ] **Step 2: 写 grouped-view.tsx**
+- [x] **Step 2: 写 grouped-view.tsx**
 
 结构要点（逐条对应 spec 缺陷修复）：
 
@@ -1425,7 +1425,7 @@ git commit -m "refactor(web): extract upstream shared cells and dialogs into mod
 
 所有截断文案（端点名、alias、upstreamModel、modelId）**必须**包 `TooltipRoot`/`TooltipTrigger`(render prop)/`TooltipContent className="max-w-xs break-all"`，否则 `truncate-requires-tooltip` lint 报错。`TableCell` 上不得直接加 `truncate`，须移到内部 `span`。
 
-- [ ] **Step 3: page.tsx 接入**
+- [x] **Step 3: page.tsx 接入**
 
 删除 `renderGroupHead` / `renderModelRow` / `TableRowGroup` / 移动端内联 JSX，改为：
 
@@ -1449,7 +1449,7 @@ git commit -m "refactor(web): extract upstream shared cells and dialogs into mod
 
 `findModelOwner` / `openEditModelFromRow` 可删除 —— `GroupedView` 渲染时天然知道所属 group，直接传 `(m, group.endpoint)`。
 
-- [ ] **Step 4: 验证**
+- [x] **Step 4: 验证**
 
 ```bash
 cd web && npm run lint && npx tsc --noEmit && npm run build
@@ -1457,7 +1457,7 @@ cd web && npm run lint && npx tsc --noEmit && npm run build
 
 Expected: 全绿，尤其无 `truncate-requires-tooltip` 违规。
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add "web/src/app/(dashboard)/upstream/" web/src/locales/
@@ -1483,7 +1483,7 @@ git commit -m "feat(web): redesign upstream grouped view as indented tree table"
   - `useModelList(opts)` → `{ items, pageInfo, loading, sortField, sort, toggleSort, refresh }`
   - `FlatView(props: FlatViewProps)`
 
-- [ ] **Step 1: 写纯函数的失败测试**
+- [x] **Step 1: 写纯函数的失败测试**
 
 创建 `web/src/app/(dashboard)/upstream/__tests__/use-model-list.test.ts`：
 
@@ -1550,7 +1550,7 @@ describe("nextSortState", () => {
 });
 ```
 
-- [ ] **Step 2: 运行确认失败**
+- [x] **Step 2: 运行确认失败**
 
 ```bash
 cd web && npm test
@@ -1558,7 +1558,7 @@ cd web && npm test
 
 Expected: FAIL —— 找不到 `../use-model-list`。
 
-- [ ] **Step 3: 实现 use-model-list.ts**
+- [x] **Step 3: 实现 use-model-list.ts**
 
 导出两个纯函数（供测试）与 hook：
 
@@ -1589,7 +1589,7 @@ export function nextSortState(
 
 hook 内用 `usePersistentState` 持久化 `dashboard.upstream.flat.page` / `.pageSize` / `.sortField` / `.sort`，`useEffect` 依赖 `[queryParams, sortField, sort]` 触发拉取，错误走 `showErrorToast`。
 
-- [ ] **Step 4: 运行确认通过**
+- [x] **Step 4: 运行确认通过**
 
 ```bash
 cd web && npm test
@@ -1597,7 +1597,7 @@ cd web && npm test
 
 Expected: 5 个断言全 PASS。
 
-- [ ] **Step 5: 写 view-switch.tsx**
+- [x] **Step 5: 写 view-switch.tsx**
 
 ```tsx
 "use client";
@@ -1641,7 +1641,7 @@ export function ViewSwitch({
 }
 ```
 
-- [ ] **Step 6: 写 flat-view.tsx**
+- [x] **Step 6: 写 flat-view.tsx**
 
 桌面表列：别名（含 `· id:` 后缀）、上游真名、端点（`OwnerCell` 风格的头像 + 名称）、规格（`SpecBadges`）、能力（`CapabilityBadges`）、状态（`Switch`）、创建、操作。
 
@@ -1665,7 +1665,7 @@ export function ViewSwitch({
 
 停用行同样 `opacity-45` + alias `line-through`。移动端为紧凑卡片列表（每行显示 alias / 端点名 / 规格 / 开关）。
 
-- [ ] **Step 7: page.tsx 接入双 filterBar 与切换**
+- [x] **Step 7: page.tsx 接入双 filterBar 与切换**
 
 关键：**两个 `useFilterBar` 实例**，切换时同步共有 token。
 
@@ -1723,7 +1723,7 @@ const handleViewChange = (next: string) => {
 
 注意：现有代码给 `FilterBar` 传的是 `facets={[]}`（第 787 行），导致 facet 建议不可用；这里必须传真实 facets。
 
-- [ ] **Step 8: 验证**
+- [x] **Step 8: 验证**
 
 ```bash
 cd web && npm run lint && npm test && npx tsc --noEmit && npm run build
@@ -1731,7 +1731,7 @@ cd web && npm run lint && npm test && npx tsc --noEmit && npm run build
 
 Expected: 全绿。
 
-- [ ] **Step 9: 提交**
+- [x] **Step 9: 提交**
 
 ```bash
 git add web/src/components/view-switch.tsx "web/src/app/(dashboard)/upstream/" web/src/locales/
@@ -1745,19 +1745,19 @@ git commit -m "feat(web): add flat model view with sortable columns and view swi
 **Files:**
 - Modify: 视验证结果修补前述文件
 
-- [ ] **Step 1: 起后端**
+- [x] **Step 1: 起后端**
 
 ```bash
 go run ./cmd/server server
 ```
 
-- [ ] **Step 2: 起前端**
+- [x] **Step 2: 起前端**
 
 ```bash
 cd web && npm run dev
 ```
 
-- [ ] **Step 3: 功能核查清单**
+- [x] **Step 3: 功能核查清单**
 
 - 分组视图：表头 7 列有名；组头色条与折叠可用；`ⓘ 连通详情` 显示双 URL/Key 掩码且可复制；停用模型整行降权；截断端点显示 `N 中显示 M`
 - 平铺视图：6 列可排序且箭头正确；分页总数与后端一致；`status`/`capability`/`endpoint` 筛选生效
@@ -1765,22 +1765,22 @@ cd web && npm run dev
 - 分页独立：分组翻到第 2 页 → 切平铺 → 切回，分组仍在第 2 页
 - CRUD：四类弹窗（建/改端点、建/改模型）与两类删除确认均正常
 
-- [ ] **Step 4: 三主题核查**
+- [x] **Step 4: 三主题核查**
 
 切 light / dark / moonshot，确认组头左侧色条、`opacity-45` 停用行、虚线树枝在三主题下都可辨（对比度 ≥3:1）。moonshot 主题下组头 `bg-card` 会带 `backdrop-filter`，确认色条不被玻璃效果吞掉。
 
-- [ ] **Step 5: 键盘与无障碍**
+- [x] **Step 5: 键盘与无障碍**
 
 Tab 走查：`ViewSwitch` 可聚焦并有 `aria-selected`；排序按钮有 `aria-label`；折叠按钮有 `aria-expanded`。
 
-- [ ] **Step 6: 全量回归**
+- [x] **Step 6: 全量回归**
 
 ```bash
 go test ./... && go run ./cmd/server lint conv ./... && go run ./cmd/server lint static ./... \
   && cd web && npm run lint && npm test && npm run build
 ```
 
-- [ ] **Step 7: 提交修补**
+- [x] **Step 7: 提交修补**
 
 ```bash
 git add -A
@@ -1869,6 +1869,36 @@ e2e 断言须判 `error.code == constant.BizErrorCodeUnauthorized`，不能判 H
 路由缺失则是 HTTP 404 + 纯文本 `Not Found`。
 另：既有 e2e 里 `bizError.Code` 声明为 `string`，与实际的数值 code 不符（那些用例从未
 走到错误分支故未暴露），新 e2e 声明为 `int`。
+
+**偏差 4：`totalModelCount` 在本分支并不存在**
+
+spec 称"后端已新增该字段（截断前口径）"——那是主工作区未提交的改动，本分支（自
+master 214fa450 派生）没有。分组视图的 `N 中显示 M` 徽标因此无数据来源。
+
+修正：按 spec 意图补上（`UpstreamGroupView.TotalModelCount` → DTO `totalModelCount`
+→ handler 映射），截断前口径由 `toGroupView` 在截断前取 `len(mvs)`。
+
+**偏差 5：纯函数测试不能直接 import `use-model-list.ts`**
+
+计划把 `buildModelListParams` / `nextSortState` 放在 `use-model-list.ts` 里。但 vitest
+在本仓库是最小接入，**没有配路径别名**（`@/...` 解析不到），任何 import "@/…" 的模块
+都无法被测试加载。
+
+修正：拆出 `model-list-params.ts`（纯逻辑、只含 `import type`），hook 从它导入。
+测试 import 该模块即可，无需改 vitest 配置。
+
+**偏差 6（实施中发现的功能缺陷，非计划错误）：分组请求曾跟随「当前激活视图」的筛选**
+
+计划里写的是 `const { queryParams } = activeFilterBar`，而分组的 `fetchUpstream` 依赖
+它。结果是：切到平铺视图后改任何平铺筛选，都会连带重拉分组接口（用平铺的关键词）。
+
+修正：工具条渲染用 `activeFilterBar`，数据请求各自绑定自己的实例
+（`groupedQueryParams` / `flatFilterBar.queryParams`）。
+
+**注：`FacetDef.options` 是 `string[]` 而非 `{value,label}[]`**
+
+计划按后者写的。实际需传字符串数组，并用 `formatValue` 做展示层翻译。
+端点 facet 存的是端点 ID 字符串（`paramName` 缺省 = key = `endpointID`）。
 - `ModelListSortField` 六个字面量与后端 `constant.ModelListSortFields` 六个值逐字对应
 - DTO `ListModelsRsp.Items` 的 JSON 名 `items` 与前端 `ListModelsPageRsp.items` 一致
 - `nextSortState` / `buildModelListParams` 在测试与实现中同名
