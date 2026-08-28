@@ -197,12 +197,16 @@ _Avoid_: cron mutex, scheduled lock, scheduler lock
 **SoftDeletePurge（软删除清理）**:
 定时 cron 任务，遍历被软删除的 Session，提取引用的 Message/Tool IDs，与活跃 Session 引用的 IDs 计算差集后硬删除孤儿记录。避免多 Session 共享 Message/Tool 时误删。使用 `lo.Difference` 做集合运算。
 
-**SessionDedup（会话去重）**:
-定时 cron 任务，清理同一对话的中间快照。每次 LLM 请求都会把完整对话历史落库并新建一条 Session，历史 Message 按 checksum 复用同一行，因此第 k 轮的 MessageIDs 必然是第 k+1 轮的**前缀**——冗余判定即前缀判定，而非任意子数组。任务按首个 Message ID 分组（同一对话的快照集合），组内保留最长者（长度相同取 ID 最小），把被删快照的 ToolIDs 并入保留者；对话分叉时组内可有多个保留者。此外，未吸收任何冗余成员的 Session 若末条消息是 assistant 且带 tool_calls（对话在工具调用处中断，属不完整分支）也会被清理；已吸收冗余成员的保留者（merge target）受保护不被清理，否则并入它的 ToolIDs 会一起丢失。ToolIDs 合并与冗余软删在同一事务内完成。
+**SessionDedup（会话前缀去重）**:
+session 插入事务提交后实时执行的去重：每次 LLM 请求都会把完整对话历史落库并新建一条 Session，历史 Message 按 checksum 复用同一行，因此第 k 轮的 MessageIDs 必然是第 k+1 轮的**前缀**——冗余判定即前缀判定，而非任意子数组。去重按首个 Message ID 分组（同一对话的快照集合），组内保留最长者（长度相同取 ID 最小），把被删快照的 ToolIDs 并入保留者；对话分叉时组内可有多个保留者。执行在 `store_pool` 主事务提交后的独立短事务内，组行 `FOR UPDATE` 串行化同组并发写入；失败仅记日志，残留由下次同组插入自愈。算法与写回在 `repository.DeduplicateSessionGroup`。
 _Avoid_: session merge, snapshot cleanup
 
+**TerminalCleanup（终态清理）**:
+每小时 cron（`SessionTerminalCleanupCron`），扫描最近 24 小时内末条消息为 assistant 且带 tool_calls 的会话（对话在工具调用处中断，属不完整分支）并删除。不做前缀解析——前缀冗余由插入时去重实时处理；被删会话的 Message/Tool 引用由 SoftDeletePurge 按保留期处理。
+_Avoid_: terminal session sweep, stuck session cleanup
+
 **CronModule（定时任务模块）**:
-平台所有定时任务遵循 `CronRegistryEntry` 模式注册：`SessionScore`（已废弃，原 LLM 自动评分）、`SessionSummarize`（自动摘要）、`SessionDedup`（去重合并）、`ThinkExtract`（推理内容提取）、`SoftDeletePurge`（清理孤儿数据）。
+平台所有定时任务遵循 `CronRegistryEntry` 模式注册：`SessionScore`（已废弃，原 LLM 自动评分）、`SessionSummarize`（自动摘要）、`SessionTerminalCleanup`（终态清理）、`ThinkExtract`（推理内容提取）、`SoftDeletePurge`（清理孤儿数据）。
 
 **CronTriggerSource（触发来源）**:
 cron 任务执行的触发来源枚举：`scheduled`（定时调度触发）与 `manual`（管理后台手动触发，可对 disabled 任务执行，拿不到分布式锁时忽略执行且不产生审计）。写入 `cron_call_audits.trigger_source` 列。

@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/cron"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
+	repository "github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
@@ -51,14 +51,14 @@ func TestApplyMergeResultCommits(t *testing.T) {
 	db := newApplyTestDB(t, "apply_merge_commit")
 	seedApplySessions(t, db)
 
-	result := cron.MergeResult{
+	result := repository.MergeResult{
 		RedundantIDs: []uint{2},
 		MergeMapping: map[uint]map[uint]struct{}{
 			1: {10: {}, 20: {}},
 		},
 	}
 
-	merged, err := cron.ApplyMergeResult(db, dao.GetSessionDAO(), result)
+	merged, err := repository.ApplyMergeResult(db, dao.GetSessionDAO(), result)
 	if err != nil {
 		t.Fatalf("ApplyMergeResult() error = %v, want nil", err)
 	}
@@ -121,14 +121,14 @@ func TestApplyMergeResultRollsBackOnFailure(t *testing.T) {
 		t.Fatalf("failed to register callback: %v", err)
 	}
 
-	result := cron.MergeResult{
+	result := repository.MergeResult{
 		RedundantIDs: []uint{2},
 		MergeMapping: map[uint]map[uint]struct{}{
 			1: {10: {}, 20: {}},
 		},
 	}
 
-	if _, err := cron.ApplyMergeResult(db, dao.GetSessionDAO(), result); err == nil {
+	if _, err := repository.ApplyMergeResult(db, dao.GetSessionDAO(), result); err == nil {
 		t.Fatal("ApplyMergeResult() error = nil, want non-nil")
 	}
 

@@ -5,6 +5,7 @@
 package pool
 
 import (
+	"context"
 	"time"
 
 	demoauditport "github.com/hcd233/aris-proxy-api/internal/application/demoaccessaudit/port"
@@ -16,6 +17,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 	"github.com/samber/lo"
@@ -66,8 +68,10 @@ func (pm *PoolManager) runMessageStoreTask(task *dto.MessageStoreTask) {
 		}
 	})
 
+	var messageIDs []uint
 	err := db.Transaction(func(tx *gorm.DB) error {
-		messageIDs, err := pm.deduplicateAndStoreMessages(tx, messages)
+		var err error
+		messageIDs, err = pm.deduplicateAndStoreMessages(tx, messages)
 		if err != nil {
 			log.Error("[StorePool] Failed to store messages", zap.Error(err))
 			return err
@@ -105,6 +109,33 @@ func (pm *PoolManager) runMessageStoreTask(task *dto.MessageStoreTask) {
 		return
 	}
 	log.Info("[StorePool] Messages stored successfully")
+	pm.deduplicateNewSession(task.Ctx, messageIDs)
+}
+
+// deduplicateNewSession 主事务提交后对同组会话执行前缀去重（best-effort）
+//
+// 主数据（messages/tools/session）已提交，去重失败仅记日志、不重试：
+// 残留重复由该对话下次插入时的去重自愈。task.Ctx 经 CopyContextValues
+// 已脱离请求生命周期，事务提交后使用安全。
+//
+//	@receiver pm *PoolManager
+//	@param ctx context.Context 脱离请求生命周期的存储上下文
+//	@param messageIDs []uint 新会话的消息 ID 列表，空则短路
+//	@author centonhuang
+//	@update 2026-08-29 10:00:00
+func (pm *PoolManager) deduplicateNewSession(ctx context.Context, messageIDs []uint) {
+	if len(messageIDs) == 0 {
+		return
+	}
+	log := logger.WithCtx(ctx)
+	deduped, err := repository.DeduplicateSessionGroup(pm.db.WithContext(ctx), messageIDs[0])
+	if err != nil {
+		log.Error("[StorePool] Session deduplication failed, will self-heal on next insert", zap.Error(err))
+		return
+	}
+	if deduped > 0 {
+		log.Info("[StorePool] Session deduplicated", zap.Int("deduped", deduped))
+	}
 }
 
 // extractQuestionIDs 从消息中提取用户提问的 message ID 列表

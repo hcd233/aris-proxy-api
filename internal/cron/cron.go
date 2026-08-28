@@ -151,13 +151,13 @@ func InitCronJobs(parentCtx context.Context, db *gorm.DB, poolManager *pool.Pool
 func buildRegistryEntries() []CronRegistryEntry {
 	return []CronRegistryEntry{
 		{
-			Name:        constant.CronModuleSessionDeduplicate,
+			Name:        constant.CronModuleSessionTerminalCleanup,
 			Type:        constant.CronTypeFunctional,
-			Spec:        constant.CronSpecSessionDeduplicate,
-			Description: constant.CronDescriptionSessionDeduplicate,
-			Enabled:     func() bool { return config.CronSessionDeduplicateEnabled },
+			Spec:        constant.CronSpecSessionTerminalCleanup,
+			Description: constant.CronDescriptionSessionTerminalCleanup,
+			Enabled:     func() bool { return config.CronSessionTerminalCleanupEnabled },
 			Factory: func(db *gorm.DB, _ *pool.PoolManager, cache *redis.Client, _ conversation.ThinkExtractRepository) Cron {
-				return NewSessionDeduplicateCron(db, cache)
+				return NewSessionTerminalCleanupCron(db, cache)
 			},
 		},
 		{

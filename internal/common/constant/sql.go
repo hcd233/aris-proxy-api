@@ -124,6 +124,14 @@ var (
 	SessionRepoFieldsDedup      = []string{FieldID, FieldMessageIDs, FieldToolIDs}
 	SessionRepoFieldsSummarize  = []string{FieldID, FieldMessageIDs}
 
+	// SessionRepoFieldsTerminalScan 终态清理窗口扫描的查询列（不需要 tool_ids）
+	SessionRepoFieldsTerminalScan = []string{FieldID, FieldMessageIDs}
+
+	// SessionFirstMessageIDCondition 按首条消息 ID 查同组会话的条件。
+	// 表达式必须与生产索引 idx_sessions_first_msg 的索引表达式
+	// ((message_ids::jsonb->>0) WHERE deleted_at = 0) 逐字一致，改动即退化全表扫描。
+	SessionFirstMessageIDCondition = "message_ids::jsonb->>0 = ?"
+
 	// 消息数桶固定边界（不含动态上限），与 SessionMessageCountBucketCase 对齐；末桶上限由动态 max 截断
 	SessionMessageCountBucketEdges = []int{10, 50, 100, 200, 500}
 
