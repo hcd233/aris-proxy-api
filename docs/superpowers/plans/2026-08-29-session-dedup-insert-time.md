@@ -1,5 +1,7 @@
 # Session 前缀去重实时化 + Terminal 终态清理 Implementation Plan
 
+> **状态（2026-08-29）：已实施完毕。** 提交链 35c3811 → 3ea99f7 → dffd352 → 00c7649 → 5d7f985 → 379eb91（全 hook 绿，1119 单测通过）。执行期修正：① SQL 护栏改用 **postgres dialector DryRun**（sqlite 驱动的 "FOR" ClauseBuilder 不渲染 FOR UPDATE）；② 复用 `DBLockStrengthUpdate` / `WhereCreatedAtGTE` 常量过 magic.string lint；③ cron 包禁 import dbmodel，`FindCreatedSince` 改返回 `dao.SessionTerminalScanView`；④ 测试轮询用 ticker 禁 time.Sleep。剩余：生产索引 + 推送部署 + e2e 验证（runbook 见 Task 6）。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 前缀去重从每小时 cron 迁移到 session 插入后实时执行（独立短事务 + FOR UPDATE）；terminal tool_call 清理保留为改名后的 `SessionTerminalCleanupCron`（24h 窗口扫描）。
