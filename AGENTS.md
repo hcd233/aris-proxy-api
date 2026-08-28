@@ -4,16 +4,17 @@
 
 ## 核心规则
 - 永远使用中文回复 ALWAYS USING CHINESE
+- 编写或修改 Go 代码前，必须按 [docs/agents/workflow.md](docs/agents/workflow.md) 的「Go 后端 Skill 加载清单」加载对应 skill，并先跑 `use-modern-go` 的 `list`；项目硬约束（[docs/agents/go-backend.md](docs/agents/go-backend.md)）优先级高于任何 skill 的通用建议。
 
 ## 文件索引
 
 | 文件 | 使用场景 | 加载时机 |
 |------|---------|---------|
 | [docs/agents/meta.md](docs/agents/meta.md) | 角色、执行循环、边界、Karpathy 编码原则 | **始终加载** |
-| [docs/agents/workflow.md](docs/agents/workflow.md) | Skill 路由、开发工作流、Git 分支与 worktree 规范、任务分类 | 收到新任务时 |
+| [docs/agents/workflow.md](docs/agents/workflow.md) | Skill 路由、Go 后端 Skill 加载清单、开发工作流、Git 分支与 worktree 规范、任务分类 | 收到新任务时 |
 | [docs/agents/architecture.md](docs/agents/architecture.md) | 项目架构、启动链路、请求链路、DI、优雅关闭 | 需要理解代码库时 |
 | [docs/agents/commands.md](docs/agents/commands.md) | 构建、测试、lint、清理命令 | 需要执行命令时 |
-| [docs/agents/go-backend.md](docs/agents/go-backend.md) | 测试契约、代码契约、Context 契约、DTO与API契约、API路由命名 | 编写或修改 Go 后端代码时 |
+| [docs/agents/go-backend.md](docs/agents/go-backend.md) | Skill 建议冲突时的硬约束、测试契约、代码契约、Context 契约、DTO与API契约、API路由命名 | 编写或修改 Go 后端代码时 |
 | [docs/agents/repo-ci.md](docs/agents/repo-ci.md) | 仓库管理、CI workflow、K8s 部署、技术债清理 | 涉及 git/CI/部署时 |
 | [docs/agents/web-frontend.md](docs/agents/web-frontend.md) | Web 前端项目模型、目录结构、开发契约、联调发布 | 修改 `web/` 前端代码时 |
 | [docs/agents/code-tools.md](docs/agents/code-tools.md) | CodeGraph 与 Serena 的代码搜索、符号分析、重构和工程经验沉淀规范 | 代码搜索、重构或开发任务开始/结束时 |
