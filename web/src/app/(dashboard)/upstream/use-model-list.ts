@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api-client";
 import { showErrorToast } from "@/lib/api-error-handler";
 import { usePersistentState } from "@/hooks/use-persistent-state";
@@ -53,17 +53,26 @@ export function useModelList(opts: {
   const [reloadTick, setReloadTick] = useState(0);
   const reload = useCallback(() => setReloadTick((n) => n + 1), []);
 
+  // 竞态守卫：只采纳最后一次请求的响应，连点筛选/翻页时慢响应不得覆盖新数据
+  const loadSeqRef = useRef(0);
   const load = useCallback(() => {
     if (!enabled) return;
+    const seq = ++loadSeqRef.current;
     setLoading(true);
     api
       .listModelsPage(buildModelListParams({ page, pageSize, freeText, params, sortField, sort }))
       .then((res) => {
+        if (seq !== loadSeqRef.current) return;
         setItems(res.items ?? []);
         setPageInfo(res.pageInfo ?? { page, pageSize, total: 0 });
       })
-      .catch((err) => showErrorToast(err, { title: t("upstream.load_error") }))
-      .finally(() => setLoading(false));
+      .catch((err) => {
+        if (seq !== loadSeqRef.current) return;
+        showErrorToast(err, { title: t("upstream.load_error") });
+      })
+      .finally(() => {
+        if (seq === loadSeqRef.current) setLoading(false);
+      });
     // facetSig 代表 params 的生效内容，替代 params 引用本身作为依赖
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, freeText, facetSig, page, pageSize, sortField, sort, t, reloadTick]);

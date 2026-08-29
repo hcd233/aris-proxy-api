@@ -380,7 +380,7 @@ func (r *modelRepository) Paginate(ctx context.Context, param model.CommonParam,
 func (r *modelRepository) PaginateWithFilter(ctx context.Context, param model.CommonParam, filter llmproxy.ModelListFilter, scopeUserID *uint) ([]*aggregate.Model, *model.PageInfo, error) {
 	db := r.db.WithContext(ctx)
 	if scopeUserID != nil {
-		db = db.Where(constant.FieldUserID, *scopeUserID)
+		db = db.Where(constant.FieldUserID+" = ?", *scopeUserID)
 	}
 	switch filter.Status {
 	case constant.ModelStatusEnabled:
@@ -395,9 +395,9 @@ func (r *modelRepository) PaginateWithFilter(ctx context.Context, param model.Co
 	if lo.Contains(enum.InputModalities, filter.Capability) {
 		db = db.Where(constant.WhereCapabilitiesLike, `%"`+filter.Capability+`"%`)
 	}
+	// 白名单外回退默认列但保留调用方排序方向，不报错（避免前端拼错导致整页 500）
 	if !lo.Contains(constant.ModelListSortFields, param.SortField) {
 		param.SortField = constant.ModelListDefaultSortField
-		param.Sort = enum.SortDesc
 	}
 
 	records, pageInfo, err := r.dao.Paginate(

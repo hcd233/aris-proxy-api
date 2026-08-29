@@ -58,7 +58,7 @@ func RegisterWebAPIRoutes(webRoot huma.API, deps APIRouterDependencies) {
 	initEndpointRouter(endpointGroup, deps.EndpointHandler, deps.Cache)
 
 	modelGroup := huma.NewGroup(jwtGroup, "/model")
-	initModelRouter(modelGroup, deps.ModelHandler, deps.Cache)
+	initModelRouter(modelGroup, deps.ModelHandler, deps.Cache, deps.DemoModuleAccessor, deps.DemoAuditSubmitter)
 
 	upstreamGroup := huma.NewGroup(jwtGroup, "/upstream")
 	initUpstreamRouter(upstreamGroup, deps.UpstreamHandler, deps.Cache, deps.DemoModuleAccessor, deps.DemoAuditSubmitter)

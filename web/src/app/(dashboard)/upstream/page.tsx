@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { useOptimisticUpdate } from "@/hooks/use-optimistic-update";
 import { api } from "@/lib/api-client";
@@ -177,9 +177,12 @@ export default function UpstreamPage() {
     enabled: view === "flat",
   });
 
+  // 竞态守卫：关键词/筛选连点时慢响应不得覆盖新响应
+  const fetchSeqRef = useRef(0);
   const fetchUpstream = useCallback(
     async (page: number, pageSize: number, query?: string) => {
       const safeSize = VALID_PAGE_SIZES.includes(pageSize) ? pageSize : DEFAULT_PAGE_SIZE;
+      const seq = ++fetchSeqRef.current;
       setLoading(true);
       try {
         const rsp = await api.listUpstream(
@@ -188,6 +191,7 @@ export default function UpstreamPage() {
           query,
           groupedQueryParams.params.username,
         );
+        if (seq !== fetchSeqRef.current) return;
         setGroups(rsp.groups ?? []);
         if (rsp.modelTotal !== undefined) {
           setModelTotal(rsp.modelTotal);
@@ -200,9 +204,10 @@ export default function UpstreamPage() {
           }
         }
       } catch (err) {
+        if (seq !== fetchSeqRef.current) return;
         showErrorToast(err, { title: t("upstream.load_error") });
       } finally {
-        setLoading(false);
+        if (seq === fetchSeqRef.current) setLoading(false);
       }
     },
     [t, setPersistedPage, setPersistedPageSize, groupedQueryParams.params.username],
@@ -343,7 +348,13 @@ export default function UpstreamPage() {
   };
 
   const handleSaveModel = async () => {
-    if (!modelForm.alias.trim() || !modelForm.upstreamModel.trim() || !targetEndpointID) {
+    // 端点绑定仅创建必填：更新路径不改绑定（绑定不可移动）；孤儿模型（所属端点
+    // 已删、endpoint 缺省）编辑保存时 targetEndpointID 为 0，不应被误判为缺字段
+    if (
+      !modelForm.alias.trim() ||
+      !modelForm.upstreamModel.trim() ||
+      (!editingModel && !targetEndpointID)
+    ) {
       toast.error(t("models.fields_required"));
       return;
     }

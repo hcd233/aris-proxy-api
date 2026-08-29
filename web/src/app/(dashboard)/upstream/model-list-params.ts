@@ -1,8 +1,9 @@
 /**
- * 平铺模型列表的纯逻辑（无 React / 无项目内 import），便于 vitest 直接测。
+ * 平铺模型列表的纯逻辑（无 React；运行时无项目内 import——type import 会被
+ * 编译期擦除，因此 vitest 无需路径别名即可直接加载测）。
  *
  * 刻意与 use-model-list.ts 分开：vitest 在本仓库是最小接入，没有配路径别名
- * （@/ 解析不到），任何 import "@/..." 的模块都无法被测试直接加载。
+ * （@/ 解析不到），任何带运行时 import "@/..." 的模块都无法被测试直接加载。
  */
 import type { ModelCapability, ModelListSortField } from "@/lib/types";
 

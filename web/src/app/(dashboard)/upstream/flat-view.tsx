@@ -22,8 +22,11 @@ import { cn } from "@/lib/utils";
 import type { ModelListSortField, ModelListItem, UpstreamUser } from "@/lib/types";
 import { CapabilityBadges, SpecBadges } from "./shared";
 
-/** 端点列：头像 + 名称。平铺视图里端点退化为普通属性列 */
-function EndpointCell({ name, user }: { name: string; user?: UpstreamUser }) {
+/**
+ * 端点列：端点名 + 该行模型归属用户的头像。
+ * 平铺视图端点退化为属性列；头像用归属用户而非端点 owner，与分组视图的行内口径一致。
+ */
+function EndpointOwnerCell({ name, user }: { name: string; user?: UpstreamUser }) {
   return (
     <div className="flex min-w-0 items-center gap-1.5">
       <Avatar size="sm">
@@ -193,7 +196,7 @@ export function FlatView({
             <div
               className={cn("mt-2 flex flex-wrap items-center gap-1.5", !m.enabled && "opacity-45")}
             >
-              {m.endpoint && <EndpointCell name={m.endpoint.name} user={m.user} />}
+              {m.endpoint && <EndpointOwnerCell name={m.endpoint.name} user={m.user} />}
               <SpecBadges contextLength={m.contextLength} maxOutputTokens={m.maxOutputTokens} />
               <CapabilityBadges capabilities={m.capabilities} />
             </div>
@@ -301,7 +304,7 @@ export function FlatView({
             </TableCell>
             <TableCell className={cn(!m.enabled && "opacity-45")}>
               {m.endpoint ? (
-                <EndpointCell name={m.endpoint.name} user={m.user} />
+                <EndpointOwnerCell name={m.endpoint.name} user={m.user} />
               ) : (
                 <span className="text-muted-foreground">—</span>
               )}

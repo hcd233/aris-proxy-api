@@ -485,6 +485,30 @@ func TestModelList_SortFieldWhitelistFallsBack(t *testing.T) {
 	}
 }
 
+// TestModelList_ScopeIsolation 非 admin 用户的 HTTP 层 scope：只回自己名下模型。
+//
+// admin token 建的 fixture 归属 admin 账户；user 权限 token 的列表里出现任何一个
+// 都意味着 scope 隔离在 handler→repo 链路上被击穿。仓储层口径由
+// test/unit/model_list_repo 覆盖，本用例补 HTTP 层（scopePtrFor→repo 全链路）。
+// 门控 E2E_USER_TOKEN（user 权限 JWT，缺省跳过，不影响无凭据 CI）。
+func TestModelList_ScopeIsolation(t *testing.T) {
+	t.Parallel()
+	baseURL, adminToken := mustE2EEnv(t)
+	userToken := os.Getenv("E2E_USER_TOKEN")
+	if userToken == "" {
+		t.Skip("E2E_USER_TOKEN not set, skip scope isolation e2e")
+	}
+	_, aliases := setupFixtures(t, baseURL, adminToken)
+
+	for _, it := range mustListModels(t, baseURL, userToken, "").Items {
+		for _, a := range aliases {
+			if it.Alias == a {
+				t.Fatalf("scope leak: admin-owned model %q visible to user token", a)
+			}
+		}
+	}
+}
+
 // TestModelList_RequiresAuth 未认证请求不得看到任何模型。
 //
 // 本项目鉴权失败走 HTTP 200 + 业务错误码 10001（非 HTTP 401），故断言错误码而非状态码。

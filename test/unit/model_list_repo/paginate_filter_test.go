@@ -3,6 +3,7 @@ package model_list_repo
 
 import (
 	"testing"
+	"time"
 
 	"github.com/samber/lo"
 	"gorm.io/driver/sqlite"
@@ -142,7 +143,20 @@ func TestPaginateWithFilter_SortFieldWhitelist(t *testing.T) {
 	scope := lo.ToPtr(uint(101))
 	ctx := t.Context()
 
-	// 非白名单字段（含合法字符集但敏感的 api_key）必须回退默认排序，不得进 ORDER BY
+	// 错开 scope 内两条的 created_at，使"回退保留方向"可断言（seed 默认同刻写入）
+	base := time.Date(2026, 8, 28, 12, 0, 0, 0, time.UTC)
+	for alias, offset := range map[string]time.Duration{
+		"a-enabled":  0,
+		"b-disabled": time.Minute,
+	} {
+		if err := db.Model(&dbmodel.Model{}).Where(constant.FieldAlias, alias).
+			Update(constant.FieldCreatedAt, base.Add(offset)).Error; err != nil {
+			t.Fatalf("stagger %s: %v", alias, err)
+		}
+	}
+
+	// 非白名单字段（含合法字符集但敏感的 api_key）必须回退默认排序列，不得进 ORDER BY；
+	// 回退只换列、保留调用方排序方向
 	param := model.CommonParam{
 		PageParam: model.PageParam{Page: 1, PageSize: 50},
 		SortParam: model.SortParam{Sort: enum.SortAsc, SortField: "api_key"},
@@ -151,12 +165,22 @@ func TestPaginateWithFilter_SortFieldWhitelist(t *testing.T) {
 	if err != nil {
 		t.Fatalf("illegal sort field must not error: %v", err)
 	}
-	if len(got) != 2 {
-		t.Errorf("want 2 rows after fallback, got %d", len(got))
+	if len(got) != 2 || got[0].Alias().String() != "a-enabled" {
+		t.Errorf("fallback keeps asc: want [a-enabled b-disabled], got %v", aliasesOf(got))
+	}
+
+	param.Sort = enum.SortDesc
+	got, _, err = repo.PaginateWithFilter(ctx, param, llmproxy.ModelListFilter{}, scope)
+	if err != nil {
+		t.Fatalf("illegal sort field desc: %v", err)
+	}
+	if len(got) != 2 || got[0].Alias().String() != "b-disabled" {
+		t.Errorf("fallback keeps desc: want [b-disabled a-enabled], got %v", aliasesOf(got))
 	}
 
 	// 白名单字段正常生效：alias 升序
 	param.SortField = "alias"
+	param.Sort = enum.SortAsc
 	got, _, err = repo.PaginateWithFilter(ctx, param, llmproxy.ModelListFilter{}, scope)
 	if err != nil {
 		t.Fatalf("alias sort: %v", err)
