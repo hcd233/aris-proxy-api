@@ -130,9 +130,7 @@ function podChartData(
 const THREADS_KEY_PREFIX = "m:";
 
 // gmChartData 把各 pod 的 G/M 曲线合并为同一时间轴多列：列名 pod 为 G，`m:`+pod 为 M。
-function gmChartData(
-  instances: Record<string, InstanceState>,
-): Array<Record<string, number>> {
+function gmChartData(instances: Record<string, InstanceState>): Array<Record<string, number>> {
   const rows = new Map<number, Record<string, number>>();
   for (const [pod, inst] of Object.entries(instances)) {
     for (const p of inst.goroutines) {
