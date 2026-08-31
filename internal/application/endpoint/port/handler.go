@@ -31,9 +31,9 @@ type CreateEndpointHandler interface {
 
 // UpdateEndpointCommand 更新 Endpoint 命令
 //
-// ScopeUserID 多租户隔离：>0 时限定该用户；==0（admin）不过滤。
+// ScopeUserID 多租户隔离三态：nil（admin）不过滤；非 nil（含共享池 0）精确匹配 user_id。
 type UpdateEndpointCommand struct {
-	ScopeUserID                 uint
+	ScopeUserID                 *uint
 	EndpointID                  uint
 	Name                        *string
 	OpenaiBaseURL               *string
@@ -53,7 +53,7 @@ type UpdateEndpointHandler interface {
 //
 // ScopeUserID 语义同 UpdateEndpointCommand。
 type DeleteEndpointCommand struct {
-	ScopeUserID uint
+	ScopeUserID *uint
 	EndpointID  uint
 }
 

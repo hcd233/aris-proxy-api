@@ -49,11 +49,19 @@ func (h *upstreamHandler) HandleListUpstream(ctx context.Context, req *dto.ListU
 	rsp := &dto.ListUpstreamRsp{}
 
 	perm := util.CtxValuePermission(ctx)
-	isGlobalScope := perm == enum.PermissionAdmin
+	var scope *uint
+	if perm != enum.PermissionAdmin {
+		userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
+		if userID == 0 {
+			err := ierr.New(ierr.ErrUnauthorized, "user id is required for non-admin scope")
+			return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrUnauthorized.BizError())
+		}
+		scope = &userID
+	}
 	groups, modelTotal, pageInfo, err := h.list.Handle(ctx, upstreamport.ListUpstreamQuery{
 		CommonParam: req.CommonParam,
 		IsDemo:      perm == enum.PermissionDemo,
-		ScopeUserID: lo.Ternary(isGlobalScope, 0, util.CtxValueUint(ctx, constant.CtxKeyUserID)),
+		ScopeUserID: scope,
 		Username:    req.Username,
 	})
 	if err != nil {

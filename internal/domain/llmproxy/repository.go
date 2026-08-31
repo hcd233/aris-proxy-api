@@ -10,33 +10,36 @@ import (
 
 // EndpointRepository Endpoint 聚合根仓储接口
 //
-// scopeUserID 语义（多租户隔离）：>0 时查询/删除限定在该用户名下；==0（admin 视角）不过滤。
+// scopeUserID 语义（多租户隔离，三态显式）：nil 时查询/删除不限定用户（仅 admin 视角）；
+// 非 nil（含 0）时精确匹配 user_id，0 用于共享池（user_id=0 的存量/共享配置）。
+// 禁止用零值 uint 兼作"全量视角"哨兵——那会让认证缺失静默退化为全平台可见。
 type EndpointRepository interface {
-	FindByID(ctx context.Context, id, scopeUserID uint) (*aggregate.Endpoint, error)
+	FindByID(ctx context.Context, id uint, scopeUserID *uint) (*aggregate.Endpoint, error)
 	BatchFindByIDs(ctx context.Context, ids []uint) (map[uint]*aggregate.Endpoint, error)
 	Create(ctx context.Context, endpoint *aggregate.Endpoint, ownerUserID uint) (uint, error)
 	Update(ctx context.Context, endpoint *aggregate.Endpoint) error // 归属校验由调用方 FindByID 完成
-	Delete(ctx context.Context, id, scopeUserID uint) error
-	DeleteCascade(ctx context.Context, id, scopeUserID uint) error
+	Delete(ctx context.Context, id uint, scopeUserID *uint) error
+	DeleteCascade(ctx context.Context, id uint, scopeUserID *uint) error
 	List(ctx context.Context) ([]*aggregate.Endpoint, error)
-	Paginate(ctx context.Context, param model.CommonParam, scopeUserID uint) ([]*aggregate.Endpoint, *model.PageInfo, error)
+	Paginate(ctx context.Context, param model.CommonParam, scopeUserID *uint) ([]*aggregate.Endpoint, *model.PageInfo, error)
 	// FindIDsByScope 按租户范围返回全部可见 endpoint ID 列表（id 升序）；
-	// scopeUserID==0（admin 视角）不过滤。用于 upstream 分组视图的分页基数。
-	FindIDsByScope(ctx context.Context, scopeUserID uint) ([]uint, error)
+	// scopeUserID 为 nil（admin 视角）不过滤。用于 upstream 分组视图的分页基数。
+	FindIDsByScope(ctx context.Context, scopeUserID *uint) ([]uint, error)
 }
 
 // ModelRepository Model 聚合根仓储接口
 //
-// scopeUserID 语义同 EndpointRepository；FindByAlias 为网关解析专用，userID 必传真实值。
+// scopeUserID 语义同 EndpointRepository；FindByAlias 为网关解析专用，userID 传真实值，
+// 传 0（共享池）需在网关回退开关下使用。
 type ModelRepository interface {
-	FindByAlias(ctx context.Context, alias vo.EndpointAlias, userID uint) ([]*aggregate.Model, error)
-	FindByID(ctx context.Context, id, scopeUserID uint) (*aggregate.Model, error)
+	FindByAlias(ctx context.Context, alias vo.EndpointAlias, userID *uint) ([]*aggregate.Model, error)
+	FindByID(ctx context.Context, id uint, scopeUserID *uint) (*aggregate.Model, error)
 	Create(ctx context.Context, model *aggregate.Model, ownerUserID uint) (uint, error)
 	Update(ctx context.Context, model *aggregate.Model) error
-	Delete(ctx context.Context, id, scopeUserID uint) error
+	Delete(ctx context.Context, id uint, scopeUserID *uint) error
 	DeleteByEndpointID(ctx context.Context, endpointID uint) error // 级联删除前调用方已校验端点归属
 	List(ctx context.Context) ([]*aggregate.Model, error)
-	Paginate(ctx context.Context, param model.CommonParam, scopeUserID uint) ([]*aggregate.Model, *model.PageInfo, error)
+	Paginate(ctx context.Context, param model.CommonParam, scopeUserID *uint) ([]*aggregate.Model, *model.PageInfo, error)
 	// ListByEndpointIDs 批量拉取一组 endpoint 名下的 model 聚合（不做二次 scope 过滤，
 	// 调用方传入的 endpointIDs 必须已经过 scope 解析）。未命中的 endpointID 自然返回空集合。
 	ListByEndpointIDs(ctx context.Context, endpointIDs []uint) ([]*aggregate.Model, error)

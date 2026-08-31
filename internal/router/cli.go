@@ -12,8 +12,9 @@ import (
 
 // RegisterCLIAPIRoutes 注册 CLI 分区路由（aris 客户端）。
 //
-// 路径契约：model/list 以 constant.ClientModelsAPIPrefix + ClientModelsRoutePath
-// 对外承诺（客户端 SDK 同源派生），前缀已在常量层迁移至 /api/cli/v1。
+// 路径契约：组内路径全部取 constant 的 RoutePath 常量，客户端可见的绝对路径
+// 由 CLIAPIPrefix + RoutePath 同源派生（trace 上报两条与 model/list 一致，
+// 不再各自硬编码）。
 //
 //	@param cliGroup huma.API
 //	@param deps APIRouterDependencies
@@ -35,14 +36,14 @@ func RegisterCLIAPIRoutes(cliGroup huma.API, deps APIRouterDependencies) {
 	}, deps.ClientHandler.HandleListModels)
 
 	huma.Register(cliGroup, huma.Operation{
-		OperationID: "reportTraceEvent", Method: http.MethodPost, Path: "/trace/event",
+		OperationID: "reportTraceEvent", Method: http.MethodPost, Path: constant.TraceClientIngestRoutePath,
 		Summary: "ReportTraceEvent", Description: "Report a codex hook event (API key auth)",
 		Tags:     []string{constant.TagTrace},
 		Security: []map[string][]string{{constant.SecuritySchemeAPIKey: {}}},
 	}, deps.TraceHandler.HandleReportTraceEvent)
 
 	huma.Register(cliGroup, huma.Operation{
-		OperationID: "checkTraceClientAPIKey", Method: http.MethodGet, Path: "/trace/client/check",
+		OperationID: "checkTraceClientAPIKey", Method: http.MethodGet, Path: constant.TraceClientCheckRoutePath,
 		Summary: "CheckTraceClientAPIKey", Description: "Validate the trace client API key",
 		Tags:     []string{constant.TagTrace},
 		Security: []map[string][]string{{constant.SecuritySchemeAPIKey: {}}},

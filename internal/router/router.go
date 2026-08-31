@@ -20,6 +20,7 @@ import (
 	"gorm.io/gorm"
 
 	demoport "github.com/hcd233/aris-proxy-api/internal/application/demo/port"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/jwt"
 )
@@ -57,18 +58,18 @@ type APIRouterDependencies struct {
 
 // RegisterAPIRouter 注册 API 路由（分区编排入口）。
 //
-// 各分区的具体路由见 web.go / cli.go 与 proxy 两个 init 函数；
+// 各分区的具体路由见 webapi.go / cli.go 与 proxy 两个 init 函数；
 // 运维分区（根路径无鉴权）在 bootstrap 中经 RegisterOpsRouter 单独注册。
 //
 //	@author centonhuang
 //	@update 2025-11-10 17:26:08
 func RegisterAPIRouter(humaAPI huma.API, deps APIRouterDependencies) {
 	// ── Web 分区 ──
-	webRoot := huma.NewGroup(humaAPI, "/api/web/v1")
+	webRoot := huma.NewGroup(humaAPI, constant.WebAPIPrefix)
 	RegisterWebAPIRoutes(webRoot, deps)
 
 	// ── CLI 分区 ──
-	cliGroup := huma.NewGroup(humaAPI, "/api/cli/v1")
+	cliGroup := huma.NewGroup(humaAPI, constant.CLIAPIPrefix)
 	RegisterCLIAPIRoutes(cliGroup, deps)
 
 	// ── Proxy 分区（前缀不变） ──

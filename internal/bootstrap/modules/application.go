@@ -232,8 +232,8 @@ func NewCreateModelHandler(endpointRepo llmproxy.EndpointRepository, modelRepo l
 	return modelcommand.NewCreateModelHandler(endpointRepo, modelRepo)
 }
 
-func NewUpdateModelHandler(repo llmproxy.ModelRepository) modelport.UpdateModelHandler {
-	return modelcommand.NewUpdateModelHandler(repo)
+func NewUpdateModelHandler(endpointRepo llmproxy.EndpointRepository, repo llmproxy.ModelRepository) modelport.UpdateModelHandler {
+	return modelcommand.NewUpdateModelHandler(endpointRepo, repo)
 }
 
 func NewDeleteModelHandler(repo llmproxy.ModelRepository) modelport.DeleteModelHandler {

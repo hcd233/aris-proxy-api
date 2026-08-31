@@ -33,8 +33,10 @@ func NewListUpstreamHandler(endpointRepo llmproxy.EndpointRepository, modelRepo 
 func (h *listUpstreamHandler) Handle(ctx context.Context, q port.ListUpstreamQuery) ([]*port.UpstreamGroupView, int64, *model.PageInfo, error) {
 	log := logger.WithCtx(ctx)
 
+	// scope 三态：nil=admin 全量；非 nil（含 0）=精确匹配该 userID（0 命中共享池）。
+	// admin 叠加 username 筛选时反查 uid 转为精确匹配；普通用户的 username 由 handler 忽略。
 	scope := q.ScopeUserID
-	if scope == 0 && q.Username != "" {
+	if scope == nil && q.Username != "" {
 		u, err := h.userRepo.FindByName(ctx, q.Username)
 		if err != nil {
 			log.Error("[UpstreamQuery] Find user by name failed", zap.Error(err))
@@ -45,7 +47,8 @@ func (h *listUpstreamHandler) Handle(ctx context.Context, q port.ListUpstreamQue
 			return []*port.UpstreamGroupView{}, 0,
 				&model.PageInfo{Page: q.Page, PageSize: q.PageSize}, nil
 		}
-		scope = u.AggregateID()
+		uid := u.AggregateID()
+		scope = &uid
 	}
 
 	allIDs, err := h.endpointRepo.FindIDsByScope(ctx, scope)
@@ -97,7 +100,7 @@ func (h *listUpstreamHandler) Handle(ctx context.Context, q port.ListUpstreamQue
 	groups := make([]*port.UpstreamGroupView, 0, len(pageIDs))
 	var modelTotal int64
 	for _, id := range pageIDs {
-		groups = append(groups, h.toGroupView(epsByID[id], modelsByEp[id], usersByID, q.IsDemo))
+		groups = append(groups, h.toGroupView(ctx, epsByID[id], modelsByEp[id], usersByID, q.IsDemo))
 	}
 	// modelTotal 口径跟随当前筛选范围的全量模型数（含非当前页组），不受组内截断影响。
 	for _, id := range matchedIDs {
@@ -129,7 +132,7 @@ func (h *listUpstreamHandler) loadUsers(ctx context.Context, epsByID map[uint]*l
 	return users
 }
 
-func (h *listUpstreamHandler) toGroupView(ep *llmagg.Endpoint, models []*llmagg.Model, usersByID map[uint]*identityaggregate.User, isDemo bool) *port.UpstreamGroupView {
+func (h *listUpstreamHandler) toGroupView(ctx context.Context, ep *llmagg.Endpoint, models []*llmagg.Model, usersByID map[uint]*identityaggregate.User, isDemo bool) *port.UpstreamGroupView {
 	mvs := lo.Map(models, func(m *llmagg.Model, _ int) *port.UpstreamModelView {
 		return toModelView(m, usersByID, isDemo)
 	})
@@ -140,6 +143,10 @@ func (h *listUpstreamHandler) toGroupView(ep *llmagg.Endpoint, models []*llmagg.
 	if totalModelCount > constant.UpstreamGroupModelLimit {
 		mvs = mvs[:constant.UpstreamGroupModelLimit]
 		truncated = true
+		logger.WithCtx(ctx).Warn("[UpstreamQuery] Group model list truncated",
+			zap.String("endpoint", ep.Name()),
+			zap.Int("total", totalModelCount),
+			zap.Int("limit", constant.UpstreamGroupModelLimit))
 	}
 	return &port.UpstreamGroupView{
 		Endpoint:        toEndpointView(ep, usersByID, isDemo),

@@ -33,6 +33,9 @@ const (
 	DBConditionPermissionAdmin = "permission = ?"
 	DBConditionUserIDZero      = "user_id = 0"
 
+	// SharedPoolUserID 共享池归属：user_id=0 的存量/共享配置，仅供网关共享池回退路径使用。
+	SharedPoolUserID uint = 0
+
 	SQLDropIndex         = "DROP INDEX IF EXISTS "
 	SQLCreateUniqueIndex = "CREATE UNIQUE INDEX IF NOT EXISTS "
 

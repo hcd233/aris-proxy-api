@@ -34,12 +34,12 @@ func newScopedEndpointRepo() *scopedEndpointRepo {
 	return &scopedEndpointRepo{byID: map[uint]*aggregate.Endpoint{1: epA, 2: epB}}
 }
 
-func (r *scopedEndpointRepo) FindByID(_ context.Context, id, scopeUserID uint) (*aggregate.Endpoint, error) {
+func (r *scopedEndpointRepo) FindByID(_ context.Context, id uint, scopeUserID *uint) (*aggregate.Endpoint, error) {
 	ep, ok := r.byID[id]
 	if !ok {
 		return nil, nil
 	}
-	if scopeUserID != 0 && ep.UserID() != scopeUserID {
+	if scopeUserID != nil && ep.UserID() != *scopeUserID {
 		return nil, nil
 	}
 	return ep, nil
@@ -51,12 +51,12 @@ func (r *scopedEndpointRepo) Create(context.Context, *aggregate.Endpoint, uint) 
 	return 0, nil
 }
 func (r *scopedEndpointRepo) Update(context.Context, *aggregate.Endpoint) error { return nil }
-func (r *scopedEndpointRepo) Delete(context.Context, uint, uint) error          { return nil }
-func (r *scopedEndpointRepo) DeleteCascade(context.Context, uint, uint) error   { return nil }
+func (r *scopedEndpointRepo) Delete(context.Context, uint, *uint) error         { return nil }
+func (r *scopedEndpointRepo) DeleteCascade(context.Context, uint, *uint) error  { return nil }
 func (r *scopedEndpointRepo) List(context.Context) ([]*aggregate.Endpoint, error) {
 	return nil, nil
 }
-func (r *scopedEndpointRepo) Paginate(context.Context, model.CommonParam, uint) ([]*aggregate.Endpoint, *model.PageInfo, error) {
+func (r *scopedEndpointRepo) Paginate(context.Context, model.CommonParam, *uint) ([]*aggregate.Endpoint, *model.PageInfo, error) {
 	return nil, nil, nil
 }
 
@@ -65,10 +65,10 @@ type recordingModelRepo struct {
 	gotEndpoint uint
 }
 
-func (r *recordingModelRepo) FindByAlias(context.Context, vo.EndpointAlias, uint) ([]*aggregate.Model, error) {
+func (r *recordingModelRepo) FindByAlias(context.Context, vo.EndpointAlias, *uint) ([]*aggregate.Model, error) {
 	return nil, nil
 }
-func (r *recordingModelRepo) FindByID(context.Context, uint, uint) (*aggregate.Model, error) {
+func (r *recordingModelRepo) FindByID(context.Context, uint, *uint) (*aggregate.Model, error) {
 	return nil, nil
 }
 func (r *recordingModelRepo) Create(_ context.Context, m *aggregate.Model, ownerUserID uint) (uint, error) {
@@ -77,19 +77,19 @@ func (r *recordingModelRepo) Create(_ context.Context, m *aggregate.Model, owner
 	return 1, nil
 }
 func (r *recordingModelRepo) Update(context.Context, *aggregate.Model) error { return nil }
-func (r *recordingModelRepo) Delete(context.Context, uint, uint) error       { return nil }
+func (r *recordingModelRepo) Delete(context.Context, uint, *uint) error      { return nil }
 func (r *recordingModelRepo) DeleteByEndpointID(context.Context, uint) error { return nil }
 func (r *recordingModelRepo) List(context.Context) ([]*aggregate.Model, error) {
 	return nil, nil
 }
-func (r *recordingModelRepo) Paginate(context.Context, model.CommonParam, uint) ([]*aggregate.Model, *model.PageInfo, error) {
+func (r *recordingModelRepo) Paginate(context.Context, model.CommonParam, *uint) ([]*aggregate.Model, *model.PageInfo, error) {
 	return nil, nil, nil
 }
 func (r *recordingModelRepo) PaginateWithFilter(context.Context, model.CommonParam, llmproxy.ModelListFilter, *uint) ([]*aggregate.Model, *model.PageInfo, error) {
 	return nil, nil, nil
 }
 
-func (r *scopedEndpointRepo) FindIDsByScope(context.Context, uint) ([]uint, error) {
+func (r *scopedEndpointRepo) FindIDsByScope(context.Context, *uint) ([]uint, error) {
 	return nil, nil
 }
 
@@ -131,7 +131,10 @@ func (f *noopUserRepo) ListUsers(context.Context, model.CommonParam, enum.Permis
 }
 func (f *noopUserRepo) DeleteCascade(context.Context, uint) error { return nil }
 
-func validCreateCmd(endpointID, scope uint) port.CreateModelCommand {
+// uptr 测试用 uint 指针 helper（scope 三态：nil=admin 全量，非 nil 精确匹配）。
+func uptr(id uint) *uint { return &id }
+
+func validCreateCmd(endpointID uint, scope *uint) port.CreateModelCommand {
 	return port.CreateModelCommand{
 		ScopeUserID:   scope,
 		Alias:         "gpt-test",
@@ -147,7 +150,7 @@ func TestCreateModel_OwnEndpoint(t *testing.T) {
 	repo := &recordingModelRepo{}
 	h := command.NewCreateModelHandler(newScopedEndpointRepo(), repo)
 
-	if _, err := h.Handle(context.Background(), validCreateCmd(1, 101)); err != nil {
+	if _, err := h.Handle(context.Background(), validCreateCmd(1, uptr(101))); err != nil {
 		t.Fatalf("create on own endpoint failed: %v", err)
 	}
 	if repo.gotOwner != 101 || repo.gotEndpoint != 1 {
@@ -160,7 +163,7 @@ func TestCreateModel_CrossTenantRejected(t *testing.T) {
 	t.Parallel()
 	h := command.NewCreateModelHandler(newScopedEndpointRepo(), &recordingModelRepo{})
 
-	_, err := h.Handle(context.Background(), validCreateCmd(2, 101))
+	_, err := h.Handle(context.Background(), validCreateCmd(2, uptr(101)))
 	if err == nil {
 		t.Fatal("cross-tenant create must be rejected")
 	}
@@ -169,13 +172,13 @@ func TestCreateModel_CrossTenantRejected(t *testing.T) {
 	}
 }
 
-// admin（scope=0）可对任意用户端点建 model。
+// admin（scope=nil）可对任意用户端点建 model。
 func TestCreateModel_AdminScope(t *testing.T) {
 	t.Parallel()
 	repo := &recordingModelRepo{}
 	h := command.NewCreateModelHandler(newScopedEndpointRepo(), repo)
 
-	if _, err := h.Handle(context.Background(), validCreateCmd(2, 0)); err != nil {
+	if _, err := h.Handle(context.Background(), validCreateCmd(2, nil)); err != nil {
 		t.Fatalf("admin create failed: %v", err)
 	}
 	if repo.gotOwner != 202 {

@@ -50,9 +50,13 @@ func NewModelHandler(deps ModelDependencies) ModelHandler {
 func (h *modelHandler) HandleCreateModel(ctx context.Context, req *dto.CreateModelReq) (*dto.HTTPResponse[*dto.EmptyRsp], error) {
 	rsp := &dto.EmptyRsp{}
 	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
+	scope, err := scopeFor(ctx, util.CtxValuePermission(ctx))
+	if err != nil {
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrUnauthorized.BizError())
+	}
 
-	_, err := h.create.Handle(ctx, port.CreateModelCommand{
-		ScopeUserID:     scopeFor(ctx, util.CtxValuePermission(ctx)),
+	_, err = h.create.Handle(ctx, port.CreateModelCommand{
+		ScopeUserID:     scope,
 		Alias:           req.Body.Alias,
 		ModelID:         req.Body.ModelID,
 		UpstreamModel:   req.Body.UpstreamModel,
@@ -73,9 +77,13 @@ func (h *modelHandler) HandleCreateModel(ctx context.Context, req *dto.CreateMod
 
 func (h *modelHandler) HandleUpdateModel(ctx context.Context, req *dto.UpdateModelReq) (*dto.HTTPResponse[*dto.EmptyRsp], error) {
 	rsp := &dto.EmptyRsp{}
+	scope, err := scopeFor(ctx, util.CtxValuePermission(ctx))
+	if err != nil {
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrUnauthorized.BizError())
+	}
 
-	err := h.update.Handle(ctx, port.UpdateModelCommand{
-		ScopeUserID:     scopeFor(ctx, util.CtxValuePermission(ctx)),
+	err = h.update.Handle(ctx, port.UpdateModelCommand{
+		ScopeUserID:     scope,
 		ID:              req.ID,
 		Alias:           req.Body.Alias,
 		UpstreamModel:   req.Body.UpstreamModel,
@@ -95,9 +103,13 @@ func (h *modelHandler) HandleUpdateModel(ctx context.Context, req *dto.UpdateMod
 
 func (h *modelHandler) HandleDeleteModel(ctx context.Context, req *dto.DeleteModelReq) (*dto.HTTPResponse[*dto.EmptyRsp], error) {
 	rsp := &dto.EmptyRsp{}
+	scope, err := scopeFor(ctx, util.CtxValuePermission(ctx))
+	if err != nil {
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrUnauthorized.BizError())
+	}
 
-	err := h.delete.Handle(ctx, port.DeleteModelCommand{
-		ScopeUserID: scopeFor(ctx, util.CtxValuePermission(ctx)),
+	err = h.delete.Handle(ctx, port.DeleteModelCommand{
+		ScopeUserID: scope,
 		ModelID:     req.ID,
 	})
 	if err != nil {
