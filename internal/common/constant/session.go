@@ -5,7 +5,7 @@ import "time"
 const (
 	SessionDetailCacheTTL = 60 * time.Minute
 
-	CronModuleSessionDeduplicate = "SessionDeduplicateCron"
+	CronModuleSessionTerminalCleanup = "SessionTerminalCleanupCron"
 
-	CronSpecSessionDeduplicate = "0 * * * *"
+	CronSpecSessionTerminalCleanup = "0 * * * *"
 )

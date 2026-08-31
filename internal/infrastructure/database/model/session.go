@@ -11,7 +11,10 @@ import "time"
 //	@update 2024-06-22 09:33:43
 type Session struct {
 	BaseModel
-	ID         uint              `json:"id" gorm:"column:id;primary_key;auto_increment;comment:会话ID"`
+	ID uint `json:"id" gorm:"column:id;primary_key;auto_increment;comment:会话ID"`
+	// CreatedAt 重声明以为 sessions 单表挂索引（直接改 BaseModel 会波及全部继承表），
+	// 覆盖终态清理 24h 窗口扫描与会话列表默认排序
+	CreatedAt  time.Time         `json:"created_at" gorm:"column:created_at;index:idx_sessions_created_at;comment:创建时间"`
 	APIKeyName string            `json:"api_key_name" gorm:"column:api_key_name;not null;default:'';comment:API密钥名称"`
 	MessageIDs []uint            `json:"message_ids" gorm:"column:message_ids;not null;comment:消息ID列表;serializer:json"`
 	ToolIDs    []uint            `json:"tool_ids" gorm:"column:tool_ids;not null;comment:工具ID列表;serializer:json"`

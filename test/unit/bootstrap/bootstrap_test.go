@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"go.uber.org/fx"
+
 	appbootstrap "github.com/hcd233/aris-proxy-api/internal/bootstrap"
 )
 
@@ -51,4 +53,17 @@ func readFile(t *testing.T, path string) string {
 		t.Fatalf("ReadFile(%s) error = %v", path, err)
 	}
 	return string(data)
+}
+
+// TestFxAppDependencyGraphValidates 静态校验 fx 依赖图（CR I4/R2）。
+//
+// 背景：#161 漏写 fx.As(new(port.ListClientModelsHandler)) 导致生产
+// CrashLoopBackOff——编译期与普通单测均无法发现此类装配错误；
+// fx.ValidateApp 只做依赖图解析（不执行构造函数/不连数据库），
+// 把 DI 装配校验纳入 CI。
+func TestFxAppDependencyGraphValidates(t *testing.T) {
+	t.Parallel()
+	if err := fx.ValidateApp(appbootstrap.BuildFxAppOptions("localhost", "0")...); err != nil {
+		t.Fatalf("fx dependency graph validation failed: %v", err)
+	}
 }

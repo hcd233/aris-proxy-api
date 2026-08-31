@@ -48,7 +48,7 @@ func (h *endpointHandler) HandleCreateEndpoint(ctx context.Context, req *dto.Cre
 
 	isAdmin := util.CtxValuePermission(ctx) == enum.PermissionAdmin
 	ownerUserID := lo.Ternary(isAdmin && req.Body.OwnerUserID != nil, lo.FromPtr(req.Body.OwnerUserID), userID)
-	result, err := h.create.Handle(ctx, port.CreateEndpointCommand{
+	_, err := h.create.Handle(ctx, port.CreateEndpointCommand{
 		OwnerUserID:                 ownerUserID,
 		Name:                        req.Body.Name,
 		OpenaiBaseURL:               lo.FromPtr(req.Body.OpenaiBaseURL),
@@ -63,7 +63,6 @@ func (h *endpointHandler) HandleCreateEndpoint(ctx context.Context, req *dto.Cre
 		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 
-	_ = result.EndpointID
 	logger.WithCtx(ctx).Info("[EndpointHandler] Create endpoint success",
 		zap.Uint("userID", userID), zap.String("name", req.Body.Name))
 	return apiutil.WrapHTTPResponse(rsp, nil)
@@ -71,9 +70,13 @@ func (h *endpointHandler) HandleCreateEndpoint(ctx context.Context, req *dto.Cre
 
 func (h *endpointHandler) HandleUpdateEndpoint(ctx context.Context, req *dto.UpdateEndpointReq) (*dto.HTTPResponse[*dto.EmptyRsp], error) {
 	rsp := &dto.EmptyRsp{}
+	scope, err := scopeFor(ctx, util.CtxValuePermission(ctx))
+	if err != nil {
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrUnauthorized.BizError())
+	}
 
-	err := h.update.Handle(ctx, port.UpdateEndpointCommand{
-		ScopeUserID:                 scopeFor(ctx, util.CtxValuePermission(ctx)),
+	err = h.update.Handle(ctx, port.UpdateEndpointCommand{
+		ScopeUserID:                 scope,
 		EndpointID:                  req.ID,
 		Name:                        req.Body.Name,
 		OpenaiBaseURL:               req.Body.OpenaiBaseURL,
@@ -92,9 +95,13 @@ func (h *endpointHandler) HandleUpdateEndpoint(ctx context.Context, req *dto.Upd
 
 func (h *endpointHandler) HandleDeleteEndpoint(ctx context.Context, req *dto.DeleteEndpointReq) (*dto.HTTPResponse[*dto.EmptyRsp], error) {
 	rsp := &dto.EmptyRsp{}
+	scope, err := scopeFor(ctx, util.CtxValuePermission(ctx))
+	if err != nil {
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrUnauthorized.BizError())
+	}
 
-	err := h.delete.Handle(ctx, port.DeleteEndpointCommand{
-		ScopeUserID: scopeFor(ctx, util.CtxValuePermission(ctx)),
+	err = h.delete.Handle(ctx, port.DeleteEndpointCommand{
+		ScopeUserID: scope,
 		EndpointID:  req.ID,
 	})
 	if err != nil {
@@ -104,10 +111,17 @@ func (h *endpointHandler) HandleDeleteEndpoint(ctx context.Context, req *dto.Del
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 
-// scopeFor 多租户隔离 scope 计算：admin 返回 0（不过滤），其余用户限定自身。
-func scopeFor(ctx context.Context, perm enum.Permission) uint {
+// scopeFor 多租户隔离 scope 计算：admin 返回 nil（不过滤），其余用户限定自身。
+//
+// 非 admin 且 ctx 缺 userID（==0，认证中间件异常）时返回错误——
+// 0 若被当作"全量视角"哨兵会让请求静默退化为全平台可见。
+func scopeFor(ctx context.Context, perm enum.Permission) (*uint, error) {
 	if perm == enum.PermissionAdmin {
-		return 0
+		return nil, nil
 	}
-	return util.CtxValueUint(ctx, constant.CtxKeyUserID)
+	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
+	if userID == 0 {
+		return nil, ierr.New(ierr.ErrUnauthorized, "user id is required for non-admin scope")
+	}
+	return &userID, nil
 }

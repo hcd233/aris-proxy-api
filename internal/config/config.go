@@ -167,9 +167,9 @@ var (
 	//	@update 2026-04-25 10:00:00
 	CLSLevel string
 
-	// CronSessionDeduplicateEnabled bool 是否启用 Session 去重定时任务
-	//	@update 2026-05-01 10:00:00
-	CronSessionDeduplicateEnabled bool
+	// CronSessionTerminalCleanupEnabled bool 是否启用 Session 终态清理定时任务
+	//	@update 2026-08-29 10:00:00
+	CronSessionTerminalCleanupEnabled bool
 
 	// CronSoftDeletePurgeEnabled bool 是否启用软删除清理定时任务
 	//	@update 2026-05-01 10:00:00
@@ -234,6 +234,13 @@ var (
 	// HTTPClientTimeout time.Duration 上游 HTTP 客户端总超时时间（含响应 body 读取）
 	//	@update 2026-08-12 10:00:00
 	HTTPClientTimeout time.Duration
+
+	// GatewaySharedPoolFallback bool 网关模型解析共享池回退开关
+	//
+	// 开启后：用户名下解析不到 alias 时，回退查共享池（user_id=0 的存量/共享配置）。
+	// 用于用户级多租户化（PR #162）上线后的平滑过渡，避免存量用户 LLM 调用即刻中断。
+	//	@update 2026-08-28 10:00:00
+	GatewaySharedPoolFallback bool
 )
 
 // PoolGroupConfig 协程池分组配置
@@ -288,7 +295,7 @@ func InitEnvironment() {
 	config.SetDefault("postgres.sslmode", "disable")
 
 	config.SetDefault("trusted.proxies", "172.18.0.1")
-	config.SetDefault("cron.session.deduplicate.enabled", true)
+	config.SetDefault("cron.session.terminal_cleanup.enabled", true)
 	config.SetDefault("cron.soft.delete.purge.enabled", true)
 
 	config.SetDefault("upstream.retry.max_attempts", 5)
@@ -305,6 +312,8 @@ func InitEnvironment() {
 	config.SetDefault("upstream.bulkhead.enabled", true)
 	config.SetDefault("upstream.bulkhead.max_concurrent", 32)
 	config.SetDefault("upstream.bulkhead.acquire_timeout", time.Second)
+
+	config.SetDefault("gateway.shared_pool_fallback", false)
 
 	config.AutomaticEnv()
 
@@ -364,7 +373,7 @@ func InitEnvironment() {
 	CLSTopicID = config.GetString("cls.topic.id")
 	CLSLevel = config.GetString("cls.level")
 
-	CronSessionDeduplicateEnabled = config.GetBool("cron.session.deduplicate.enabled")
+	CronSessionTerminalCleanupEnabled = config.GetBool("cron.session.terminal_cleanup.enabled")
 	CronSoftDeletePurgeEnabled = config.GetBool("cron.soft.delete.purge.enabled")
 	CronThinkExtractEnabled = config.GetBool("cron.think.extract.enabled")
 
@@ -384,6 +393,8 @@ func InitEnvironment() {
 	UpstreamBulkheadEnabled = config.GetBool("upstream.bulkhead.enabled")
 	UpstreamBulkheadMaxConcurrent = max(config.GetInt("upstream.bulkhead.max_concurrent"), constant.ResilienceMinMaxConcurrent)
 	UpstreamBulkheadAcquireTimeout = max(config.GetDuration("upstream.bulkhead.acquire_timeout"), constant.ResilienceMinAcquireTimeout)
+
+	GatewaySharedPoolFallback = config.GetBool("gateway.shared_pool_fallback")
 
 	Pool = PoolConfig{
 		Store: PoolGroupConfig{

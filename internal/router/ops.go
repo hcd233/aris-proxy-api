@@ -11,10 +11,11 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
-	"github.com/hcd233/aris-proxy-api/internal/middleware"
 )
 
-// RegisterOpsRouter 注册运维分区路由：健康检查常驻，文档与 pprof(fgprof) 仅非生产开放。
+// RegisterOpsRouter 注册运维分区路由：健康检查常驻，/docs 仅非生产开放。
+//
+// pprof(fgprof) 的全局中间件装配归 bootstrap（registerMiddlewares），本函数只负责路由注册。
 //
 //	@param app *fiber.App
 //	@param humaAPI huma.API
@@ -28,8 +29,6 @@ func RegisterOpsRouter(app *fiber.App, humaAPI huma.API, pingHandler handler.Pin
 
 	if config.Env != enum.EnvProduction {
 		registerDocs(app)
-		// pprof(fgprof) 与 /docs 同策略：生产环境不暴露调试端点
-		app.Use(middleware.FgprofMiddleware())
 	}
 }
 

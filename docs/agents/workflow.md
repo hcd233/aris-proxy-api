@@ -10,6 +10,7 @@
 - **生产配置更新 / api.env / K8s ConfigMap**：使用 `update-prod-config`；SSH 到 `api.lvlvko.top` 修改配置，禁止使用裸 IP 地址。
 - **发布 / 部署**：推送到 `master` 或合并 PR 到 `master` 自动触发 `docker-publish.yml` 构建镜像并部署到 K8s；不需要额外手动部署步骤。
 - **写或改 `internal/dto/**` / 新增 huma 路由 / 排查 "field 总是零值" 类问题**：使用 `huma-dto-conventions`；它沉淀了 huma 的 path/query/body 绑定规则、Body 包装模板、响应 unwrap 行为和反模式速查。
+- **验证 `web/` 前端改动的运行时行为**：使用 `next-dev-loop`（Vercel 官方）；它交叉比对 `/_next/mcp`（框架视角）与 `agent-browser`（浏览器视角），确认改动在运行中的应用里真的生效，而不只是"能编译、类型通过"。适用范围与本项目约束见 [web-frontend.md](web-frontend.md) 的「运行时验证」。
 - **编写 Go 代码**：必须加载 `use-modern-go`（现代 Go 惯用法，权威 CLI）、`golang-code-style`（代码风格）、`golang-naming`（命名规范）、`golang-samber-lo`、`golang-samber-mo`。详细加载清单与调用方式见下文「Go 后端 Skill 加载清单」。
 - **修改 `go.uber.org/fx` 相关代码**：使用 `golang-uber-fx`。
 - **修改 `github.com/spf13/cobra` 相关代码**：使用 `golang-spf13-cobra`。
@@ -82,4 +83,4 @@
 - 正式发布：推送到 `master` 或合并 PR 到 `master`，`docker-publish.yml` 自动构建镜像并部署到 K8s，无需手动 SSH 执行部署脚本。可以通过gh命令行跟踪工作流执行情况，来判断是否完成部署
 - 部署后**先跑** `test/e2e/<topic>/` 的 Go 用例，而不是只 `curl` 一下；如需交互式补充验证再用 `call-api` skill。
 - 如果 E2E 失败，取响应头 `X-Trace-Id`，回到 CLS 排障步骤；重复直到需求或 bugfix 完成。
-- 如果是Web端相关的修复，还需要使用chrome mcp来验证相关网页交互
+- **Web 端改动必须做运行时验证**：`npm run lint && npm run build` 只覆盖类型与导出，不证明页面行为正确。改完前端后按 `next-dev-loop` 跑一遍编辑/验证循环（`/_next/mcp` 查编译与运行时错误 + `agent-browser` 断言用户实际看到的内容），详见 [web-frontend.md](web-frontend.md) 的「运行时验证」。

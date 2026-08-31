@@ -85,6 +85,24 @@ const (
 	WhereFieldCheckSum = "check_sum"
 )
 
+const (
+	// ModelStatusEnabled 模型列表 status 筛选取值：仅启用
+	ModelStatusEnabled = "enabled"
+	// ModelStatusDisabled 模型列表 status 筛选取值：仅停用
+	ModelStatusDisabled = "disabled"
+	// ModelListDefaultSortField 模型列表默认排序列（配合 enum.SortDesc）
+	ModelListDefaultSortField = "created_at"
+)
+
+const (
+	// WhereModelEnabledEquals 按启用状态筛选
+	WhereModelEnabledEquals = "enabled = ?"
+	// WhereEndpointIDEquals 按所属端点筛选
+	WhereEndpointIDEquals = "endpoint_id = ?"
+	// WhereCapabilitiesLike 按输入模态筛选（capabilities 是 text 列 + serializer:json）
+	WhereCapabilitiesLike = "capabilities LIKE ?"
+)
+
 var (
 	MessageRepoFieldsChecksum = []string{FieldID, FieldCheckSum}
 	MessageRepoFieldsFull     = []string{FieldID, FieldModelID, FieldMessage, FieldCheckSum, FieldCreatedAt}
@@ -105,6 +123,14 @@ var (
 	SessionRepoFieldsReadDetail = []string{FieldID, FieldAPIKeyName, FieldCreatedAt, FieldUpdatedAt, FieldMessageIDs, FieldToolIDs, FieldMetadata, FieldScore, FieldScoredAt}
 	SessionRepoFieldsDedup      = []string{FieldID, FieldMessageIDs, FieldToolIDs}
 	SessionRepoFieldsSummarize  = []string{FieldID, FieldMessageIDs}
+
+	// SessionRepoFieldsTerminalScan 终态清理窗口扫描的查询列（不需要 tool_ids）
+	SessionRepoFieldsTerminalScan = []string{FieldID, FieldMessageIDs}
+
+	// SessionFirstMessageIDCondition 按首条消息 ID 查同组会话的条件。
+	// 表达式必须与生产索引 idx_sessions_first_msg 的索引表达式
+	// ((message_ids::jsonb->>0) WHERE deleted_at = 0) 逐字一致，改动即退化全表扫描。
+	SessionFirstMessageIDCondition = "message_ids::jsonb->>0 = ?"
 
 	// 消息数桶固定边界（不含动态上限），与 SessionMessageCountBucketCase 对齐；末桶上限由动态 max 截断
 	SessionMessageCountBucketEdges = []int{10, 50, 100, 200, 500}
@@ -131,6 +157,12 @@ var (
 	AuditFilterFieldStatus = "status"
 	AuditFilterFieldUA     = "ua"
 
+	// ModelListSortFields 模型列表允许的排序列白名单。
+	//
+	// 不可用 util.SafeSortField 代替：它只校验字符集，api_key 之类敏感列同样放行。
+	// 白名单外的取值回退 ModelListDefaultSortField，不报错（避免前端拼错导致整页 500）。
+	ModelListSortFields = []string{"alias", "context_length", "max_output_tokens", "created_at", "endpoint_id", "enabled"}
+
 	TriggerRepoFieldsFull = []string{FieldID, FieldWord, FieldHitCount, FieldAction, FieldCreatedAt, FieldUpdatedAt}
 
 	AuditMaxPageSize = 500
@@ -140,6 +172,15 @@ var (
 	// UpstreamGroupModelLimit upstream 分组视图单个分组返回的模型数上限（防御性兜底）。
 	// ponytail: 上限写死 200；需要真分页时再引入组内游标
 	UpstreamGroupModelLimit = 200
+
+	// UpstreamScopeWarnThreshold upstream 分组查询内存筛选/分页模型假设的告警阈值：
+	// scope 内 endpoint 数超过此值打 Warn（当前实现全量加载后内存分页）。
+	UpstreamScopeWarnThreshold = 500
+
+	// WhereUserIDEquals user_id 显式等值条件。
+	// 必须用 "user_id = ?" 而非 Where("user_id", v)：GORM 的 Where("col", v) 在
+	// 无占位符时 v 会被静默丢弃（v=0 时退化为 WHERE user_id，语义完全错误）。
+	WhereUserIDEquals = "user_id = ?"
 
 	// SessionListINChunkSize session 列表「空 summary fallback」批量加载消息时，
 	// 每条 SELECT ... WHERE id IN (?) 携带的 ID 上限。

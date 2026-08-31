@@ -165,13 +165,22 @@ const (
 	// Router sub-paths
 	RoutePathList = "/list"
 
-	// ClientModelsAPIPrefix / ClientModelsRoutePath 客户端模型分发接口的路径契约：
-	// 服务端以 ClientModelsRoutePath 为组内路径注册，客户端以二者拼接后的
-	// ClientModelsListPath 请求。任一改名只需改这里，避免两侧脱节（#165 曾因
-	// 只改 SDK 路径、未改 group 前缀导致 /api/v1/client/model/list 而 404）。
-	// 2026-08-27 路由分区治理：客户端路由归入 CLI 分区，前缀改为 /api/cli/v1。
-	ClientModelsAPIPrefix = "/api/cli/v1"
-	ClientModelsRoutePath = "/model/list"
+	// API 路由分区前缀（2026-08-27 路由四分区治理）：
+	//   - WebAPIPrefix  web 前端 JWT 路由
+	//   - CLIAPIPrefix  aris CLI 的 API-key 路由（trace 上报、client models 等）
+	// 所有分区前缀与客户端可见路径常量在此收敛，服务端注册与客户端 SDK 均从
+	// 这里的常量派生，禁止在任何一侧重新硬编码（#165/#166 两次 404 的根因）。
+	WebAPIPrefix = "/api/web/v1"
+	CLIAPIPrefix = "/api/cli/v1"
+
+	// CLIAPIPrefix 下的组内注册路径（服务端 router/cli.go 消费；客户端可见的
+	// 绝对路径常量由 CLIAPIPrefix + RoutePath 派生）。
+	TraceClientIngestRoutePath = "/trace/event"
+	TraceClientCheckRoutePath  = "/trace/client/check"
+	ClientModelsRoutePath      = "/model/list"
+
+	// ClientModelsAPIPrefix 客户端模型分发接口前缀，与 CLI 分区前缀同源。
+	ClientModelsAPIPrefix = CLIAPIPrefix
 
 	// Router path/query/field constants
 	WhereIDEquals = "id = ?"

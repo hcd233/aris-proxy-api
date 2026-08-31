@@ -6,6 +6,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/api"
 	"github.com/hcd233/aris-proxy-api/internal/bootstrap/modules"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/inflight"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/middleware"
@@ -94,4 +95,9 @@ func registerMiddlewares(params middlewareParams) {
 			},
 		}),
 	)
+	// pprof(fgprof) 调试端点与 /docs 同策略：生产环境不暴露。
+	// 原挂在 router 包 RegisterOpsRouter 内（路由注册函数带全局 Use，职责混淆），移归 bootstrap。
+	if config.Env != enum.EnvProduction {
+		params.App.Use(middleware.FgprofMiddleware())
+	}
 }

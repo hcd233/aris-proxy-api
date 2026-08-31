@@ -16,7 +16,7 @@ type capturingEndpointRepo struct {
 	gotOwner uint
 }
 
-func (f *capturingEndpointRepo) FindByID(context.Context, uint, uint) (*aggregate.Endpoint, error) {
+func (f *capturingEndpointRepo) FindByID(context.Context, uint, *uint) (*aggregate.Endpoint, error) {
 	return nil, nil
 }
 func (f *capturingEndpointRepo) BatchFindByIDs(context.Context, []uint) (map[uint]*aggregate.Endpoint, error) {
@@ -27,16 +27,16 @@ func (f *capturingEndpointRepo) Create(_ context.Context, _ *aggregate.Endpoint,
 	return 1, nil
 }
 func (f *capturingEndpointRepo) Update(context.Context, *aggregate.Endpoint) error { return nil }
-func (f *capturingEndpointRepo) Delete(context.Context, uint, uint) error          { return nil }
-func (f *capturingEndpointRepo) DeleteCascade(context.Context, uint, uint) error   { return nil }
+func (f *capturingEndpointRepo) Delete(context.Context, uint, *uint) error         { return nil }
+func (f *capturingEndpointRepo) DeleteCascade(context.Context, uint, *uint) error  { return nil }
 func (f *capturingEndpointRepo) List(context.Context) ([]*aggregate.Endpoint, error) {
 	return nil, nil
 }
-func (f *capturingEndpointRepo) Paginate(context.Context, model.CommonParam, uint) ([]*aggregate.Endpoint, *model.PageInfo, error) {
+func (f *capturingEndpointRepo) Paginate(context.Context, model.CommonParam, *uint) ([]*aggregate.Endpoint, *model.PageInfo, error) {
 	return nil, nil, nil
 }
 
-func (f *capturingEndpointRepo) FindIDsByScope(context.Context, uint) ([]uint, error) {
+func (f *capturingEndpointRepo) FindIDsByScope(context.Context, *uint) ([]uint, error) {
 	return nil, nil
 }
 

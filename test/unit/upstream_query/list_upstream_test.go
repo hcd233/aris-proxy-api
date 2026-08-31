@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/samber/lo"
+
 	"github.com/hcd233/aris-proxy-api/internal/application/upstream/port"
 	"github.com/hcd233/aris-proxy-api/internal/application/upstream/query"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
@@ -26,10 +28,10 @@ type fakeEndpointRepo struct {
 	endpoints map[uint]*llmagg.Endpoint // 以 ID 索引；ID 列表即 FindIDsByScope 结果
 }
 
-func (f *fakeEndpointRepo) FindIDsByScope(_ context.Context, scopeUserID uint) ([]uint, error) {
+func (f *fakeEndpointRepo) FindIDsByScope(_ context.Context, scopeUserID *uint) ([]uint, error) {
 	ids := make([]uint, 0, len(f.endpoints))
 	for id, ep := range f.endpoints {
-		if scopeUserID == 0 || ep.UserID() == scopeUserID {
+		if scopeUserID == nil || ep.UserID() == *scopeUserID {
 			ids = append(ids, id)
 		}
 	}
@@ -48,17 +50,17 @@ func (f *fakeEndpointRepo) BatchFindByIDs(_ context.Context, ids []uint) (map[ui
 	return out, nil
 }
 
-func (f *fakeEndpointRepo) FindByID(context.Context, uint, uint) (*llmagg.Endpoint, error) {
+func (f *fakeEndpointRepo) FindByID(context.Context, uint, *uint) (*llmagg.Endpoint, error) {
 	return nil, nil
 }
 func (f *fakeEndpointRepo) Create(context.Context, *llmagg.Endpoint, uint) (uint, error) {
 	return 0, nil
 }
 func (f *fakeEndpointRepo) Update(context.Context, *llmagg.Endpoint) error   { return nil }
-func (f *fakeEndpointRepo) Delete(context.Context, uint, uint) error         { return nil }
-func (f *fakeEndpointRepo) DeleteCascade(context.Context, uint, uint) error  { return nil }
+func (f *fakeEndpointRepo) Delete(context.Context, uint, *uint) error        { return nil }
+func (f *fakeEndpointRepo) DeleteCascade(context.Context, uint, *uint) error { return nil }
 func (f *fakeEndpointRepo) List(context.Context) ([]*llmagg.Endpoint, error) { return nil, nil }
-func (f *fakeEndpointRepo) Paginate(context.Context, model.CommonParam, uint) ([]*llmagg.Endpoint, *model.PageInfo, error) {
+func (f *fakeEndpointRepo) Paginate(context.Context, model.CommonParam, *uint) ([]*llmagg.Endpoint, *model.PageInfo, error) {
 	return nil, nil, nil
 }
 
@@ -66,6 +68,10 @@ var _ llmproxy.EndpointRepository = (*fakeEndpointRepo)(nil)
 
 type fakeModelRepo struct {
 	models []*llmagg.Model
+}
+
+func (f *fakeModelRepo) PaginateWithFilter(context.Context, model.CommonParam, llmproxy.ModelListFilter, *uint) ([]*llmagg.Model, *model.PageInfo, error) {
+	return nil, nil, nil
 }
 
 func (f *fakeModelRepo) ListByEndpointIDs(_ context.Context, endpointIDs []uint) ([]*llmagg.Model, error) {
@@ -82,16 +88,18 @@ func (f *fakeModelRepo) ListByEndpointIDs(_ context.Context, endpointIDs []uint)
 	return out, nil
 }
 
-func (f *fakeModelRepo) FindByAlias(context.Context, llmvo.EndpointAlias, uint) ([]*llmagg.Model, error) {
+func (f *fakeModelRepo) FindByAlias(context.Context, llmvo.EndpointAlias, *uint) ([]*llmagg.Model, error) {
 	return nil, nil
 }
-func (f *fakeModelRepo) FindByID(context.Context, uint, uint) (*llmagg.Model, error) { return nil, nil }
-func (f *fakeModelRepo) Create(context.Context, *llmagg.Model, uint) (uint, error)   { return 0, nil }
-func (f *fakeModelRepo) Update(context.Context, *llmagg.Model) error                 { return nil }
-func (f *fakeModelRepo) Delete(context.Context, uint, uint) error                    { return nil }
-func (f *fakeModelRepo) DeleteByEndpointID(context.Context, uint) error              { return nil }
-func (f *fakeModelRepo) List(context.Context) ([]*llmagg.Model, error)               { return nil, nil }
-func (f *fakeModelRepo) Paginate(context.Context, model.CommonParam, uint) ([]*llmagg.Model, *model.PageInfo, error) {
+func (f *fakeModelRepo) FindByID(context.Context, uint, *uint) (*llmagg.Model, error) {
+	return nil, nil
+}
+func (f *fakeModelRepo) Create(context.Context, *llmagg.Model, uint) (uint, error) { return 0, nil }
+func (f *fakeModelRepo) Update(context.Context, *llmagg.Model) error               { return nil }
+func (f *fakeModelRepo) Delete(context.Context, uint, *uint) error                 { return nil }
+func (f *fakeModelRepo) DeleteByEndpointID(context.Context, uint) error            { return nil }
+func (f *fakeModelRepo) List(context.Context) ([]*llmagg.Model, error)             { return nil, nil }
+func (f *fakeModelRepo) Paginate(context.Context, model.CommonParam, *uint) ([]*llmagg.Model, *model.PageInfo, error) {
 	return nil, nil, nil
 }
 
@@ -332,7 +340,7 @@ func TestListUpstream_ScopeIsolation(t *testing.T) {
 
 	groups, modelTotal, pageInfo, err := h.Handle(context.Background(), port.ListUpstreamQuery{
 		CommonParam: model.CommonParam{PageParam: model.PageParam{Page: 1, PageSize: 10}},
-		ScopeUserID: uBob,
+		ScopeUserID: lo.ToPtr(uBob),
 	})
 	if err != nil {
 		t.Fatalf("Handle failed: %v", err)

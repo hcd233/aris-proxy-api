@@ -167,6 +167,32 @@ func TestToolAutoMigrateUniqueIndex(t *testing.T) {
 	}
 }
 
+// TestSessionAutoMigrateCreatedAtIndex 验证 sessions 表 created_at 索引生成。
+// 终态清理 cron 的 24h 窗口扫描（SessionDAO.FindCreatedSince）依赖它避免全表扫描。
+func TestSessionAutoMigrateCreatedAtIndex(t *testing.T) {
+	t.Parallel()
+	db := newTestDB(t)
+	if err := db.AutoMigrate(&dbmodel.Session{}); err != nil {
+		t.Fatalf("failed to migrate sessions: %v", err)
+	}
+
+	const indexName = "idx_sessions_created_at"
+	var indexSQL string
+	if err := db.Raw(
+		"SELECT sql FROM sqlite_master WHERE type = 'index' AND tbl_name = 'sessions' AND name = ?",
+		indexName,
+	).Scan(&indexSQL).Error; err != nil {
+		t.Fatalf("query index %q: %v", indexName, err)
+	}
+	if indexSQL == "" {
+		t.Fatalf("index %q missing", indexName)
+	}
+	gotCols := parseIndexColumns(t, indexSQL)
+	if !equalStrings(gotCols, []string{"created_at"}) {
+		t.Errorf("index %q columns = %v, want [created_at]", indexName, gotCols)
+	}
+}
+
 // parseIndexColumns 从 sqlite_master 的 index SQL 中解析列名，如
 // "CREATE INDEX idx_mca_apikey_created ON model_call_audits(api_key_id, created_at desc)"。
 func parseIndexColumns(t *testing.T, sql string) []string {

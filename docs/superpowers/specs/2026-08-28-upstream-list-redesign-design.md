@@ -237,7 +237,7 @@ export interface ListModelsPageRsp extends CommonRsp {
 
 - vitest 覆盖排序参数映射、facet 同步纯函数
 - `npm run lint` 须过 `truncate-requires-tooltip` 自定义规则（新增截断文案都要配 Tooltip）
-- `npm run build` 通过（死类型删除后须确认无残留引用导致编译失败）
+- `npm run build` 通过
 - 三主题（light / dark / moonshot）下核查组头色条、停用行降权、树枝线的对比度
 
 ### i18n

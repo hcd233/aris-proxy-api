@@ -5,7 +5,7 @@
 ## 项目模型
 
 - 位置：仓库根目录 `web/`，独立 npm 工程，不参与 Go module。
-- 技术栈：Next.js `16.2.6`（App Router）+ React `19` + TypeScript + Tailwind v4 + shadcn/ui（`base-nova` 风格）+ `@base-ui/react` + `lucide-react` + `sonner`。
+- 技术栈：Next.js `16.3.3`（App Router，Turbopack）+ React `19` + TypeScript + Tailwind v4 + shadcn/ui（`base-nova` 风格）+ `@base-ui/react` + `lucide-react` + `sonner`。
 - 关键配置（`web/next.config.ts`）：`output: "export"` 静态导出、`basePath: "/web"`、`trailingSlash: true`、`images.unoptimized: true`。前端最终被 Go 后端 embed 服务，**不要改 basePath，也不要引入需要 SSR/Edge 的依赖**。
 - 后端 embed 路径：`internal/web/static.go` 里 `//go:embed all:dist`；构建时 `make web-build` 把 `web/out/` 拷贝到 `internal/web/dist/`（已 `.gitignore`）。线上请求由 `internal/router/web.go` 的 `/web/*` 处理，找不到的非 `_next/`/`static/` 路径回落 `index.html`。
 - 注意：`web/AGENTS.md` 已声明这是新版 Next.js，与训练数据有差异；动手前优先读 `node_modules/next/dist/docs/` 中的对应章节，并尊重弃用提示。
@@ -67,10 +67,29 @@
 
 `<LocaleFade>` 包裹 dashboard `<main>` 内 `max-w-6xl` 容器与 share 页根，监听 `locale` 变化做 ~120ms opacity 淡入。新增会因切换语言而 reflow 的页面根容器时，用 `<LocaleFade>` 包裹。不要在 `width`/`height` 上加 CSS transition，不要引入 View Transitions API。
 
+## 运行时验证
+
+> 使用 `next-dev-loop` skill（`.agents/skills/external/next-dev-loop/`，来自 vercel/next.js）。`npm run lint && npm run build` 只证明类型与静态导出能成功，不证明页面行为正确——前端改动必须补一轮运行时验证。
+
+### 双视角
+
+- **`/_next/mcp`**：`next dev` 自带的 HTTP 端点，框架视角。本项目验证过的工具：`get_compilation_issues`（Turbopack 编译问题）、`get_errors`（服务端 + 冒泡上来的浏览器错误）、`get_routes`（路由图）、`get_page_metadata`（当前路由由哪些文件渲染，可用来收窄搜索范围）、`get_logs`。回包是 SSE，用 `sed -n 's/^data: //p'` 取 JSON。
+- **`agent-browser`**：驱动真实 Chrome，浏览器视角。DOM、console、network、React fiber。运行命令前先跑一次 `agent-browser skills get core` 读版本匹配的用法，不要凭记忆猜子命令（headless 是默认行为，**没有** `--headless` flag）。
+
+两个视角互为交叉校验：两者结论冲突时先怀疑工具链（多为浏览器会话失效），而不是先怀疑业务代码。
+
+### 本项目适配
+
+- **端口**：本项目 dev server 常用非 3000 端口，需相应设置 `NEXT_MCP_URL=http://localhost:<port>/_next/mcp`。
+- **URL 必须带 `basePath`**：入口是 `http://localhost:<port>/web/`，不是 `/`。
+- **session 隔离**：本项目在 `.worktrees/` 下并行开发，必须用 `--scope worktree` 生成 session id 并 `export AGENT_BROWSER_SESSION` / `AGENT_BROWSER_RESTORE`，否则多 worktree 会互相抢浏览器。
+- **登录态**：dashboard 路由受 `AuthProvider` 保护，需 OAuth2 登录。首次由用户在 headed 浏览器里完成登录，`agent-browser close` 会存 cookie，后续 `--restore` 复用。只验证 `/web/login/`、`/web/share/` 等公开页时不需要。
+- **不适用的上游 skill**：`next-cache-components-adoption` / `next-cache-components-optimizer` / `next-partial-prefetching-adoption` 都要求服务端渲染 + 流式 Suspense，与本项目 `output: "export"` 静态导出（88/101 个组件是 `"use client"`，数据全部经 `api-client.ts` 在浏览器 fetch）架构冲突，**不要引入**。
+
 ## 联调与发布
 
 - 本地完整链路：先后端 `go run ./cmd/server server start ...`，再 `cd web && npm run dev`，浏览器访问 `http://localhost:3000/web`。
 - 生产路径：`make build` → 镜像里 Go 二进制内置 `internal/web/dist/`，浏览器访问 `https://<host>/web/`。
-- CI：`.github/workflows/docker-publish.yml` 的 push path filter **包含** `web/**`（与 `internal/**`、`go.mod` 等同级），纯前端改动也会触发 Docker-Publish：构建前端 → embed 进 Go 镜像 → 推送到 ghcr → 部署到 K8s。推送到 `master` 或合并 PR 到 `master` 即自动发布，无需手工触发。
-- 测试：当前没有强制的前端单测/e2e 框架；改动后至少运行 `cd web && npm run lint && npm run build` 验证类型与导出能成功。
+- CI：`.github/workflows/build-and-publish.yml` 的 push path filter **包含** `web/**`（与 `internal/**`、`go.mod` 等同级），纯前端改动也会触发构建发布：构建前端 → embed 进 Go 镜像 → 推送到 ghcr → 部署到 K8s。推送到 `master` 或合并 PR 到 `master` 即自动发布，无需手工触发。另有 `.github/workflows/lint.yml` 的 `web-lint` job 跑 `npm run lint` + `npm run format:check`（无 `--max-warnings`，warning 不阻塞）。
+- 测试：`cd web && npm run test`（vitest，覆盖 `filter-dsl` 等纯函数与自定义 eslint 规则）。改动后至少跑 `npm run lint && npm run test && npm run build`，再按上文「运行时验证」补一轮 `next-dev-loop`。
 - 提交：前端改动同样遵循 `.worktrees/` + `feature|bugfix|refactor|chore|docs|test|hotfix/...-YYYY-MM-DD` 分支规范；与后端联动的功能尽量在同一个 PR 中提交，避免接口前后不一致。

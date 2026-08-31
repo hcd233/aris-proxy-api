@@ -32,6 +32,7 @@ import (
 	metricsquery "github.com/hcd233/aris-proxy-api/internal/application/metrics/query"
 	modelcommand "github.com/hcd233/aris-proxy-api/internal/application/model/command"
 	modelport "github.com/hcd233/aris-proxy-api/internal/application/model/port"
+	modelquery "github.com/hcd233/aris-proxy-api/internal/application/model/query"
 	appoauth "github.com/hcd233/aris-proxy-api/internal/application/oauth2/command"
 	oauthport "github.com/hcd233/aris-proxy-api/internal/application/oauth2/port"
 	sessioncommand "github.com/hcd233/aris-proxy-api/internal/application/session/command"
@@ -80,6 +81,7 @@ var ApplicationModule = fx.Module(constant.DigNameApplicationModule,
 		NewCreateModelHandler,
 		NewUpdateModelHandler,
 		NewDeleteModelHandler,
+		NewListModelHandler,
 		NewListUpstreamHandler,
 		NewRefreshTokensHandler,
 		NewUpdateProfileHandler,
@@ -230,12 +232,16 @@ func NewCreateModelHandler(endpointRepo llmproxy.EndpointRepository, modelRepo l
 	return modelcommand.NewCreateModelHandler(endpointRepo, modelRepo)
 }
 
-func NewUpdateModelHandler(repo llmproxy.ModelRepository) modelport.UpdateModelHandler {
-	return modelcommand.NewUpdateModelHandler(repo)
+func NewUpdateModelHandler(endpointRepo llmproxy.EndpointRepository, repo llmproxy.ModelRepository) modelport.UpdateModelHandler {
+	return modelcommand.NewUpdateModelHandler(endpointRepo, repo)
 }
 
 func NewDeleteModelHandler(repo llmproxy.ModelRepository) modelport.DeleteModelHandler {
 	return modelcommand.NewDeleteModelHandler(repo)
+}
+
+func NewListModelHandler(endpointRepo llmproxy.EndpointRepository, modelRepo llmproxy.ModelRepository, userRepo identity.UserRepository) modelport.ListModelHandler {
+	return modelquery.NewListModelHandler(modelRepo, endpointRepo, userRepo)
 }
 
 func NewListUpstreamHandler(endpointRepo llmproxy.EndpointRepository, modelRepo llmproxy.ModelRepository, userRepo identity.UserRepository) upstreamport.ListUpstreamHandler {
