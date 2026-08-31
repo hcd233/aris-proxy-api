@@ -81,6 +81,12 @@
       "skillPath": "skills/engineering/improve-codebase-architecture/SKILL.md",
       "computedHash": "8bf292143ca93b00276a0de0fc5f84f2381f4690c5b0d32e99fa283a072f392f"
     },
+    "next-dev-loop": {
+      "source": "vercel/next.js",
+      "sourceType": "github",
+      "skillPath": "skills/next-dev-loop/SKILL.md",
+      "computedHash": "6b8749833d92be29d11598fffcb6863ae32421c88b16299af808f7de3faf7d85"
+    },
     "prototype": {
       "source": "mattpocock/skills",
       "sourceType": "github",
