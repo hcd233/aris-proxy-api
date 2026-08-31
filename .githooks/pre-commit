@@ -65,6 +65,36 @@ fi
 printf "$PASS skills symlink sync\n"
 
 # --------------------------------------------------------------------------
+# 0c. web prettier — auto-format staged web files and re-stage
+#     （与 CI web-lint 的 Prettier check 同规则，避免本地提交后 CI 才发现格式问题）
+# --------------------------------------------------------------------------
+# 注：git pathspec 的 `web/*.ts` 不匹配嵌套路径，故先取 web/ 下全部暂存文件再按扩展名过滤
+WEB_CHANGES=$(git diff --cached --name-only --diff-filter=ACMR -- web/ \
+    | grep -E '\.(ts|tsx|js|jsx|mjs|cjs|json|css|scss|less|md|mdx|yml|yaml)$' || true)
+
+if [ -z "$WEB_CHANGES" ]; then
+    printf "$INFO No web file changes in staging area — skipping prettier\n"
+elif [ ! -d web/node_modules ]; then
+    printf "$INFO web/node_modules not found — skipping prettier\n"
+else
+    printf "$INFO Running prettier -w ...\n"
+
+    # cd 进 web/ 使 prettier 解析 web/ 的配置与本地依赖；路径去掉 web/ 前缀
+    RELATIVE=$(printf '%s\n' "$WEB_CHANGES" | sed 's|^web/||')
+    if ! ( cd web && npx prettier --write --log-level warn $RELATIVE ); then
+        fail "prettier failed. Please fix the issues above before committing."
+    fi
+
+    if ! git diff --quiet -- $WEB_CHANGES; then
+        printf "$INFO prettier reformatted the following files (auto-staging):\n"
+        echo "$WEB_CHANGES" | sed 's/^/       /'
+        echo ""
+        git add $WEB_CHANGES
+    fi
+    printf "$PASS prettier\n"
+fi
+
+# --------------------------------------------------------------------------
 # 1. Detect Go changes in staging area — skip Go checks if none
 # --------------------------------------------------------------------------
 GO_CHANGES=$(git diff --cached --name-only -- '*.go' 'go.mod' 'go.sum')
