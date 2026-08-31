@@ -446,9 +446,12 @@ class ApiClient {
   }
 
   async deleteShare(shareId: string): Promise<CommonRsp> {
-    return this.request<CommonRsp>(`${API_PREFIX}/session/share?id=${encodeURIComponent(shareId)}`, {
-      method: "DELETE",
-    });
+    return this.request<CommonRsp>(
+      `${API_PREFIX}/session/share?id=${encodeURIComponent(shareId)}`,
+      {
+        method: "DELETE",
+      },
+    );
   }
 
   // ─── Session Delete ──────────────────────────────────────────────────────
