@@ -13,15 +13,21 @@ import (
 )
 
 type updateModelHandler struct {
-	repo llmproxy.ModelRepository
+	endpointRepo llmproxy.EndpointRepository
+	repo         llmproxy.ModelRepository
 }
 
 // NewUpdateModelHandler 构造更新命令处理器
-func NewUpdateModelHandler(repo llmproxy.ModelRepository) port.UpdateModelHandler {
-	return &updateModelHandler{repo: repo}
+func NewUpdateModelHandler(endpointRepo llmproxy.EndpointRepository, repo llmproxy.ModelRepository) port.UpdateModelHandler {
+	return &updateModelHandler{endpointRepo: endpointRepo, repo: repo}
 }
 
 // Handle 执行更新命令
+//
+// 换绑 endpoint（cmd.EndpointID 非 nil）时必须校验目标 endpoint 归属：
+// 用户 A 把 model 挂到用户 B 的 endpoint 上会让 model 出现在 B 的 upstream
+// 分组视图里（ListByEndpointIDs 不做二次 scope 过滤），形成跨租户信息泄露。
+// admin 全量视角下同样要求 endpoint 归属与 model 一致，防止误操作造出跨用户挂载。
 func (h *updateModelHandler) Handle(ctx context.Context, cmd port.UpdateModelCommand) error {
 	log := logger.WithCtx(ctx)
 
@@ -32,6 +38,20 @@ func (h *updateModelHandler) Handle(ctx context.Context, cmd port.UpdateModelCom
 	}
 	if m == nil {
 		return ierr.New(ierr.ErrDataNotExists, "model not found")
+	}
+
+	if cmd.EndpointID != nil {
+		ep, eerr := h.endpointRepo.FindByID(ctx, *cmd.EndpointID, cmd.ScopeUserID)
+		if eerr != nil {
+			log.Error("[ModelCommand] Find endpoint for model update failed", zap.Error(eerr))
+			return eerr
+		}
+		if ep == nil {
+			return ierr.New(ierr.ErrDataNotExists, "endpoint not found")
+		}
+		if ep.UserID() != m.UserID() {
+			return ierr.New(ierr.ErrNoPermission, "endpoint owner does not match model owner")
+		}
 	}
 
 	var aliasPtr *vo.EndpointAlias

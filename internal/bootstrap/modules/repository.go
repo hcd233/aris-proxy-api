@@ -171,7 +171,7 @@ func NewEndpointResolver(
 	endpointRepo llmproxy.EndpointRepository,
 	modelRepo llmproxy.ModelRepository,
 ) llmproxyservice.EndpointResolver {
-	return llmproxyservice.NewEndpointResolver(endpointRepo, modelRepo)
+	return llmproxyservice.NewEndpointResolver(endpointRepo, modelRepo, config.GatewaySharedPoolFallback)
 }
 
 func NewTriggerRepository(db *gorm.DB) trigger.TriggerRepository {

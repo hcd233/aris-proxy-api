@@ -173,6 +173,15 @@ var (
 	// ponytail: 上限写死 200；需要真分页时再引入组内游标
 	UpstreamGroupModelLimit = 200
 
+	// UpstreamScopeWarnThreshold upstream 分组查询内存筛选/分页模型假设的告警阈值：
+	// scope 内 endpoint 数超过此值打 Warn（当前实现全量加载后内存分页）。
+	UpstreamScopeWarnThreshold = 500
+
+	// WhereUserIDEquals user_id 显式等值条件。
+	// 必须用 "user_id = ?" 而非 Where("user_id", v)：GORM 的 Where("col", v) 在
+	// 无占位符时 v 会被静默丢弃（v=0 时退化为 WHERE user_id，语义完全错误）。
+	WhereUserIDEquals = "user_id = ?"
+
 	// SessionListINChunkSize session 列表「空 summary fallback」批量加载消息时，
 	// 每条 SELECT ... WHERE id IN (?) 携带的 ID 上限。
 	//

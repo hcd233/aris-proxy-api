@@ -32,10 +32,12 @@ const (
 
 	TraceClientSchemeHTTP  = "http"
 	TraceClientSchemeHTTPS = "https"
-	TraceClientCheckPath   = "/api/cli/v1/trace/client/check"
-	// ClientModelsListPath 客户端模型分发接口绝对路径（aris model export 实际请求）。
+
+	// TraceClientIngestPath/CheckPath 客户端上报接口绝对路径。
 	//
-	// 服务端注册路径由 ClientModelsRoutePath 派生，二者同源，不得各自硬编码。
+	// 与服务端注册路径同源派生（CLI 前缀 + 组内 RoutePath），不得各自硬编码——
+	// 路径改名只需改 CLIAPIPrefix 与对应 RoutePath（CR M1）。
+	TraceClientCheckPath            = CLIAPIPrefix + TraceClientCheckRoutePath
 	ClientModelsListPath            = ClientModelsAPIPrefix + ClientModelsRoutePath
 	ClientModelsListMaxBodyBytes    = 1 << 20
 	TraceClientHTTPTimeout          = 5 * time.Second
@@ -43,7 +45,7 @@ const (
 	TraceClientBatchMaxRecords      = 500
 	TraceClientBatchMaxBytes        = 4 << 20
 	TraceClientRejectedRetention    = 7 * 24 * time.Hour
-	TraceClientIngestPath           = "/api/cli/v1/trace/event"
+	TraceClientIngestPath           = CLIAPIPrefix + TraceClientIngestRoutePath
 	TraceClientRecordFileSuffix     = ".json"
 	TraceClientSpoolLockFile        = "spool.lock"
 	TraceClientStateLockFile        = "client.lock"

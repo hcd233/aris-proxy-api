@@ -54,7 +54,7 @@ func newStubModelRepo(behavior string) *stubModelRepo {
 
 var errStubDBFailure = ierr.New(ierr.ErrDBQuery, "simulated db outage")
 
-func (s *stubModelRepo) FindByAlias(_ context.Context, alias vo.EndpointAlias, _ uint) ([]*aggregate.Model, error) {
+func (s *stubModelRepo) FindByAlias(_ context.Context, alias vo.EndpointAlias, _ *uint) ([]*aggregate.Model, error) {
 	s.callsByAlias[alias.String()]++
 	b, ok := s.behaviorByAlias[alias.String()]
 	if !ok {
@@ -73,7 +73,7 @@ func (s *stubModelRepo) FindByAlias(_ context.Context, alias vo.EndpointAlias, _
 	}
 }
 
-func (s *stubModelRepo) FindByID(_ context.Context, _, _ uint) (*aggregate.Model, error) {
+func (s *stubModelRepo) FindByID(_ context.Context, _ uint, _ *uint) (*aggregate.Model, error) {
 	return nil, nil
 }
 
@@ -85,7 +85,7 @@ func (s *stubModelRepo) Update(_ context.Context, _ *aggregate.Model) error {
 	return nil
 }
 
-func (s *stubModelRepo) Delete(_ context.Context, _, _ uint) error {
+func (s *stubModelRepo) Delete(_ context.Context, _ uint, _ *uint) error {
 	return nil
 }
 
@@ -101,7 +101,7 @@ func (s *stubModelRepo) ListByEndpointIDs(context.Context, []uint) ([]*aggregate
 	return nil, nil
 }
 
-func (s *stubModelRepo) Paginate(_ context.Context, _ model.CommonParam, _ uint) ([]*aggregate.Model, *model.PageInfo, error) {
+func (s *stubModelRepo) Paginate(_ context.Context, _ model.CommonParam, _ *uint) ([]*aggregate.Model, *model.PageInfo, error) {
 	return nil, nil, nil
 }
 
@@ -113,7 +113,7 @@ type stubEndpointRepo struct {
 	findByIDCalled bool
 }
 
-func (s *stubEndpointRepo) FindByID(_ context.Context, id, _ uint) (*aggregate.Endpoint, error) {
+func (s *stubEndpointRepo) FindByID(_ context.Context, id uint, _ *uint) (*aggregate.Endpoint, error) {
 	s.findByIDCalled = true
 	if id == 0 {
 		return nil, nil
@@ -133,11 +133,11 @@ func (s *stubEndpointRepo) Update(_ context.Context, _ *aggregate.Endpoint) erro
 	return nil
 }
 
-func (s *stubEndpointRepo) Delete(_ context.Context, _, _ uint) error {
+func (s *stubEndpointRepo) Delete(_ context.Context, _ uint, _ *uint) error {
 	return nil
 }
 
-func (s *stubEndpointRepo) DeleteCascade(_ context.Context, _, _ uint) error {
+func (s *stubEndpointRepo) DeleteCascade(_ context.Context, _ uint, _ *uint) error {
 	return nil
 }
 
@@ -145,11 +145,11 @@ func (s *stubEndpointRepo) List(_ context.Context) ([]*aggregate.Endpoint, error
 	return nil, nil
 }
 
-func (s *stubEndpointRepo) FindIDsByScope(context.Context, uint) ([]uint, error) {
+func (s *stubEndpointRepo) FindIDsByScope(context.Context, *uint) ([]uint, error) {
 	return nil, nil
 }
 
-func (s *stubEndpointRepo) Paginate(_ context.Context, _ model.CommonParam, _ uint) ([]*aggregate.Endpoint, *model.PageInfo, error) {
+func (s *stubEndpointRepo) Paginate(_ context.Context, _ model.CommonParam, _ *uint) ([]*aggregate.Endpoint, *model.PageInfo, error) {
 	return nil, nil, nil
 }
 
@@ -157,11 +157,11 @@ type staticModelRepo struct {
 	models []*aggregate.Model
 }
 
-func (s *staticModelRepo) FindByAlias(_ context.Context, _ vo.EndpointAlias, userID uint) ([]*aggregate.Model, error) {
+func (s *staticModelRepo) FindByAlias(_ context.Context, _ vo.EndpointAlias, userID *uint) ([]*aggregate.Model, error) {
 	return s.models, nil
 }
 
-func (s *staticModelRepo) FindByID(_ context.Context, _, _ uint) (*aggregate.Model, error) {
+func (s *staticModelRepo) FindByID(_ context.Context, _ uint, _ *uint) (*aggregate.Model, error) {
 	return nil, nil
 }
 
@@ -173,7 +173,7 @@ func (s *staticModelRepo) Update(_ context.Context, _ *aggregate.Model) error {
 	return nil
 }
 
-func (s *staticModelRepo) Delete(_ context.Context, _, _ uint) error {
+func (s *staticModelRepo) Delete(_ context.Context, _ uint, _ *uint) error {
 	return nil
 }
 
@@ -193,7 +193,7 @@ func (s *staticModelRepo) List(_ context.Context) ([]*aggregate.Model, error) {
 	return nil, nil
 }
 
-func (s *staticModelRepo) Paginate(_ context.Context, _ model.CommonParam, _ uint) ([]*aggregate.Model, *model.PageInfo, error) {
+func (s *staticModelRepo) Paginate(_ context.Context, _ model.CommonParam, _ *uint) ([]*aggregate.Model, *model.PageInfo, error) {
 	return nil, nil, nil
 }
 
@@ -201,11 +201,11 @@ type endpointByIDRepo struct {
 	endpoints map[uint]*aggregate.Endpoint
 }
 
-func (s *endpointByIDRepo) FindIDsByScope(context.Context, uint) ([]uint, error) {
+func (s *endpointByIDRepo) FindIDsByScope(context.Context, *uint) ([]uint, error) {
 	return nil, nil
 }
 
-func (s *endpointByIDRepo) FindByID(_ context.Context, id, _ uint) (*aggregate.Endpoint, error) {
+func (s *endpointByIDRepo) FindByID(_ context.Context, id uint, _ *uint) (*aggregate.Endpoint, error) {
 	return s.endpoints[id], nil
 }
 
@@ -227,11 +227,11 @@ func (s *endpointByIDRepo) Update(_ context.Context, _ *aggregate.Endpoint) erro
 	return nil
 }
 
-func (s *endpointByIDRepo) Delete(_ context.Context, _, _ uint) error {
+func (s *endpointByIDRepo) Delete(_ context.Context, _ uint, _ *uint) error {
 	return nil
 }
 
-func (s *endpointByIDRepo) DeleteCascade(_ context.Context, _, _ uint) error {
+func (s *endpointByIDRepo) DeleteCascade(_ context.Context, _ uint, _ *uint) error {
 	return nil
 }
 
@@ -239,7 +239,7 @@ func (s *endpointByIDRepo) List(_ context.Context) ([]*aggregate.Endpoint, error
 	return nil, nil
 }
 
-func (s *endpointByIDRepo) Paginate(_ context.Context, _ model.CommonParam, _ uint) ([]*aggregate.Endpoint, *model.PageInfo, error) {
+func (s *endpointByIDRepo) Paginate(_ context.Context, _ model.CommonParam, _ *uint) ([]*aggregate.Endpoint, *model.PageInfo, error) {
 	return nil, nil, nil
 }
 
@@ -253,6 +253,7 @@ func TestEndpointResolver_ResolveSkipsDisabledModels(t *testing.T) {
 	resolver := service.NewEndpointResolver(
 		&endpointByIDRepo{endpoints: map[uint]*aggregate.Endpoint{1: ep}},
 		&staticModelRepo{models: []*aggregate.Model{disabledModel, enabledModel}},
+		false,
 	)
 
 	_, m, err := resolver.Resolve(ctx, 0, alias, func(ep *aggregate.Endpoint) bool {
@@ -280,6 +281,7 @@ func TestEndpointResolver_ResolveFiltersUnsupportedEndpoints(t *testing.T) {
 	resolver := service.NewEndpointResolver(
 		&endpointByIDRepo{endpoints: map[uint]*aggregate.Endpoint{1: anthropicOnly, 2: openAIOnly}},
 		&staticModelRepo{models: []*aggregate.Model{anthropicModel, openAIModel}},
+		false,
 	)
 
 	ep, m, err := resolver.Resolve(ctx, 0, alias, func(ep *aggregate.Endpoint) bool {
@@ -306,7 +308,7 @@ func TestEndpointResolver_Resolve(t *testing.T) {
 			t.Parallel()
 			modelRepo := newStubModelRepo(tc.ModelBehavior)
 			endpointRepo := &stubEndpointRepo{}
-			resolver := service.NewEndpointResolver(endpointRepo, modelRepo)
+			resolver := service.NewEndpointResolver(endpointRepo, modelRepo, false)
 
 			ep, m, err := resolver.Resolve(ctx, 0, vo.EndpointAlias(tc.Alias), nil)
 
@@ -363,22 +365,22 @@ func (r *ownedModelRepo) ListByEndpointIDs(context.Context, []uint) ([]*aggregat
 	return nil, nil
 }
 
-func (r *ownedModelRepo) FindByAlias(_ context.Context, alias vo.EndpointAlias, userID uint) ([]*aggregate.Model, error) {
-	if userID == r.ownerUserID && alias.String() == r.alias {
+func (r *ownedModelRepo) FindByAlias(_ context.Context, alias vo.EndpointAlias, userID *uint) ([]*aggregate.Model, error) {
+	if userID != nil && *userID == r.ownerUserID && alias.String() == r.alias {
 		m, _ := aggregate.CreateModel(1, alias, "upstream-x", 1, true, 128000, 64000, []enum.InputModality{enum.InputModalityText})
 		return []*aggregate.Model{m}, nil
 	}
 	return nil, nil
 }
-func (r *ownedModelRepo) FindByID(context.Context, uint, uint) (*aggregate.Model, error) {
+func (r *ownedModelRepo) FindByID(context.Context, uint, *uint) (*aggregate.Model, error) {
 	return nil, nil
 }
 func (r *ownedModelRepo) Create(context.Context, *aggregate.Model, uint) (uint, error) { return 0, nil }
 func (r *ownedModelRepo) Update(context.Context, *aggregate.Model) error               { return nil }
-func (r *ownedModelRepo) Delete(context.Context, uint, uint) error                     { return nil }
+func (r *ownedModelRepo) Delete(context.Context, uint, *uint) error                    { return nil }
 func (r *ownedModelRepo) DeleteByEndpointID(context.Context, uint) error               { return nil }
 func (r *ownedModelRepo) List(context.Context) ([]*aggregate.Model, error)             { return nil, nil }
-func (r *ownedModelRepo) Paginate(context.Context, model.CommonParam, uint) ([]*aggregate.Model, *model.PageInfo, error) {
+func (r *ownedModelRepo) Paginate(context.Context, model.CommonParam, *uint) ([]*aggregate.Model, *model.PageInfo, error) {
 	return nil, nil, nil
 }
 
@@ -389,6 +391,7 @@ func TestEndpointResolver_UserIsolation(t *testing.T) {
 	resolver := service.NewEndpointResolver(
 		&stubEndpointRepo{},
 		&ownedModelRepo{ownerUserID: 101, alias: "gpt-x"},
+		false,
 	)
 
 	// 归属用户解析成功
@@ -401,5 +404,63 @@ func TestEndpointResolver_UserIsolation(t *testing.T) {
 	_, _, err = resolver.Resolve(context.Background(), 202, vo.EndpointAlias("gpt-x"), nil)
 	if !errors.Is(err, ierr.ErrDataNotExists) {
 		t.Fatalf("non-owner resolve should be ErrDataNotExists, got %v", err)
+	}
+}
+
+// sharedPoolModelRepo 仅对共享池（userID=0）返回命中，验证回退语义。
+type sharedPoolModelRepo struct {
+	alias string
+}
+
+func (r *sharedPoolModelRepo) ListByEndpointIDs(context.Context, []uint) ([]*aggregate.Model, error) {
+	return nil, nil
+}
+
+func (r *sharedPoolModelRepo) FindByAlias(_ context.Context, alias vo.EndpointAlias, userID *uint) ([]*aggregate.Model, error) {
+	if userID == nil || *userID != 0 || alias.String() != r.alias {
+		return nil, nil
+	}
+	m, _ := aggregate.CreateModel(1, alias, "shared-upstream", 1, true, 128000, 64000, []enum.InputModality{enum.InputModalityText})
+	m.SetUserID(0)
+	return []*aggregate.Model{m}, nil
+}
+func (r *sharedPoolModelRepo) FindByID(context.Context, uint, *uint) (*aggregate.Model, error) {
+	return nil, nil
+}
+func (r *sharedPoolModelRepo) Create(context.Context, *aggregate.Model, uint) (uint, error) {
+	return 0, nil
+}
+func (r *sharedPoolModelRepo) Update(context.Context, *aggregate.Model) error   { return nil }
+func (r *sharedPoolModelRepo) Delete(context.Context, uint, *uint) error        { return nil }
+func (r *sharedPoolModelRepo) DeleteByEndpointID(context.Context, uint) error   { return nil }
+func (r *sharedPoolModelRepo) List(context.Context) ([]*aggregate.Model, error) { return nil, nil }
+func (r *sharedPoolModelRepo) Paginate(context.Context, model.CommonParam, *uint) ([]*aggregate.Model, *model.PageInfo, error) {
+	return nil, nil, nil
+}
+func (r *sharedPoolModelRepo) PaginateWithFilter(context.Context, model.CommonParam, llmproxy.ModelListFilter, *uint) ([]*aggregate.Model, *model.PageInfo, error) {
+	return nil, nil, nil
+}
+
+// TestEndpointResolver_SharedPoolFallback 开启回退时用户名下未命中 → 查共享池；
+// 关闭回退时直接 ErrDataNotExists。
+func TestEndpointResolver_SharedPoolFallback(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	alias := vo.EndpointAlias("gpt-shared")
+	endpointRepo := &stubEndpointRepo{}
+
+	resolverOn := service.NewEndpointResolver(endpointRepo, &sharedPoolModelRepo{alias: alias.String()}, true)
+	ep, m, err := resolverOn.Resolve(ctx, 101, alias, nil)
+	if err != nil {
+		t.Fatalf("fallback resolve should succeed: %v", err)
+	}
+	if ep == nil || m == nil {
+		t.Fatal("expected endpoint and model resolved from shared pool")
+	}
+
+	resolverOff := service.NewEndpointResolver(endpointRepo, &sharedPoolModelRepo{alias: alias.String()}, false)
+	_, _, err = resolverOff.Resolve(ctx, 101, alias, nil)
+	if !errors.Is(err, ierr.ErrDataNotExists) {
+		t.Fatalf("fallback disabled must be ErrDataNotExists, got %v", err)
 	}
 }

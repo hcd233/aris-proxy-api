@@ -11,7 +11,7 @@ import (
 //
 // ModelID 为业务模型 ID（缺省 nil 时默认 = alias，与领域层 CreateModel 行为一致）。
 type CreateModelCommand struct {
-	ScopeUserID     uint
+	ScopeUserID     *uint
 	Alias           string
 	ModelID         *string
 	UpstreamModel   string
@@ -35,7 +35,7 @@ type CreateModelHandler interface {
 //
 // ID 为 Model 数据库主键（路由 id），ModelID 为业务模型 ID（默认=alias，可更新）。
 type UpdateModelCommand struct {
-	ScopeUserID     uint
+	ScopeUserID     *uint
 	ID              uint
 	Alias           *string
 	UpstreamModel   *string
@@ -54,7 +54,7 @@ type UpdateModelHandler interface {
 
 // DeleteModelCommand 删除 Model 命令
 type DeleteModelCommand struct {
-	ScopeUserID uint
+	ScopeUserID *uint
 	ModelID     uint
 }
 

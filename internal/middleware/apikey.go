@@ -61,6 +61,15 @@ func APIKeyMiddleware(db *gorm.DB) func(ctx huma.Context, next func(huma.Context
 			return
 		}
 
+		// 无主 key（user_id=0）防御：struct 零值条件下 userDAO.Get 会忽略 user_id 过滤，
+		// 返回主键最小的用户，把请求错误认成别人的租户——多租户化后必须显式拒绝。
+		if apiKey.UserID == 0 {
+			logger.WithCtx(ctx.Context()).Info("[APIKeyMiddleware] Orphan API key rejected (user_id=0)",
+				zap.Uint("apiKeyID", apiKey.ID))
+			lo.Must0(apiutil.WriteErrorHTTPResponse(ctx, fiber.StatusUnauthorized, ierr.ErrUnauthorized.BizError().Localize(i18n.FromCtx(ctx.Context()))))
+			return
+		}
+
 		// Demo 账户的存量 API Key 一律拒绝：demo 只读受限，不允许调用 LLM 转发
 		if user.Permission == enum.PermissionDemo {
 			logger.WithCtx(ctx.Context()).Info("[APIKeyMiddleware] Demo user API key rejected",
