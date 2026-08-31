@@ -754,6 +754,7 @@ export interface RuntimeInstanceSeries {
   goroutines?: RuntimePoint[];
   heapMB?: RuntimePoint[];
   cpuPercent?: RuntimePoint[];
+  threads?: RuntimePoint[];
 }
 
 export interface RuntimeMetricsRsp extends CommonRsp {
