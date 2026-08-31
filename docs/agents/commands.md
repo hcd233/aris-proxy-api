@@ -8,8 +8,12 @@
 - 全量测试：`make test`（等价于 `go test -count=1 ./cmd/... ./internal/... ./test/...`，显式排除 `web/node_modules` 中的嵌套 Go 目录）
 - 聚焦测试：`go test -v -count=1 -run TestFunctionName ./test/unit/<topic>/` 或 `./test/e2e/<topic>/`
 - 前端 lint：`cd web && npm run lint`（或 `make web-lint`）；自动修复：`npm run lint:fix`
+- 前端单测：`cd web && npm run test`（vitest）
 - 前端格式化：`cd web && npm run format`（Prettier 写入，或 `make web-format`）；格式检查：`npm run format:check`（CI 用，或 `make web-format-check`）
 - 前端构建（同时同步到 `internal/web/dist/`）：`make web-build`；清理产物：`make web-clean`
+- 前端运行时验证：`cd web && npx next dev --port <port>`，再按 `next-dev-loop` skill 交叉校验 `/_next/mcp` 与 `agent-browser`（入口 `http://localhost:<port>/web/`，注意 `basePath`）。详见 [web-frontend.md](web-frontend.md) 的「运行时验证」
+- 探测 `/_next/mcp`：`curl -s -X POST http://localhost:<port>/_next/mcp -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | sed -n 's/^data: //p'`（回包是 SSE）
+- 停掉前端 dev server：`lsof -nP -ti tcp:<port> -sTCP:LISTEN | xargs kill`（本机 `pkill -f` 会匹配到调用者自身而卡死）
 - 生产构建会自动包含前端：`make build` 在编译 Go 之前先跑 `web-build`
 - UPX 极致压缩：`make build-upx`（需安装 upx）
 - 编译缓存预热：`make warm-cache`（CI 加速）
