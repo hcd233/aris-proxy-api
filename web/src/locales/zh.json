@@ -180,7 +180,7 @@
   "monitor.heap_memory": "堆内存",
   "monitor.request_qps": "请求QPS",
   "monitor.latency_p95": "延迟P95",
-  "monitor.goroutines_chart": "协程数",
+  "monitor.goroutines_chart": "协程 / 线程数",
   "monitor.live": "实时",
   "monitor.collecting": "正在采集数据…",
   "monitor.current": "当前值",

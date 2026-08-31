@@ -179,6 +179,36 @@ func TestAggregate_SuccessRateSkipsEmptyBucket(t *testing.T) {
 	}
 }
 
+func TestAggregate_ThreadsPerPodSkipsLegacySnapshots(t *testing.T) {
+	t.Parallel()
+	const bucket int64 = 60
+	// 桶0：新快照 Threads 30、旧版快照（无 threads 字段解码为 0）、新快照 Threads 50
+	// → threads 均值 (30+50)/2=40，不得被 0 稀释成 80/3。
+	// 桶1：仅旧版快照 → threads 无有效样本，不输出该点。
+	byInstance := map[string][]metrics.Snapshot{
+		"pod-a": {
+			{TS: 0, Goroutines: 10, Threads: 30},
+			{TS: 15, Goroutines: 20},
+			{TS: 30, Goroutines: 20, Threads: 50},
+			{TS: 90, Goroutines: 30},
+		},
+	}
+
+	got := metricsquery.Aggregate(byInstance, 0, bucket, 120, 0)
+
+	a := got.Instances["pod-a"]
+	if len(a.Threads) != 1 {
+		t.Fatalf("expected 1 threads point, got %+v", a.Threads)
+	}
+	if a.Threads[0].Time != 0 || a.Threads[0].Value != 40 {
+		t.Errorf("expected threads 40@0, got %+v", a.Threads[0])
+	}
+	// goroutines 曲线不受 threads 哨兵逻辑影响：桶0 均值 50/3、桶1 原值 30
+	if len(a.Goroutines) != 2 {
+		t.Errorf("expected 2 goroutines points, got %+v", a.Goroutines)
+	}
+}
+
 func TestAggregate_SuccessRateRoundsRepeatingDecimal(t *testing.T) {
 	t.Parallel()
 	const bucket int64 = 60

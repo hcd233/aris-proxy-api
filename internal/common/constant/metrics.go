@@ -53,6 +53,7 @@ const (
 	// —— flusher 从 registry.Gather() 抽取快照时用的完整指标名 ——
 	MetricFullRequestDuration = "http_request_duration_seconds"
 	MetricFullGoGoroutines    = "go_goroutines"
+	MetricFullGoThreads       = "go_threads"
 	MetricFullGoHeapAlloc     = "go_memstats_alloc_bytes"
 	MetricFullProcessCPU      = "process_cpu_seconds_total"
 	MetricFullSSEActive       = "sse_active_connections"

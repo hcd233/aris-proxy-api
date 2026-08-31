@@ -41,6 +41,7 @@ type RuntimeInstanceSeries struct {
 	Goroutines []RuntimePoint `json:"goroutines" doc:"goroutine 数（单 pod）"`
 	HeapMB     []RuntimePoint `json:"heapMB" doc:"堆内存 MB（单 pod）"`
 	CPUPercent []RuntimePoint `json:"cpuPercent" doc:"CPU 使用率 %（单 pod，0-100）"`
+	Threads    []RuntimePoint `json:"threads" doc:"OS 线程数 M（单 pod）"`
 }
 
 // RuntimePoint 时序点

@@ -150,40 +150,53 @@ func decodeSnapshots(payloads [][]byte) []metrics.Snapshot {
 }
 
 func accumulateInstance(agg []bucketAgg, snaps []metrics.Snapshot, alignedStart, bucket int64, n int) {
-	_, _, gSSE, gCount := instanceGauges(snaps, alignedStart, bucket, n)
+	gauges := instanceGauges(snaps, alignedStart, bucket, n)
 	deltas := instanceDeltas(snaps, alignedStart, bucket, n)
 
 	bucketSeconds := float64(bucket)
 	for idx := range n {
-		mergeGaugeBucket(&agg[idx], gSSE[idx], gCount[idx])
+		mergeGaugeBucket(&agg[idx], gauges[idx].sse, gauges[idx].count)
 		mergeRateBucket(&agg[idx], deltas[idx].count, deltas[idx].cpu, deltas[idx].hist, bucketSeconds)
 		mergeTokenBucket(&agg[idx], deltas[idx].tokenIn, deltas[idx].tokenOut)
 		mergeReqBucket(&agg[idx], deltas[idx].reqTotal, deltas[idx].reqSuccess)
 	}
 }
 
+// instanceGauge 单实例某桶的 gauge 原值累加与样本计数（threads 另计有效样本数 tCount）。
+type instanceGauge struct {
+	goroutines float64
+	heapBytes  float64
+	threads    float64
+	sse        map[string]float64
+	count      float64
+	tCount     float64
+}
+
 // instanceGauges 按桶累加单实例的 gauge 原值与计数（用于后续求桶内均值）。
-func instanceGauges(snaps []metrics.Snapshot, alignedStart, bucket int64, n int) (gSum, gHeap []float64, gSSE []map[string]float64, gCount []float64) {
-	gSum = make([]float64, n)
-	gHeap = make([]float64, n)
-	gSSE = make([]map[string]float64, n)
-	gCount = make([]float64, n)
+// threads 单独计数：旧版快照无该字段（解码为 0），仅累计有效样本避免稀释均值。
+func instanceGauges(snaps []metrics.Snapshot, alignedStart, bucket int64, n int) []instanceGauge {
+	gauges := make([]instanceGauge, n)
 	for _, s := range snaps {
 		idx := int((s.TS - alignedStart) / bucket)
 		if idx < 0 || idx >= n {
 			continue
 		}
-		gSum[idx] += s.Goroutines
-		gHeap[idx] += s.HeapBytes
-		gCount[idx]++
-		if gSSE[idx] == nil {
-			gSSE[idx] = map[string]float64{}
+		g := &gauges[idx]
+		g.goroutines += s.Goroutines
+		g.heapBytes += s.HeapBytes
+		g.count++
+		if s.Threads > 0 {
+			g.threads += s.Threads
+			g.tCount++
+		}
+		if g.sse == nil {
+			g.sse = map[string]float64{}
 		}
 		for prov, v := range s.SSEActive {
-			gSSE[idx][prov] += v
+			g.sse[prov] += v
 		}
 	}
-	return gSum, gHeap, gSSE, gCount
+	return gauges
 }
 
 // instanceDelta 单实例某桶的相邻快照正向 delta 汇总（速率与比例在跨实例合并后统一计算）。
@@ -318,27 +331,31 @@ func aggregateInstances(byInstance map[string][]metrics.Snapshot, alignedStart, 
 	return out
 }
 
-// aggregateOneInstance 单实例按桶输出 goroutines/heapMB/cpuPercent 曲线。
+// aggregateOneInstance 单实例按桶输出 goroutines/heapMB/cpuPercent/threads 曲线。
 func aggregateOneInstance(snaps []metrics.Snapshot, alignedStart, bucket int64, n int, outputStart int64) dto.RuntimeInstanceSeries {
-	gSum, gHeap, _, gCount := instanceGauges(snaps, alignedStart, bucket, n)
+	gauges := instanceGauges(snaps, alignedStart, bucket, n)
 	deltas := instanceDeltas(snaps, alignedStart, bucket, n)
 	bucketSeconds := float64(bucket)
 
 	var s dto.RuntimeInstanceSeries
 	for idx := range n {
 		t := alignedStart + int64(idx)*bucket
-		if t < outputStart || gCount[idx] == 0 {
+		if t < outputStart || gauges[idx].count == 0 {
 			continue
 		}
-		s.Goroutines = append(s.Goroutines, dto.RuntimePoint{Time: t, Value: round2(gSum[idx] / gCount[idx])})
-		s.HeapMB = append(s.HeapMB, dto.RuntimePoint{Time: t, Value: round2(gHeap[idx] / gCount[idx] / constant.RuntimeMetricsBytesPerMB)})
+		s.Goroutines = append(s.Goroutines, dto.RuntimePoint{Time: t, Value: round2(gauges[idx].goroutines / gauges[idx].count)})
+		s.HeapMB = append(s.HeapMB, dto.RuntimePoint{Time: t, Value: round2(gauges[idx].heapBytes / gauges[idx].count / constant.RuntimeMetricsBytesPerMB)})
 		s.CPUPercent = append(s.CPUPercent, dto.RuntimePoint{Time: t, Value: round2(deltas[idx].cpu / bucketSeconds * constant.RuntimeMetricsPercentToRatio)})
+		// 桶内无有效 threads 样本（纯旧快照）时不输出该点，前端自然断线。
+		if gauges[idx].tCount > 0 {
+			s.Threads = append(s.Threads, dto.RuntimePoint{Time: t, Value: round2(gauges[idx].threads / gauges[idx].tCount)})
+		}
 	}
 	return s
 }
 
 func instanceSeriesHasPoints(s dto.RuntimeInstanceSeries) bool {
-	return len(s.Goroutines) > 0 || len(s.HeapMB) > 0 || len(s.CPUPercent) > 0
+	return len(s.Goroutines) > 0 || len(s.HeapMB) > 0 || len(s.CPUPercent) > 0 || len(s.Threads) > 0
 }
 
 func collectProviders(agg []bucketAgg) []string {

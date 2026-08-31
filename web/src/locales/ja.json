@@ -291,7 +291,7 @@
   "monitor.heap_memory": "ヒープメモリ",
   "monitor.request_qps": "リクエスト QPS",
   "monitor.latency_p95": "レイテンシ P95",
-  "monitor.goroutines_chart": "Goroutines",
+  "monitor.goroutines_chart": "ゴルーチン / スレッド数",
   "monitor.live": "ライブ",
   "monitor.collecting": "データ収集中…",
   "monitor.current": "現在",
