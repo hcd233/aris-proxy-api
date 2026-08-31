@@ -47,6 +47,22 @@ func TestBuildSnapshot_ExtractsRuntimeMetrics(t *testing.T) {
 	}
 }
 
+func TestBuildSnapshot_ExtractsGoThreads(t *testing.T) {
+	t.Parallel()
+	registry := prometheus.NewRegistry()
+	threads := prometheus.NewGauge(prometheus.GaugeOpts{Name: constant.MetricFullGoThreads})
+	registry.MustRegister(threads)
+	threads.Set(37)
+
+	snap, err := metricspkg.BuildSnapshot(registry, time.Now())
+	if err != nil {
+		t.Fatalf("BuildSnapshot failed: %v", err)
+	}
+	if snap.Threads != 37 {
+		t.Errorf("expected threads 37, got %f", snap.Threads)
+	}
+}
+
 func TestSSEGauge_IncDec(t *testing.T) {
 	t.Parallel()
 	registry := prometheus.NewRegistry()
