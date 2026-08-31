@@ -291,7 +291,7 @@
   "monitor.heap_memory": "Heap Memory",
   "monitor.request_qps": "Request QPS",
   "monitor.latency_p95": "Latency P95",
-  "monitor.goroutines_chart": "Goroutines",
+  "monitor.goroutines_chart": "Goroutines / Threads",
   "monitor.live": "Live",
   "monitor.collecting": "Collecting data…",
   "monitor.current": "Current",

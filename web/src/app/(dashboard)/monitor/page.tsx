@@ -39,6 +39,7 @@ interface InstanceState {
   goroutines: Pt[];
   heapMB: Pt[];
   cpuPercent: Pt[];
+  threads: Pt[];
 }
 
 interface SeriesState {
@@ -52,7 +53,7 @@ interface SeriesState {
   latestTime: number; // 后端当前桶起点 unix 秒，用于头部卡片活跃实例判定
 }
 
-const EMPTY_INSTANCE: InstanceState = { goroutines: [], heapMB: [], cpuPercent: [] };
+const EMPTY_INSTANCE: InstanceState = { goroutines: [], heapMB: [], cpuPercent: [], threads: [] };
 
 const EMPTY_STATE: SeriesState = {
   qps: [],
@@ -104,6 +105,7 @@ function mergeInstances(
       goroutines: mergePoints(p.goroutines, inc.goroutines ?? [], cutoff),
       heapMB: mergePoints(p.heapMB, inc.heapMB ?? [], cutoff),
       cpuPercent: mergePoints(p.cpuPercent, inc.cpuPercent ?? [], cutoff),
+      threads: mergePoints(p.threads, inc.threads ?? [], cutoff),
     };
   }
   return out;
@@ -119,6 +121,28 @@ function podChartData(
     for (const p of inst[metric]) {
       const row = rows.get(p.time) ?? { time: p.time };
       row[pod] = p.value;
+      rows.set(p.time, row);
+    }
+  }
+  return [...rows.values()].sort((a, b) => a.time - b.time);
+}
+
+const THREADS_KEY_PREFIX = "m:";
+
+// gmChartData 把各 pod 的 G/M 曲线合并为同一时间轴多列：列名 pod 为 G，`m:`+pod 为 M。
+function gmChartData(
+  instances: Record<string, InstanceState>,
+): Array<Record<string, number>> {
+  const rows = new Map<number, Record<string, number>>();
+  for (const [pod, inst] of Object.entries(instances)) {
+    for (const p of inst.goroutines) {
+      const row = rows.get(p.time) ?? { time: p.time };
+      row[pod] = p.value;
+      rows.set(p.time, row);
+    }
+    for (const p of inst.threads) {
+      const row = rows.get(p.time) ?? { time: p.time };
+      row[`${THREADS_KEY_PREFIX}${pod}`] = p.value;
       rows.set(p.time, row);
     }
   }
@@ -247,6 +271,16 @@ export default function MonitorPage() {
     label: pod,
     color: seriesColors[i % seriesColors.length],
   }));
+  // M 线与所属 pod 的 G 线同色，虚线区分；图例 label 加 (M) 后缀
+  const gmSeries = [
+    ...podSeries,
+    ...pods.map((pod, i) => ({
+      key: `${THREADS_KEY_PREFIX}${pod}`,
+      label: `${pod} (M)`,
+      color: seriesColors[i % seriesColors.length],
+      dashed: true,
+    })),
+  ];
   const goroutinesTotal = Math.round(
     podSumLatest(state.instances, "goroutines", state.latestTime, RANGE_BUCKET_SEC[range]),
   );
@@ -365,8 +399,8 @@ export default function MonitorPage() {
           />
           <RuntimeChart
             title={t("monitor.goroutines_chart")}
-            data={podChartData(state.instances, "goroutines")}
-            series={podSeries}
+            data={gmChartData(state.instances)}
+            series={gmSeries}
             rangeKey={range}
             emptyLabel={t("monitor.collecting")}
           />
