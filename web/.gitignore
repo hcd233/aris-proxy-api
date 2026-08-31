@@ -15,6 +15,8 @@
 
 # next.js
 /.next/
+# 构建中断/沙箱环境无法删除目录时遗留的 .next 备份（本地环境产物）
+/.next.*/
 /out/
 
 # production
