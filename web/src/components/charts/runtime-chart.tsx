@@ -17,6 +17,7 @@ interface RuntimeChartSeries {
   key: string;
   label: string;
   color: string;
+  dashed?: boolean;
 }
 
 interface RuntimeChartProps {
@@ -143,6 +144,7 @@ export function RuntimeChart({
                   stroke={s.color}
                   strokeWidth={2}
                   strokeOpacity={getStrokeOpacity(s.key)}
+                  strokeDasharray={s.dashed ? "6 4" : undefined}
                   dot={false}
                   isAnimationActive={false}
                 />
