@@ -74,7 +74,7 @@
     <div class="header">
       <p class="header-eyebrow">Architecture · aris-proxy-api · LLM Proxy Gateway</p>
       <h1>aris-proxy-api 架构全景</h1>
-      <p class="subtitle">一个 Go 实现的 LLM 代理网关与管理后台：统一接入多个 MaaS 平台与 API 协议，承载 7 条跨协议转发路径，向下沉淀会话与审计数据，向上提供管理 API、训练数据导出与 Agent Harness Trace 分析。以下十四张图分别刻画 DDD 分层总览、LLM 代理链路、上游容错（熔断/隔离/降级）、会话数据模型、Trace 摄取管线、Web 管理后台前端架构、前端内嵌交付链路、部署发布拓扑、运维运行时治理、运行时指标、优雅退出、敏感词热更新、定时任务与 Demo 演示账户架构。</p>
+      <p class="subtitle">一个 Go 实现的 LLM 代理网关与管理后台：统一接入多个 MaaS 平台与 API 协议，承载 7 条跨协议转发路径，向下沉淀会话与审计数据，向上提供管理 API、训练数据导出与 Agent Harness Trace 分析。以下十四张图分别刻画 DDD 分层总览、LLM 代理链路、上游容错（熔断/隔离/降级）、会话数据模型、Trace 摄取管线、Web 管理后台前端架构、前端内嵌交付链路、部署发布拓扑、运维运行时治理、运行时指标、优雅退出、触发词热更新、定时任务与 Demo 演示账户架构。</p>
     </div>
 
     <!-- ============================================================ -->
@@ -86,7 +86,7 @@
       <div class="diagram-container">
         <svg class="diagram" viewBox="0 0 1000 940" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="d1-title d1-desc">
           <title id="d1-title">aris-proxy-api 系统总览 · DDD 分层</title>
-          <desc id="d1-desc">DDD 分层架构图：Web 管理后台（Next.js 静态导出，14 个后台页面 + 3 个公开页，Provider 链与统一 api-client）、Aris Trace CLI（init/status/trace ingest，AgentAdapter 与本地 spool）与 Agentic 客户端三类调用方，分别以 JWT、X-API-Key 上报、X-API-Key 转发进入接口层；接口层由 router、十级中间件链与 handler 组成，调用应用层 14 个用例模块的 port；应用层依赖领域层的聚合与仓储接口，基础设施层反向实现这些接口完成依赖倒置，并向下读写 PostgreSQL、Redis 与调用上游 MaaS、OAuth2；Cron 定时治理与 bootstrap/Fx 装配作为横切关注点分别驱动应用层与基础设施层。</desc>
+          <desc id="d1-desc">DDD 分层架构图：Web 管理后台（Next.js 静态导出，14 个后台页面 + 3 个公开页，Provider 链与统一 api-client）、Aris Trace CLI（init/status/model export/trace ingest，AgentAdapter 与本地 spool）与 Agentic 客户端三类调用方，分别以 JWT、X-API-Key 上报、X-API-Key 转发进入接口层；接口层由 router、十级中间件链与 handler 组成，调用应用层 17 个用例模块的 port；应用层依赖领域层的聚合与仓储接口，基础设施层反向实现这些接口完成依赖倒置，并向下读写 PostgreSQL、Redis 与调用上游 MaaS、OAuth2；Cron 定时治理与 bootstrap/Fx 装配作为横切关注点分别驱动应用层与基础设施层。</desc>
           <rect width="100%" height="100%" fill="#f5f5f5"/>
 
           <!-- Zones -->
@@ -162,7 +162,7 @@
           <rect x="364" y="88" width="24" height="12" rx="2" fill="transparent" stroke="rgba(122,131,153,0.4)" stroke-width="0.8"/>
           <text x="376" y="97" fill="#7a8399" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">CLI</text>
           <text x="500" y="106" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Aris Trace CLI</text>
-          <text x="500" y="124" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">aris init · status · trace ingest</text>
+          <text x="500" y="124" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">aris init · model export · trace ingest</text>
           <text x="500" y="138" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">AgentAdapter: codex · claude</text>
           <text x="500" y="152" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">spool 256MiB · 批量 500 条/4MiB</text>
           <text x="500" y="166" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">fail-open · 独立二进制 4 平台</text>
@@ -184,18 +184,18 @@
           <rect x="52" y="260" width="34" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
           <text x="69" y="269" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">IFACE</text>
           <text x="500" y="278" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">接口层 Interface · router · middleware · handler · dto</text>
-          <text x="500" y="296" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">router: Huma Operation 注册 · /api/openai/v1 · /api/anthropic/v1 · /api/v1/* · /web/*</text>
+          <text x="500" y="296" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">router: 四分区 web/cli/proxy/ops · /api/web/v1 · /api/cli/v1 · /api/openai/v1 · /api/anthropic/v1 · /web/*</text>
           <text x="500" y="310" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">middleware 10 级链: Recover→Metrics→Inflight→Guard→Fgprof→CORS→Compress→Trace→Locale→Log</text>
-          <text x="500" y="324" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">handler 16 组: DTO 校验 → 调用 application port → 业务错误码与 i18n 文案映射</text>
+          <text x="500" y="324" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">handler 19 组: DTO 校验 → 调用 application port → 业务错误码与 i18n 文案映射</text>
 
           <!-- N5 应用层 -->
           <rect x="44" y="376" width="680" height="96" rx="6" fill="#f5f5f5"/>
           <rect x="44" y="376" width="680" height="96" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
           <rect x="52" y="384" width="30" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
           <text x="67" y="393" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">APP</text>
-          <text x="384" y="402" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">应用层 Application · 14 个用例模块</text>
+          <text x="384" y="402" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">应用层 Application · 17 个用例模块</text>
           <text x="384" y="420" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">command / query / port 三段式: identity · oauth2 · apikey · endpoint</text>
-          <text x="384" y="434" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">model · session · dataset · trace · audit · metrics · blocked · cron</text>
+          <text x="384" y="434" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">model · session · dataset · trace · audit · metrics · trigger · cron · upstream</text>
           <text x="384" y="448" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">llmproxy/usecase 编排 7 条跨协议路径 · converter 做协议↔领域映射</text>
           <text x="384" y="462" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">只依赖 domain 抽象，不触碰 GORM model</text>
 
@@ -206,7 +206,7 @@
           <text x="74" y="529" fill="#eb6c36" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">DOMAIN</text>
           <text x="384" y="538" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">领域层 Domain · 聚合 · 值对象 · 仓储接口</text>
           <text x="384" y="556" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">aggregate: session · conversation(message/tool) · modelcall · identity · apikey · trace</text>
-          <text x="384" y="570" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">规则内聚: checksum 内容寻址去重 · 评分 · 分享 · Token 用量 · 敏感词命中</text>
+          <text x="384" y="570" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">规则内聚: checksum 内容寻址去重 · 评分 · 分享 · Token 用量 · 触发词命中</text>
           <text x="384" y="584" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">repository.go 只声明接口，实现由基础设施注入</text>
 
           <!-- N7 基础设施层 -->
@@ -226,9 +226,9 @@
           <text x="806" y="393" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">CRON</text>
           <text x="868" y="402" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Cron 定时治理</text>
           <text x="868" y="420" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">4 模块 · Redis 锁</text>
-          <text x="868" y="434" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">session dedup 每小时</text>
+          <text x="868" y="434" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">终态清理 每小时 · 24h 窗口</text>
           <text x="868" y="448" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">purge · think 提取</text>
-          <text x="868" y="462" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">敏感词命中同步</text>
+          <text x="868" y="462" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">触发词命中同步</text>
 
           <!-- N9 bootstrap · Fx（横切） -->
           <rect x="780" y="512" width="176" height="208" rx="6" fill="#f5f5f5"/>
@@ -305,11 +305,11 @@
     <!-- ============================================================ -->
     <div class="section">
       <div class="section-head"><span class="idx">02</span><h2>LLM 代理转发核心链路</h2></div>
-      <p class="section-sub">APIKey 鉴权 → 双层限流 → 敏感词 → EndpointResolver → 跨协议转换 → Transport → 上游 → recordModelCall 收尾 + Pond 异步落库</p>
+      <p class="section-sub">APIKey 鉴权 → 双层限流 → 触发词 → EndpointResolver → 跨协议转换 → Transport → 上游 → recordModelCall 收尾 + Pond 异步落库</p>
       <div class="diagram-container">
         <svg class="diagram" viewBox="0 0 1000 824" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="d2-title d2-desc">
           <title id="d2-title">LLM 代理转发核心链路</title>
-          <desc id="d2-desc">请求处理管线：客户端请求依次经过 APIKey 鉴权、请求与 Token 双层限流、Aho-Corasick 敏感词检查、EndpointResolver 端点解析，然后跨协议转换并经 Transport 转发到上游 LLM；响应同步返回客户端，同时 recordModelCall 统一收尾完成审计、Token 扣减与指标上报，消息与审计经 Pond 协程池异步落库。</desc>
+          <desc id="d2-desc">请求处理管线：客户端请求依次经过 APIKey 鉴权、请求与 Token 双层限流、Aho-Corasick 触发词检查、EndpointResolver 端点解析，然后跨协议转换并经 Transport 转发到上游 LLM；响应同步返回客户端，同时 recordModelCall 统一收尾完成审计、Token 扣减与指标上报，消息与审计经 Pond 协程池异步落库。</desc>
           <rect width="100%" height="100%" fill="#f5f5f5"/>
 
           <!-- Zones -->
@@ -370,12 +370,12 @@
           <text x="190" y="258" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">请求 100/min · Token 2M/min per Key</text>
           <text x="190" y="272" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">peek 只读 · 429 + Retry-After</text>
 
-          <!-- 4 blocked -->
+          <!-- 4 trigger -->
           <rect x="60" y="304" width="260" height="64" rx="6" fill="#f5f5f5"/>
           <rect x="60" y="304" width="260" height="64" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
           <rect x="68" y="312" width="26" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
           <text x="81" y="321" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">BLK</text>
-          <text x="190" y="330" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">敏感词检查</text>
+          <text x="190" y="330" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">触发词检查</text>
           <text x="190" y="346" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">Aho-Corasick 自动机 · O(n) 匹配</text>
           <text x="190" y="360" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">deny→403 · omit→不落库 · 命中计数</text>
 
@@ -385,7 +385,7 @@
           <rect x="68" y="400" width="28" height="12" rx="2" fill="transparent" stroke="rgba(235,108,54,0.50)" stroke-width="0.8"/>
           <text x="82" y="409" fill="#eb6c36" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">RES</text>
           <text x="190" y="418" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">EndpointResolver</text>
-          <text x="190" y="434" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">alias → model 集 → 随机 endpoint</text>
+          <text x="190" y="434" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">alias → model 集 → endpoint · 按用户隔离</text>
           <text x="190" y="448" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">UpstreamCreds · 接口支持标记校验</text>
 
           <!-- 6 convert -->
@@ -465,7 +465,7 @@
       <div class="diagram-container">
         <svg class="diagram" viewBox="0 0 1000 580" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="d3-title d3-desc">
           <title id="d3-title">会话数据模型与生命周期</title>
-          <desc id="d3-desc">以 Session 聚合根为中枢：LLM 转发与 Trace 摄取两条路径写入，Message 与 Tool 按 checksum 内容寻址去重且不可变；SessionDetailCache 提供三层 Redis 读缓存，Web 管理后台查询评分并发起 Redis UUID 分享，训练数据管线流式导出 ShareGPT JSONL，Cron 治理任务做去重合并、孤儿清理与思维链提取，每次调用产生 ModelCallAudit 审计。</desc>
+          <desc id="d3-desc">以 Session 聚合根为中枢：LLM 转发与 Trace 摄取两条路径写入，Message 与 Tool 按 checksum 内容寻址去重且不可变；SessionDetailCache 提供三层 Redis 读缓存，Web 管理后台查询评分并发起 Redis UUID 分享，训练数据管线流式导出 ShareGPT JSONL，Cron 治理任务做终态清理、软删清理与思维链提取，前缀去重在插入事务后实时完成，每次调用产生 ModelCallAudit 审计。</desc>
           <rect width="100%" height="100%" fill="#f5f5f5"/>
 
           <!-- ARROWS -->
@@ -557,7 +557,7 @@
           <rect x="48" y="432" width="36" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
           <text x="66" y="441" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">CRON</text>
           <text x="150" y="450" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Cron 治理</text>
-          <text x="150" y="466" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">dedup 合并 · purge 孤儿清理</text>
+          <text x="150" y="466" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">终态清理 · 软删数据清理</text>
           <text x="150" y="480" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">think-extract · Redis 分布式锁</text>
 
           <!-- 7 web -->
@@ -704,7 +704,7 @@
           <rect x="568" y="164" width="24" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
           <text x="580" y="173" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">API</text>
           <text x="655" y="182" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Trace Ingest API</text>
-          <text x="655" y="198" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">POST /api/v1/trace/event</text>
+          <text x="655" y="198" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">POST /api/cli/v1/trace/event</text>
           <text x="655" y="212" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">批量 500 条 / 4MiB · 5s</text>
 
           <!-- 7 auth dedup -->
@@ -844,9 +844,9 @@
           <text x="70" y="381" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">ROUTE</text>
           <text x="258" y="390" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">(dashboard) 路由组 · 14 页</text>
           <text x="258" y="408" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">dashboard · sessions · shares · apikeys · profile</text>
-          <text x="258" y="422" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">endpoints · models · users · blocked · cron (admin)</text>
+          <text x="258" y="422" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">upstream · trigger · users · demo · cron (admin)</text>
           <text x="258" y="436" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">audit · monitor · dataset · trace</text>
-          <text x="258" y="450" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">PermissionGuard 角色守卫 + 侧栏 layout</text>
+          <text x="258" y="450" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">PermissionGuard 守卫 + 侧栏功能域分组折叠</text>
 
           <!-- B2b 公开路由 -->
           <rect x="496" y="364" width="228" height="96" rx="6" fill="#f5f5f5"/>
@@ -886,8 +886,8 @@
           <rect x="52" y="808" width="26" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
           <text x="65" y="817" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">API</text>
           <text x="384" y="826" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">REST / SSE API</text>
-          <text x="384" y="844" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">/api/v1/* JWT Bearer · 401 → POST /api/v1/token/refresh</text>
-          <text x="384" y="858" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">/api/v1/dataset/export SSE 流式 · /api/v1/metrics 运行时指标</text>
+          <text x="384" y="844" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">/api/web/v1/* JWT Bearer · 401 → POST /api/web/v1/token/refresh</text>
+          <text x="384" y="858" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">/api/web/v1/dataset/export SSE · /api/web/v1/metrics/runtime 大盘</text>
           <text x="384" y="872" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">Accept-Language zh/en 决定后端文案 · X-Trace-Id 贯穿</text>
 
           <!-- Legend -->
@@ -1039,7 +1039,7 @@
       <div class="diagram-container">
         <svg class="diagram" viewBox="0 0 1000 600" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="ddeploy-title ddeploy-desc">
           <title id="ddeploy-title">部署与发布拓扑</title>
-          <desc id="ddeploy-desc">部署链路：master 推送或 tag 触发 docker-publish 工作流，前端构建缓存后由 buildx 在 amd64/arm64 原生 runner 上按 digest 推送镜像，merge 生成多架构 manifest 到 GHCR；master 分支经 SSH 到生产主机执行 git reset 与 deploy-k8s.sh 滚动更新 k3s Deployment（2 副本，preStop sleep 10 与 660 秒优雅期实现无损下线），Service LoadBalancer 18080 映射到 8080 暴露到生产域名；Trace CLI 由独立工作流发布四平台 tar.gz 到 GitHub Releases，经 /install.sh 安装后向生产上报。</desc>
+          <desc id="ddeploy-desc">部署链路：master 推送或 tag 触发 build-and-publish 工作流，前端构建缓存后由 buildx 在 amd64/arm64 原生 runner 上按 digest 推送镜像，merge 生成多架构 manifest 到 GHCR；master 分支经 SSH 到生产主机执行 git reset 与 deploy-k8s.sh 滚动更新 k3s Deployment（2 副本，preStop sleep 10 与 660 秒优雅期实现无损下线），Service LoadBalancer 18080 映射到 8080 暴露到生产域名；Trace CLI 由独立工作流发布四平台 tar.gz 到 GitHub Releases，经 /install.sh 安装后向生产上报。</desc>
           <rect width="100%" height="100%" fill="#f5f5f5"/>
 
           <!-- Zones -->
@@ -1106,7 +1106,7 @@
           <rect x="260" y="56" width="220" height="96" rx="6" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
           <rect x="268" y="64" width="26" height="12" rx="2" fill="transparent" stroke="rgba(235,108,54,0.50)" stroke-width="0.8"/>
           <text x="281" y="73" fill="#eb6c36" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">CI</text>
-          <text x="370" y="82" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">docker-publish.yml</text>
+          <text x="370" y="82" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">build-and-publish.yml</text>
           <text x="370" y="100" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">frontend: npm build + 缓存</text>
           <text x="370" y="116" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">buildx amd64/arm64 原生 runner</text>
           <text x="370" y="132" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">push-by-digest → merge manifest</text>
@@ -1215,11 +1215,11 @@
     <!-- ============================================================ -->
     <div class="section">
       <div class="section-head"><span class="idx">08</span><h2>运维与运行时治理</h2></div>
-      <p class="section-sub">运行时指标采集与聚合 · 优雅退出序列 · 敏感词热更新 · 定时任务触发与执行（Redis 分布式锁 + 跨 Pod 广播 + 审计）</p>
+      <p class="section-sub">运行时指标采集与聚合 · 优雅退出序列 · 触发词热更新 · 定时任务触发与执行（Redis 分布式锁 + 跨 Pod 广播 + 审计）</p>
       <div class="diagram-container">
         <svg class="diagram" viewBox="0 0 1000 876" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="dops-title dops-desc">
           <title id="dops-title">运维与运行时治理</title>
-          <desc id="dops-desc">运维与横切关注点四宫格：其一运行时指标采集——进程内 HTTPCollector/SSEGauge/TokenUsageCounter 与 Go runtime 采集器经每 Pod 一个的 Metrics Flusher 周期性 BuildSnapshot 写入 Redis 快照（retention 过期清理），再由 /metrics Prometheus 与运行时大盘消费；其二优雅退出序列——SIGINT/SIGTERM 触发 Fx OnStop 逆序执行，依次停 cron、停 pond 协程池、inflight drain 等在途、关 HTTP（ShutdownWithContext 泄流 SSE 长连接）、关 DB/Redis 并同步日志；其三敏感词热更新——管理后台 /block 写入 DB 后 NotifyChanged（Redis Publish 即时信号 + INCR 版本计数），各 Pod BlockedService 经 pub/sub、版本轮询与低频兜底三重同步全量 Rebuild 内存 AC 匹配器，命中计数经 hit-sync cron 每 5 分钟回写 DB；其四定时任务触发与执行——管理后台 /cron 更新 spec 或手动触发，CronManager 热重载并经 Redis pub/sub 跨 Pod 广播，任务以 Redis 分布式锁（TTL + ticker 续期）保证单实例执行，执行注入 traceID、panic 恢复并落 CronCallAudit 审计。</desc>
+          <desc id="dops-desc">运维与横切关注点四宫格：其一运行时指标采集——进程内 HTTPCollector/SSEGauge/TokenUsageCounter 与 Go runtime 采集器经每 Pod 一个的 Metrics Flusher 周期性 BuildSnapshot 写入 Redis 快照（retention 过期清理），再由 /metrics Prometheus 与运行时大盘消费；其二优雅退出序列——SIGINT/SIGTERM 触发 Fx OnStop 逆序执行，依次停 cron、停 pond 协程池、inflight drain 等在途、关 HTTP（ShutdownWithContext 泄流 SSE 长连接）、关 DB/Redis 并同步日志；其三触发词热更新——管理后台 /trigger 写入 DB 后 NotifyChanged（Redis Publish 即时信号 + INCR 版本计数），各 Pod TriggerService 经 pub/sub、版本轮询与低频兜底三重同步全量 Rebuild 内存 AC 匹配器，命中计数经 hit-sync cron 每 5 分钟回写 DB；其四定时任务触发与执行——管理后台 /cron 更新 spec 或手动触发，CronManager 热重载并经 Redis pub/sub 跨 Pod 广播，任务以 Redis 分布式锁（TTL + ticker 续期）保证单实例执行，执行注入 traceID、panic 恢复并落 CronCallAudit 审计。</desc>
           <rect width="100%" height="100%" fill="#f5f5f5"/>
 
           <!-- ================= Zone 1 · Metrics ================= -->
@@ -1232,10 +1232,10 @@
           <rect x="38" y="244" width="204" height="12" rx="2" fill="#f5f5f5"/>
           <text x="140" y="253" fill="rgba(45,49,66,0.40)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">02 · SHUTDOWN · 优雅退出序列</text>
 
-          <!-- ================= Zone 3 · Blocked hot-reload ================= -->
+          <!-- ================= Zone 3 · Trigger hot-reload ================= -->
           <rect x="30" y="440" width="940" height="176" rx="8" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
           <rect x="38" y="444" width="204" height="12" rx="2" fill="#f5f5f5"/>
-          <text x="140" y="453" fill="rgba(45,49,66,0.40)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">03 · BLOCKED · 敏感词热更新</text>
+          <text x="140" y="453" fill="rgba(45,49,66,0.40)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">03 · BLOCKED · 触发词热更新</text>
 
           <!-- ================= Zone 4 · Cron trigger & execute ================= -->
           <rect x="30" y="640" width="940" height="176" rx="8" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
@@ -1385,7 +1385,7 @@
           <rect x="44" y="476" width="150" height="104" rx="6" fill="rgba(79,93,117,0.10)" stroke="#7a8399" stroke-width="1"/>
           <rect x="52" y="484" width="22" height="12" rx="2" fill="transparent" stroke="rgba(122,131,153,0.4)" stroke-width="0.8"/>
           <text x="63" y="493" fill="#7a8399" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">UI</text>
-          <text x="119" y="502" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">管理后台 /block</text>
+          <text x="119" y="502" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">管理后台 /trigger</text>
           <text x="119" y="522" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">create/update/delete</text>
           <text x="119" y="536" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">写 DB + 广播</text>
 
@@ -1401,7 +1401,7 @@
           <rect x="414" y="476" width="200" height="104" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
           <rect x="422" y="484" width="28" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
           <text x="436" y="493" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">POD</text>
-          <text x="514" y="502" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">各 Pod BlockedService</text>
+          <text x="514" y="502" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">各 Pod TriggerService</text>
           <text x="514" y="522" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">pub/sub · 版本轮询 2s</text>
           <text x="514" y="536" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">低频兜底 5min · 全量 Rebuild</text>
 
@@ -1443,7 +1443,7 @@
           <rect x="532" y="684" width="26" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
           <text x="545" y="693" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">JOB</text>
           <text x="634" y="702" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">4 个 cron 任务 · 分布式锁</text>
-          <text x="634" y="722" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">dedup 每小时 · purge 周日</text>
+          <text x="634" y="722" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">cleanup 每小时 · purge 周日</text>
           <text x="634" y="736" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">Redis 锁 TTL 5min + 续期</text>
 
           <rect x="784" y="676" width="172" height="104" rx="6" fill="#f5f5f5"/>
@@ -1555,7 +1555,7 @@
             <rect x="528" y="344" width="26" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
             <text x="541" y="353" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">USE</text>
             <text x="620" y="376" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">运行时大盘</text>
-            <text x="620" y="398" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">/api/v1/metrics/runtime</text>
+            <text x="620" y="398" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">/api/web/v1/metrics/runtime</text>
             <text x="620" y="414" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">QPS · P95 · 成功率 · CPU · tok/s</text>
           
             <rect x="280" y="336" width="200" height="104" rx="6" fill="#f5f5f5"/>
@@ -1586,11 +1586,11 @@
     <!-- ============================================================ -->
     <div class="section">
       <div class="section-head"><span class="idx">10</span><h2>优雅退出序列</h2></div>
-      <p class="section-sub">SIGINT / SIGTERM 触发 Fx Lifecycle OnStop 逆序执行（注册顺序为 Redis → DB → BlockedService → Logger → HTTP → Flusher → Inflight → Pool → Cron，故 OnStop 反序）。依次停 cron（3min）→ 停 pond 协程池（3min）→ inflight drain 等在途（5min）→ 关 HTTP（ShutdownWithContext 30s，泄流 SSE 长连接，停 Flusher）→ 同步日志 → 关 DB → 关 Redis。K8s 配合 preStop sleep 10 + terminationGracePeriodSeconds 660 无损下线。</p>
+      <p class="section-sub">SIGINT / SIGTERM 触发 Fx Lifecycle OnStop 逆序执行（注册顺序为 Redis → DB → TriggerService → Logger → HTTP → Flusher → Inflight → Pool → Cron，故 OnStop 反序）。依次停 cron（3min）→ 停 pond 协程池（3min）→ inflight drain 等在途（5min）→ 关 HTTP（ShutdownWithContext 30s，泄流 SSE 长连接，停 Flusher）→ 同步日志 → 关 DB → 关 Redis。K8s 配合 preStop sleep 10 + terminationGracePeriodSeconds 660 无损下线。</p>
       <div class="diagram-container">
 <svg class="diagram" viewBox="0 0 1000 544" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="shutdown-title shutdown-desc">
             <title id="shutdown-title">优雅退出序列</title>
-            <desc id="shutdown-desc">优雅退出序列（双列自上而下）：SIGINT/SIGTERM（K8s preStop sleep 10，terminationGracePeriodSeconds 660）触发 Fx Lifecycle OnStop 逆序执行；依次停 cron（CronManager.StopAll，3 分钟超时）、停 pond 协程池（PoolManager.StopWithContext，3 分钟）、inflight drain 等在途（InflightTracker.Drain，5 分钟）、关 HTTP（ShutdownWithContext 30 秒，泄流 SSE 长连接，同时停 Metrics Flusher 采集循环）、同步日志并停 BlockedService pub/sub、最后关闭 DB 与 Redis 连接。</desc>
+            <desc id="shutdown-desc">优雅退出序列（双列自上而下）：SIGINT/SIGTERM（K8s preStop sleep 10，terminationGracePeriodSeconds 660）触发 Fx Lifecycle OnStop 逆序执行；依次停 cron（CronManager.StopAll，3 分钟超时）、停 pond 协程池（PoolManager.StopWithContext，3 分钟）、inflight drain 等在途（InflightTracker.Drain，5 分钟）、关 HTTP（ShutdownWithContext 30 秒，泄流 SSE 长连接，同时停 Metrics Flusher 采集循环）、同步日志并停 TriggerService pub/sub、最后关闭 DB 与 Redis 连接。</desc>
             <rect width="100%" height="100%" fill="#f5f5f5"/>
 
             <!-- ARROWS (before nodes) -->
@@ -1658,7 +1658,7 @@
             <text x="560" y="289" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">LOG</text>
             <text x="700" y="308" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">同步日志</text>
             <text x="700" y="328" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">logger Sync</text>
-            <text x="700" y="344" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">BlockedService StopSync 关 pub/sub</text>
+            <text x="700" y="344" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">TriggerService StopSync 关 pub/sub</text>
 
             <rect x="540" y="380" width="320" height="88" rx="6" fill="#f5f5f5"/>
             <rect x="540" y="380" width="320" height="88" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
@@ -1684,15 +1684,15 @@
     </div>
 
     <!-- ============================================================ -->
-    <!-- 图 11 · 敏感词热更新 → aris-blocked-hot-reload.png -->
+    <!-- 图 11 · 触发词热更新 → aris-blocked-hot-reload.png -->
     <!-- ============================================================ -->
     <div class="section">
-      <div class="section-head"><span class="idx">11</span><h2>敏感词热更新</h2></div>
-      <p class="section-sub">管理后台 /block 写入 DB 后 NotifyChanged 经 Redis Publish(blocked:changed) 即时信号 + INCR(blocked:version) 版本广播；各 Pod BlockedService 通过 pub/sub 订阅、版本轮询（2s）与低频兜底（5min）三重同步触发全量 Rebuild 内存 Aho-Corasick matcher；LLM 请求经 Check 命中后按 action 拦截（deny）或打码（omit），命中计数经 BlockedHitSync cron 每 5min 批量回写 DB。</p>
+      <div class="section-head"><span class="idx">11</span><h2>触发词热更新</h2></div>
+      <p class="section-sub">管理后台 /trigger 写入 DB 后 NotifyChanged 经 Redis Publish(trigger:changed) 即时信号 + INCR(trigger:version) 版本广播；各 Pod TriggerService 通过 pub/sub 订阅、版本轮询（2s）与低频兜底（5min）三重同步触发全量 Rebuild 内存 Aho-Corasick matcher；LLM 请求经 Check 命中后按 action 拦截（deny）或打码（omit），命中计数经 TriggerHitSync cron 每 5min 批量回写 DB。</p>
       <div class="diagram-container">
-<svg class="diagram" viewBox="0 0 1000 584" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="blocked-title blocked-desc">
-            <title id="blocked-title">敏感词热更新</title>
-            <desc id="blocked-desc">敏感词热更新数据流：管理后台 /block 的 create/update/delete 写入词表 PostgreSQL 后调用 NotifyChanged，经 Redis Publish(blocked:changed) 即时信号与 INCR(blocked:version) 版本计数广播；各 Pod BlockedService 通过 pub/sub 订阅、版本轮询（2 秒）与低频兜底（5 分钟）三重同步触发全量 Rebuild 内存 Aho-Corasick matcher（Rebuild 从 DB ListAll 重建）；LLM 请求经 blocked_check 调用 Check 命中后按 action 拦截 deny 或打码 omit，命中计数 IncrementHits 写入命中缓存 Redis，再由 BlockedHitSync cron 每 5 分钟 PopAll 后 BatchIncrementHitCount 回写词表 DB。</desc>
+<svg class="diagram" viewBox="0 0 1000 584" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="trigger-title trigger-desc">
+            <title id="trigger-title">触发词热更新</title>
+            <desc id="trigger-desc">触发词热更新数据流：管理后台 /trigger 的 create/update/delete 写入词表 PostgreSQL 后调用 NotifyChanged，经 Redis Publish(trigger:changed) 即时信号与 INCR(trigger:version) 版本计数广播；各 Pod TriggerService 通过 pub/sub 订阅、版本轮询（2 秒）与低频兜底（5 分钟）三重同步触发全量 Rebuild 内存 Aho-Corasick matcher（Rebuild 从 DB ListAll 重建）；LLM 请求经 TriggerChecker 调用 Check 命中后按 action 拦截 deny 或打码 omit，命中计数 IncrementHits 写入命中缓存 Redis，再由 TriggerHitSync cron 每 5 分钟 PopAll 后 BatchIncrementHitCount 回写词表 DB。</desc>
             <rect width="100%" height="100%" fill="#f5f5f5"/>
           
             <!-- ARROWS (before nodes) -->
@@ -1733,7 +1733,7 @@
             <rect x="40" y="60" width="160" height="104" rx="6" fill="rgba(79,93,117,0.10)" stroke="#7a8399" stroke-width="1"/>
             <rect x="48" y="68" width="22" height="12" rx="2" fill="transparent" stroke="rgba(122,131,153,0.4)" stroke-width="0.8"/>
             <text x="59" y="77" fill="#7a8399" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">UI</text>
-            <text x="120" y="104" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">管理后台 /block</text>
+            <text x="120" y="104" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">管理后台 /trigger</text>
             <text x="120" y="126" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">create · update · delete</text>
             <text x="120" y="142" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">写 DB + 广播</text>
           
@@ -1742,7 +1742,7 @@
             <rect x="248" y="68" width="22" height="12" rx="2" fill="transparent" stroke="rgba(79,93,117,0.50)" stroke-width="0.8"/>
             <text x="259" y="77" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">DB</text>
             <text x="320" y="104" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">词表 PostgreSQL</text>
-            <text x="320" y="126" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">blocked 表</text>
+            <text x="320" y="126" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">trigger_words 表</text>
             <text x="320" y="142" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">word · action deny/omit</text>
           
             <rect x="440" y="60" width="160" height="104" rx="6" fill="#f5f5f5"/>
@@ -1750,14 +1750,14 @@
             <rect x="448" y="68" width="22" height="12" rx="2" fill="transparent" stroke="rgba(79,93,117,0.50)" stroke-width="0.8"/>
             <text x="459" y="77" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">DB</text>
             <text x="520" y="104" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">变更信号 Redis</text>
-            <text x="520" y="126" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">Publish blocked:changed</text>
-            <text x="520" y="142" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">INCR blocked:version</text>
+            <text x="520" y="126" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">Publish trigger:changed</text>
+            <text x="520" y="142" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">INCR trigger:version</text>
           
             <rect x="640" y="60" width="160" height="104" rx="6" fill="#f5f5f5"/>
             <rect x="640" y="60" width="160" height="104" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
             <rect x="648" y="68" width="26" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
             <text x="661" y="77" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">POD</text>
-            <text x="720" y="104" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">各 Pod BlockedService</text>
+            <text x="720" y="104" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">各 Pod TriggerService</text>
             <text x="720" y="126" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">pub/sub · 版本轮询 2s</text>
             <text x="720" y="142" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">低频兜底 5min</text>
           
@@ -1767,7 +1767,7 @@
             <rect x="48" y="248" width="26" height="12" rx="2" fill="transparent" stroke="rgba(122,131,153,0.4)" stroke-width="0.8"/>
             <text x="61" y="257" fill="#7a8399" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">USE</text>
             <text x="120" y="284" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">LLM 请求链路</text>
-            <text x="120" y="306" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">blocked_check.go</text>
+            <text x="120" y="306" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">TriggerChecker</text>
             <text x="120" y="322" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">Check(text)</text>
           
             <rect x="440" y="240" width="160" height="104" rx="6" fill="#f5f5f5"/>
@@ -1783,7 +1783,7 @@
             <rect x="648" y="248" width="22" height="12" rx="2" fill="transparent" stroke="rgba(79,93,117,0.50)" stroke-width="0.8"/>
             <text x="659" y="257" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">DB</text>
             <text x="720" y="284" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">命中缓存 Redis</text>
-            <text x="720" y="306" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">BlockedHitCache</text>
+            <text x="720" y="306" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">TriggerHitCache</text>
             <text x="720" y="322" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">IncrementHits</text>
           
             <!-- NODES · Bottom row -->
@@ -1791,7 +1791,7 @@
             <rect x="640" y="420" width="160" height="104" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
             <rect x="648" y="428" width="40" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
             <text x="668" y="437" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">CRON</text>
-            <text x="720" y="464" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">BlockedHitSync cron</text>
+            <text x="720" y="464" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">TriggerHitSync cron</text>
             <text x="720" y="486" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">每 5min · PopAll</text>
             <text x="720" y="502" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">BatchIncrementHitCount</text>
           
@@ -1819,11 +1819,11 @@
     <!-- ============================================================ -->
     <div class="section">
       <div class="section-head"><span class="idx">12</span><h2>定时任务触发与执行</h2></div>
-      <p class="section-sub">管理后台 /cron 更新 spec/enabled 或手动触发；CronManager 热重载（Restart/Enable/Disable）并经 cron:reload Redis pub/sub 跨 Pod 广播（其他 Pod handleMessage 同步）；任务以 Redis 分布式锁（TTL 5min + ticker 续期）保证单实例执行，wrapCronFunc 注入 traceID、panic 恢复与 enabled 检查，每次执行落 CronCallAudit（status + duration + trigger source）。</p>
+      <p class="section-sub">管理后台 /cron 更新 spec/enabled 或手动触发；CronManager 热重载（Restart/Enable/Disable）并经 cron:reload Redis pub/sub 跨 Pod 广播（其他 Pod handleMessage 同步）；任务以 Redis 分布式锁（TTL 5min + ticker 续期）保证单实例执行，wrapCronFunc 注入 traceID、panic 恢复与 enabled 检查，每次执行落 CronCallAudit（status + duration + trigger source）。Session 前缀去重已实时化——插入事务提交后以独立短事务 + FOR UPDATE 行锁合并同前缀会话，不经 cron。</p>
       <div class="diagram-container">
 <svg class="diagram" viewBox="0 0 1000 548" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="cron-title cron-desc">
             <title id="cron-title">定时任务触发与执行</title>
-            <desc id="cron-desc">定时任务触发与执行：管理后台 /cron 更新 spec/enabled 或手动触发进入 CronManager；CronManager 做热重载（Restart/Enable/Disable，持 RLock 读）并 publish cron:reload 到 Redis pub/sub，其他 Pod 订阅后 handleMessage 同步热重载；执行链路（手动 Trigger 与 robfig 调度）经 wrapCronFunc 注入 traceID、enabled 检查与 panic 恢复，经 Redis 分布式锁（cron:lock:{name}，TTL 5 分钟 + ticker 续期）保证单实例执行，运行 4 个任务（dedup 每小时 / purge 周日 / think 每日 / hit-sync 每 5 分钟），最后落 CronCallAudit 审计（status + duration + trigger source）。</desc>
+            <desc id="cron-desc">定时任务触发与执行：管理后台 /cron 更新 spec/enabled 或手动触发进入 CronManager；CronManager 做热重载（Restart/Enable/Disable，持 RLock 读）并 publish cron:reload 到 Redis pub/sub，其他 Pod 订阅后 handleMessage 同步热重载；执行链路（手动 Trigger 与 robfig 调度）经 wrapCronFunc 注入 traceID、enabled 检查与 panic 恢复，经 Redis 分布式锁（cron:lock:{name}，TTL 5 分钟 + ticker 续期）保证单实例执行，运行 4 个任务（terminal-cleanup 每小时 / purge 周日 / think 每日 / hit-sync 每 5 分钟），最后落 CronCallAudit 审计（status + duration + trigger source）。</desc>
             <rect width="100%" height="100%" fill="#f5f5f5"/>
           
             <!-- ARROWS (before nodes) -->
@@ -1893,7 +1893,7 @@
             <rect x="688" y="96" width="26" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
             <text x="701" y="105" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">JOB</text>
             <text x="750" y="132" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">4 个 cron 任务</text>
-            <text x="750" y="154" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">dedup · purge</text>
+            <text x="750" y="154" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">cleanup · purge</text>
             <text x="750" y="170" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">think · hit-sync</text>
           
             <rect x="840" y="88" width="140" height="104" rx="6" fill="#f5f5f5"/>
@@ -1945,11 +1945,11 @@
     <!-- ============================================================ -->
     <div class="section">
       <div class="section-head"><span class="idx">13</span><h2>Demo 演示账户架构 · 白名单重设计</h2></div>
-      <p class="section-sub">四级权限 pending &lt; demo &lt; user &lt; admin：登录页「Continue as Demo」经 IP 限流端点（5s/8）一键登录签发 JWT；demo 只读请求过访问防线——模块白名单 fail-closed + demoAccess IP 令牌桶 5s/30（WithPermissionFilter 非 demo 零开销，超限 429 + Retry-After）——分两路视角：会话走 demo_sessions 白名单（列表 ListSessionsByIDs · 详情 IsAllowed 不在即"不存在"防遍历），audit/models/endpoints 全量但脱敏（身份 MaskIdentity → *** · 连接类 MaskSecret → 前4..后4 · 保留数字与别名）；admin 在独立 /demo tab 勾选批量增删白名单。</p>
+      <p class="section-sub">四级权限 pending &lt; demo &lt; user &lt; admin：登录页「Continue as Demo」经 IP 限流端点（5s/8）一键登录签发 JWT；demo 只读请求过访问防线——模块白名单 fail-closed + demoAccess IP 令牌桶 5s/30（WithPermissionFilter 非 demo 零开销，超限 429 + Retry-After）——分两路视角：会话走 demo_sessions 白名单（列表 ListSessionsByIDs · 详情 IsAllowed 不在即"不存在"防遍历），audit/models/endpoints 全量但脱敏（身份 MaskIdentity → *** · 连接类 MaskSecret → 前4..后4 · 保留数字与别名）；admin 在独立 /demo tab 勾选批量增删白名单；登录与模块访问事件（path/IP/UA）落 demo_access_audits。</p>
       <div class="diagram-container">
 <svg class="diagram" viewBox="0 0 1000 712" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="demo-title demo-desc">
             <title id="demo-title">Demo 演示账户架构 · 白名单重设计</title>
-            <desc id="demo-desc">Demo 演示账户架构（白名单重设计）：登录页一键 Demo 登录经 IP 限流端点与 DemoLogin 命令签发 JWT；demo 只读请求先过访问防线——模块白名单 fail-closed 与 demoAccess IP 令牌桶（5s/30，超限 429），非 demo 用户权限过滤零开销放行；随后分两路：会话按 demo_sessions 白名单视角查询（列表按 ID 集合、详情校验成员、不在白名单返回不存在以防遍历），audit/models/endpoints 全量返回但身份字段脱敏为星号、连接字段保留首尾四字符，统计数字与别名保留；admin 在独立 demo tab 勾选批量增删白名单会话。</desc>
+            <desc id="demo-desc">Demo 演示账户架构（白名单重设计）：登录页一键 Demo 登录经 IP 限流端点与 DemoLogin 命令签发 JWT；demo 只读请求先过访问防线——模块白名单 fail-closed 与 demoAccess IP 令牌桶（5s/30，超限 429），非 demo 用户权限过滤零开销放行；随后分两路：会话按 demo_sessions 白名单视角查询（列表按 ID 集合、详情校验成员、不在白名单返回不存在以防遍历），audit/models/endpoints 全量返回但身份字段脱敏为星号、连接字段保留首尾四字符，统计数字与别名保留；admin 在独立 demo tab 勾选批量增删白名单会话；demo 登录与模块访问事件（path/IP/UA）落 demo_access_audits 审计。</desc>
             <rect width="100%" height="100%" fill="#f5f5f5"/>
 
             <!-- ARROWS (before nodes) -->
@@ -2004,7 +2004,7 @@
             <rect x="248" y="96" width="26" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
             <text x="261" y="105" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">API</text>
             <text x="312" y="132" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Demo 公开端点</text>
-            <text x="312" y="154" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">POST /api/v1/demo/login</text>
+            <text x="312" y="154" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">/api/web/v1/demo/login</text>
             <text x="312" y="170" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">无 JWT · IP 令牌桶 5s/8</text>
 
             <rect x="440" y="88" width="144" height="104" rx="6" fill="#f5f5f5"/>
@@ -2293,8 +2293,8 @@
           <li>限流：请求 <code>100/min</code> + Token <code>2M/min</code>（per API Key，Redis 令牌桶）。</li>
           <li>Trace spool：<code>256MiB</code> 上限 · 批量 <code>500 条 / 4MiB</code> · 超时 <code>5s</code> · rejected 保留 <code>7d</code>。</li>
           <li>K8s：limits <code>512Mi/300m</code> · <code>GOMEMLIMIT 440Mi</code> · preStop <code>10s</code> · grace <code>660s</code>。</li>
-          <li>Cron：dedup 每小时 · purge 周日 04:00 · think 每日 00:00 · hit-sync 每 5min · 锁 TTL <code>5min</code> + ticker 续期。</li>
-          <li>敏感词热更新：Publish 即时信号 + 版本轮询 <code>2s</code> + 低频兜底 <code>5min</code>，各 Pod 全量 Rebuild AC matcher。</li>
+          <li>Cron：terminal-cleanup 每小时 · purge 周日 04:00 · think 每日 00:00 · hit-sync 每 5min · 锁 TTL <code>5min</code> + ticker 续期。</li>
+          <li>触发词热更新：Publish 即时信号 + 版本轮询 <code>2s</code> + 低频兜底 <code>5min</code>，各 Pod 全量 Rebuild AC matcher。</li>
           <li>Metrics：每 Pod Flusher 周期采集写 Redis 快照（retention 清理），聚合层 delta/桶宽 求 QPS/P95/成功率/CPU/tokens。</li>
           <li>缓存/分享：SessionDetailCache TTL <code>1h</code> · 分享默认 <code>24h</code>（1d/7d/30d/never）。</li>
         </ul>

@@ -6,20 +6,20 @@ Aris 将多个 MaaS 平台、多种模型和多种 API 协议统一接入，通�
 
 ## 核心能力
 
-- **模型聚合与统一入口**：Endpoint/Model 两级配置，模型别名屏蔽上游差异，一个别名可关联多个 Endpoint；同时提供 OpenAI Chat Completions、OpenAI Responses、Anthropic Messages 兼容入口，并支持 OpenAI 与 Anthropic 之间的跨协议转换（含 SSE 流式事件）。
+- **模型聚合与统一入口**：Endpoint/Model 两级配置（用户级多租户，普通用户管理自己的端点与模型，admin 可按用户过滤与代建），模型别名屏蔽上游差异，一个别名可关联多个 Endpoint；同时提供 OpenAI Chat Completions、OpenAI Responses、Anthropic Messages 兼容入口，并支持 OpenAI 与 Anthropic 之间的跨协议转换（含 SSE 流式事件）。
 - **数据沉淀与治理**：模型交互聚合为 Session，Message/Tool 以协议无关结构存储并按 checksum 内容寻址去重；支持评分、分享链接、会话筛选与 ShareGPT JSONL 流式导出，为私有模型 SFT 沉淀数据资产。
 - **审计与运行监控**：每次调用记录 Token 四类用量、首 Token 延迟、流式时长、上游状态码和 Trace ID；提供趋势/成功率/吞吐/用量统计、Cron 审计，以及跨 Pod 的 QPS、P95、SSE 连接、goroutines/heap/CPU 运行时监控。
 - **Agent Harness Trace 分析**：独立编译的 `aris` CLI 采集 Codex Hook 事件与 rollout 记录，本地 spool 批量上报；服务端将事件重建为可阅读的 TraceConversation，用于观察 Agent 的模型请求、推理过程与工具调用链路。
 - **客户端配置导出**：从管理后台一键生成 OpenCode、Claude Code、Codex、Pi 的接入配置或安装脚本，幂等 patch、`.bak` 备份、原子替换、凭证文件 `0600`。
-- **安全与治理**：GitHub/Google OAuth2 登录 + JWT 管理鉴权，Proxy API Key 调用鉴权，`pending`/`demo`/`user`/`admin` 四级权限与用户审核（demo 演示账户：模块白名单 + 行为数据取模抽样 + 一键登录），Aho-Corasick 敏感词拦截，Redis 令牌桶请求限流与 Token 用量限流。
+- **安全与治理**：GitHub/Google OAuth2 登录 + JWT 管理鉴权，Proxy API Key 调用鉴权，`pending`/`demo`/`user`/`admin` 四级权限与用户审核（demo 演示账户：模块白名单 + 会话白名单/全量脱敏双视角 + 一键登录 + 访问审计），Aho-Corasick 触发词拦截，Redis 令牌桶请求限流与 Token 用量限流。
 
 ## 系统架构
 
-后端按 DDD 分层组织：接口层（router / 十级中间件链 / handler / dto）→ 应用层（14 个用例模块的 `command`/`query`/`port`）→ 领域层（聚合、值对象、仓储接口）；基础设施层反向实现仓储接口完成依赖倒置，Cron 定时治理与 `bootstrap`/Fx 装配作为横切关注点。三类调用方分别是 Web 管理后台（JWT）、`aris` Trace CLI 与 Agentic 客户端（`X-API-Key`）。
+后端按 DDD 分层组织：接口层（router / 十级中间件链 / handler / dto）→ 应用层（17 个用例模块的 `command`/`query`/`port`）→ 领域层（聚合、值对象、仓储接口）；基础设施层反向实现仓储接口完成依赖倒置，Cron 定时治理与 `bootstrap`/Fx 装配作为横切关注点。三类调用方分别是 Web 管理后台（JWT）、`aris` Trace CLI 与 Agentic 客户端（`X-API-Key`）。
 
 ![系统总览 · DDD 分层](docs/diagrams/aris-arch-01.png)
 
-**LLM 代理链路**：鉴权/限流/敏感词 → 端点解析 → 跨协议转换 → 上游；响应同步返回，消息与审计经 Pond 协程池异步落库，不阻塞请求。
+**LLM 代理链路**：鉴权/限流/触发词 → 端点解析（用户级隔离）→ 跨协议转换 → 上游；响应同步返回，消息与审计经 Pond 协程池异步落库，不阻塞请求。
 
 ![LLM 代理链路](docs/diagrams/aris-proxy-pipeline.png)
 
@@ -47,19 +47,19 @@ Aris 将多个 MaaS 平台、多种模型和多种 API 协议统一接入，通�
 
 ![运行时指标采集](docs/diagrams/aris-runtime-metrics.png)
 
-**优雅退出**：`SIGINT` / `SIGTERM` 触发 `fx.Lifecycle.OnStop` 逆序执行（注册顺序 Redis → DB → BlockedService → Logger → HTTP → Flusher → Inflight → Pool → Cron，故 OnStop 反序）；依次停 cron（`CronManager.StopAll`，3min）→ 停 `pond` 协程池（`StopWithContext`，3min）→ `inflight` drain 等在途（5min）→ 关 HTTP（`ShutdownWithContext` 30s，泄流 SSE 长连接，停 Flusher）→ 同步日志 + 停 BlockedService pub/sub → 关 DB → 关 Redis；K8s 配合 `preStop sleep 10` + `terminationGracePeriodSeconds 660` 无损下线。
+**优雅退出**：`SIGINT` / `SIGTERM` 触发 `fx.Lifecycle.OnStop` 逆序执行（注册顺序 Redis → DB → TriggerService → Logger → HTTP → Flusher → Inflight → Pool → Cron，故 OnStop 反序）；依次停 cron（`CronManager.StopAll`，3min）→ 停 `pond` 协程池（`StopWithContext`，3min）→ `inflight` drain 等在途（5min）→ 关 HTTP（`ShutdownWithContext` 30s，泄流 SSE 长连接，停 Flusher）→ 同步日志 + 停 TriggerService pub/sub → 关 DB → 关 Redis；K8s 配合 `preStop sleep 10` + `terminationGracePeriodSeconds 660` 无损下线。
 
 ![优雅退出序列](docs/diagrams/aris-graceful-shutdown.png)
 
-**敏感词热更新**：管理后台 `/api/v1/block` 写入 DB 后 `NotifyChanged` 经 Redis `Publish(blocked:changed)` 即时信号 + `INCR(blocked:version)` 版本广播；各 Pod `BlockedService` 通过 pub/sub 订阅、版本轮询（2s）与低频兜底（5min）三重同步触发全量 `Rebuild`（`ListAll` 重建内存 Aho-Corasick matcher）；LLM 请求经 `Check` 命中后按 action 拦截（deny）/ 打码（omit），命中计数经 `BlockedHitSync` cron（每 5min `PopAll` → `BatchIncrementHitCount`）批量回写 DB。
+**触发词热更新**：管理后台 `/api/web/v1/trigger` 写入 DB 后 `NotifyChanged` 经 Redis `Publish(trigger:changed)` 即时信号 + `INCR(trigger:version)` 版本广播；各 Pod `TriggerService` 通过 pub/sub 订阅、版本轮询（2s）与低频兜底（5min）三重同步触发全量 `Rebuild`（`ListAll` 重建内存 Aho-Corasick matcher）；LLM 请求经 `Check` 命中后按 action 拦截（deny）/ 打码（omit），命中计数经 `TriggerHitSync` cron（每 5min `PopAll` → `BatchIncrementHitCount`）批量回写 DB。
 
-![敏感词热更新](docs/diagrams/aris-blocked-hot-reload.png)
+![触发词热更新](docs/diagrams/aris-blocked-hot-reload.png)
 
-**定时任务触发与执行**：管理后台 `/api/v1/cron` 更新 spec / enabled（`update_cron_job` 校验 spec、核心任务禁关）或手动触发 `CronManager.Trigger`；`CronManager` 热重载（`Restart` / `Enable` / `Disable`）并经 `cron:reload` Redis pub/sub 跨 Pod 广播（其他 Pod `handleMessage` 同步）；任务以 Redis 分布式锁（`cron:lock:{name}`，TTL 5min + ticker 续期）保证单实例执行，`wrapCronFunc` 注入 traceID / enabled 检查 / panic 恢复，4 个任务（dedup 每小时 / purge 周日 04:00 / think 每日 00:00 / hit-sync 每 5min）每次执行落 `CronCallAudit`（status + duration + trigger source）。
+**定时任务触发与执行**：管理后台 `/api/web/v1/cron` 更新 spec / enabled（`update_cron_job` 校验 spec、核心任务禁关）或手动触发 `CronManager.Trigger`；`CronManager` 热重载（`Restart` / `Enable` / `Disable`）并经 `cron:reload` Redis pub/sub 跨 Pod 广播（其他 Pod `handleMessage` 同步）；任务以 Redis 分布式锁（`cron:lock:{name}`，TTL 5min + ticker 续期）保证单实例执行，`wrapCronFunc` 注入 traceID / enabled 检查 / panic 恢复，4 个任务（terminal-cleanup 每小时扫描最近 24h 终态会话 / purge 周日 04:00 / think 每日 00:00 / hit-sync 每 5min）每次执行落 `CronCallAudit`（status + duration + trigger source）。Session 前缀去重不再走 cron——插入事务提交后以独立短事务 + `FOR UPDATE` 行锁实时合并同前缀会话。
 
 ![定时任务触发与执行](docs/diagrams/aris-cron-execution.png)
 
-**Demo 演示账户架构**：四级权限 `pending` < `demo` < `user` < `admin`，全局单例 demo 账户一键只读体验。登录页「Continue as Demo」经无鉴权 IP 限流端点（令牌桶 5s/8）调用 `POST /api/v1/demo/login`，DemoLogin 命令校验 `login_enabled` 并按 permission 定位 demo 用户签发 JWT；前端以 `isDemo()` + `demoModules` 驱动 PermissionGuard 三态守卫与 Nav/删除按钮置灰锁定。demo 只读请求先过访问防线：权限中间件按模块白名单放行（fail-closed），`TokenBucketRateLimiterMiddleware` 以 `WithPermissionFilter(demo)` 仅对 demo 权限启用 `demoAccess` IP 令牌桶（5s/30，8 个接口组全局共享一桶，超限 429 + `Retry-After`；非 demo 用户零开销放行）。数据分两路视角：**会话白名单**——admin 在独立 `/demo` tab 勾选批量增删 `demo_sessions`（`session_id` 唯一索引），demo 列表走 `ListSessionsByIDs`、详情经 `IsAllowed` 成员校验，不在白名单一律返回"不存在"（防遍历），白名单内容明文（admin 选取即授权）；**全量脱敏**——audit/models/endpoints 展示全量数据但关键字段脱敏（身份类 `MaskIdentity` → `***`，连接类 `MaskSecret` → 保留前 4 后 4），统计数字与别名有意保留。全部写接口与存量 API Key 的 LLM 转发因 demo 权限低于 user 被天然拒绝，零额外改动。
+**Demo 演示账户架构**：四级权限 `pending` < `demo` < `user` < `admin`，全局单例 demo 账户一键只读体验。登录页「Continue as Demo」经无鉴权 IP 限流端点（令牌桶 5s/8）调用 `POST /api/web/v1/demo/login`，DemoLogin 命令校验 `login_enabled` 并按 permission 定位 demo 用户签发 JWT，登录与模块访问事件（path/IP/UA）落 `demo_access_audits` 供 admin 审计；前端以 `isDemo()` + `demoModules` 驱动 PermissionGuard 三态守卫与 Nav/删除按钮置灰锁定。demo 只读请求先过访问防线：权限中间件按模块白名单放行（fail-closed），`TokenBucketRateLimiterMiddleware` 以 `WithPermissionFilter(demo)` 仅对 demo 权限启用 `demoAccess` IP 令牌桶（5s/30，8 个接口组全局共享一桶，超限 429 + `Retry-After`；非 demo 用户零开销放行）。数据分两路视角：**会话白名单**——admin 在独立 `/demo` tab 勾选批量增删 `demo_sessions`（`session_id` 唯一索引），demo 列表走 `ListSessionsByIDs`、详情经 `IsAllowed` 成员校验，不在白名单一律返回"不存在"（防遍历），白名单内容明文（admin 选取即授权）；**全量脱敏**——audit/models/endpoints 展示全量数据但关键字段脱敏（身份类 `MaskIdentity` → `***`，连接类 `MaskSecret` → 保留前 4 后 4），统计数字与别名有意保留。全部写接口与存量 API Key 的 LLM 转发因 demo 权限低于 user 被天然拒绝，零额外改动。
 
 ![Demo 演示账户架构](docs/diagrams/aris-demo-account.png)
 
@@ -136,7 +136,7 @@ cd web && npm ci && npm run dev   # http://localhost:3000
 | `make web-lint` / `make web-format` | 前端 ESLint / Prettier |
 | `make fgprof` | 拉取远程 fgprof profile 并打开火焰图 |
 
-服务端 CLI：`server start`、`database migrate`、`lint conv/static`（`cmd/server`）；Trace 客户端 CLI：`aris init`、`aris trace ingest`、`aris status`（`cmd/client`）。
+服务端 CLI：`server start`、`database migrate`、`lint conv/static`（`cmd/server`）；Trace 客户端 CLI：`aris init`、`aris model export`、`aris trace ingest`、`aris trace install`、`aris status`（`cmd/client`）。
 
 ## API 概览
 
@@ -145,12 +145,13 @@ cd web && npm ci && npm run dev   # http://localhost:3000
 | 前缀 | 认证 | 说明 |
 | --- | --- | --- |
 | `/api/openai/v1` · `/api/anthropic/v1` | `X-API-Key` | LLM 兼容入口：chat/completions、responses、messages、count_tokens、models |
-| `/api/v1/trace/event` · `/trace/client/check` | `X-API-Key` | Trace 事件上报与客户端 Key 检查 |
-| `/api/v1/oauth2` · `/token` | 公开（限流） | OAuth2 登录/回调、Token 刷新 |
-| `/api/v1/user` | JWT | 个人资料；管理员可列表、审核（approve/demote）、删除用户 |
-| `/api/v1/apikey` · `/session` · `/dataset` · `/trace` | JWT + Owner 隔离 | API Key、会话/分享、数据集导出、Trace 查询 |
-| `/api/v1/endpoint` · `/model` · `/block` · `/cron` · `/audit/cron` · `/metrics` | JWT + admin | 端点、模型、敏感词、Cron 管理/触发、Cron 审计、运行时指标 |
-| `/api/v1/audit` | JWT | 模型调用审计与统计（管理员可见全局） |
+| `/api/cli/v1/model/list` · `/trace/event` · `/trace/client/check` | `X-API-Key` | `aris` 客户端模型分发、Trace 事件上报与客户端 Key 检查 |
+| `/api/web/v1/oauth2` · `/token` | 公开（限流） | OAuth2 登录/回调、Token 刷新 |
+| `/api/web/v1/user` | JWT | 个人资料；管理员可列表、审核（approve/demote）、删除用户 |
+| `/api/web/v1/apikey` · `/session` · `/dataset` · `/trace` | JWT + Owner 隔离 | API Key、会话/分享、数据集导出、Trace 查询 |
+| `/api/web/v1/endpoint` · `/model` · `/upstream` | JWT（用户级多租户） | 端点、模型（用户隔离，admin 可按用户过滤与代建）、上游聚合视图 |
+| `/api/web/v1/trigger` · `/cron` · `/audit/cron` · `/metrics` | JWT + admin | 触发词、Cron 管理/触发、Cron 审计、运行时指标 |
+| `/api/web/v1/audit` | JWT | 模型调用审计与统计（管理员可见全局） |
 | `/health` `/ready` `/ssehealth` `/metrics` `/install.sh` | 公开 | 探针、Prometheus 指标、Trace 客户端安装脚本 |
 
 ## 部署
@@ -172,7 +173,7 @@ internal/
   application/    用例编排（identity/session/llmproxy/trace/...）
   domain/         领域模型与规则
   infrastructure/ GORM Repository、Redis、JWT、LLM Transport、协程池
-  cron/           定时任务（Session 去重、孤儿清理、Think 提取、敏感词命中同步）
+  cron/           定时任务（终态清理、软删数据清理、Think 提取、触发词命中同步）
   bootstrap/      Fx 依赖注入与生命周期
   web/dist        前端构建产物（embed.FS）
 web/              Next.js 管理后台源码
