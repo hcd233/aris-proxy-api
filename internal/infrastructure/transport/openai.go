@@ -129,11 +129,14 @@ func parseSSEDataLine(line string) mo.Option[*dto.OpenAIChatCompletionChunk] {
 // bulkhead 槽位与熔断上报绑定到返回 body 的 Close（见 BindLease）：
 // 流式响应在整个消费阶段占用并发槽；body 读错误（非 EOF）经租约翻转
 // 计入熔断失败，上游半死（断流）因此能触发熔断。
+// drain 派生 ctx 的 cancel 同样绑定 body 的 Close（见 drainCancelBody）：
+// 请求 ctx 不随请求结束而 Done，不绑定则每个请求泄漏一个守护 goroutine。
 func (p *openAIProxy) doUpstreamRequest(ctx context.Context, ep vo.UpstreamEndpoint, body []byte, pathSuffix string) (*http.Response, error) {
-	ctx = p.tracker.CancelOnDrain(ctx)
+	ctx, cancelDrain := p.tracker.CancelOnDrain(ctx)
 	key := EndpointKey(ep)
 	lease, err := p.guard.Allow(ctx, key)
 	if err != nil {
+		cancelDrain()
 		return nil, err
 	}
 
@@ -144,10 +147,12 @@ func (p *openAIProxy) doUpstreamRequest(ctx context.Context, ep vo.UpstreamEndpo
 	if err != nil || resp == nil {
 		// 未拿到响应体：立即结束租约并上报结果
 		lease.Done(!IsCircuitError(err))
+		cancelDrain()
 		return resp, err
 	}
 	// 响应头已到达；成功与否延迟到 body 消费完成时判定上报
 	resp.Body = p.guard.BindLease(resp.Body, lease, true)
+	resp.Body = newDrainCancelBody(resp.Body, cancelDrain)
 	return resp, nil
 }
 
