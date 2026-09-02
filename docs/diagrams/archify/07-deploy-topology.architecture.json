@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "部署与发布拓扑",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "repository": {
+      "url": "https://github.com/hcd233/aris-proxy-api",
+      "revision": "cf60466b7bbd28b6fb4e8a8a91afb54b4eefbd2b"
+    },
+    "viewBox": [1300, 640],
+    "views": [
+      { "id": "ci", "label": "构建发布", "focus": ["git", "ci", "ghcr"], "note": "master/tag 触发 buildx 多架构构建并推 GHCR。" },
+      { "id": "deploy", "label": "部署与运行时", "focus": ["deploy", "k8s", "svc"], "note": "SSH 触发滚动更新，Service 对外暴露。" },
+      { "id": "cli", "label": "CLI 分发", "focus": ["release", "cli"], "note": "tag 触发多平台二进制发布到 GitHub Releases。" }
+    ]
+  },
+  "components": [
+    { "id": "git", "type": "external", "label": "Git 推送 / PR", "sublabel": "master · tag v*", "pos": [40, 60], "size": [220, 104] },
+    { "id": "ci", "type": "backend", "label": "build-and-publish.yml", "sublabel": "buildx amd64/arm64 · push-by-digest", "tag": "CI", "pos": [300, 60], "size": [300, 104], "sources": [{ "path": ".github/workflows/build-and-publish.yml" }] },
+    { "id": "ghcr", "type": "cloud", "label": "GHCR", "sublabel": "ghcr.io/hcd233/aris-proxy-api", "tag": "镜像", "pos": [680, 60], "size": [300, 80] },
+    { "id": "release", "type": "backend", "label": "trace-client release", "sublabel": "GitHub Releases · 4 平台", "tag": "tag 触发", "pos": [40, 210], "size": [220, 96] },
+    { "id": "cli", "type": "frontend", "label": "aris CLI 用户机", "sublabel": "install.sh · trace 上报", "pos": [40, 360], "size": [220, 96], "sources": [{ "path": "internal/client/api/client.go" }] },
+    { "id": "deploy", "type": "backend", "label": "deploy-k8s", "sublabel": "SSH · git reset + deploy-k8s.sh", "tag": "60s 轮询", "pos": [300, 220], "size": [300, 88] },
+    { "id": "k8s", "type": "backend", "label": "Deployment · 2 副本", "sublabel": "maxUnavailable 0 · 512Mi/300m · preStop 10s · grace 660s", "tag": "k3s ns/aris-proxy-api", "pos": [680, 200], "size": [340, 124] },
+    { "id": "svc", "type": "backend", "label": "Service LB", "sublabel": "18080→8080", "pos": [1060, 200], "size": [200, 88] },
+    { "id": "cfg", "type": "security", "label": "ConfigMap+Secret", "sublabel": "envFrom 注入", "pos": [680, 380], "size": [150, 88] },
+    { "id": "store", "type": "database", "label": "PG + Redis", "sublabel": "同机 Docker", "pos": [870, 380], "size": [150, 88] },
+    { "id": "prod", "type": "external", "label": "生产域名 api.lvlvko.top", "sublabel": "HTTPS 用户 · install.sh 下载", "pos": [680, 510], "size": [380, 88] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "CI/CD · GitHub Actions", "wraps": ["git", "ci", "ghcr", "release", "deploy", "cli"], "pad": 10 },
+    { "kind": "region", "label": "PROD · k3s", "wraps": ["k8s", "svc", "cfg", "store", "prod"], "pad": 10 }
+  ],
+  "connections": [
+    { "id": "trig", "from": "git", "to": "ci", "label": "触发", "fromSide": "right", "toSide": "left" },
+    { "id": "push", "from": "ci", "to": "ghcr", "label": "push-by-digest", "fromSide": "right", "toSide": "left", "labelAt": [640, 84] },
+    { "id": "auto", "from": "ci", "to": "deploy", "label": "自动部署", "variant": "emphasis", "fromSide": "bottom", "toSide": "top", "labelAt": [450, 192] },
+    { "id": "roll", "from": "deploy", "to": "k8s", "label": "滚动更新", "fromSide": "right", "toSide": "left" },
+    { "id": "pull", "from": "ghcr", "to": "k8s", "label": "拉取镜像", "variant": "dashed", "fromSide": "bottom", "toSide": "top" },
+    { "id": "env", "from": "cfg", "to": "k8s", "label": "envFrom", "variant": "dashed", "fromSide": "top", "toSide": "bottom" },
+    { "id": "route", "from": "k8s", "to": "svc", "label": "路由", "fromSide": "right", "toSide": "left" },
+    { "id": "expose", "from": "svc", "to": "prod", "label": "对外暴露", "fromSide": "bottom", "toSide": "right", "labelAt": [1180, 480] },
+    { "id": "data", "from": "k8s", "to": "store", "label": "SQL · Redis", "fromSide": "bottom", "toSide": "top" },
+    { "id": "dist", "from": "release", "to": "cli", "label": "tag 分发", "variant": "dashed", "fromSide": "bottom", "toSide": "top", "labelAt": [150, 333] },
+    { "id": "report", "from": "cli", "to": "prod", "label": "HTTPS 上报", "variant": "dashed", "fromSide": "bottom", "toSide": "left", "labelAt": [300, 490] }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "CI/CD", "items": ["build-and-publish.yml：buildx amd64/arm64 push-by-digest", "master 推送自动部署；tag v* 额外发 trace-client 4 平台产物", "deploy-k8s.sh SSH 到主机 git reset 后滚动更新，60s 轮询就绪"] },
+    { "dot": "emerald", "title": "运行时", "items": ["Deployment 2 副本 maxUnavailable 0，零中断滚动", "资源 512Mi/300m，GOMEMLIMIT 440MiB", "preStop sleep 10 + 优雅退出 660s，覆盖 SSE 泄流"] },
+    { "dot": "rose", "title": "外部触点", "items": ["Service LB 18080→8080，api.lvlvko.top 对外", "PG + Redis 同机 Docker，环境注入经 ConfigMap+Secret", "aris CLI 经 install.sh 安装，HTTPS 上报 trace"] }
+  ]
+}

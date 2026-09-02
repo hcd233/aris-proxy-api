@@ -1,0 +1,41 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "优雅退出序列",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "animation": "trace"
+  },
+  "lanes": [
+    { "id": "signal", "label": "信号与 Fx" },
+    { "id": "background", "label": "后台任务收尾" },
+    { "id": "drain", "label": "泄流" },
+    { "id": "release", "label": "释放" }
+  ],
+  "mainPath": ["sig", "fx", "cron", "pond", "inflight", "http", "log", "rel"],
+  "nodes": [
+    { "id": "sig", "lane": "signal", "col": 0, "type": "external", "label": "终止信号", "sublabel": "SIGINT/SIGTERM · preStop 10s", "width": 136 },
+    { "id": "fx", "lane": "signal", "col": 1, "type": "backend", "label": "Fx Lifecycle", "sublabel": "OnStop 逆序 · 9 Hook" },
+    { "id": "cron", "lane": "background", "col": 1, "type": "backend", "label": "停 CronManager", "sublabel": "StopAll · 3min" },
+    { "id": "pond", "lane": "background", "col": 2, "type": "backend", "label": "停 Pond 协程池", "sublabel": "StopWithContext · 3min" },
+    { "id": "inflight", "lane": "drain", "col": 2, "type": "backend", "label": "InFlight 泄流", "sublabel": "CancelOnDrain 守护收尾" },
+    { "id": "http", "lane": "drain", "col": 3, "type": "backend", "label": "关 HTTP Server", "sublabel": "Shutdown 30s · SSE 收尾", "tag": "焦点" },
+    { "id": "log", "lane": "release", "col": 3, "type": "backend", "label": "日志 Sync", "sublabel": "zap 缓冲落盘" },
+    { "id": "rel", "lane": "release", "col": 4, "type": "database", "label": "释放资源", "sublabel": "关 DB/Redis 连接池" }
+  ],
+  "edges": [
+    { "from": "sig", "to": "fx", "label": "触发" },
+    { "from": "fx", "to": "cron", "label": "逆序第一步" },
+    { "from": "cron", "to": "pond", "label": "停后台" },
+    { "from": "pond", "to": "inflight", "label": "泄流" },
+    { "from": "inflight", "to": "http", "label": "停止接入" },
+    { "from": "http", "to": "log", "label": "日志落盘" },
+    { "from": "log", "to": "rel", "label": "最后释放" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "K8s 协同", "items": ["preStop sleep 10 让 LB 摘流先于进程退出", "terminationGracePeriodSeconds 660，覆盖 3+3min 后台收尾", "Deployment maxUnavailable 0，滚动期间不降可用性"] },
+    { "dot": "emerald", "title": "泄流焦点", "items": ["InFlight Tracker 在停止接入后等待在途请求收尾", "CancelOnDrain 守护 goroutine 绑定上游 body Close 释放", "HTTP ShutdownWithContext 30s 兜底 SSE 长连接"] },
+    { "dot": "rose", "title": "顺序保证", "items": ["Fx OnStop 与注册相反的顺序执行，先建的资源后关", "停 cron / pond 各 3min，避免任务被中断", "日志 Sync 在连接池关闭前执行，不丢尾部日志"] }
+  ]
+}

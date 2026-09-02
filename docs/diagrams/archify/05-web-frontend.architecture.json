@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Web 管理后台前端架构",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "repository": {
+      "url": "https://github.com/hcd233/aris-proxy-api",
+      "revision": "cf60466b7bbd28b6fb4e8a8a91afb54b4eefbd2b"
+    },
+    "viewBox": [1140, 800],
+    "views": [
+      { "id": "shell", "label": "入口与布局", "focus": ["browser", "layout"], "note": "静态导出 SPA 由根布局挂 Provider 链。" },
+      { "id": "routes", "label": "路由分区", "focus": ["dash", "pub"], "note": "dashboard 14 页带权限守卫，公开路由 3 页。" },
+      { "id": "api", "label": "数据出入口", "focus": ["comp", "lib", "api"], "note": "全部请求收敛到 src/lib 的 api-client。" }
+    ]
+  },
+  "components": [
+    { "id": "browser", "type": "frontend", "label": "浏览器 · SPA", "sublabel": "GET /web/ · 内联脚本先行", "tag": "静态导出", "pos": [40, 40], "size": [280, 96], "sources": [{ "path": "web/src/app/layout.tsx", "label": "App Router" }] },
+    { "id": "store", "type": "database", "label": "localStorage", "sublabel": "token · locale · theme · 筛选草稿", "tag": "客户端态", "pos": [820, 40], "size": [280, 88] },
+    { "id": "layout", "type": "backend", "label": "app/layout.tsx · Provider 链", "sublabel": "I18n → Theme → Auth → Toaster", "tag": "根布局", "pos": [40, 220], "size": [660, 88] },
+    { "id": "dash", "type": "backend", "label": "(dashboard) 路由组 · 14 页", "sublabel": "PermissionGuard · admin 门槛页", "tag": "JWT", "pos": [40, 360], "size": [400, 104] },
+    { "id": "pub", "type": "backend", "label": "公开路由 · 3 页", "sublabel": "login · trace install · share", "tag": "无守卫", "pos": [470, 360], "size": [230, 104] },
+    { "id": "comp", "type": "backend", "label": "components + hooks", "sublabel": "ui 24 · charts 9 · chat · 6 数据 hooks", "tag": "88/101 客户端组件", "pos": [40, 520], "size": [620, 88] },
+    { "id": "lib", "type": "backend", "label": "src/lib 唯一后端出入口", "sublabel": "api-client.ts 统一 401/错误处理", "tag": "api.*", "pos": [40, 660], "size": [620, 96] },
+    { "id": "api", "type": "backend", "label": "REST / SSE 后端", "sublabel": "/api/web/v1 JWT · SSE 流式", "tag": "aris-proxy-api", "pos": [760, 660], "size": [340, 96] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "浏览器", "wraps": ["browser"], "pad": 10 },
+    { "kind": "region", "label": "web/src · Next.js 16 静态导出", "wraps": ["layout", "dash", "pub", "comp", "lib"], "pad": 10 },
+    { "kind": "region", "label": "SERVER", "wraps": ["api"], "pad": 10 }
+  ],
+  "connections": [
+    { "id": "boot", "from": "browser", "to": "layout", "label": "加载 bundle", "fromSide": "bottom", "toSide": "top" },
+    { "id": "r-dash", "from": "layout", "to": "dash", "label": "路由渲染", "fromSide": "bottom", "toSide": "top", "labelAt": [240, 336] },
+    { "id": "r-pub", "from": "layout", "to": "pub", "label": "路由渲染", "fromSide": "bottom", "toSide": "top", "labelAt": [585, 336] },
+    { "id": "c-dash", "from": "dash", "to": "comp", "label": "组合组件", "fromSide": "bottom", "toSide": "top", "labelAt": [240, 496] },
+    { "id": "c-pub", "from": "pub", "to": "comp", "label": "组合组件", "fromSide": "bottom", "toSide": "top" },
+    { "id": "c-lib", "from": "comp", "to": "lib", "label": "调用 api.*", "fromSide": "bottom", "toSide": "top", "labelAt": [370, 634] },
+    { "id": "req", "from": "lib", "to": "api", "label": "JSON / SSE", "variant": "emphasis", "fromSide": "right", "toSide": "left", "labelAt": [730, 700] }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "静态导出", "items": ["output: export · basePath /web，无服务端运行时", "88/101 组件为 \"use client\"，数据全走浏览器 fetch", "localStorage 持久化 token/locale/theme 与筛选草稿"] },
+    { "dot": "emerald", "title": "路由与权限", "items": ["(dashboard) 14 页：PermissionGuard 按 PermissionAdmin/Demo 分流", "公开 3 页：login · trace install · share", "admin 门槛页对 demo 用户 403 收敛"] },
+    { "dot": "rose", "title": "数据链路", "items": ["api-client.ts 是唯一后端出入口，统一 401/错误归一", "SSE 流式接口直连 /api/web/v1", "组件层禁止散落 fetch，一律经 src/lib"] }
+  ]
+}

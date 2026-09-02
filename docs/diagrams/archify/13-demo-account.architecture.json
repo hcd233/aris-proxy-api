@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Demo 演示账户架构",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "repository": {
+      "url": "https://github.com/hcd233/aris-proxy-api",
+      "revision": "cf60466b7bbd28b6fb4e8a8a91afb54b4eefbd2b"
+    },
+    "viewBox": [1260, 640],
+    "views": [
+      { "id": "login", "label": "免登录链", "focus": ["login", "demo-api", "cmd", "webfe"], "note": "登录页一键 Demo，签发受限 JWT。" },
+      { "id": "defense", "label": "访问防线", "focus": ["webfe", "defense", "session-view", "masked"], "note": "模块白名单 fail-closed，两套数据视角。" },
+      { "id": "govern", "label": "白名单治理", "focus": ["demo-sessions", "admin-ui"], "note": "Admin 维护演示会话白名单。" }
+    ]
+  },
+  "components": [
+    { "id": "login", "type": "frontend", "label": "登录页", "sublabel": "Continue as Demo · GET /demo/status", "pos": [40, 40], "size": [220, 88] },
+    { "id": "demo-api", "type": "backend", "label": "Demo 公开端点", "sublabel": "/api/web/v1/demo/login · IP 5s/8", "tag": "无 JWT", "pos": [340, 40], "size": [240, 88] },
+    { "id": "cmd", "type": "backend", "label": "DemoLogin 命令", "sublabel": "login_enabled · FindByPermission(demo)", "pos": [660, 40], "size": [260, 88] },
+    { "id": "webfe", "type": "frontend", "label": "Web demo 感知", "sublabel": "isDemo() 三态守卫", "pos": [1000, 40], "size": [180, 88] },
+    { "id": "session-view", "type": "backend", "label": "会话白名单视角", "sublabel": "ListSessionsByIDs · IsAllowed", "pos": [100, 260], "size": [280, 104] },
+    { "id": "defense", "type": "security", "label": "Demo 访问防线", "sublabel": "模块白名单 fail-closed · IP 5s/30", "tag": "埋点 IP/UA", "pos": [460, 260], "size": [240, 104], "sources": [{ "path": "internal/middleware/permission.go" }] },
+    { "id": "masked", "type": "backend", "label": "全量脱敏视图", "sublabel": "身份→*** · 连接→前4..后4", "pos": [780, 260], "size": [280, 104] },
+    { "id": "demo-sessions", "type": "database", "label": "demo_sessions", "sublabel": "session_id uniqueIndex", "pos": [100, 480], "size": [280, 88] },
+    { "id": "admin-ui", "type": "frontend", "label": "Admin /demo tab", "sublabel": "勾选批量增删", "pos": [780, 480], "size": [280, 88] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "登录链", "wraps": ["login", "demo-api", "cmd", "webfe"], "pad": 10 },
+    { "kind": "region", "label": "访问防线与视角", "wraps": ["session-view", "defense", "masked"], "pad": 10 },
+    { "kind": "region", "label": "白名单存储与治理", "wraps": ["demo-sessions", "admin-ui"], "pad": 10 }
+  ],
+  "connections": [
+    { "id": "l1", "from": "login", "to": "demo-api", "label": "POST /login", "fromSide": "right", "toSide": "left" },
+    { "id": "l2", "from": "demo-api", "to": "cmd", "label": "登录校验", "fromSide": "right", "toSide": "left" },
+    { "id": "l3", "from": "cmd", "to": "webfe", "label": "JWT 签发", "fromSide": "right", "toSide": "left" },
+    { "id": "l4", "from": "webfe", "to": "defense", "label": "demo 只读请求", "variant": "emphasis", "fromSide": "bottom", "toSide": "top", "labelAt": [600, 200] },
+    { "id": "d1", "from": "defense", "to": "session-view", "label": "SESSIONS", "fromSide": "left", "toSide": "right" },
+    { "id": "d2", "from": "defense", "to": "masked", "label": "全量脱敏", "fromSide": "right", "toSide": "left" },
+    { "id": "g1", "from": "session-view", "to": "demo-sessions", "label": "AllowedIDs", "fromSide": "bottom", "toSide": "top", "labelAt": [240, 415] },
+    { "id": "g2", "from": "admin-ui", "to": "demo-sessions", "label": "批量增删", "variant": "dashed", "fromSide": "left", "toSide": "right" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "免登录入口", "items": ["/api/web/v1/demo/login 无 JWT，IP 令牌桶 5s/8", "DemoLogin 校验 login_enabled，按 demo 权限挑会话", "签发受限 JWT，前端 isDemo() 三态守卫收敛 UI"] },
+    { "dot": "emerald", "title": "访问防线", "items": ["模块白名单 fail-closed：SESSIONS 放行，其余 403", "第二层 IP 令牌桶 5s/30 防扫", "埋点记录模块访问 IP/UA，审计 demo 行为"] },
+    { "dot": "rose", "title": "数据视角", "items": ["会话白名单视角：仅可见 demo_sessions 里的会话", "全量脱敏视角：身份 *** · 连接 前4..后4", "Admin /demo tab 勾选批量维护白名单"] }
+  ]
+}

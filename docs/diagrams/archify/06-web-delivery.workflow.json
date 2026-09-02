@@ -1,0 +1,34 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "前端构建与内嵌交付",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "animation": "trace"
+  },
+  "lanes": [
+    { "id": "build", "label": "① 构建期" },
+    { "id": "ship", "label": "② 内嵌与分发" }
+  ],
+  "mainPath": ["source", "next-build", "web-build", "dist", "go-build", "serve"],
+  "nodes": [
+    { "id": "source", "lane": "build", "col": 0, "type": "frontend", "label": "web/ 源码", "sublabel": "src/app · lib · hooks" },
+    { "id": "next-build", "lane": "build", "col": 1, "type": "backend", "label": "next build", "sublabel": "export · /web" },
+    { "id": "web-build", "lane": "build", "col": 2, "type": "backend", "label": "make web-build", "sublabel": "cp · gzip -9" },
+    { "id": "dist", "lane": "ship", "col": 3, "type": "database", "label": "internal/web/dist", "sublabel": "//go:embed all:dist", "width": 136 },
+    { "id": "go-build", "lane": "ship", "col": 4, "type": "backend", "label": "go build", "sublabel": "前端随二进制发布", "tag": "45MB→39MB" },
+    { "id": "serve", "lane": "ship", "col": 5, "type": "backend", "label": "/web/* 路由", "sublabel": "gzip 协商 · SPA 回落" }
+  ],
+  "edges": [
+    { "from": "source", "to": "next-build", "label": "npm ci" },
+    { "from": "next-build", "to": "web-build", "label": "web/out/" },
+    { "from": "web-build", "to": "dist", "label": "拷贝 · 预压缩", "variant": "emphasis" },
+    { "from": "dist", "to": "go-build", "label": "embed" },
+    { "from": "go-build", "to": "serve", "label": "静态服务" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "构建期", "items": ["next build 静态导出到 web/out/，basePath /web", "make web-build 拷贝产物到 internal/web/dist", "逐文件 gzip -9 预压缩：10MB → 3.5MB"] },
+    { "dot": "emerald", "title": "内嵌分发", "items": ["//go:embed all:dist 把前端打进二进制", "单二进制交付：45MB → 39MB（gzip 预压缩）", "/web/* 路由按 Accept-Encoding 协商，SPA 回落 index.html"] }
+  ]
+}

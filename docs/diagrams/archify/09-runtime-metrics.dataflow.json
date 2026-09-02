@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "运行时指标采集与聚合",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "viewBox": [900, 560]
+  },
+  "stages": [
+    { "label": "进程内采集" },
+    { "label": "Registry · Flusher" },
+    { "label": "Redis 快照" },
+    { "label": "聚合与消费" }
+  ],
+  "nodes": [
+    { "id": "collectors", "stage": 0, "row": 0, "type": "backend", "label": "采集器", "sublabel": "HTTP·SSE·Token·runtime", "tag": "4 类" },
+    { "id": "registry", "stage": 1, "row": 0, "type": "backend", "label": "Registry", "sublabel": "GoCollector · Gather()" },
+    { "id": "flusher", "stage": 1, "row": 1, "type": "backend", "label": "Metrics Flusher", "sublabel": "每 Pod 5s", "tag": "单例" },
+    { "id": "redis", "stage": 2, "row": 0, "type": "database", "label": "Redis 快照", "sublabel": "ZSET · 24h", "tag": "跨 Pod" },
+    { "id": "agg", "stage": 3, "row": 0, "type": "backend", "label": "Aggregate", "sublabel": "delta÷桶宽 · P95" },
+    { "id": "dashboard", "stage": 3, "row": 1, "type": "frontend", "label": "运行时大盘", "sublabel": "QPS·P95·tok/s" },
+    { "id": "prom", "stage": 3, "row": 2, "type": "external", "label": "Prometheus", "sublabel": "promhttp 直读" }
+  ],
+  "flows": [
+    { "from": "collectors", "to": "registry", "label": "注册累加" },
+    { "from": "registry", "to": "flusher", "label": "Gather", "labelAt": [315, 215] },
+    { "from": "flusher", "to": "redis", "label": "写快照 5s" },
+    { "from": "redis", "to": "agg", "label": "读快照" },
+    { "from": "agg", "to": "dashboard", "label": "聚合查询", "labelAt": [745, 215] }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "采集与快照", "items": ["4 类采集器：HTTP 指标 · SSE Gauge · Token 计数 · runtime", "Prometheus Registry 进程内聚合，Gather() 导出", "Metrics Flusher 每 Pod 单例，5s 写 Redis ZSET 快照，保留 24h"] },
+    { "dot": "emerald", "title": "双消费路径", "items": ["大盘：Redis 快照 → Aggregate（delta÷桶宽 · P95 聚合）→ 跨 Pod 汇总", "Prometheus：promhttp 直接拉取本 Pod Registry", "goroutines 等运行时指标也随快照入库，支撑泄漏时序还原"] }
+  ]
+}

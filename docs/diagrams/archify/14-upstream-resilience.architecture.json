@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "上游容错",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "repository": {
+      "url": "https://github.com/hcd233/aris-proxy-api",
+      "revision": "cf60466b7bbd28b6fb4e8a8a91afb54b4eefbd2b"
+    },
+    "viewBox": [1360, 640],
+    "views": [
+      { "id": "chain", "label": "转发链", "focus": ["proxy", "adapt", "guard", "retry", "upstream"], "note": "每次上游调用先过 Guard 再重试转发。" },
+      { "id": "defense", "label": "两道防线", "focus": ["breaker", "bulkhead", "degrade"], "note": "三态熔断 + 信号量隔离，任一拒绝即快速失败。" },
+      { "id": "observe", "label": "可观测", "focus": ["metrics"], "note": "熔断与隔离状态全部暴露为 Prometheus 指标。" }
+    ]
+  },
+  "components": [
+    { "id": "proxy", "type": "backend", "label": "Proxy 转发调用点", "sublabel": "doUpstreamRequest · sendRequest", "pos": [40, 40], "size": [260, 104] },
+    { "id": "adapt", "type": "backend", "label": "EndpointGuard", "sublabel": "key: BaseURL|APIKey · IsCircuitError", "tag": "容错入口", "pos": [380, 40], "size": [260, 104] },
+    { "id": "guard", "type": "backend", "label": "Guard 组合", "sublabel": "Allow: 熔断→信号量 · defer Report", "pos": [720, 40], "size": [260, 104] },
+    { "id": "retry", "type": "backend", "label": "UpstreamRetry", "sublabel": "指数退避 + jitter", "pos": [1060, 40], "size": [260, 104] },
+    { "id": "upstream", "type": "external", "label": "MaaS 上游", "sublabel": "HTTP/SSE · 5xx 重试 · 429 不计熔断", "pos": [1060, 190], "size": [260, 88] },
+    { "id": "degrade", "type": "backend", "label": "快速失败降级", "sublabel": "503 + Retry-After · 协议错误体", "pos": [40, 240], "size": [240, 104] },
+    { "id": "breaker", "type": "backend", "label": "三态熔断器", "sublabel": "60s×6桶 · min10 · ≥50% · 30s 半开", "pos": [360, 240], "size": [280, 124], "sources": [{ "path": "internal/common/resilience/circuit_breaker.go" }] },
+    { "id": "bulkhead", "type": "backend", "label": "信号量隔离", "sublabel": "per-key ≤32 · 等待 1s", "pos": [730, 240], "size": [240, 104] },
+    { "id": "metrics", "type": "backend", "label": "Prometheus 容错指标", "sublabel": "circuit_state/open/rejected · bulkhead_rejected", "tag": "观测横切", "pos": [360, 430], "size": [600, 88] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "转发链", "wraps": ["proxy", "adapt", "guard", "retry", "upstream"], "pad": 10 },
+    { "kind": "region", "label": "容错防线", "wraps": ["degrade", "breaker", "bulkhead"], "pad": 10 }
+  ],
+  "connections": [
+    { "id": "c1", "from": "proxy", "to": "adapt", "label": "Allow()", "fromSide": "right", "toSide": "left" },
+    { "id": "c2", "from": "adapt", "to": "guard", "label": "组装", "fromSide": "right", "toSide": "left" },
+    { "id": "c3", "from": "guard", "to": "retry", "label": "放行", "fromSide": "right", "toSide": "left" },
+    { "id": "c4", "from": "retry", "to": "upstream", "fromSide": "bottom", "toSide": "top" },
+    { "id": "c5", "from": "retry", "to": "guard", "label": "Report", "variant": "dashed", "fromSide": "bottom", "toSide": "right", "via": [[1190, 178], [1010, 178], [1010, 92]], "labelAt": [1060, 164] },
+    { "id": "c6", "from": "guard", "to": "breaker", "label": "熔断判定", "fromSide": "bottom", "toSide": "top", "labelAt": [645, 203] },
+    { "id": "c7", "from": "guard", "to": "bulkhead", "label": "并发获取", "fromSide": "bottom", "toSide": "top", "labelAt": [850, 225] },
+    { "id": "c8", "from": "breaker", "to": "degrade", "label": "打开→降级", "fromSide": "left", "toSide": "right", "labelAt": [320, 290] },
+    { "id": "c10", "from": "breaker", "to": "metrics", "label": "状态暴露", "variant": "dashed", "fromSide": "bottom", "toSide": "top", "labelAt": [500, 397] },
+    { "id": "c11", "from": "bulkhead", "to": "metrics", "label": "拒绝计数", "variant": "dashed", "fromSide": "bottom", "toSide": "top", "labelAt": [840, 387] }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "调用契约", "items": ["Guard key 为 BaseURL|APIKey，故障按上游端点隔离", "Allow 先查熔断再抢信号量，defer Report 回写结果", "IsCircuitError 归一网络与 5xx 错误；429 不计熔断"] },
+    { "dot": "emerald", "title": "两道防线", "items": ["熔断：60s×6 桶滑窗，≥10 次且 ≥50% 失败即打开，30s 半开试探", "隔离：per-key 信号量 ≤32 并发，等待 1s 即拒绝", "任一拒绝立即 503 + Retry-After，不消耗上游配额"] },
+    { "dot": "rose", "title": "可观测", "items": ["upstream_circuit_state 暴露三态", "circuit_open_total / rejected_total / bulkhead_rejected_total", "已建立的 SSE 流不受熔断影响"] }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "Agent Harness Trace 摄取",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "viewBox": [1068, 560]
+  },
+  "stages": [
+    { "label": "Agent 事件源" },
+    { "label": "aris CLI 采集" },
+    { "label": "本地 spool" },
+    { "label": "服务端摄取" },
+    { "label": "存储与消费" }
+  ],
+  "nodes": [
+    { "id": "codex-hook", "stage": 0, "row": 0, "type": "external", "label": "Codex Hook", "sublabel": "Session 事件" },
+    { "id": "claude-hook", "stage": 0, "row": 1, "type": "external", "label": "Claude Hook", "sublabel": "11 类事件" },
+    { "id": "rollout", "stage": 0, "row": 2, "type": "external", "label": "Rollout", "sublabel": ".jsonl 重放" },
+    { "id": "cli", "stage": 1, "row": 1, "type": "backend", "label": "trace ingest", "sublabel": "fail-open", "tag": "双 Agent" },
+    { "id": "spool", "stage": 2, "row": 1, "type": "database", "label": "spool", "sublabel": "256MiB · 续传" },
+    { "id": "ingest", "stage": 3, "row": 0, "type": "backend", "label": "Ingest API", "sublabel": "批量 500/4MiB", "tag": "X-API-Key" },
+    { "id": "dedup", "stage": 3, "row": 1, "type": "security", "label": "鉴权 · 去重", "sublabel": "复合键幂等" },
+    { "id": "repo", "stage": 4, "row": 0, "type": "database", "label": "Trace Repo", "sublabel": "PG 幂等写入" },
+    { "id": "proj", "stage": 4, "row": 1, "type": "backend", "label": "投影重建", "sublabel": "→ 会话投影" },
+    { "id": "web", "stage": 4, "row": 2, "type": "frontend", "label": "Trace Web", "sublabel": "时间线 · JWT" }
+  ],
+  "flows": [
+    { "from": "codex-hook", "to": "cli", "label": "Hook 事件", "route": "top-channel" },
+    { "from": "claude-hook", "to": "cli", "label": "事件", "route": "straight" },
+    { "from": "rollout", "to": "cli", "label": "Rollout" },
+    { "from": "cli", "to": "spool", "label": "原子落盘" },
+    { "from": "spool", "to": "ingest", "label": "批量上报 · accepted 删除" },
+    { "from": "ingest", "to": "dedup", "label": "鉴权", "labelAt": [745, 214] },
+    { "from": "dedup", "to": "repo", "label": "幂等写入" },
+    { "from": "repo", "to": "proj", "label": "投影", "labelAt": [960, 214] },
+    { "from": "proj", "to": "web", "label": "JWT 查询", "labelAt": [960, 328] }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "客户端侧", "items": ["codex hook · claude hook 适配双 Agent 事件模型", "rollout 兜底：离线 .jsonl 重放补齐会话", "CLI fail-open：采集失败不影响 Agent 运行"] },
+    { "dot": "emerald", "title": "传输与幂等", "items": ["本地 spool 原子落盘，失败重试不丢事件", "批量 500 条 / 4MiB，服务端 accepted 才删除", "hook:/rollout: 复合键幂等，重复上报安全"] },
+    { "dot": "rose", "title": "服务端侧", "items": ["X-API-Key 鉴权，事件按会话聚合去重", "PostgreSQL 幂等写入后投影重建 TraceConversation", "Trace Web 按事件时间线回放完整执行轨迹"] }
+  ]
+}

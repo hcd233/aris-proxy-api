@@ -17,51 +17,53 @@ Aris 将多个 MaaS 平台、多种模型和多种 API 协议统一接入，通�
 
 后端按 DDD 分层组织：接口层（router / 十级中间件链 / handler / dto）→ 应用层（17 个用例模块的 `command`/`query`/`port`）→ 领域层（聚合、值对象、仓储接口）；基础设施层反向实现仓储接口完成依赖倒置，Cron 定时治理与 `bootstrap`/Fx 装配作为横切关注点。三类调用方分别是 Web 管理后台（JWT）、`aris` Trace CLI 与 Agentic 客户端（`X-API-Key`）。
 
-![系统总览 · DDD 分层](docs/diagrams/aris-arch-01.png)
+![系统总览 · DDD 分层](docs/diagrams/archify/aris-arch-01.gif)
+
+交互版（节点搜索 / 影响追踪 / 深浅主题 / 引导导览，节点附源码锚点）：[docs/diagrams/archify/aris-arch-01.html](docs/diagrams/archify/aris-arch-01.html)
 
 **LLM 代理链路**：鉴权/限流/触发词 → 端点解析（用户级隔离）→ 跨协议转换 → 上游；响应同步返回，消息与审计经 Pond 协程池异步落库，不阻塞请求。
 
-![LLM 代理链路](docs/diagrams/aris-proxy-pipeline.png)
+![LLM 代理链路](docs/diagrams/archify/aris-arch-02.gif)
 
 **上游容错（熔断/隔离/降级）**：proxy 转发链路在重试外层接入容错守卫 `Guard`——按 `BaseURL|APIKey` 维度的三态熔断器（滑动窗口 60s × 6 桶、≥10 请求且错误率 ≥50% 打开、30s 后半开限量 1 探测恢复）与 per-key 信号量隔离（并发 ≤32、等待 1s 超时）组合判定；熔断打开或满载时快速失败为 503 + `Retry-After` + 按入口协议格式的错误体。429 仍可重试但不计熔断（限流不算故障），已建立的 SSE 连接不受熔断影响；熔断状态与拒绝计数注册 Prometheus 指标（label 为 endpoint key）。
 
-![上游容错：熔断 / 隔离 / 降级](docs/diagrams/aris-upstream-resilience.png)
+![上游容错：熔断 / 隔离 / 降级](docs/diagrams/archify/aris-arch-14.gif)
 
 **会话数据模型与生命周期**：LLM 转发与 Trace 摄取两路写入 Session 聚合根，Message/Tool 按 checksum 内容寻址去重，审计、缓存、导出与后台消费围绕其展开。
 
-![会话数据模型与生命周期](docs/diagrams/aris-session-data.png)
+![会话数据模型与生命周期](docs/diagrams/archify/aris-arch-03.gif)
 
 **Agent Harness Trace 摄取**：Codex / Claude Code Hook 与 Rollout 事件由 `aris` CLI（fail-open）本地 spool 批量上报，鉴权去重后落库，Web 端投影为可阅读的调用链路。
 
-![Agent Harness Trace 摄取](docs/diagrams/aris-trace-ingest.png)
+![Agent Harness Trace 摄取](docs/diagrams/archify/aris-arch-04.gif)
 
 **Web 管理后台前端架构**：浏览器加载静态导出产物 → 根布局 Provider 链（I18n → Theme → Auth）→ 路由组（后台 14 页 / 公开 3 页，管理员页由 `PermissionGuard` 守卫）→ 组件与 6 个通用 hooks → `src/lib` 作为唯一后端出入口（Bearer 注入、401 单飞刷新、错误码 toast、数据集 SSE 导出）。
 
-![Web 管理后台前端架构](docs/diagrams/aris-web-frontend.png)
+![Web 管理后台前端架构](docs/diagrams/archify/aris-arch-05.gif)
 
 **前端构建与内嵌交付**：`next build` 静态导出（`basePath: /web`）→ `make web-build` 拷贝并逐文件 `gzip -9` 预压缩（10MB → 3.5MB）→ `embed.FS` 随服务端二进制发布 → `/web/*` 显式解析 `Accept-Encoding` 直发预压缩内容，非静态路径回落 `index.html`。
 
-![前端构建与内嵌交付](docs/diagrams/aris-web-delivery.png)
+![前端构建与内嵌交付](docs/diagrams/archify/aris-arch-06.gif)
 
 **运行时指标采集**：进程内 `HTTPCollector`（请求时延 histogram + 成功/失败 counter）、`SSEGauge`（SSE 并发连接）、`TokenUsageCounter`（输入/输出 token 吞吐）与 Go runtime 采集器（`go_goroutines` / `go_memstats_alloc_bytes` / `process_cpu_seconds_total`）注册进 Prometheus Registry；每 Pod 一个 `MetricsFlusher` 周期（5s）`BuildSnapshot` 把快照写入 Redis（ZSET `metrics:runtime:data:{pod}` + 实例注册表，retention 24h 清理）；运行时大盘经聚合层对相邻快照做 gauge 桶内均值 / counter 正向 delta÷桶宽 / histogram 桶合并求 P95，产出 QPS / P95 / 成功率 / CPU% / tokens·s；`/metrics` 端点经 `promhttp.Handler` 直读本 Pod Registry。
 
-![运行时指标采集](docs/diagrams/aris-runtime-metrics.png)
+![运行时指标采集](docs/diagrams/archify/aris-arch-09.gif)
 
 **优雅退出**：`SIGINT` / `SIGTERM` 触发 `fx.Lifecycle.OnStop` 逆序执行（注册顺序 Redis → DB → TriggerService → Logger → HTTP → Flusher → Inflight → Pool → Cron，故 OnStop 反序）；依次停 cron（`CronManager.StopAll`，3min）→ 停 `pond` 协程池（`StopWithContext`，3min）→ `inflight` drain 等在途（5min）→ 关 HTTP（`ShutdownWithContext` 30s，泄流 SSE 长连接，停 Flusher）→ 同步日志 + 停 TriggerService pub/sub → 关 DB → 关 Redis；K8s 配合 `preStop sleep 10` + `terminationGracePeriodSeconds 660` 无损下线。
 
-![优雅退出序列](docs/diagrams/aris-graceful-shutdown.png)
+![优雅退出序列](docs/diagrams/archify/aris-arch-10.gif)
 
 **触发词热更新**：管理后台 `/api/web/v1/trigger` 写入 DB 后 `NotifyChanged` 经 Redis `Publish(trigger:changed)` 即时信号 + `INCR(trigger:version)` 版本广播；各 Pod `TriggerService` 通过 pub/sub 订阅、版本轮询（2s）与低频兜底（5min）三重同步触发全量 `Rebuild`（`ListAll` 重建内存 Aho-Corasick matcher）；LLM 请求经 `Check` 命中后按 action 拦截（deny）/ 打码（omit），命中计数经 `TriggerHitSync` cron（每 5min `PopAll` → `BatchIncrementHitCount`）批量回写 DB。
 
-![触发词热更新](docs/diagrams/aris-blocked-hot-reload.png)
+![触发词热更新](docs/diagrams/archify/aris-arch-11.gif)
 
 **定时任务触发与执行**：管理后台 `/api/web/v1/cron` 更新 spec / enabled（`update_cron_job` 校验 spec、核心任务禁关）或手动触发 `CronManager.Trigger`；`CronManager` 热重载（`Restart` / `Enable` / `Disable`）并经 `cron:reload` Redis pub/sub 跨 Pod 广播（其他 Pod `handleMessage` 同步）；任务以 Redis 分布式锁（`cron:lock:{name}`，TTL 5min + ticker 续期）保证单实例执行，`wrapCronFunc` 注入 traceID / enabled 检查 / panic 恢复，4 个任务（terminal-cleanup 每小时扫描最近 24h 终态会话 / purge 周日 04:00 / think 每日 00:00 / hit-sync 每 5min）每次执行落 `CronCallAudit`（status + duration + trigger source）。Session 前缀去重不再走 cron——插入事务提交后以独立短事务 + `FOR UPDATE` 行锁实时合并同前缀会话。
 
-![定时任务触发与执行](docs/diagrams/aris-cron-execution.png)
+![定时任务触发与执行](docs/diagrams/archify/aris-arch-12.gif)
 
 **Demo 演示账户架构**：四级权限 `pending` < `demo` < `user` < `admin`，全局单例 demo 账户一键只读体验。登录页「Continue as Demo」经无鉴权 IP 限流端点（令牌桶 5s/8）调用 `POST /api/web/v1/demo/login`，DemoLogin 命令校验 `login_enabled` 并按 permission 定位 demo 用户签发 JWT，登录与模块访问事件（path/IP/UA）落 `demo_access_audits` 供 admin 审计；前端以 `isDemo()` + `demoModules` 驱动 PermissionGuard 三态守卫与 Nav/删除按钮置灰锁定。demo 只读请求先过访问防线：权限中间件按模块白名单放行（fail-closed），`TokenBucketRateLimiterMiddleware` 以 `WithPermissionFilter(demo)` 仅对 demo 权限启用 `demoAccess` IP 令牌桶（5s/30，8 个接口组全局共享一桶，超限 429 + `Retry-After`；非 demo 用户零开销放行）。数据分两路视角：**会话白名单**——admin 在独立 `/demo` tab 勾选批量增删 `demo_sessions`（`session_id` 唯一索引），demo 列表走 `ListSessionsByIDs`、详情经 `IsAllowed` 成员校验，不在白名单一律返回"不存在"（防遍历），白名单内容明文（admin 选取即授权）；**全量脱敏**——audit/models/endpoints 展示全量数据但关键字段脱敏（身份类 `MaskIdentity` → `***`，连接类 `MaskSecret` → 保留前 4 后 4），统计数字与别名有意保留。全部写接口与存量 API Key 的 LLM 转发因 demo 权限低于 user 被天然拒绝，零额外改动。
 
-![Demo 演示账户架构](docs/diagrams/aris-demo-account.png)
+![Demo 演示账户架构](docs/diagrams/archify/aris-arch-13.gif)
 
 ## 技术栈
 
@@ -160,7 +162,7 @@ cd web && npm ci && npm run dev   # http://localhost:3000
 - **Kubernetes**：Deployment + Service + ConfigMap/Secret，滚动更新；`preStop` + draining + `terminationGracePeriodSeconds` 支持 SSE 长连接无损下线。
 - **CI**：GitHub Actions 构建 GHCR 镜像并发布 `aris` 客户端 Release（tar.gz + sha256），服务端 `/install.sh` 提供自包含安装脚本。
 
-![部署与发布拓扑](docs/diagrams/aris-deploy-topology.png)
+![部署与发布拓扑](docs/diagrams/archify/aris-arch-07.gif)
 
 ## 项目结构
 
