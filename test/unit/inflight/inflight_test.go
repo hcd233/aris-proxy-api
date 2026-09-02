@@ -119,7 +119,7 @@ func TestTracker_DrainSoftBroadcastCancel(t *testing.T) {
 		t.Fatal("Track should succeed when running")
 	}
 
-	derived := tracker.CancelOnDrain(context.Background())
+	derived, cancelDerived := tracker.CancelOnDrain(context.Background())
 
 	drained := make(chan bool, 1)
 	go func() {
@@ -131,6 +131,7 @@ func TestTracker_DrainSoftBroadcastCancel(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("CancelOnDrain ctx should be canceled after soft deadline broadcast")
 	}
+	cancelDerived()
 
 	tracker.Untrack()
 
@@ -148,7 +149,7 @@ func TestTracker_CancelOnDrainNoBroadcast(t *testing.T) {
 	if !tracker.Track() {
 		t.Fatal("Track should succeed when running")
 	}
-	derived := tracker.CancelOnDrain(context.Background())
+	derived, cancelDerived := tracker.CancelOnDrain(context.Background())
 	tracker.Untrack()
 
 	drained := make(chan bool, 1)
@@ -164,5 +165,13 @@ func TestTracker_CancelOnDrainNoBroadcast(t *testing.T) {
 	case <-derived.Done():
 		t.Fatal("CancelOnDrain ctx must not be canceled when no broadcast happens")
 	default:
+	}
+
+	// 请求方显式结束后派生 ctx 关闭（body Close 语义），守护 goroutine 退出
+	cancelDerived()
+	select {
+	case <-derived.Done():
+	default:
+		t.Fatal("CancelOnDrain ctx should be canceled after caller cancel")
 	}
 }
