@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"runtime"
 	"testing"
 	"time"
 
@@ -90,6 +91,63 @@ func TestOpenAIProxy_DrainCancelInterruptsStream(t *testing.T) {
 	tracker.Untrack()
 	if result := <-drained; !result {
 		t.Fatal("Drain should return true after stream released")
+	}
+}
+
+// TestUpstreamRequestBodyCloseReleasesDrainGoroutine 回归（2026-09-02 生产 goroutine 泄漏）：
+// CancelOnDrain 派生 ctx 的守护 goroutine 必须随上游 body 的 Close 退出。
+// 缺陷形态：fiber/fasthttp 请求 ctx 不随请求结束而 Done，若 cancel 不绑定
+// body 生命周期，每个上游请求泄漏一个守护 goroutine（生产 24h 随 LLM 流量
+// 阶梯上涨 55→126）。判定：N 次「请求 + body Close」后 goroutine 数必须回落。
+func TestUpstreamRequestBodyCloseReleasesDrainGoroutine(t *testing.T) {
+	t.Parallel()
+	tracker := inflight.NewTracker()
+	proxy := transport.NewOpenAIProxy(tracker, transport.NewEndpointGuard(nil))
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.WriteHeader(http.StatusOK)
+		_, _ = fmt.Fprint(w, "data: {\"id\":\"1\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"hi\"}}]}\n\n")
+		if flusher, ok := w.(http.Flusher); ok {
+			flusher.Flush()
+		}
+		_, _ = fmt.Fprint(w, "data: [DONE]\n\n")
+	}))
+	t.Cleanup(srv.Close)
+	ep := vo.UpstreamEndpoint{BaseURL: srv.URL, Model: "test-model", APIKey: "test-key"}
+
+	// 预热建立基线（连接池、guard 等懒初始化）
+	for range 2 {
+		stream, err := proxy.OpenChatCompletionStream(context.Background(), ep, []byte(`{}`))
+		if err != nil {
+			t.Fatalf("warmup open stream: %v", err)
+		}
+		_, _ = proxy.ReadChatCompletionStream(context.Background(), stream, func(*dto.OpenAIChatCompletionChunk) error { return nil })
+	}
+	runtime.GC()
+	baseline := runtime.NumGoroutine()
+
+	const rounds = 20
+	for range rounds {
+		stream, err := proxy.OpenChatCompletionStream(context.Background(), ep, []byte(`{}`))
+		if err != nil {
+			t.Fatalf("open stream: %v", err)
+		}
+		// Read 内部 defer stream.Close()：body 生命周期结束即 drain 派生 ctx 结束
+		_, _ = proxy.ReadChatCompletionStream(context.Background(), stream, func(*dto.OpenAIChatCompletionChunk) error { return nil })
+	}
+
+	deadline := time.Now().Add(3 * time.Second)
+	for {
+		runtime.GC()
+		if runtime.NumGoroutine() <= baseline+2 || time.Now().After(deadline) {
+			break
+		}
+		<-time.After(100 * time.Millisecond) //nolint:revive // goroutine 回落轮询间隔
+	}
+	after := runtime.NumGoroutine()
+	if after > baseline+2 {
+		t.Fatalf("drain guard goroutines leaked: baseline=%d after=%d (%d closed stream requests)", baseline, after, rounds)
 	}
 }
 

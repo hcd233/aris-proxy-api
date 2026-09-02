@@ -79,15 +79,20 @@ func (t *Tracker) Drain(soft, hard time.Duration) bool {
 	}
 }
 
-// CancelOnDrain 返回 ctx 的派生 context：drain soft deadline 广播时取消派生 ctx，
-// 使依赖该 ctx 的阻塞操作（如上游 SSE 读）退出。goroutine 在派生 ctx
-// （随请求结束而 done）时退出，不泄漏。
+// CancelOnDrain 返回 ctx 的派生 context 及其 cancel：drain soft deadline 广播时取消派生 ctx，
+// 使依赖该 ctx 的阻塞操作（如上游 SSE 读）退出。
+//
+// 调用方必须在请求生命周期结束（上游 body Close 或出错立即返回）时调用 cancel：
+// fiber/fasthttp 的请求 ctx 不随请求结束而 Done（RequestCtx.Done 返回 nil channel），
+// 派生 ctx 不会自然结束，守护 goroutine 与 ctx 若无人显式 cancel 会随请求累积泄漏
+// （生产实测每个上游请求泄漏一个 goroutine，24h 内 goroutine 随 LLM 代理流量阶梯上涨）。
 //
 //	@param ctx context.Context
-//	@return context.Context
+//	@return context.Context 派生 ctx
+//	@return context.CancelFunc 结束函数，幂等，body Close 时必须调用
 //	@author centonhuang
-//	@update 2026-08-15 10:00:00
-func (t *Tracker) CancelOnDrain(ctx context.Context) context.Context {
+//	@update 2026-09-02 10:00:00
+func (t *Tracker) CancelOnDrain(ctx context.Context) (context.Context, context.CancelFunc) {
 	derived, cancel := context.WithCancel(ctx)
 	go func() {
 		select {
@@ -96,7 +101,7 @@ func (t *Tracker) CancelOnDrain(ctx context.Context) context.Context {
 		case <-derived.Done():
 		}
 	}()
-	return derived
+	return derived, cancel
 }
 
 func (t *Tracker) broadcastCancel() {
