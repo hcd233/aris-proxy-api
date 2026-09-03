@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/redis/go-redis/v9"
@@ -48,9 +49,14 @@ func (c *RuntimeMetricsCache) WriteSnapshot(instanceID string, score int64, payl
 	ctx := context.Background()
 	dataKey := runtimeMetricsDataKey(instanceID)
 	cutoff := strconv.FormatInt(retentionCutoff, constant.DecimalBase)
+	// retention 由 score - retentionCutoff 推导（Flusher 传入 cutoff = now - retention）。
+	// TTL = retention + 宽限：活跃实例每次写入续期，消亡实例的 key 自动过期回收，
+	// 否则 pod 消亡后 data key 会以满窗口体积（约 10MB）永久残留。
+	ttl := time.Duration(score-retentionCutoff)*time.Second + constant.RuntimeMetricsKeyGracePeriod
 
 	pipe := c.client.Pipeline()
 	pipe.ZAdd(ctx, dataKey, redis.Z{Score: float64(score), Member: string(payload)})
+	pipe.Expire(ctx, dataKey, ttl)
 	pipe.ZRemRangeByScore(ctx, dataKey, "0", "("+cutoff)
 	pipe.ZAdd(ctx, constant.RuntimeMetricsInstancesKey, redis.Z{Score: float64(score), Member: instanceID})
 	pipe.ZRemRangeByScore(ctx, constant.RuntimeMetricsInstancesKey, "0", "("+cutoff)

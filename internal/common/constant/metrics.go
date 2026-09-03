@@ -85,6 +85,9 @@ const (
 	RuntimeMetricsRetention = 24 * time.Hour
 	// RuntimeMetricsInstanceTTL 实例注册表中超过此时长未心跳的死实例会被清理
 	RuntimeMetricsInstanceTTL = 24 * time.Hour
+	// RuntimeMetricsKeyGracePeriod 运行时指标 data key 的 TTL 宽限：活跃实例每次写入续期，
+	// 消亡实例的 key 在 retention + 宽限后由 Redis 自动过期回收，防止僵尸 key 永久残留
+	RuntimeMetricsKeyGracePeriod = 2 * time.Hour
 
 	// RuntimeMetricsUnknownInstance hostname 获取失败时的兜底实例标识
 	RuntimeMetricsUnknownInstance = "unknown"
