@@ -5046,28 +5046,28 @@
         <path data-edge-from="cron" data-edge-to="session" data-edge-label="终态清理" data-edge-key="6" data-edge-id="cron-govern" data-composition-points="550,420;550,200" d="M 550 420 L 550 200" class="a-dashed" data-animate="edge" style="--step:6" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
 
         <!-- Components -->
-        <g id="node-llm-forward" data-node-id="llm-forward" data-node-label="LLM 转发" tabindex="0" role="button" aria-label="聚焦LLM 转发，MessageStoreTask 异步写入, 两路写入" aria-pressed="false" data-node-kind="backend" data-node-sublabel="MessageStoreTask 异步写入" data-node-tag="checksum 去重" data-node-context="两路写入">
-          <title>LLM 转发 · MessageStoreTask 异步写入 · 两路写入 · checksum 去重</title>
+        <g id="node-llm-forward" data-node-id="llm-forward" data-node-label="LLM 转发" tabindex="0" role="button" aria-label="聚焦LLM 转发，MessageStoreTask 异步写入 · checksum 去重 · 单事务, 两路写入" aria-pressed="false" data-node-kind="backend" data-node-sublabel="MessageStoreTask 异步写入 · checksum 去重 · 单事务" data-node-tag="两路写入" data-node-context="两路写入">
+          <title>LLM 转发 · MessageStoreTask 异步写入 · checksum 去重 · 单事务 · 两路写入 · 两路写入</title>
           <rect x="40" y="80" width="260" height="88" rx="6" class="c-mask"/>
           <rect x="40" y="80" width="260" height="88" rx="6" class="c-backend" data-animate="node" style="--step:0" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(46 86) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="170" y="122" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">LLM 转发</text>
-        <text data-detail="context" x="170" y="138" class="t-muted" font-size="9" text-anchor="middle">MessageStoreTask 异步写入</text>
-        <text data-detail="fine" x="170" y="160" class="t-backend" font-size="7" text-anchor="middle">checksum 去重</text>
+        <text data-detail="context" x="170" y="138" class="t-muted" font-size="8.4" text-anchor="middle">MessageStoreTask 异步写入 · checksum 去重 · 单事务</text>
+        <text data-detail="fine" x="170" y="160" class="t-backend" font-size="7" text-anchor="middle">两路写入</text>
         </g>
 
-        <g id="node-trace-ingest" data-node-id="trace-ingest" data-node-label="Trace 摄取" tabindex="0" role="button" aria-label="聚焦Trace 摄取，aris CLI → TraceEvent, 两路写入" aria-pressed="false" data-node-kind="backend" data-node-sublabel="aris CLI → TraceEvent" data-node-tag="事件重建" data-node-context="两路写入">
-          <title>Trace 摄取 · aris CLI → TraceEvent · 两路写入 · 事件重建</title>
+        <g id="node-trace-ingest" data-node-id="trace-ingest" data-node-label="Trace 摄取" tabindex="0" role="button" aria-label="聚焦Trace 摄取，aris CLI → TraceEvent · 事件重建为会话, 两路写入" aria-pressed="false" data-node-kind="backend" data-node-sublabel="aris CLI → TraceEvent · 事件重建为会话" data-node-tag="两路写入" data-node-context="两路写入">
+          <title>Trace 摄取 · aris CLI → TraceEvent · 事件重建为会话 · 两路写入 · 两路写入</title>
           <rect x="40" y="220" width="260" height="88" rx="6" class="c-mask"/>
           <rect x="40" y="220" width="260" height="88" rx="6" class="c-backend" data-animate="node" style="--step:1" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(46 226) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="170" y="262" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Trace 摄取</text>
-        <text data-detail="context" x="170" y="278" class="t-muted" font-size="9" text-anchor="middle">aris CLI → TraceEvent</text>
-        <text data-detail="fine" x="170" y="300" class="t-backend" font-size="7" text-anchor="middle">事件重建</text>
+        <text data-detail="context" x="170" y="278" class="t-muted" font-size="9" text-anchor="middle">aris CLI → TraceEvent · 事件重建为会话</text>
+        <text data-detail="fine" x="170" y="300" class="t-backend" font-size="7" text-anchor="middle">两路写入</text>
         </g>
 
         <g id="node-session" data-node-id="session" data-node-label="Session 聚合根" tabindex="0" role="button" aria-label="聚焦Session 聚合根，message_ids[] · tool_ids[] · questions[] · score 1-5, Session 聚合中枢" aria-pressed="false" data-node-kind="backend" data-node-sublabel="message_ids[] · tool_ids[] · questions[] · score 1-5" data-node-tag="按 APIKeyOwner 隔离" data-node-context="Session 聚合中枢">
@@ -5082,8 +5082,8 @@
         <text data-detail="fine" x="550" y="192" class="t-backend" font-size="7" text-anchor="middle">按 APIKeyOwner 隔离</text>
         </g>
 
-        <g id="node-msg-tool" data-node-id="msg-tool" data-node-label="Message · Tool" tabindex="0" role="button" aria-label="聚焦Message · Tool，协议无关 JSON · 不可变 · check_sum 寻址, Session 聚合中枢" aria-pressed="false" data-node-kind="database" data-node-sublabel="协议无关 JSON · 不可变 · check_sum 寻址" data-node-tag="Tool 属于 Message" data-node-context="Session 聚合中枢">
-          <title>Message · Tool · 协议无关 JSON · 不可变 · check_sum 寻址 · Session 聚合中枢 · Tool 属于 Message</title>
+        <g id="node-msg-tool" data-node-id="msg-tool" data-node-label="Message · Tool" tabindex="0" role="button" aria-label="聚焦Message · Tool，协议无关 JSON · 不可变 · 内容寻址, Session 聚合中枢" aria-pressed="false" data-node-kind="database" data-node-sublabel="协议无关 JSON · 不可变 · 内容寻址" data-node-tag="check_sum unique" data-node-context="Session 聚合中枢">
+          <title>Message · Tool · 协议无关 JSON · 不可变 · 内容寻址 · Session 聚合中枢 · check_sum unique</title>
           <rect x="320" y="270" width="190" height="104" rx="6" class="c-mask"/>
           <rect x="320" y="270" width="190" height="104" rx="6" class="c-database" data-animate="node" style="--step:3" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="database" class="semantic-sigil s-database" transform="translate(326 276) scale(0.6875)">
@@ -5091,12 +5091,12 @@
             <path d="M3 4v8c0 1.1 2.2 2 5 2s5-.9 5-2V4M3 8c0 1.1 2.2 2 5 2s5-.9 5-2"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="415" y="320" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Message · Tool</text>
-        <text data-detail="context" x="415" y="336" class="t-muted" font-size="7.7" text-anchor="middle">协议无关 JSON · 不可变 · check_sum 寻址</text>
-        <text data-detail="fine" x="415" y="366" class="t-database" font-size="7" text-anchor="middle">Tool 属于 Message</text>
+        <text data-detail="context" x="415" y="336" class="t-muted" font-size="9" text-anchor="middle">协议无关 JSON · 不可变 · 内容寻址</text>
+        <text data-detail="fine" x="415" y="366" class="t-database" font-size="7" text-anchor="middle">check_sum unique</text>
         </g>
 
-        <g id="node-cache" data-node-id="cache" data-node-label="SessionDetailCache" tabindex="0" role="button" aria-label="聚焦SessionDetailCache，Redis 三层读 · TTL 1h, Session 聚合中枢" aria-pressed="false" data-node-kind="database" data-node-sublabel="Redis 三层读 · TTL 1h" data-node-tag="miss 降级 DB" data-node-context="Session 聚合中枢">
-          <title>SessionDetailCache · Redis 三层读 · TTL 1h · Session 聚合中枢 · miss 降级 DB</title>
+        <g id="node-cache" data-node-id="cache" data-node-label="SessionDetailCache" tabindex="0" role="button" aria-label="聚焦SessionDetailCache，Redis 三层 meta+msg+tool · TTL 1h, Session 聚合中枢" aria-pressed="false" data-node-kind="database" data-node-sublabel="Redis 三层 meta+msg+tool · TTL 1h" data-node-tag="miss 降级 DB" data-node-context="Session 聚合中枢">
+          <title>SessionDetailCache · Redis 三层 meta+msg+tool · TTL 1h · Session 聚合中枢 · miss 降级 DB</title>
           <rect x="600" y="270" width="200" height="88" rx="6" class="c-mask"/>
           <rect x="600" y="270" width="200" height="88" rx="6" class="c-database" data-animate="node" style="--step:4" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="database" class="semantic-sigil s-database" transform="translate(606 276) scale(0.6875)">
@@ -5104,19 +5104,19 @@
             <path d="M3 4v8c0 1.1 2.2 2 5 2s5-.9 5-2V4M3 8c0 1.1 2.2 2 5 2s5-.9 5-2"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="700" y="312" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">SessionDetailCache</text>
-        <text data-detail="context" x="700" y="328" class="t-muted" font-size="9" text-anchor="middle">Redis 三层读 · TTL 1h</text>
+        <text data-detail="context" x="700" y="328" class="t-muted" font-size="9" text-anchor="middle">Redis 三层 meta+msg+tool · TTL 1h</text>
         <text data-detail="fine" x="700" y="350" class="t-database" font-size="7" text-anchor="middle">miss 降级 DB</text>
         </g>
 
-        <g id="node-cron" data-node-id="cron" data-node-label="Cron 治理" tabindex="0" role="button" aria-label="聚焦Cron 治理，终态清理 · 软删清理 · think-extract, 架构组件" aria-pressed="false" data-node-kind="backend" data-node-sublabel="终态清理 · 软删清理 · think-extract" data-node-tag="Redis 分布式锁" data-node-context="架构组件">
-          <title>Cron 治理 · 终态清理 · 软删清理 · think-extract · 架构组件 · Redis 分布式锁</title>
+        <g id="node-cron" data-node-id="cron" data-node-label="Cron 治理" tabindex="0" role="button" aria-label="聚焦Cron 治理，终态清理(24h) · 软删 · think-extract, 架构组件" aria-pressed="false" data-node-kind="backend" data-node-sublabel="终态清理(24h) · 软删 · think-extract" data-node-tag="Redis 分布式锁" data-node-context="架构组件">
+          <title>Cron 治理 · 终态清理(24h) · 软删 · think-extract · 架构组件 · Redis 分布式锁</title>
           <rect x="420" y="420" width="260" height="88" rx="6" class="c-mask"/>
           <rect x="420" y="420" width="260" height="88" rx="6" class="c-backend" data-animate="node" style="--step:6" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(426 426) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="550" y="462" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Cron 治理</text>
-        <text data-detail="context" x="550" y="478" class="t-muted" font-size="9" text-anchor="middle">终态清理 · 软删清理 · think-extract</text>
+        <text data-detail="context" x="550" y="478" class="t-muted" font-size="9" text-anchor="middle">终态清理(24h) · 软删 · think-extract</text>
         <text data-detail="fine" x="550" y="500" class="t-backend" font-size="7" text-anchor="middle">Redis 分布式锁</text>
         </g>
 
@@ -5135,20 +5135,20 @@
         <text data-detail="fine" x="960" y="120" class="t-frontend" font-size="7" text-anchor="middle">详情经缓存</text>
         </g>
 
-        <g id="node-export" data-node-id="export" data-node-label="训练数据导出" tabindex="0" role="button" aria-label="聚焦训练数据导出，ShareGPT JSONL 流式 · 不持久化, 消费侧" aria-pressed="false" data-node-kind="backend" data-node-sublabel="ShareGPT JSONL 流式 · 不持久化" data-node-tag="DatasetPreview" data-node-context="消费侧">
-          <title>训练数据导出 · ShareGPT JSONL 流式 · 不持久化 · 消费侧 · DatasetPreview</title>
+        <g id="node-export" data-node-id="export" data-node-label="训练数据导出" tabindex="0" role="button" aria-label="聚焦训练数据导出，ShareGPT JSONL 流式 · 评分/模型筛选 · 不持久化, 消费侧" aria-pressed="false" data-node-kind="backend" data-node-sublabel="ShareGPT JSONL 流式 · 评分/模型筛选 · 不持久化" data-node-tag="DatasetPreview" data-node-context="消费侧">
+          <title>训练数据导出 · ShareGPT JSONL 流式 · 评分/模型筛选 · 不持久化 · 消费侧 · DatasetPreview</title>
           <rect x="820" y="180" width="280" height="88" rx="6" class="c-mask"/>
           <rect x="820" y="180" width="280" height="88" rx="6" class="c-backend" data-animate="node" style="--step:5" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(826 186) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="960" y="222" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">训练数据导出</text>
-        <text data-detail="context" x="960" y="238" class="t-muted" font-size="9" text-anchor="middle">ShareGPT JSONL 流式 · 不持久化</text>
+        <text data-detail="context" x="960" y="238" class="t-muted" font-size="9" text-anchor="middle">ShareGPT JSONL 流式 · 评分/模型筛选 · 不持久化</text>
         <text data-detail="fine" x="960" y="260" class="t-backend" font-size="7" text-anchor="middle">DatasetPreview</text>
         </g>
 
-        <g id="node-share" data-node-id="share" data-node-label="会话分享" tabindex="0" role="button" aria-label="聚焦会话分享，读 Session 生成 · Redis UUID 1d/7d/30d/never, 消费侧" aria-pressed="false" data-node-kind="external" data-node-sublabel="读 Session 生成 · Redis UUID 1d/7d/30d/never" data-node-tag="无鉴权 IP 限流" data-node-context="消费侧">
-          <title>会话分享 · 读 Session 生成 · Redis UUID 1d/7d/30d/never · 消费侧 · 无鉴权 IP 限流</title>
+        <g id="node-share" data-node-id="share" data-node-label="会话分享" tabindex="0" role="button" aria-label="聚焦会话分享，Redis UUID 默认 24h · 1d/7d/30d/never, 消费侧" aria-pressed="false" data-node-kind="external" data-node-sublabel="Redis UUID 默认 24h · 1d/7d/30d/never" data-node-tag="无鉴权 IP 限流" data-node-context="消费侧">
+          <title>会话分享 · Redis UUID 默认 24h · 1d/7d/30d/never · 消费侧 · 无鉴权 IP 限流</title>
           <rect x="820" y="340" width="280" height="88" rx="6" class="c-mask"/>
           <rect x="820" y="340" width="280" height="88" rx="6" class="c-external" data-animate="node" style="--step:8" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="external" class="semantic-sigil s-external" transform="translate(826 346) scale(0.6875)">
@@ -5156,12 +5156,12 @@
             <path d="M8 2.5h5.5V8M13.5 2.5 7.5 8.5"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="960" y="382" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">会话分享</text>
-        <text data-detail="context" x="960" y="398" class="t-muted" font-size="9" text-anchor="middle">读 Session 生成 · Redis UUID 1d/7d/30d/never</text>
+        <text data-detail="context" x="960" y="398" class="t-muted" font-size="9" text-anchor="middle">Redis UUID 默认 24h · 1d/7d/30d/never</text>
         <text data-detail="fine" x="960" y="420" class="t-external" font-size="7" text-anchor="middle">无鉴权 IP 限流</text>
         </g>
 
-        <g id="node-audit" data-node-id="audit" data-node-label="ModelCallAudit 审计" tabindex="0" role="button" aria-label="聚焦ModelCallAudit 审计，由转发收尾产生 · tokens 4 维 · trace_id, 消费侧" aria-pressed="false" data-node-kind="database" data-node-sublabel="由转发收尾产生 · tokens 4 维 · trace_id" data-node-tag="聚合于会话" data-node-context="消费侧">
-          <title>ModelCallAudit 审计 · 由转发收尾产生 · tokens 4 维 · trace_id · 消费侧 · 聚合于会话</title>
+        <g id="node-audit" data-node-id="audit" data-node-label="ModelCallAudit 审计" tabindex="0" role="button" aria-label="聚焦ModelCallAudit 审计，tokens 4 维 · 延迟 2 段 · UA · upstream_status · trace_id, 消费侧" aria-pressed="false" data-node-kind="database" data-node-sublabel="tokens 4 维 · 延迟 2 段 · UA · upstream_status · trace_id" data-node-tag="转发收尾产生" data-node-context="消费侧">
+          <title>ModelCallAudit 审计 · tokens 4 维 · 延迟 2 段 · UA · upstream_status · trace_id · 消费侧 · 转发收尾产生</title>
           <rect x="820" y="480" width="280" height="88" rx="6" class="c-mask"/>
           <rect x="820" y="480" width="280" height="88" rx="6" class="c-database" data-animate="node" style="--step:9" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="database" class="semantic-sigil s-database" transform="translate(826 486) scale(0.6875)">
@@ -5169,8 +5169,8 @@
             <path d="M3 4v8c0 1.1 2.2 2 5 2s5-.9 5-2V4M3 8c0 1.1 2.2 2 5 2s5-.9 5-2"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="960" y="522" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">ModelCallAudit 审计</text>
-        <text data-detail="context" x="960" y="538" class="t-muted" font-size="9" text-anchor="middle">由转发收尾产生 · tokens 4 维 · trace_id</text>
-        <text data-detail="fine" x="960" y="560" class="t-database" font-size="7" text-anchor="middle">聚合于会话</text>
+        <text data-detail="context" x="960" y="538" class="t-muted" font-size="7.9" text-anchor="middle">tokens 4 维 · 延迟 2 段 · UA · upstream_status · trace_id</text>
+        <text data-detail="fine" x="960" y="560" class="t-database" font-size="7" text-anchor="middle">转发收尾产生</text>
         </g>
 
         <!-- Connection labels -->
@@ -5413,9 +5413,9 @@
           <h3>聚合与实体</h3>
         </div>
         <ul>
-          <li>&bull; Session 聚合根按 APIKeyOwner 隔离，评分 1-5</li>
-          <li>&bull; Message/Tool 协议无关 JSON，check_sum 内容寻址去重</li>
-          <li>&bull; 前缀去重实时化：插入事务后独立短事务 + FOR UPDATE</li>
+          <li>&bull; Session 聚合根按 APIKeyOwner 隔离：message/tool/questions/model_ids[]</li>
+          <li>&bull; 评分 1-5 + scored_at；Message/Tool 协议无关 JSON 内容寻址去重</li>
+          <li>&bull; 前缀去重实时化：独立短事务 + FOR UPDATE</li>
         </ul>
       </div>
 
@@ -5436,7 +5436,7 @@
           <h3>消费与治理</h3>
         </div>
         <ul>
-          <li>&bull; Web 查询评分 · ShareGPT JSONL 流式导出</li>
+          <li>&bull; Web 查询评分 · ShareGPT JSONL 流式导出（评分/模型筛选）</li>
           <li>&bull; 分享 Redis UUID 默认 24h，无鉴权走 IP 限流</li>
           <li>&bull; Cron 治理：终态清理 · 软删清理 · think-extract</li>
         </ul>
@@ -6528,7 +6528,7 @@
         var fps = Math.max(1, Number(options.fps) || MOTION_FPS);
         var svg = document.querySelector('.diagram-container svg');
         var vb = svg.viewBox.baseVal;
-        var scale = Math.min(1, 1280 / vb.width);
+        var scale = Math.min(1, Math.min(4096, Math.round(Number(window.__ARCHIFY_MOTION_MAX_W)) || 1280) / vb.width);
         var data = serializeSvg(scale);
         var sourceUrl = URL.createObjectURL(new Blob([data.svgString], { type: 'image/svg+xml;charset=utf-8' }));
 
@@ -6692,7 +6692,7 @@
             var mime = motionMimeType();
             var recorder;
             try {
-              recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 6000000 });
+              recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: Math.round(Number(window.__ARCHIFY_MOTION_BPS)) || 6000000 });
             } catch (err) {
               URL.revokeObjectURL(sourceUrl);
               stream.getTracks().forEach(function (track) { track.stop(); });

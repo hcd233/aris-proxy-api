@@ -5004,7 +5004,7 @@
     <!-- Main Diagram -->
     <div class="diagram-container" data-detail-level="read"
          data-preset-badge-editorial-plate="ARCHIFY / 图版 04">
-      <svg viewBox="0 0 880 408" role="img" lang="zh-CN" aria-labelledby="archify-diagram-title archify-diagram-description" data-animation="trace" data-preset="classic" data-quality-profile="showcase">
+      <svg viewBox="0 0 1146 408" role="img" lang="zh-CN" aria-labelledby="archify-diagram-title archify-diagram-description" data-animation="trace" data-preset="classic" data-quality-profile="showcase">
         <title id="archify-diagram-title">前端构建与内嵌交付</title>
         <desc id="archify-diagram-description">由 Archify 生成的工作流图。</desc>
         <!-- Definitions -->
@@ -5030,10 +5030,10 @@
         <rect width="100%" height="100%" fill="url(#grid)" />
 
         <!-- Swimlanes -->
-        <rect data-graph-role="structural-frame" data-composition-frame-kind="lane" data-composition-frame-id="lane-0" x="40" y="52" width="824" height="106" rx="10" class="c-lane" stroke-width="1"/>
+        <rect data-graph-role="structural-frame" data-composition-frame-kind="lane" data-composition-frame-id="lane-0" x="40" y="52" width="1090" height="106" rx="10" class="c-lane" stroke-width="1"/>
         <text x="54" y="74" class="t-dim" font-size="10" font-weight="600">01 / ① 构建期</text>
 
-        <rect data-graph-role="structural-frame" data-composition-frame-kind="lane" data-composition-frame-id="lane-1" x="40" y="178" width="824" height="106" rx="10" class="c-lane" stroke-width="1"/>
+        <rect data-graph-role="structural-frame" data-composition-frame-kind="lane" data-composition-frame-id="lane-1" x="40" y="178" width="1090" height="106" rx="10" class="c-lane" stroke-width="1"/>
         <text x="54" y="200" class="t-dim" font-size="10" font-weight="600">02 / ② 内嵌与分发</text>
 
         <!-- Phase headers -->
@@ -5043,104 +5043,104 @@
 
 
         <!-- Edge paths -->
-        <path data-edge-from="dist" data-edge-to="go-build" data-edge-label="embed" data-edge-key="0" data-composition-points="569.2,246;611.2,246" d="M 569.2 246 L 611.2 246" class="a-default" data-animate="edge" style="--step:3" stroke-width="1.4" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="go-build" data-edge-to="serve" data-edge-label="静态服务" data-edge-key="1" data-composition-points="703.2,246;759.6,246" d="M 703.2 246 L 759.6 246" class="a-default" data-animate="edge" style="--step:4" stroke-width="1.4" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="next-build" data-edge-to="web-build" data-edge-label="web/out/" data-edge-key="2" data-composition-points="278.8,120;335.20000000000005,120" d="M 278.8 120 L 335.20000000000005 120" class="a-default" data-animate="edge" style="--step:1" stroke-width="1.4" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="source" data-edge-to="next-build" data-edge-label="npm ci" data-edge-key="3" data-composition-points="140,120;186.8,120" d="M 140 120 L 186.8 120" class="a-default" data-animate="edge" style="--step:0" stroke-width="1.4" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="web-build" data-edge-to="dist" data-edge-label="拷贝 · 预压缩" data-edge-key="4" data-composition-points="427.20000000000005,120;501.20000000000005,120;501.20000000000005,220" d="M 427.20000000000005 120 L 501.20000000000005 120 L 501.20000000000005 220" class="a-emphasis" data-animate="edge" style="--step:2" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <path data-edge-from="dist" data-edge-to="go-build" data-edge-label="embed" data-edge-key="0" data-composition-points="719.2,246;761.2,246" d="M 719.2 246 L 761.2 246" class="a-default" data-animate="edge" style="--step:3" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="go-build" data-edge-to="serve" data-edge-label="静态服务" data-edge-key="1" data-composition-points="909.2,246;965.5999999999999,246" d="M 909.2 246 L 965.5999999999999 246" class="a-default" data-animate="edge" style="--step:4" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="next-build" data-edge-to="web-build" data-edge-label="web/out/" data-edge-key="2" data-composition-points="406.8,120;463.20000000000005,120" d="M 406.8 120 L 463.20000000000005 120" class="a-default" data-animate="edge" style="--step:1" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="source" data-edge-to="next-build" data-edge-label="npm ci" data-edge-key="3" data-composition-points="204,120;250.8,120" d="M 204 120 L 250.8 120" class="a-default" data-animate="edge" style="--step:0" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="web-build" data-edge-to="dist" data-edge-label="拷贝 · 预压缩" data-edge-key="4" data-composition-points="531.2,146;531.2,168;651.2,168;651.2,220" d="M 531.2 146 L 531.2 168 L 651.2 168 L 651.2 220" class="a-emphasis" data-animate="edge" style="--step:2" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
 
         <!-- Nodes -->
-        <g id="node-source" data-node-id="source" data-node-label="web/ 源码" tabindex="0" role="button" aria-label="聚焦web/ 源码，src/app · lib · hooks, ① 构建期" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="src/app · lib · hooks" data-node-context="① 构建期">
-          <title>web/ 源码 · src/app · lib · hooks · ① 构建期</title>
-          <rect x="48" y="94" width="92" height="52" rx="6" class="c-mask"/>
-          <rect x="48" y="94" width="92" height="52" rx="6" class="c-frontend" data-animate="node" style="--step:0" stroke-width="1.5"/>
+        <g id="node-source" data-node-id="source" data-node-label="web/ 源码" tabindex="0" role="button" aria-label="聚焦web/ 源码，src/app · lib · hooks · locales, ① 构建期" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="src/app · lib · hooks · locales" data-node-context="① 构建期">
+          <title>web/ 源码 · src/app · lib · hooks · locales · ① 构建期</title>
+          <rect x="48" y="94" width="156" height="52" rx="6" class="c-mask"/>
+          <rect x="48" y="94" width="156" height="52" rx="6" class="c-frontend" data-animate="node" style="--step:0" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(54 100) scale(0.6875)">
             <rect x="2" y="3" width="12" height="10" rx="2"/>
             <path d="M2 6.5h12"/>
             <circle cx="4.1" cy="4.8" r=".7" class="sigil-fill"/>
             <circle cx="6.3" cy="4.8" r=".7" class="sigil-fill"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="94" y="115" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">web/ 源码</text>
-          <text data-detail="context" x="94" y="132" class="t-muted" font-size="6.6" text-anchor="middle">src/app · lib · hooks</text>
+          <text data-node-label="" data-detail-anchor="" x="126" y="115" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">web/ 源码</text>
+          <text data-detail="context" x="126" y="132" class="t-muted" font-size="7.9" text-anchor="middle">src/app · lib · hooks · locales</text>
         </g>
 
-        <g id="node-next-build" data-node-id="next-build" data-node-label="next build" tabindex="0" role="button" aria-label="聚焦next build，export · /web, ① 构建期" aria-pressed="false" data-node-kind="backend" data-node-sublabel="export · /web" data-node-context="① 构建期">
-          <title>next build · export · /web · ① 构建期</title>
-          <rect x="186.8" y="94" width="92" height="52" rx="6" class="c-mask"/>
-          <rect x="186.8" y="94" width="92" height="52" rx="6" class="c-backend" data-animate="node" style="--step:1" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(192.8 100) scale(0.6875)">
+        <g id="node-next-build" data-node-id="next-build" data-node-label="next build" tabindex="0" role="button" aria-label="聚焦next build，output:export · basePath /web, ① 构建期" aria-pressed="false" data-node-kind="backend" data-node-sublabel="output:export · basePath /web" data-node-context="① 构建期">
+          <title>next build · output:export · basePath /web · ① 构建期</title>
+          <rect x="250.8" y="94" width="156" height="52" rx="6" class="c-mask"/>
+          <rect x="250.8" y="94" width="156" height="52" rx="6" class="c-backend" data-animate="node" style="--step:1" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(256.8 100) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="232.8" y="115" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">next build</text>
-          <text data-detail="context" x="232.8" y="132" class="t-muted" font-size="8" text-anchor="middle">export · /web</text>
+          <text data-node-label="" data-detail-anchor="" x="328.8" y="115" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">next build</text>
+          <text data-detail="context" x="328.8" y="132" class="t-muted" font-size="8" text-anchor="middle">output:export · basePath /web</text>
         </g>
 
-        <g id="node-web-build" data-node-id="web-build" data-node-label="make web-build" tabindex="0" role="button" aria-label="聚焦make web-build，cp · gzip -9, ① 构建期" aria-pressed="false" data-node-kind="backend" data-node-sublabel="cp · gzip -9" data-node-context="① 构建期">
-          <title>make web-build · cp · gzip -9 · ① 构建期</title>
-          <rect x="335.20000000000005" y="94" width="92" height="52" rx="6" class="c-mask"/>
-          <rect x="335.20000000000005" y="94" width="92" height="52" rx="6" class="c-backend" data-animate="node" style="--step:2" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(341.20000000000005 100) scale(0.6875)">
+        <g id="node-web-build" data-node-id="web-build" data-node-label="make web-build" tabindex="0" role="button" aria-label="聚焦make web-build，cp → dist · gzip -9, ① 构建期" aria-pressed="false" data-node-kind="backend" data-node-sublabel="cp → dist · gzip -9" data-node-context="① 构建期">
+          <title>make web-build · cp → dist · gzip -9 · ① 构建期</title>
+          <rect x="463.20000000000005" y="94" width="136" height="52" rx="6" class="c-mask"/>
+          <rect x="463.20000000000005" y="94" width="136" height="52" rx="6" class="c-backend" data-animate="node" style="--step:2" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(469.20000000000005 100) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="381.20000000000005" y="115" class="t-primary" font-size="10" font-weight="600" text-anchor="middle">make web-build</text>
-          <text data-detail="context" x="381.20000000000005" y="132" class="t-muted" font-size="8" text-anchor="middle">cp · gzip -9</text>
+          <text data-node-label="" data-detail-anchor="" x="531.2" y="115" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">make web-build</text>
+          <text data-detail="context" x="531.2" y="132" class="t-muted" font-size="8" text-anchor="middle">cp → dist · gzip -9</text>
         </g>
 
-        <g id="node-dist" data-node-id="dist" data-node-label="internal/web/dist" tabindex="0" role="button" aria-label="聚焦internal/web/dist，//go:embed all:dist, ② 内嵌与分发" aria-pressed="false" data-node-kind="database" data-node-sublabel="//go:embed all:dist" data-node-context="② 内嵌与分发">
-          <title>internal/web/dist · //go:embed all:dist · ② 内嵌与分发</title>
-          <rect x="433.20000000000005" y="220" width="136" height="52" rx="6" class="c-mask"/>
-          <rect x="433.20000000000005" y="220" width="136" height="52" rx="6" class="c-database" data-animate="node" style="--step:3" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="database" class="semantic-sigil s-database" transform="translate(439.20000000000005 226) scale(0.6875)">
+        <g id="node-dist" data-node-id="dist" data-node-label="internal/web/dist" tabindex="0" role="button" aria-label="聚焦internal/web/dist，//go:embed · worktree 占位, ② 内嵌与分发" aria-pressed="false" data-node-kind="database" data-node-sublabel="//go:embed · worktree 占位" data-node-context="② 内嵌与分发">
+          <title>internal/web/dist · //go:embed · worktree 占位 · ② 内嵌与分发</title>
+          <rect x="583.2" y="220" width="136" height="52" rx="6" class="c-mask"/>
+          <rect x="583.2" y="220" width="136" height="52" rx="6" class="c-database" data-animate="node" style="--step:3" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="database" class="semantic-sigil s-database" transform="translate(589.2 226) scale(0.6875)">
             <ellipse cx="8" cy="4" rx="5" ry="2"/>
             <path d="M3 4v8c0 1.1 2.2 2 5 2s5-.9 5-2V4M3 8c0 1.1 2.2 2 5 2s5-.9 5-2"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="501.20000000000005" y="241" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">internal/web/dist</text>
-          <text data-detail="context" x="501.20000000000005" y="258" class="t-muted" font-size="8" text-anchor="middle">//go:embed all:dist</text>
+          <text data-node-label="" data-detail-anchor="" x="651.2" y="241" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">internal/web/dist</text>
+          <text data-detail="context" x="651.2" y="258" class="t-muted" font-size="8" text-anchor="middle">//go:embed · worktree 占位</text>
         </g>
 
-        <g id="node-go-build" data-node-id="go-build" data-node-label="go build" tabindex="0" role="button" aria-label="聚焦go build，前端随二进制发布, ② 内嵌与分发" aria-pressed="false" data-node-kind="backend" data-node-sublabel="前端随二进制发布" data-node-tag="45MB→39MB" data-node-context="② 内嵌与分发">
-          <title>go build · 前端随二进制发布 · ② 内嵌与分发 · 45MB→39MB</title>
-          <rect x="611.2" y="212" width="92" height="68" rx="6" class="c-mask"/>
-          <rect x="611.2" y="212" width="92" height="68" rx="6" class="c-backend" data-animate="node" style="--step:4" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(617.2 218) scale(0.6875)">
+        <g id="node-go-build" data-node-id="go-build" data-node-label="go build" tabindex="0" role="button" aria-label="聚焦go build，45MB→39MB · distroless, ② 内嵌与分发" aria-pressed="false" data-node-kind="backend" data-node-sublabel="45MB→39MB · distroless" data-node-tag="前端随二进制" data-node-context="② 内嵌与分发">
+          <title>go build · 45MB→39MB · distroless · ② 内嵌与分发 · 前端随二进制</title>
+          <rect x="761.2" y="212" width="148" height="68" rx="6" class="c-mask"/>
+          <rect x="761.2" y="212" width="148" height="68" rx="6" class="c-backend" data-animate="node" style="--step:4" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(767.2 218) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="657.2" y="233" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">go build</text>
-          <text data-detail="context" x="657.2" y="250" class="t-muted" font-size="8" text-anchor="middle">前端随二进制发布</text>
-        <text data-detail="fine" x="657.2" y="268" class="t-backend" font-size="7" text-anchor="middle">45MB→39MB</text>
+          <text data-node-label="" data-detail-anchor="" x="835.2" y="233" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">go build</text>
+          <text data-detail="context" x="835.2" y="250" class="t-muted" font-size="8" text-anchor="middle">45MB→39MB · distroless</text>
+        <text data-detail="fine" x="835.2" y="268" class="t-backend" font-size="7" text-anchor="middle">前端随二进制</text>
         </g>
 
-        <g id="node-serve" data-node-id="serve" data-node-label="/web/* 路由" tabindex="0" role="button" aria-label="聚焦/web/* 路由，gzip 协商 · SPA 回落, ② 内嵌与分发" aria-pressed="false" data-node-kind="backend" data-node-sublabel="gzip 协商 · SPA 回落" data-node-context="② 内嵌与分发">
-          <title>/web/* 路由 · gzip 协商 · SPA 回落 · ② 内嵌与分发</title>
-          <rect x="759.6" y="220" width="92" height="52" rx="6" class="c-mask"/>
-          <rect x="759.6" y="220" width="92" height="52" rx="6" class="c-backend" data-animate="node" style="--step:5" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(765.6 226) scale(0.6875)">
+        <g id="node-serve" data-node-id="serve" data-node-label="/web/* 路由" tabindex="0" role="button" aria-label="聚焦/web/* 路由，Accept-Encoding 协商 · SPA 回落, ② 内嵌与分发" aria-pressed="false" data-node-kind="backend" data-node-sublabel="Accept-Encoding 协商 · SPA 回落" data-node-context="② 内嵌与分发">
+          <title>/web/* 路由 · Accept-Encoding 协商 · SPA 回落 · ② 内嵌与分发</title>
+          <rect x="965.5999999999999" y="220" width="156" height="52" rx="6" class="c-mask"/>
+          <rect x="965.5999999999999" y="220" width="156" height="52" rx="6" class="c-backend" data-animate="node" style="--step:5" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(971.5999999999999 226) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="805.6" y="241" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">/web/* 路由</text>
-          <text data-detail="context" x="805.6" y="258" class="t-muted" font-size="7" text-anchor="middle">gzip 协商 · SPA 回落</text>
+          <text data-node-label="" data-detail-anchor="" x="1043.6" y="241" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">/web/* 路由</text>
+          <text data-detail="context" x="1043.6" y="258" class="t-muted" font-size="7.9" text-anchor="middle">Accept-Encoding 协商 · SPA 回落</text>
         </g>
 
         <!-- Edge labels -->
         <g data-detail="context" data-edge-from="dist" data-edge-to="go-build" data-edge-label="embed" data-edge-key="0">
-          <rect x="573.2" y="226" width="34" height="14" rx="3" class="c-mask"/>
-          <text x="590.2" y="236" class="t-muted" font-size="8" text-anchor="middle">embed</text>
+          <rect x="723.2" y="226" width="34" height="14" rx="3" class="c-mask"/>
+          <text x="740.2" y="236" class="t-muted" font-size="8" text-anchor="middle">embed</text>
         </g>
         <g data-detail="context" data-edge-from="go-build" data-edge-to="serve" data-edge-label="静态服务" data-edge-key="1">
-          <rect x="707.2" y="226" width="48.4" height="14" rx="3" class="c-mask"/>
-          <text x="731.4000000000001" y="236" class="t-muted" font-size="8" text-anchor="middle">静态服务</text>
+          <rect x="913.1999999999999" y="226" width="48.4" height="14" rx="3" class="c-mask"/>
+          <text x="937.4" y="236" class="t-muted" font-size="8" text-anchor="middle">静态服务</text>
         </g>
         <g data-detail="context" data-edge-from="next-build" data-edge-to="web-build" data-edge-label="web/out/" data-edge-key="2">
-          <rect x="282.8" y="100" width="48.4" height="14" rx="3" class="c-mask"/>
-          <text x="307" y="110" class="t-muted" font-size="8" text-anchor="middle">web/out/</text>
+          <rect x="410.8" y="100" width="48.4" height="14" rx="3" class="c-mask"/>
+          <text x="435" y="110" class="t-muted" font-size="8" text-anchor="middle">web/out/</text>
         </g>
         <g data-detail="context" data-edge-from="source" data-edge-to="next-build" data-edge-label="npm ci" data-edge-key="3">
-          <rect x="144" y="100" width="38.8" height="14" rx="3" class="c-mask"/>
-          <text x="163.4" y="110" class="t-muted" font-size="8" text-anchor="middle">npm ci</text>
+          <rect x="208" y="100" width="38.8" height="14" rx="3" class="c-mask"/>
+          <text x="227.4" y="110" class="t-muted" font-size="8" text-anchor="middle">npm ci</text>
         </g>
         <g data-detail="context" data-edge-from="web-build" data-edge-to="dist" data-edge-label="拷贝 · 预压缩" data-edge-key="4">
-          <rect x="428.00000000000006" y="100" width="72.4" height="14" rx="3" class="c-mask"/>
-          <text x="464.20000000000005" y="110" class="t-backend" font-size="8" text-anchor="middle">拷贝 · 预压缩</text>
+          <rect x="555" y="148" width="72.4" height="14" rx="3" class="c-mask"/>
+          <text x="591.2" y="158" class="t-backend" font-size="8" text-anchor="middle">拷贝 · 预压缩</text>
         </g>
 
         <!-- Legend -->
@@ -5351,9 +5351,9 @@
           <h3>构建期</h3>
         </div>
         <ul>
-          <li>&bull; next build 静态导出到 web/out/，basePath /web</li>
-          <li>&bull; make web-build 拷贝产物到 internal/web/dist</li>
-          <li>&bull; 逐文件 gzip -9 预压缩：10MB → 3.5MB</li>
+          <li>&bull; next build 静态导出到 web/out/，basePath /web 不可改（后端按 /web 挂载）</li>
+          <li>&bull; make web-build 拷贝产物到 internal/web/dist，是 build-server 前置依赖</li>
+          <li>&bull; find -exec gzip -9 逐文件预压缩：dist 10MB → 3.5MB</li>
         </ul>
       </div>
 
@@ -5363,9 +5363,21 @@
           <h3>内嵌分发</h3>
         </div>
         <ul>
-          <li>&bull; //go:embed all:dist 把前端打进二进制</li>
-          <li>&bull; 单二进制交付：45MB → 39MB（gzip 预压缩）</li>
-          <li>&bull; /web/* 路由按 Accept-Encoding 协商，SPA 回落 index.html</li>
+          <li>&bull; static.go: //go:embed all:dist，目录已 gitignore（缺失会致 go vet 失败）</li>
+          <li>&bull; 单二进制交付：server 45MB → 39MB，distroless nonroot 镜像</li>
+          <li>&bull; 显式解析 Accept-Encoding（忽略 q=0）：.gz 命中直发，否则实时解压</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot rose"></div>
+          <h3>回落规则</h3>
+        </div>
+        <ul>
+          <li>&bull; 静态资源未命中 → 404，不回落</li>
+          <li>&bull; 其余路径 → index.html（SPA 回落）</li>
+          <li>&bull; CI path filter 不含 web/**（前端改动不触发后端流水线）</li>
         </ul>
       </div>
     </div>
@@ -6455,7 +6467,7 @@
         var fps = Math.max(1, Number(options.fps) || MOTION_FPS);
         var svg = document.querySelector('.diagram-container svg');
         var vb = svg.viewBox.baseVal;
-        var scale = Math.min(1, 1280 / vb.width);
+        var scale = Math.min(1, Math.min(4096, Math.round(Number(window.__ARCHIFY_MOTION_MAX_W)) || 1280) / vb.width);
         var data = serializeSvg(scale);
         var sourceUrl = URL.createObjectURL(new Blob([data.svgString], { type: 'image/svg+xml;charset=utf-8' }));
 
@@ -6619,7 +6631,7 @@
             var mime = motionMimeType();
             var recorder;
             try {
-              recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 6000000 });
+              recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: Math.round(Number(window.__ARCHIFY_MOTION_BPS)) || 6000000 });
             } catch (err) {
               URL.revokeObjectURL(sourceUrl);
               stream.getTracks().forEach(function (track) { track.stop(); });

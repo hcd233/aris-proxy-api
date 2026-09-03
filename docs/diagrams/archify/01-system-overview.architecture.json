@@ -19,17 +19,17 @@
     ]
   },
   "components": [
-    { "id": "web-admin", "type": "frontend", "label": "Web 管理后台", "sublabel": "Next.js 16 静态导出 · basePath /web", "pos": [40, 30], "size": [400, 96], "sources": [{ "path": "web/src/app/layout.tsx", "label": "App Router" }] },
-    { "id": "trace-cli", "type": "frontend", "label": "Aris Trace CLI", "sublabel": "init · model export · trace ingest", "tag": "codex · claude", "pos": [480, 30], "size": [400, 96], "sources": [{ "path": "internal/client/api/client.go" }] },
-    { "id": "agentic-clients", "type": "external", "label": "Agentic 客户端", "sublabel": "Claude Code · Codex · OpenCode · Pi", "tag": "SSE 流式", "pos": [920, 30], "size": [400, 96] },
-    { "id": "interface", "type": "backend", "label": "接口层 Interface", "sublabel": "router · middleware · handler · dto", "tag": "四分区路由", "pos": [40, 170], "size": [1280, 80], "sources": [{ "path": "internal/router/router.go" }, { "path": "internal/middleware/jwt.go" }, { "path": "internal/handler/session.go" }] },
-    { "id": "application", "type": "backend", "label": "应用层 Application", "sublabel": "17 个用例模块 · command / query / port", "tag": "port", "pos": [40, 294], "size": [720, 96], "sources": [{ "path": "internal/application/llmproxy/usecase/openai_chat.go" }] },
-    { "id": "cron", "type": "backend", "label": "Cron 定时治理", "sublabel": "4 模块 · Redis 锁", "tag": "每小时", "pos": [840, 294], "size": [480, 96] },
-    { "id": "domain", "type": "backend", "label": "领域层 Domain", "sublabel": "聚合 · 值对象 · 仓储接口", "tag": "核心", "pos": [40, 434], "size": [720, 96], "sources": [{ "path": "internal/domain/session/repository.go" }] },
-    { "id": "bootstrap", "type": "backend", "label": "bootstrap · Fx", "sublabel": "container.go · modules 5 组", "tag": "8 步退出", "pos": [840, 434], "size": [480, 96] },
-    { "id": "infra", "type": "backend", "label": "基础设施层 Infrastructure", "sublabel": "repository(GORM) · cache · transport · lock", "tag": "DIP", "pos": [40, 574], "size": [1280, 80], "sources": [{ "path": "internal/infrastructure/database/dao/base.go" }] },
+    { "id": "web-admin", "type": "frontend", "label": "Web 管理后台", "sublabel": "Next.js 16 静态导出 · basePath /web · 后台 14 页 + 公开 3 页", "tag": "JWT", "pos": [40, 30], "size": [400, 96], "sources": [{ "path": "web/src/app/layout.tsx", "label": "App Router" }] },
+    { "id": "trace-cli", "type": "frontend", "label": "Aris Trace CLI", "sublabel": "init · model export · trace ingest · 独立二进制 4 平台", "tag": "codex · claude", "pos": [480, 30], "size": [400, 96], "sources": [{ "path": "internal/client/api/client.go" }] },
+    { "id": "agentic-clients", "type": "external", "label": "Agentic 客户端", "sublabel": "Claude Code · Codex · OpenCode · Pi · OpenAI / Anthropic 兼容入口", "tag": "SSE 流式", "pos": [920, 30], "size": [400, 96] },
+    { "id": "interface", "type": "backend", "label": "接口层 Interface", "sublabel": "router 四分区 web/cli/proxy/ops · 中间件链 Recover→Metrics→Inflight→Guard→CORS→Compress→Trace→Locale→Log · handler 19 组", "tag": "四分区路由", "pos": [40, 170], "size": [1280, 80], "sources": [{ "path": "internal/router/router.go" }, { "path": "internal/middleware/jwt.go" }, { "path": "internal/handler/session.go" }] },
+    { "id": "application", "type": "backend", "label": "应用层 Application", "sublabel": "17 个用例模块 command/query/port · llmproxy 编排 7 条跨协议路径 · 只依赖 domain 抽象", "tag": "port", "pos": [40, 294], "size": [720, 96], "sources": [{ "path": "internal/application/llmproxy/usecase/openai_chat.go" }] },
+    { "id": "cron", "type": "backend", "label": "Cron 定时治理", "sublabel": "4 任务：终态清理(时) · purge(周日) · think(日) · 命中回写(5min) · Redis 锁单点", "tag": "每小时", "pos": [840, 294], "size": [480, 96] },
+    { "id": "domain", "type": "backend", "label": "领域层 Domain", "sublabel": "聚合 session·conversation·modelcall·identity·apikey·trace · checksum 去重/评分/分享规则内聚 · 仓储只声明接口", "tag": "核心", "pos": [40, 434], "size": [720, 96], "sources": [{ "path": "internal/domain/session/repository.go" }] },
+    { "id": "bootstrap", "type": "backend", "label": "bootstrap · Fx", "sublabel": "container.go 统一装配 · modules 5 组 · Lifecycle 9 Hook · 启动探测 → 优雅退出", "tag": "8 步退出", "pos": [840, 434], "size": [480, 96] },
+    { "id": "infra", "type": "backend", "label": "基础设施层 Infrastructure", "sublabel": "repository(GORM) · cache(Redis) · transport(HTTP/SSE) · pool(pond) · jwt · lock · metrics flusher · 实现 domain 仓储接口 · DTO↔dbmodel 仅此层", "tag": "DIP", "pos": [40, 574], "size": [1280, 80], "sources": [{ "path": "internal/infrastructure/database/dao/base.go" }] },
     { "id": "postgres", "type": "database", "label": "PostgreSQL", "sublabel": "会话 · 消息 · 审计 · 配置", "brand": "postgresql", "pos": [40, 710], "size": [300, 64] },
-    { "id": "redis", "type": "database", "label": "Redis", "sublabel": "缓存 · 令牌桶 · 锁 · 分享", "brand": "redis", "pos": [370, 710], "size": [300, 64] },
+    { "id": "redis", "type": "database", "label": "Redis", "sublabel": "缓存 · 令牌桶 · 锁 · 分享 · 触发词信号", "brand": "redis", "pos": [370, 710], "size": [300, 64] },
     { "id": "maas", "type": "external", "label": "上游 MaaS", "sublabel": "OpenAI · Anthropic 等", "pos": [700, 710], "size": [300, 64] },
     { "id": "oauth2", "type": "external", "label": "OAuth2", "sublabel": "GitHub · Google", "pos": [1030, 710], "size": [300, 64] }
   ],
@@ -54,7 +54,7 @@
   ],
   "cards": [
     { "dot": "cyan", "title": "DDD 分层", "items": ["依赖向内：接口层 → 应用层 → 领域层", "基础设施反向实现仓储接口（DIP）"] },
-    { "dot": "emerald", "title": "应用与横切", "items": ["应用层 17 个用例模块 · command/query/port", "llmproxy 编排 7 条跨协议路径"] },
-    { "dot": "rose", "title": "入口与外部", "items": ["三类客户端：Web 后台 · Trace CLI · Agentic", "路由四分区：web · cli · proxy · ops"] }
+    { "dot": "emerald", "title": "应用与横切", "items": ["应用层 17 个用例模块 · command/query/port", "llmproxy 编排 7 条跨协议路径 · 3 converter"] },
+    { "dot": "rose", "title": "入口与外部", "items": ["三类客户端：Web 后台 · Trace CLI · Agentic", "路由四分区：web · cli · proxy · ops · handler 19 组"] }
   ]
 }

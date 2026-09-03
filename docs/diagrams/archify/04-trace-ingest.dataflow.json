@@ -16,16 +16,16 @@
     { "label": "存储与消费" }
   ],
   "nodes": [
-    { "id": "codex-hook", "stage": 0, "row": 0, "type": "external", "label": "Codex Hook", "sublabel": "Session 事件" },
+    { "id": "codex-hook", "stage": 0, "row": 0, "type": "external", "label": "Codex Hook", "sublabel": "3 类事件" },
     { "id": "claude-hook", "stage": 0, "row": 1, "type": "external", "label": "Claude Hook", "sublabel": "11 类事件" },
     { "id": "rollout", "stage": 0, "row": 2, "type": "external", "label": "Rollout", "sublabel": ".jsonl 重放" },
-    { "id": "cli", "stage": 1, "row": 1, "type": "backend", "label": "trace ingest", "sublabel": "fail-open", "tag": "双 Agent" },
-    { "id": "spool", "stage": 2, "row": 1, "type": "database", "label": "spool", "sublabel": "256MiB · 续传" },
-    { "id": "ingest", "stage": 3, "row": 0, "type": "backend", "label": "Ingest API", "sublabel": "批量 500/4MiB", "tag": "X-API-Key" },
-    { "id": "dedup", "stage": 3, "row": 1, "type": "security", "label": "鉴权 · 去重", "sublabel": "复合键幂等" },
+    { "id": "cli", "stage": 1, "row": 1, "type": "backend", "label": "trace ingest", "sublabel": "fail-open · Adapter 解析", "tag": "双 Agent" },
+    { "id": "spool", "stage": 2, "row": 1, "type": "database", "label": "spool", "sublabel": "256MiB · rejected 隔离 7d", "tag": "0600" },
+    { "id": "ingest", "stage": 3, "row": 0, "type": "backend", "label": "Ingest API", "sublabel": "500 条/4MiB · 5s", "tag": "X-API-Key" },
+    { "id": "dedup", "stage": 3, "row": 1, "type": "security", "label": "鉴权 · 去重", "sublabel": "hook:/rollout: 幂等" },
     { "id": "repo", "stage": 4, "row": 0, "type": "database", "label": "Trace Repo", "sublabel": "PG 幂等写入" },
-    { "id": "proj", "stage": 4, "row": 1, "type": "backend", "label": "投影重建", "sublabel": "→ 会话投影" },
-    { "id": "web", "stage": 4, "row": 2, "type": "frontend", "label": "Trace Web", "sublabel": "时间线 · JWT" }
+    { "id": "proj", "stage": 4, "row": 1, "type": "backend", "label": "投影重建", "sublabel": "事件→TraceConversation", "tag": "registry" },
+    { "id": "web", "stage": 4, "row": 2, "type": "frontend", "label": "Trace Web", "sublabel": "事件时间线 · JWT" }
   ],
   "flows": [
     { "from": "codex-hook", "to": "cli", "label": "Hook 事件", "route": "top-channel" },
@@ -39,8 +39,8 @@
     { "from": "proj", "to": "web", "label": "JWT 查询", "labelAt": [960, 328] }
   ],
   "cards": [
-    { "dot": "cyan", "title": "客户端侧", "items": ["codex hook · claude hook 适配双 Agent 事件模型", "rollout 兜底：离线 .jsonl 重放补齐会话", "CLI fail-open：采集失败不影响 Agent 运行"] },
-    { "dot": "emerald", "title": "传输与幂等", "items": ["本地 spool 原子落盘，失败重试不丢事件", "批量 500 条 / 4MiB，服务端 accepted 才删除", "hook:/rollout: 复合键幂等，重复上报安全"] },
-    { "dot": "rose", "title": "服务端侧", "items": ["X-API-Key 鉴权，事件按会话聚合去重", "PostgreSQL 幂等写入后投影重建 TraceConversation", "Trace Web 按事件时间线回放完整执行轨迹"] }
+    { "dot": "cyan", "title": "客户端侧", "items": ["codex hook（3 类事件）· claude hook（11 类事件）适配双 Agent", "rollout 兜底：离线 .jsonl 重放补齐会话（session_meta）", "CLI fail-open：采集失败不影响 Agent 运行"] },
+    { "dot": "emerald", "title": "传输与幂等", "items": ["本地 spool ~/.aris/trace/spool（0600）原子落盘，失败重试不丢", "批量 500 条 / 4MiB / 5s，服务端 accepted 才删除", "hook:/rollout: 复合键幂等，rejected 事件隔离 7d"] },
+    { "dot": "rose", "title": "服务端侧", "items": ["X-API-Key 鉴权（/api/cli/v1/trace/event），按会话聚合去重", "PostgreSQL 幂等写入后投影重建 TraceConversation", "Trace Web 按事件时间线回放完整执行轨迹"] }
   ]
 }

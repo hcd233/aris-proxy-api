@@ -7,54 +7,54 @@
     "quality_profile": "showcase",
     "animation": "trace",
     "column_fit": "spread",
-    "viewBox": [1052, 780],
+    "viewBox": [1052, 720],
     "views": [
       { "id": "pre-check", "label": "前置校验链", "focus": ["client", "auth", "rlim", "trigger"], "note": "APIKey 鉴权 → 双层限流 → 触发词检查，任一失败即快速拒绝。" },
-      { "id": "forward", "label": "转发与转换", "focus": ["app", "transport", "upstream"], "note": "EndpointResolver 解析后跨协议转换，Transport 转发上游。" },
+      { "id": "forward", "label": "解析与转发", "focus": ["res", "transport", "upstream"], "note": "EndpointResolver 解析端点，跨协议转换后由 Transport 转发上游。" },
       { "id": "finalize", "label": "收尾与落库", "focus": ["transport", "pond", "db", "client"], "note": "recordModelCall 统一收尾，审计与消息异步落库，响应同步返回。" }
     ]
   },
   "participants": [
-    { "id": "client", "type": "external", "label": "客户端", "sublabel": "Claude Code · Codex" },
-    { "id": "auth", "type": "security", "label": "鉴权", "sublabel": "X-API-Key" },
+    { "id": "client", "type": "external", "label": "客户端", "sublabel": "Codex 等" },
+    { "id": "auth", "type": "security", "label": "APIKey 鉴权", "sublabel": "X-API-Key" },
     { "id": "rlim", "type": "security", "label": "双层限流", "sublabel": "请求+Token" },
     { "id": "trigger", "type": "security", "label": "触发词", "sublabel": "Aho-Corasick" },
-    { "id": "app", "type": "backend", "label": "应用层", "sublabel": "Resolver·转换" },
+    { "id": "res", "type": "backend", "label": "解析与转换", "sublabel": "Resolver" },
     { "id": "transport", "type": "backend", "label": "Transport", "sublabel": "HTTP·SSE" },
-    { "id": "upstream", "type": "cloud", "label": "上游 MaaS", "sublabel": "OpenAI·Anthropic" },
+    { "id": "upstream", "type": "cloud", "label": "上游 MaaS", "sublabel": "多 Endpoint" },
     { "id": "pond", "type": "messagebus", "label": "Pond 池", "sublabel": "异步任务" },
     { "id": "db", "type": "database", "label": "PostgreSQL", "sublabel": "消息·审计" }
   ],
   "segments": [
     { "from": 160, "to": 330, "label": "前置校验" },
-    { "from": 330, "to": 480, "label": "转发执行" },
-    { "from": 480, "to": 700, "label": "收尾与落库" }
+    { "from": 330, "to": 512, "label": "解析 · 转发" },
+    { "from": 512, "to": 660, "label": "收尾与落库" }
   ],
   "messages": [
     { "from": "client", "to": "auth", "y": 190, "label": "代理请求 · X-API-Key", "variant": "emphasis" },
-    { "from": "auth", "to": "rlim", "y": 234, "label": "通过 · 注入 UserID/KeyID" },
-    { "from": "rlim", "to": "trigger", "y": 278, "label": "未超限 · peek 只读" },
-    { "from": "trigger", "to": "app", "y": 322, "label": "放行 · deny/omit 已处理" },
-    { "from": "app", "to": "transport", "y": 366, "label": "端点解析 · 协议转换" },
-    { "from": "transport", "to": "upstream", "y": 410, "label": "HTTP / SSE", "variant": "emphasis" },
-    { "from": "upstream", "to": "transport", "y": 454, "label": "响应流 · SSE 事件", "variant": "return" },
-    { "from": "transport", "to": "pond", "y": 530, "label": "recordModelCall 收尾 → 异步提交", "variant": "dashed" },
-    { "from": "pond", "to": "db", "y": 574, "label": "消息 + 审计落库", "variant": "dashed" },
-    { "from": "transport", "to": "client", "y": 618, "label": "JSON / SSE 同步响应", "variant": "return" }
+    { "from": "auth", "to": "rlim", "y": 232, "label": "校验通过 · 注入身份", "variant": "security" },
+    { "from": "rlim", "to": "trigger", "y": 274, "label": "未超限 · peek 只读", "variant": "security" },
+    { "from": "trigger", "to": "res", "y": 316, "label": "放行 · deny/omit", "variant": "security" },
+    { "from": "res", "to": "transport", "y": 400, "label": "端点选择 · 跨协议转换" },
+    { "from": "transport", "to": "upstream", "y": 442, "label": "HTTP / SSE", "variant": "emphasis" },
+    { "from": "upstream", "to": "transport", "y": 484, "label": "响应流 · SSE 事件", "variant": "return" },
+    { "from": "transport", "to": "pond", "y": 540, "label": "recordModelCall 收尾 · 异步提交", "variant": "dashed" },
+    { "from": "pond", "to": "db", "y": 582, "label": "Message + Audit 落库", "variant": "dashed" },
+    { "from": "transport", "to": "client", "y": 626, "label": "JSON / SSE 同步响应", "variant": "return" }
   ],
   "activations": [
-    { "participant": "auth", "from": 184, "to": 240, "type": "security" },
-    { "participant": "rlim", "from": 228, "to": 284, "type": "security" },
-    { "participant": "trigger", "from": 272, "to": 328, "type": "security" },
-    { "participant": "app", "from": 316, "to": 372, "type": "backend" },
-    { "participant": "transport", "from": 360, "to": 624, "type": "backend" },
-    { "participant": "upstream", "from": 404, "to": 460, "type": "cloud" },
-    { "participant": "pond", "from": 524, "to": 580, "type": "messagebus" },
-    { "participant": "db", "from": 568, "to": 586, "type": "database" }
+    { "participant": "auth", "from": 184, "to": 238, "type": "security" },
+    { "participant": "rlim", "from": 226, "to": 280, "type": "security" },
+    { "participant": "trigger", "from": 268, "to": 322, "type": "security" },
+    { "participant": "res", "from": 310, "to": 412, "type": "backend" },
+    { "participant": "transport", "from": 394, "to": 632, "type": "backend" },
+    { "participant": "upstream", "from": 436, "to": 490, "type": "cloud" },
+    { "participant": "pond", "from": 534, "to": 588, "type": "messagebus" },
+    { "participant": "db", "from": 576, "to": 588, "type": "database" }
   ],
   "cards": [
-    { "dot": "cyan", "title": "前置校验", "items": ["APIKey 鉴权注入 UserID · KeyID · Permission", "限流：请求 100/min + Token 2M/min（peek 只读）", "触发词 Aho-Corasick：deny→403 · omit→不落库"] },
-    { "dot": "orange", "title": "转发执行", "items": ["EndpointResolver：alias → model 集 → endpoint，按用户隔离", "3 converter · 7 条跨协议路径，消息与 SSE 双向映射", "连接错误/5xx/429 退避重试 · 4xx 不重试"] },
+    { "dot": "cyan", "title": "前置校验", "items": ["APIKey 鉴权：DB 校验 · 禁用 401 · 注入 UserID/KeyID/Permission", "限流：请求 100/min + Token 2M/min per Key（peek 只读）", "触发词 Aho-Corasick O(n)：deny→403 · omit→不落库 · 命中计数"] },
+    { "dot": "amber", "title": "解析与转换", "items": ["EndpointResolver：alias → model 集 → endpoint，按用户隔离", "3 converter · 7 条跨协议路径，消息与 SSE 事件双向映射", "tool output 压缩（smart_crusher）；连接错误/5xx/429 退避重试 · 4xx 不重试"] },
     { "dot": "emerald", "title": "收尾与落库", "items": ["recordModelCall：审计 4 维 token · 2 段延迟 · 状态归一", "Token 扣减 Lua · llm_token_usage_total", "MessageStoreTask / ModelCallAuditTask 经 Pond 异步落库，不阻塞响应"] }
   ]
 }

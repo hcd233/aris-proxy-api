@@ -5057,8 +5057,8 @@
         <path data-edge-from="proj" data-edge-to="web" data-edge-label="JWT 查询" data-edge-key="8" data-composition-points="960,300;960,356" d="M 960 300 L 960 356" class="a-default" data-animate="edge" style="--step:8" stroke-width="1.4" marker-end="url(#arrowhead)"/>
 
         <!-- Nodes -->
-        <g id="node-codex-hook" data-node-id="codex-hook" data-node-label="Codex Hook" tabindex="0" role="button" aria-label="聚焦Codex Hook，Session 事件, 01 / Agent 事件源" aria-pressed="false" data-node-kind="external" data-node-sublabel="Session 事件" data-node-context="01 / Agent 事件源">
-          <title>Codex Hook · Session 事件 · 01 / Agent 事件源</title>
+        <g id="node-codex-hook" data-node-id="codex-hook" data-node-label="Codex Hook" tabindex="0" role="button" aria-label="聚焦Codex Hook，3 类事件, 01 / Agent 事件源" aria-pressed="false" data-node-kind="external" data-node-sublabel="3 类事件" data-node-context="01 / Agent 事件源">
+          <title>Codex Hook · 3 类事件 · 01 / Agent 事件源</title>
           <rect x="44" y="128" width="112" height="58" rx="6" class="c-mask"/>
           <rect x="44" y="128" width="112" height="58" rx="6" class="c-external" data-animate="node" style="--step:0" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="external" class="semantic-sigil s-external" transform="translate(50 134) scale(0.6875)">
@@ -5066,7 +5066,7 @@
             <path d="M8 2.5h5.5V8M13.5 2.5 7.5 8.5"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="100" y="149" class="t-primary" font-size="10" font-weight="600" text-anchor="middle">Codex Hook</text>
-          <text data-detail="context" x="100" y="165" class="t-muted" font-size="7" text-anchor="middle">Session 事件</text>
+          <text data-detail="context" x="100" y="165" class="t-muted" font-size="7" text-anchor="middle">3 类事件</text>
         </g>
 
         <g id="node-claude-hook" data-node-id="claude-hook" data-node-label="Claude Hook" tabindex="0" role="button" aria-label="聚焦Claude Hook，11 类事件, 01 / Agent 事件源" aria-pressed="false" data-node-kind="external" data-node-sublabel="11 类事件" data-node-context="01 / Agent 事件源">
@@ -5093,20 +5093,20 @@
           <text data-detail="context" x="100" y="393" class="t-muted" font-size="7" text-anchor="middle">.jsonl 重放</text>
         </g>
 
-        <g id="node-cli" data-node-id="cli" data-node-label="trace ingest" tabindex="0" role="button" aria-label="聚焦trace ingest，fail-open, 02 / aris CLI 采集" aria-pressed="false" data-node-kind="backend" data-node-sublabel="fail-open" data-node-tag="双 Agent" data-node-context="02 / aris CLI 采集">
-          <title>trace ingest · fail-open · 02 / aris CLI 采集 · 双 Agent</title>
+        <g id="node-cli" data-node-id="cli" data-node-label="trace ingest" tabindex="0" role="button" aria-label="聚焦trace ingest，fail-open · Adapter 解析, 02 / aris CLI 采集" aria-pressed="false" data-node-kind="backend" data-node-sublabel="fail-open · Adapter 解析" data-node-tag="双 Agent" data-node-context="02 / aris CLI 采集">
+          <title>trace ingest · fail-open · Adapter 解析 · 02 / aris CLI 采集 · 双 Agent</title>
           <rect x="259" y="242" width="112" height="58" rx="6" class="c-mask"/>
           <rect x="259" y="242" width="112" height="58" rx="6" class="c-backend" data-animate="node" style="--step:1" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(265 248) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="315" y="263" class="t-primary" font-size="10" font-weight="600" text-anchor="middle">trace ingest</text>
-          <text data-detail="context" x="315" y="279" class="t-muted" font-size="7" text-anchor="middle">fail-open</text>
+          <text data-detail="context" x="315" y="279" class="t-muted" font-size="7" text-anchor="middle">fail-open · Adapter 解析</text>
         <text data-detail="fine" x="315" y="289" class="t-backend" font-size="7" text-anchor="middle">双 Agent</text>
         </g>
 
-        <g id="node-spool" data-node-id="spool" data-node-label="spool" tabindex="0" role="button" aria-label="聚焦spool，256MiB · 续传, 03 / 本地 spool" aria-pressed="false" data-node-kind="database" data-node-sublabel="256MiB · 续传" data-node-context="03 / 本地 spool">
-          <title>spool · 256MiB · 续传 · 03 / 本地 spool</title>
+        <g id="node-spool" data-node-id="spool" data-node-label="spool" tabindex="0" role="button" aria-label="聚焦spool，256MiB · rejected 隔离 7d, 03 / 本地 spool" aria-pressed="false" data-node-kind="database" data-node-sublabel="256MiB · rejected 隔离 7d" data-node-tag="0600" data-node-context="03 / 本地 spool">
+          <title>spool · 256MiB · rejected 隔离 7d · 03 / 本地 spool · 0600</title>
           <rect x="474" y="242" width="112" height="58" rx="6" class="c-mask"/>
           <rect x="474" y="242" width="112" height="58" rx="6" class="c-database" data-animate="node" style="--step:4" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="database" class="semantic-sigil s-database" transform="translate(480 248) scale(0.6875)">
@@ -5114,23 +5114,24 @@
             <path d="M3 4v8c0 1.1 2.2 2 5 2s5-.9 5-2V4M3 8c0 1.1 2.2 2 5 2s5-.9 5-2"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="530" y="263" class="t-primary" font-size="10" font-weight="600" text-anchor="middle">spool</text>
-          <text data-detail="context" x="530" y="279" class="t-muted" font-size="7" text-anchor="middle">256MiB · 续传</text>
+          <text data-detail="context" x="530" y="279" class="t-muted" font-size="6.9" text-anchor="middle">256MiB · rejected 隔离 7d</text>
+        <text data-detail="fine" x="530" y="289" class="t-database" font-size="7" text-anchor="middle">0600</text>
         </g>
 
-        <g id="node-ingest" data-node-id="ingest" data-node-label="Ingest API" tabindex="0" role="button" aria-label="聚焦Ingest API，批量 500/4MiB, 04 / 服务端摄取" aria-pressed="false" data-node-kind="backend" data-node-sublabel="批量 500/4MiB" data-node-tag="X-API-Key" data-node-context="04 / 服务端摄取">
-          <title>Ingest API · 批量 500/4MiB · 04 / 服务端摄取 · X-API-Key</title>
+        <g id="node-ingest" data-node-id="ingest" data-node-label="Ingest API" tabindex="0" role="button" aria-label="聚焦Ingest API，500 条/4MiB · 5s, 04 / 服务端摄取" aria-pressed="false" data-node-kind="backend" data-node-sublabel="500 条/4MiB · 5s" data-node-tag="X-API-Key" data-node-context="04 / 服务端摄取">
+          <title>Ingest API · 500 条/4MiB · 5s · 04 / 服务端摄取 · X-API-Key</title>
           <rect x="689" y="128" width="112" height="58" rx="6" class="c-mask"/>
           <rect x="689" y="128" width="112" height="58" rx="6" class="c-backend" data-animate="node" style="--step:5" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(695 134) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="745" y="149" class="t-primary" font-size="10" font-weight="600" text-anchor="middle">Ingest API</text>
-          <text data-detail="context" x="745" y="165" class="t-muted" font-size="7" text-anchor="middle">批量 500/4MiB</text>
+          <text data-detail="context" x="745" y="165" class="t-muted" font-size="7" text-anchor="middle">500 条/4MiB · 5s</text>
         <text data-detail="fine" x="745" y="175" class="t-backend" font-size="7" text-anchor="middle">X-API-Key</text>
         </g>
 
-        <g id="node-dedup" data-node-id="dedup" data-node-label="鉴权 · 去重" tabindex="0" role="button" aria-label="聚焦鉴权 · 去重，复合键幂等, 04 / 服务端摄取" aria-pressed="false" data-node-kind="security" data-node-sublabel="复合键幂等" data-node-context="04 / 服务端摄取">
-          <title>鉴权 · 去重 · 复合键幂等 · 04 / 服务端摄取</title>
+        <g id="node-dedup" data-node-id="dedup" data-node-label="鉴权 · 去重" tabindex="0" role="button" aria-label="聚焦鉴权 · 去重，hook:/rollout: 幂等, 04 / 服务端摄取" aria-pressed="false" data-node-kind="security" data-node-sublabel="hook:/rollout: 幂等" data-node-context="04 / 服务端摄取">
+          <title>鉴权 · 去重 · hook:/rollout: 幂等 · 04 / 服务端摄取</title>
           <rect x="689" y="242" width="112" height="58" rx="6" class="c-mask"/>
           <rect x="689" y="242" width="112" height="58" rx="6" class="c-security" data-animate="node" style="--step:6" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="security" class="semantic-sigil s-security" transform="translate(695 248) scale(0.6875)">
@@ -5138,7 +5139,7 @@
             <path d="m5.8 8 1.5 1.5 3-3"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="745" y="263" class="t-primary" font-size="10" font-weight="600" text-anchor="middle">鉴权 · 去重</text>
-          <text data-detail="context" x="745" y="279" class="t-muted" font-size="7" text-anchor="middle">复合键幂等</text>
+          <text data-detail="context" x="745" y="279" class="t-muted" font-size="7" text-anchor="middle">hook:/rollout: 幂等</text>
         </g>
 
         <g id="node-repo" data-node-id="repo" data-node-label="Trace Repo" tabindex="0" role="button" aria-label="聚焦Trace Repo，PG 幂等写入, 05 / 存储与消费" aria-pressed="false" data-node-kind="database" data-node-sublabel="PG 幂等写入" data-node-context="05 / 存储与消费">
@@ -5153,19 +5154,20 @@
           <text data-detail="context" x="960" y="165" class="t-muted" font-size="7" text-anchor="middle">PG 幂等写入</text>
         </g>
 
-        <g id="node-proj" data-node-id="proj" data-node-label="投影重建" tabindex="0" role="button" aria-label="聚焦投影重建，→ 会话投影, 05 / 存储与消费" aria-pressed="false" data-node-kind="backend" data-node-sublabel="→ 会话投影" data-node-context="05 / 存储与消费">
-          <title>投影重建 · → 会话投影 · 05 / 存储与消费</title>
+        <g id="node-proj" data-node-id="proj" data-node-label="投影重建" tabindex="0" role="button" aria-label="聚焦投影重建，事件→TraceConversation, 05 / 存储与消费" aria-pressed="false" data-node-kind="backend" data-node-sublabel="事件→TraceConversation" data-node-tag="registry" data-node-context="05 / 存储与消费">
+          <title>投影重建 · 事件→TraceConversation · 05 / 存储与消费 · registry</title>
           <rect x="904" y="242" width="112" height="58" rx="6" class="c-mask"/>
           <rect x="904" y="242" width="112" height="58" rx="6" class="c-backend" data-animate="node" style="--step:8" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(910 248) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="960" y="263" class="t-primary" font-size="10" font-weight="600" text-anchor="middle">投影重建</text>
-          <text data-detail="context" x="960" y="279" class="t-muted" font-size="7" text-anchor="middle">→ 会话投影</text>
+          <text data-detail="context" x="960" y="279" class="t-muted" font-size="7" text-anchor="middle">事件→TraceConversation</text>
+        <text data-detail="fine" x="960" y="289" class="t-backend" font-size="7" text-anchor="middle">registry</text>
         </g>
 
-        <g id="node-web" data-node-id="web" data-node-label="Trace Web" tabindex="0" role="button" aria-label="聚焦Trace Web，时间线 · JWT, 05 / 存储与消费" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="时间线 · JWT" data-node-context="05 / 存储与消费">
-          <title>Trace Web · 时间线 · JWT · 05 / 存储与消费</title>
+        <g id="node-web" data-node-id="web" data-node-label="Trace Web" tabindex="0" role="button" aria-label="聚焦Trace Web，事件时间线 · JWT, 05 / 存储与消费" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="事件时间线 · JWT" data-node-context="05 / 存储与消费">
+          <title>Trace Web · 事件时间线 · JWT · 05 / 存储与消费</title>
           <rect x="904" y="356" width="112" height="58" rx="6" class="c-mask"/>
           <rect x="904" y="356" width="112" height="58" rx="6" class="c-frontend" data-animate="node" style="--step:9" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(910 362) scale(0.6875)">
@@ -5175,7 +5177,7 @@
             <circle cx="6.3" cy="4.8" r=".7" class="sigil-fill"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="960" y="377" class="t-primary" font-size="10" font-weight="600" text-anchor="middle">Trace Web</text>
-          <text data-detail="context" x="960" y="393" class="t-muted" font-size="7" text-anchor="middle">时间线 · JWT</text>
+          <text data-detail="context" x="960" y="393" class="t-muted" font-size="7" text-anchor="middle">事件时间线 · JWT</text>
         </g>
 
         <!-- Flow labels -->
@@ -5420,8 +5422,8 @@
           <h3>客户端侧</h3>
         </div>
         <ul>
-          <li>&bull; codex hook · claude hook 适配双 Agent 事件模型</li>
-          <li>&bull; rollout 兜底：离线 .jsonl 重放补齐会话</li>
+          <li>&bull; codex hook（3 类事件）· claude hook（11 类事件）适配双 Agent</li>
+          <li>&bull; rollout 兜底：离线 .jsonl 重放补齐会话（session_meta）</li>
           <li>&bull; CLI fail-open：采集失败不影响 Agent 运行</li>
         </ul>
       </div>
@@ -5432,9 +5434,9 @@
           <h3>传输与幂等</h3>
         </div>
         <ul>
-          <li>&bull; 本地 spool 原子落盘，失败重试不丢事件</li>
-          <li>&bull; 批量 500 条 / 4MiB，服务端 accepted 才删除</li>
-          <li>&bull; hook:/rollout: 复合键幂等，重复上报安全</li>
+          <li>&bull; 本地 spool ~/.aris/trace/spool（0600）原子落盘，失败重试不丢</li>
+          <li>&bull; 批量 500 条 / 4MiB / 5s，服务端 accepted 才删除</li>
+          <li>&bull; hook:/rollout: 复合键幂等，rejected 事件隔离 7d</li>
         </ul>
       </div>
 
@@ -5444,7 +5446,7 @@
           <h3>服务端侧</h3>
         </div>
         <ul>
-          <li>&bull; X-API-Key 鉴权，事件按会话聚合去重</li>
+          <li>&bull; X-API-Key 鉴权（/api/cli/v1/trace/event），按会话聚合去重</li>
           <li>&bull; PostgreSQL 幂等写入后投影重建 TraceConversation</li>
           <li>&bull; Trace Web 按事件时间线回放完整执行轨迹</li>
         </ul>
@@ -6536,7 +6538,7 @@
         var fps = Math.max(1, Number(options.fps) || MOTION_FPS);
         var svg = document.querySelector('.diagram-container svg');
         var vb = svg.viewBox.baseVal;
-        var scale = Math.min(1, 1280 / vb.width);
+        var scale = Math.min(1, Math.min(4096, Math.round(Number(window.__ARCHIFY_MOTION_MAX_W)) || 1280) / vb.width);
         var data = serializeSvg(scale);
         var sourceUrl = URL.createObjectURL(new Blob([data.svgString], { type: 'image/svg+xml;charset=utf-8' }));
 
@@ -6700,7 +6702,7 @@
             var mime = motionMimeType();
             var recorder;
             try {
-              recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 6000000 });
+              recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: Math.round(Number(window.__ARCHIFY_MOTION_BPS)) || 6000000 });
             } catch (err) {
               URL.revokeObjectURL(sourceUrl);
               stream.getTracks().forEach(function (track) { track.stop(); });

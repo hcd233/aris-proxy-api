@@ -13,12 +13,12 @@
   ],
   "mainPath": ["source", "next-build", "web-build", "dist", "go-build", "serve"],
   "nodes": [
-    { "id": "source", "lane": "build", "col": 0, "type": "frontend", "label": "web/ 源码", "sublabel": "src/app · lib · hooks" },
-    { "id": "next-build", "lane": "build", "col": 1, "type": "backend", "label": "next build", "sublabel": "export · /web" },
-    { "id": "web-build", "lane": "build", "col": 2, "type": "backend", "label": "make web-build", "sublabel": "cp · gzip -9" },
-    { "id": "dist", "lane": "ship", "col": 3, "type": "database", "label": "internal/web/dist", "sublabel": "//go:embed all:dist", "width": 136 },
-    { "id": "go-build", "lane": "ship", "col": 4, "type": "backend", "label": "go build", "sublabel": "前端随二进制发布", "tag": "45MB→39MB" },
-    { "id": "serve", "lane": "ship", "col": 5, "type": "backend", "label": "/web/* 路由", "sublabel": "gzip 协商 · SPA 回落" }
+    { "id": "source", "lane": "build", "col": 0, "type": "frontend", "label": "web/ 源码", "sublabel": "src/app · lib · hooks · locales", "width": 156 },
+    { "id": "next-build", "lane": "build", "col": 1, "type": "backend", "label": "next build", "sublabel": "output:export · basePath /web", "width": 156 },
+    { "id": "web-build", "lane": "build", "col": 2, "type": "backend", "label": "make web-build", "sublabel": "cp → dist · gzip -9", "width": 136 },
+    { "id": "dist", "lane": "ship", "col": 3, "type": "database", "label": "internal/web/dist", "sublabel": "//go:embed · worktree 占位", "width": 136 },
+    { "id": "go-build", "lane": "ship", "col": 4, "type": "backend", "label": "go build", "sublabel": "45MB→39MB · distroless", "tag": "前端随二进制", "width": 148 },
+    { "id": "serve", "lane": "ship", "col": 5, "type": "backend", "label": "/web/* 路由", "sublabel": "Accept-Encoding 协商 · SPA 回落", "width": 156 }
   ],
   "edges": [
     { "from": "source", "to": "next-build", "label": "npm ci" },
@@ -28,7 +28,8 @@
     { "from": "go-build", "to": "serve", "label": "静态服务" }
   ],
   "cards": [
-    { "dot": "cyan", "title": "构建期", "items": ["next build 静态导出到 web/out/，basePath /web", "make web-build 拷贝产物到 internal/web/dist", "逐文件 gzip -9 预压缩：10MB → 3.5MB"] },
-    { "dot": "emerald", "title": "内嵌分发", "items": ["//go:embed all:dist 把前端打进二进制", "单二进制交付：45MB → 39MB（gzip 预压缩）", "/web/* 路由按 Accept-Encoding 协商，SPA 回落 index.html"] }
+    { "dot": "cyan", "title": "构建期", "items": ["next build 静态导出到 web/out/，basePath /web 不可改（后端按 /web 挂载）", "make web-build 拷贝产物到 internal/web/dist，是 build-server 前置依赖", "find -exec gzip -9 逐文件预压缩：dist 10MB → 3.5MB"] },
+    { "dot": "emerald", "title": "内嵌分发", "items": ["static.go: //go:embed all:dist，目录已 gitignore（缺失会致 go vet 失败）", "单二进制交付：server 45MB → 39MB，distroless nonroot 镜像", "显式解析 Accept-Encoding（忽略 q=0）：.gz 命中直发，否则实时解压"] },
+    { "dot": "rose", "title": "回落规则", "items": ["静态资源未命中 → 404，不回落", "其余路径 → index.html（SPA 回落）", "CI path filter 不含 web/**（前端改动不触发后端流水线）"] }
   ]
 }

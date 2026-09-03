@@ -5055,8 +5055,8 @@
         <path data-edge-from="hitsync" data-edge-to="words-db" data-edge-label="回写 hit_count" data-edge-key="6" data-composition-points="904,271;880,271;880,470;315,470;315,300" d="M 904 271 L 880 271 L 880 470 L 315 470 L 315 300" class="a-default" data-animate="edge" style="--step:6" stroke-width="1.4" marker-end="url(#arrowhead)"/>
 
         <!-- Nodes -->
-        <g id="node-admin" data-node-id="admin" data-node-label="管理后台" tabindex="0" role="button" aria-label="聚焦管理后台，/trigger 增删改, 01 / 变更入口" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="/trigger 增删改" data-node-context="01 / 变更入口">
-          <title>管理后台 · /trigger 增删改 · 01 / 变更入口</title>
+        <g id="node-admin" data-node-id="admin" data-node-label="管理后台" tabindex="0" role="button" aria-label="聚焦管理后台，create · update · delete, 01 / 变更入口" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="create · update · delete" data-node-context="01 / 变更入口">
+          <title>管理后台 · create · update · delete · 01 / 变更入口</title>
           <rect x="44" y="128" width="112" height="58" rx="6" class="c-mask"/>
           <rect x="44" y="128" width="112" height="58" rx="6" class="c-frontend" data-animate="node" style="--step:0" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(50 134) scale(0.6875)">
@@ -5066,11 +5066,11 @@
             <circle cx="6.3" cy="4.8" r=".7" class="sigil-fill"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="100" y="149" class="t-primary" font-size="10" font-weight="600" text-anchor="middle">管理后台</text>
-          <text data-detail="context" x="100" y="165" class="t-muted" font-size="7" text-anchor="middle">/trigger 增删改</text>
+          <text data-detail="context" x="100" y="165" class="t-muted" font-size="7" text-anchor="middle">create · update · delete</text>
         </g>
 
-        <g id="node-words-db" data-node-id="words-db" data-node-label="词表 PG" tabindex="0" role="button" aria-label="聚焦词表 PG，trigger_words · 后台写, 02 / 信号与存储" aria-pressed="false" data-node-kind="database" data-node-sublabel="trigger_words · 后台写" data-node-context="02 / 信号与存储">
-          <title>词表 PG · trigger_words · 后台写 · 02 / 信号与存储</title>
+        <g id="node-words-db" data-node-id="words-db" data-node-label="词表 PG" tabindex="0" role="button" aria-label="聚焦词表 PG，trigger_words · deny/omit, 02 / 信号与存储" aria-pressed="false" data-node-kind="database" data-node-sublabel="trigger_words · deny/omit" data-node-context="02 / 信号与存储">
+          <title>词表 PG · trigger_words · deny/omit · 02 / 信号与存储</title>
           <rect x="259" y="242" width="112" height="58" rx="6" class="c-mask"/>
           <rect x="259" y="242" width="112" height="58" rx="6" class="c-database" data-animate="node" style="--step:7" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="database" class="semantic-sigil s-database" transform="translate(265 248) scale(0.6875)">
@@ -5078,11 +5078,11 @@
             <path d="M3 4v8c0 1.1 2.2 2 5 2s5-.9 5-2V4M3 8c0 1.1 2.2 2 5 2s5-.9 5-2"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="315" y="263" class="t-primary" font-size="10" font-weight="600" text-anchor="middle">词表 PG</text>
-          <text data-detail="context" x="315" y="279" class="t-muted" font-size="7" text-anchor="middle">trigger_words · 后台写</text>
+          <text data-detail="context" x="315" y="279" class="t-muted" font-size="6.9" text-anchor="middle">trigger_words · deny/omit</text>
         </g>
 
-        <g id="node-signal-db" data-node-id="signal-db" data-node-label="信号 Redis" tabindex="0" role="button" aria-label="聚焦信号 Redis，Publish · INCR, 02 / 信号与存储" aria-pressed="false" data-node-kind="database" data-node-sublabel="Publish · INCR" data-node-context="02 / 信号与存储">
-          <title>信号 Redis · Publish · INCR · 02 / 信号与存储</title>
+        <g id="node-signal-db" data-node-id="signal-db" data-node-label="信号 Redis" tabindex="0" role="button" aria-label="聚焦信号 Redis，Publish + INCR version, 02 / 信号与存储" aria-pressed="false" data-node-kind="database" data-node-sublabel="Publish + INCR version" data-node-context="02 / 信号与存储">
+          <title>信号 Redis · Publish + INCR version · 02 / 信号与存储</title>
           <rect x="259" y="128" width="112" height="58" rx="6" class="c-mask"/>
           <rect x="259" y="128" width="112" height="58" rx="6" class="c-database" data-animate="node" style="--step:1" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="database" class="semantic-sigil s-database" transform="translate(265 134) scale(0.6875)">
@@ -5090,29 +5090,30 @@
             <path d="M3 4v8c0 1.1 2.2 2 5 2s5-.9 5-2V4M3 8c0 1.1 2.2 2 5 2s5-.9 5-2"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="315" y="149" class="t-primary" font-size="10" font-weight="600" text-anchor="middle">信号 Redis</text>
-          <text data-detail="context" x="315" y="165" class="t-muted" font-size="7" text-anchor="middle">Publish · INCR</text>
+          <text data-detail="context" x="315" y="165" class="t-muted" font-size="7" text-anchor="middle">Publish + INCR version</text>
         </g>
 
-        <g id="node-svc" data-node-id="svc" data-node-label="TriggerService" tabindex="0" role="button" aria-label="聚焦TriggerService，sub·轮询 2s·兜底 5min, 03 / Pod 同步" aria-pressed="false" data-node-kind="backend" data-node-sublabel="sub·轮询 2s·兜底 5min" data-node-context="03 / Pod 同步">
-          <title>TriggerService · sub·轮询 2s·兜底 5min · 03 / Pod 同步</title>
+        <g id="node-svc" data-node-id="svc" data-node-label="TriggerService" tabindex="0" role="button" aria-label="聚焦TriggerService，sub · 轮询 2s · 兜底 5min, 03 / Pod 同步" aria-pressed="false" data-node-kind="backend" data-node-sublabel="sub · 轮询 2s · 兜底 5min" data-node-tag="三重同步" data-node-context="03 / Pod 同步">
+          <title>TriggerService · sub · 轮询 2s · 兜底 5min · 03 / Pod 同步 · 三重同步</title>
           <rect x="474" y="128" width="112" height="58" rx="6" class="c-mask"/>
           <rect x="474" y="128" width="112" height="58" rx="6" class="c-backend" data-animate="node" style="--step:2" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(480 134) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="530" y="149" class="t-primary" font-size="10" font-weight="600" text-anchor="middle">TriggerService</text>
-          <text data-detail="context" x="530" y="165" class="t-muted" font-size="7" text-anchor="middle">sub·轮询 2s·兜底 5min</text>
+          <text data-detail="context" x="530" y="165" class="t-muted" font-size="6.9" text-anchor="middle">sub · 轮询 2s · 兜底 5min</text>
+        <text data-detail="fine" x="530" y="175" class="t-backend" font-size="7" text-anchor="middle">三重同步</text>
         </g>
 
-        <g id="node-matcher" data-node-id="matcher" data-node-label="AC 匹配器" tabindex="0" role="button" aria-label="聚焦AC 匹配器，Aho-Corasick, 04 / 内存匹配" aria-pressed="false" data-node-kind="backend" data-node-sublabel="Aho-Corasick" data-node-tag="全量 Rebuild" data-node-context="04 / 内存匹配">
-          <title>AC 匹配器 · Aho-Corasick · 04 / 内存匹配 · 全量 Rebuild</title>
+        <g id="node-matcher" data-node-id="matcher" data-node-label="AC 匹配器" tabindex="0" role="button" aria-label="聚焦AC 匹配器，Match → DenyIDs, 04 / 内存匹配" aria-pressed="false" data-node-kind="backend" data-node-sublabel="Match → DenyIDs" data-node-tag="全量 Rebuild" data-node-context="04 / 内存匹配">
+          <title>AC 匹配器 · Match → DenyIDs · 04 / 内存匹配 · 全量 Rebuild</title>
           <rect x="689" y="128" width="112" height="58" rx="6" class="c-mask"/>
           <rect x="689" y="128" width="112" height="58" rx="6" class="c-backend" data-animate="node" style="--step:3" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(695 134) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="745" y="149" class="t-primary" font-size="10" font-weight="600" text-anchor="middle">AC 匹配器</text>
-          <text data-detail="context" x="745" y="165" class="t-muted" font-size="7" text-anchor="middle">Aho-Corasick</text>
+          <text data-detail="context" x="745" y="165" class="t-muted" font-size="7" text-anchor="middle">Match → DenyIDs</text>
         <text data-detail="fine" x="745" y="175" class="t-backend" font-size="7" text-anchor="middle">全量 Rebuild</text>
         </g>
 
@@ -5128,8 +5129,8 @@
           <text data-detail="context" x="745" y="279" class="t-muted" font-size="7" text-anchor="middle">TriggerChecker.Check</text>
         </g>
 
-        <g id="node-hit-cache" data-node-id="hit-cache" data-node-label="命中缓存" tabindex="0" role="button" aria-label="聚焦命中缓存，Redis IncrementHits, 05 / 命中与回写" aria-pressed="false" data-node-kind="database" data-node-sublabel="Redis IncrementHits" data-node-context="05 / 命中与回写">
-          <title>命中缓存 · Redis IncrementHits · 05 / 命中与回写</title>
+        <g id="node-hit-cache" data-node-id="hit-cache" data-node-label="命中缓存" tabindex="0" role="button" aria-label="聚焦命中缓存，TriggerHitCache, 05 / 命中与回写" aria-pressed="false" data-node-kind="database" data-node-sublabel="TriggerHitCache" data-node-context="05 / 命中与回写">
+          <title>命中缓存 · TriggerHitCache · 05 / 命中与回写</title>
           <rect x="904" y="128" width="112" height="58" rx="6" class="c-mask"/>
           <rect x="904" y="128" width="112" height="58" rx="6" class="c-database" data-animate="node" style="--step:5" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="database" class="semantic-sigil s-database" transform="translate(910 134) scale(0.6875)">
@@ -5137,18 +5138,18 @@
             <path d="M3 4v8c0 1.1 2.2 2 5 2s5-.9 5-2V4M3 8c0 1.1 2.2 2 5 2s5-.9 5-2"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="960" y="149" class="t-primary" font-size="10" font-weight="600" text-anchor="middle">命中缓存</text>
-          <text data-detail="context" x="960" y="165" class="t-muted" font-size="7" text-anchor="middle">Redis IncrementHits</text>
+          <text data-detail="context" x="960" y="165" class="t-muted" font-size="7" text-anchor="middle">TriggerHitCache</text>
         </g>
 
-        <g id="node-hitsync" data-node-id="hitsync" data-node-label="HitSync Cron" tabindex="0" role="button" aria-label="聚焦HitSync Cron，每 5min · PopAll, 05 / 命中与回写" aria-pressed="false" data-node-kind="backend" data-node-sublabel="每 5min · PopAll" data-node-context="05 / 命中与回写">
-          <title>HitSync Cron · 每 5min · PopAll · 05 / 命中与回写</title>
+        <g id="node-hitsync" data-node-id="hitsync" data-node-label="HitSync Cron" tabindex="0" role="button" aria-label="聚焦HitSync Cron，5min · BatchIncr, 05 / 命中与回写" aria-pressed="false" data-node-kind="backend" data-node-sublabel="5min · BatchIncr" data-node-context="05 / 命中与回写">
+          <title>HitSync Cron · 5min · BatchIncr · 05 / 命中与回写</title>
           <rect x="904" y="242" width="112" height="58" rx="6" class="c-mask"/>
           <rect x="904" y="242" width="112" height="58" rx="6" class="c-backend" data-animate="node" style="--step:6" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(910 248) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="960" y="263" class="t-primary" font-size="10" font-weight="600" text-anchor="middle">HitSync Cron</text>
-          <text data-detail="context" x="960" y="279" class="t-muted" font-size="7" text-anchor="middle">每 5min · PopAll</text>
+          <text data-detail="context" x="960" y="279" class="t-muted" font-size="7" text-anchor="middle">5min · BatchIncr</text>
         </g>
 
         <!-- Flow labels -->
@@ -5385,7 +5386,8 @@
           <h3>变更广播</h3>
         </div>
         <ul>
-          <li>&bull; 管理后台写词表后 NotifyChanged：Publish + 版本 INCR</li>
+          <li>&bull; 管理后台写 trigger_words（word · action deny/omit）后 NotifyChanged</li>
+          <li>&bull; Redis Publish(trigger:changed) 即时信号 + INCR(trigger:version) 版本广播</li>
           <li>&bull; 各 Pod 三重同步：pub/sub 即时 · 版本轮询 2s · 兜底扫描 5min</li>
         </ul>
       </div>
@@ -5396,8 +5398,8 @@
           <h3>内存重建</h3>
         </div>
         <ul>
-          <li>&bull; 全量 Rebuild Aho-Corasick 匹配器，O(n) 单趟扫描</li>
-          <li>&bull; deny→403 · omit→响应转发但不落库</li>
+          <li>&bull; ListAll 全量 Rebuild Aho-Corasick 匹配器，O(n) 单趟扫描</li>
+          <li>&bull; deny→403 拦截 · omit→响应转发但不落库</li>
         </ul>
       </div>
 
@@ -5407,8 +5409,8 @@
           <h3>命中回写</h3>
         </div>
         <ul>
-          <li>&bull; 命中即时写 Redis 缓存，不阻塞请求链路</li>
-          <li>&bull; TriggerHitSync 每 5min PopAll 批量回写词表 hit_count</li>
+          <li>&bull; 命中即时写 Redis TriggerHitCache.IncrementHits，不阻塞请求链路</li>
+          <li>&bull; TriggerHitSync 每 5min PopAll → BatchIncrementHitCount 回写词表 hit_count</li>
         </ul>
       </div>
     </div>
@@ -6498,7 +6500,7 @@
         var fps = Math.max(1, Number(options.fps) || MOTION_FPS);
         var svg = document.querySelector('.diagram-container svg');
         var vb = svg.viewBox.baseVal;
-        var scale = Math.min(1, 1280 / vb.width);
+        var scale = Math.min(1, Math.min(4096, Math.round(Number(window.__ARCHIFY_MOTION_MAX_W)) || 1280) / vb.width);
         var data = serializeSvg(scale);
         var sourceUrl = URL.createObjectURL(new Blob([data.svgString], { type: 'image/svg+xml;charset=utf-8' }));
 
@@ -6662,7 +6664,7 @@
             var mime = motionMimeType();
             var recorder;
             try {
-              recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 6000000 });
+              recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: Math.round(Number(window.__ARCHIFY_MOTION_BPS)) || 6000000 });
             } catch (err) {
               URL.revokeObjectURL(sourceUrl);
               stream.getTracks().forEach(function (track) { track.stop(); });

@@ -19,11 +19,11 @@
   },
   "components": [
     { "id": "git", "type": "external", "label": "Git 推送 / PR", "sublabel": "master · tag v*", "pos": [40, 60], "size": [220, 104] },
-    { "id": "ci", "type": "backend", "label": "build-and-publish.yml", "sublabel": "buildx amd64/arm64 · push-by-digest", "tag": "CI", "pos": [300, 60], "size": [300, 104], "sources": [{ "path": ".github/workflows/build-and-publish.yml" }] },
+    { "id": "ci", "type": "backend", "label": "build-and-publish.yml", "sublabel": "npm build · buildx amd64/arm64 · digest manifest", "tag": "CI", "pos": [300, 60], "size": [300, 104], "sources": [{ "path": ".github/workflows/build-and-publish.yml" }] },
     { "id": "ghcr", "type": "cloud", "label": "GHCR", "sublabel": "ghcr.io/hcd233/aris-proxy-api", "tag": "镜像", "pos": [680, 60], "size": [300, 80] },
-    { "id": "release", "type": "backend", "label": "trace-client release", "sublabel": "GitHub Releases · 4 平台", "tag": "tag 触发", "pos": [40, 210], "size": [220, 96] },
-    { "id": "cli", "type": "frontend", "label": "aris CLI 用户机", "sublabel": "install.sh · trace 上报", "pos": [40, 360], "size": [220, 96], "sources": [{ "path": "internal/client/api/client.go" }] },
-    { "id": "deploy", "type": "backend", "label": "deploy-k8s", "sublabel": "SSH · git reset + deploy-k8s.sh", "tag": "60s 轮询", "pos": [300, 220], "size": [300, 88] },
+    { "id": "release", "type": "backend", "label": "trace-client release", "sublabel": "GitHub Releases · tar.gz+sha256 · 4 平台", "tag": "tag 触发", "pos": [40, 210], "size": [220, 96] },
+    { "id": "cli", "type": "frontend", "label": "aris CLI 用户机", "sublabel": "install.sh 自包含 · 下载校验 · 原子安装", "pos": [40, 360], "size": [220, 96], "sources": [{ "path": "internal/client/api/client.go" }] },
+    { "id": "deploy", "type": "backend", "label": "deploy-k8s", "sublabel": "SSH · git reset + deploy-k8s.sh · 60s 轮询 /health", "tag": "自动部署", "pos": [300, 220], "size": [300, 88] },
     { "id": "k8s", "type": "backend", "label": "Deployment · 2 副本", "sublabel": "maxUnavailable 0 · 512Mi/300m · preStop 10s · grace 660s", "tag": "k3s ns/aris-proxy-api", "pos": [680, 200], "size": [340, 124] },
     { "id": "svc", "type": "backend", "label": "Service LB", "sublabel": "18080→8080", "pos": [1060, 200], "size": [200, 88] },
     { "id": "cfg", "type": "security", "label": "ConfigMap+Secret", "sublabel": "envFrom 注入", "pos": [680, 380], "size": [150, 88] },
@@ -48,8 +48,8 @@
     { "id": "report", "from": "cli", "to": "prod", "label": "HTTPS 上报", "variant": "dashed", "fromSide": "bottom", "toSide": "left", "labelAt": [300, 490] }
   ],
   "cards": [
-    { "dot": "cyan", "title": "CI/CD", "items": ["build-and-publish.yml：buildx amd64/arm64 push-by-digest", "master 推送自动部署；tag v* 额外发 trace-client 4 平台产物", "deploy-k8s.sh SSH 到主机 git reset 后滚动更新，60s 轮询就绪"] },
-    { "dot": "emerald", "title": "运行时", "items": ["Deployment 2 副本 maxUnavailable 0，零中断滚动", "资源 512Mi/300m，GOMEMLIMIT 440MiB", "preStop sleep 10 + 优雅退出 660s，覆盖 SSE 泄流"] },
-    { "dot": "rose", "title": "外部触点", "items": ["Service LB 18080→8080，api.lvlvko.top 对外", "PG + Redis 同机 Docker，环境注入经 ConfigMap+Secret", "aris CLI 经 install.sh 安装，HTTPS 上报 trace"] }
+    { "dot": "cyan", "title": "CI/CD", "items": ["build-and-publish.yml：frontend job npm build + 缓存；buildx amd64/arm64 原生 runner", "push-by-digest → merge manifest 推 GHCR；master 推送自动部署", "deploy-k8s.sh SSH 到主机 git reset 后滚动更新，60s 轮询 /health 确认"] },
+    { "dot": "emerald", "title": "运行时", "items": ["Deployment 2 副本 RollingUpdate maxUnavailable 0，零中断滚动", "资源 512Mi/300m，GOMEMLIMIT 440MiB，distroless nonroot + embed.FS 前端", "preStop sleep 10 + 优雅退出 660s，覆盖 SSE 泄流"] },
+    { "dot": "rose", "title": "外部触点", "items": ["Service LB 18080→8080，api.lvlvko.top 对外", "PG + Redis 同机 Docker 依赖，环境注入经 ConfigMap+Secret", "tag v* 额外发 trace-client：tar.gz+sha256 · 4 平台，CLI 经 install.sh 自包含安装"] }
   ]
 }

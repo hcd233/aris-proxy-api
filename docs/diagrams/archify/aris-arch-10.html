@@ -5004,7 +5004,7 @@
     <!-- Main Diagram -->
     <div class="diagram-container" data-detail-level="read"
          data-preset-badge-editorial-plate="ARCHIFY / 图版 04">
-      <svg viewBox="0 0 898 660" role="img" lang="zh-CN" aria-labelledby="archify-diagram-title archify-diagram-description" data-animation="trace" data-preset="classic" data-quality-profile="showcase">
+      <svg viewBox="0 0 1035 652" role="img" lang="zh-CN" aria-labelledby="archify-diagram-title archify-diagram-description" data-animation="trace" data-preset="classic" data-quality-profile="showcase">
         <title id="archify-diagram-title">优雅退出序列</title>
         <desc id="archify-diagram-description">由 Archify 生成的工作流图。</desc>
         <!-- Definitions -->
@@ -5030,17 +5030,17 @@
         <rect width="100%" height="100%" fill="url(#grid)" />
 
         <!-- Swimlanes -->
-        <rect data-graph-role="structural-frame" data-composition-frame-kind="lane" data-composition-frame-id="lane-0" x="40" y="52" width="842" height="106" rx="10" class="c-lane" stroke-width="1"/>
+        <rect data-graph-role="structural-frame" data-composition-frame-kind="lane" data-composition-frame-id="lane-0" x="40" y="52" width="979" height="104" rx="10" class="c-lane" stroke-width="1"/>
         <text x="54" y="74" class="t-dim" font-size="10" font-weight="600">01 / 信号与 Fx</text>
 
-        <rect data-graph-role="structural-frame" data-composition-frame-kind="lane" data-composition-frame-id="lane-1" x="40" y="178" width="842" height="106" rx="10" class="c-lane" stroke-width="1"/>
-        <text x="54" y="200" class="t-dim" font-size="10" font-weight="600">02 / 后台任务收尾</text>
+        <rect data-graph-role="structural-frame" data-composition-frame-kind="lane" data-composition-frame-id="lane-1" x="40" y="176" width="979" height="104" rx="10" class="c-lane" stroke-width="1"/>
+        <text x="54" y="198" class="t-dim" font-size="10" font-weight="600">02 / 后台任务收尾</text>
 
-        <rect data-graph-role="structural-frame" data-composition-frame-kind="lane" data-composition-frame-id="lane-2" x="40" y="304" width="842" height="106" rx="10" class="c-lane" stroke-width="1"/>
-        <text x="54" y="326" class="t-dim" font-size="10" font-weight="600">03 / 泄流</text>
+        <rect data-graph-role="structural-frame" data-composition-frame-kind="lane" data-composition-frame-id="lane-2" x="40" y="300" width="979" height="104" rx="10" class="c-lane" stroke-width="1"/>
+        <text x="54" y="322" class="t-dim" font-size="10" font-weight="600">03 / 泄流</text>
 
-        <rect data-graph-role="structural-frame" data-composition-frame-kind="lane" data-composition-frame-id="lane-3" x="40" y="430" width="842" height="106" rx="10" class="c-lane" stroke-width="1"/>
-        <text x="54" y="452" class="t-dim" font-size="10" font-weight="600">04 / 释放</text>
+        <rect data-graph-role="structural-frame" data-composition-frame-kind="lane" data-composition-frame-id="lane-3" x="40" y="424" width="979" height="104" rx="10" class="c-lane" stroke-width="1"/>
+        <text x="54" y="446" class="t-dim" font-size="10" font-weight="600">04 / 释放</text>
 
         <!-- Phase headers -->
 
@@ -5049,150 +5049,150 @@
 
 
         <!-- Edge paths -->
-        <path data-edge-from="cron" data-edge-to="pond" data-edge-label="停后台" data-edge-key="0" data-composition-points="314,246;360.8,246" d="M 314 246 L 360.8 246" class="a-default" data-animate="edge" style="--step:2" stroke-width="1.4" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="fx" data-edge-to="cron" data-edge-label="逆序第一步" data-edge-key="1" data-composition-points="314,120;330,120;330,168;268,168;268,220" d="M 314 120 L 330 120 L 330 168 L 268 168 L 268 220" class="a-default" data-animate="edge" style="--step:1" stroke-width="1.4" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="http" data-edge-to="log" data-edge-label="日志落盘" data-edge-key="2" data-composition-points="601.2,372;617.2,372;617.2,552;555.2,552;555.2,524" d="M 601.2 372 L 617.2 372 L 617.2 552 L 555.2 552 L 555.2 524" class="a-default" data-animate="edge" style="--step:5" stroke-width="1.4" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="inflight" data-edge-to="http" data-edge-label="停止接入" data-edge-key="3" data-composition-points="452.8,372;509.20000000000005,372" d="M 452.8 372 L 509.20000000000005 372" class="a-default" data-animate="edge" style="--step:4" stroke-width="1.4" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="log" data-edge-to="rel" data-edge-label="最后释放" data-edge-key="4" data-composition-points="555.2,472;555.2,456;606.4000000000001,456;606.4000000000001,498;657.6,498" d="M 555.2 472 L 555.2 456 L 606.4000000000001 456 L 606.4000000000001 498 L 657.6 498" class="a-default" data-animate="edge" style="--step:6" stroke-width="1.4" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="pond" data-edge-to="inflight" data-edge-label="泄流" data-edge-key="5" data-composition-points="452.8,246;468.8,246;468.8,294;406.8,294;406.8,346" d="M 452.8 246 L 468.8 246 L 468.8 294 L 406.8 294 L 406.8 346" class="a-default" data-animate="edge" style="--step:3" stroke-width="1.4" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="sig" data-edge-to="fx" data-edge-label="触发" data-edge-key="6" data-composition-points="184,120;222,120" d="M 184 120 L 222 120" class="a-default" data-animate="edge" style="--step:0" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="cron" data-edge-to="pond" data-edge-label="停后台 3min" data-edge-key="0" data-composition-points="314,243;384.8,243" d="M 314 243 L 384.8 243" class="a-default" data-animate="edge" style="--step:2" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="fx" data-edge-to="cron" data-edge-label="逆序第一步" data-edge-key="1" data-composition-points="314,119;330,119;330,166;268,166;268,215" d="M 314 119 L 330 119 L 330 166 L 268 166 L 268 215" class="a-default" data-animate="edge" style="--step:1" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="http" data-edge-to="log" data-edge-label="日志落盘" data-edge-key="2" data-composition-points="726.4,367;742.4,367;742.4,414;648.4,414;648.4,463" d="M 726.4 367 L 742.4 367 L 742.4 414 L 648.4 414 L 648.4 463" class="a-default" data-animate="edge" style="--step:5" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="inflight" data-edge-to="http" data-edge-label="停止接入 30s" data-edge-key="3" data-composition-points="494.8,367;570.4,367" d="M 494.8 367 L 570.4 367" class="a-default" data-animate="edge" style="--step:4" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="log" data-edge-to="rel" data-edge-label="最后释放" data-edge-key="4" data-composition-points="726.4,491;782.8,491" d="M 726.4 491 L 782.8 491" class="a-default" data-animate="edge" style="--step:6" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="pond" data-edge-to="inflight" data-edge-label="等在途 5min" data-edge-key="5" data-composition-points="512.8,243;528.8,243;528.8,290;448.8,290;448.8,339" d="M 512.8 243 L 528.8 243 L 528.8 290 L 448.8 290 L 448.8 339" class="a-default" data-animate="edge" style="--step:3" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="sig" data-edge-to="fx" data-edge-label="触发" data-edge-key="6" data-composition-points="184,119;222,119" d="M 184 119 L 222 119" class="a-default" data-animate="edge" style="--step:0" stroke-width="1.4" marker-end="url(#arrowhead)"/>
 
         <!-- Nodes -->
         <g id="node-sig" data-node-id="sig" data-node-label="终止信号" tabindex="0" role="button" aria-label="聚焦终止信号，SIGINT/SIGTERM · preStop 10s, 信号与 Fx" aria-pressed="false" data-node-kind="external" data-node-sublabel="SIGINT/SIGTERM · preStop 10s" data-node-context="信号与 Fx">
           <title>终止信号 · SIGINT/SIGTERM · preStop 10s · 信号与 Fx</title>
-          <rect x="48" y="94" width="136" height="52" rx="6" class="c-mask"/>
-          <rect x="48" y="94" width="136" height="52" rx="6" class="c-external" data-animate="node" style="--step:0" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="external" class="semantic-sigil s-external" transform="translate(54 100) scale(0.6875)">
+          <rect x="48" y="91" width="136" height="56" rx="6" class="c-mask"/>
+          <rect x="48" y="91" width="136" height="56" rx="6" class="c-external" data-animate="node" style="--step:0" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="external" class="semantic-sigil s-external" transform="translate(54 97) scale(0.6875)">
             <rect x="2.5" y="5" width="8.5" height="8" rx="1.5"/>
             <path d="M8 2.5h5.5V8M13.5 2.5 7.5 8.5"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="116" y="115" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">终止信号</text>
-          <text data-detail="context" x="116" y="132" class="t-muted" font-size="7.6" text-anchor="middle">SIGINT/SIGTERM · preStop 10s</text>
+          <text data-node-label="" data-detail-anchor="" x="116" y="112" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">终止信号</text>
+          <text data-detail="context" x="116" y="129" class="t-muted" font-size="7.6" text-anchor="middle">SIGINT/SIGTERM · preStop 10s</text>
         </g>
 
         <g id="node-fx" data-node-id="fx" data-node-label="Fx Lifecycle" tabindex="0" role="button" aria-label="聚焦Fx Lifecycle，OnStop 逆序 · 9 Hook, 信号与 Fx" aria-pressed="false" data-node-kind="backend" data-node-sublabel="OnStop 逆序 · 9 Hook" data-node-context="信号与 Fx">
           <title>Fx Lifecycle · OnStop 逆序 · 9 Hook · 信号与 Fx</title>
-          <rect x="222" y="94" width="92" height="52" rx="6" class="c-mask"/>
-          <rect x="222" y="94" width="92" height="52" rx="6" class="c-backend" data-animate="node" style="--step:1" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(228 100) scale(0.6875)">
+          <rect x="222" y="91" width="92" height="56" rx="6" class="c-mask"/>
+          <rect x="222" y="91" width="92" height="56" rx="6" class="c-backend" data-animate="node" style="--step:1" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(228 97) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="268" y="115" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Fx Lifecycle</text>
-          <text data-detail="context" x="268" y="132" class="t-muted" font-size="7" text-anchor="middle">OnStop 逆序 · 9 Hook</text>
+          <text data-node-label="" data-detail-anchor="" x="268" y="112" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Fx Lifecycle</text>
+          <text data-detail="context" x="268" y="129" class="t-muted" font-size="7" text-anchor="middle">OnStop 逆序 · 9 Hook</text>
         </g>
 
         <g id="node-cron" data-node-id="cron" data-node-label="停 CronManager" tabindex="0" role="button" aria-label="聚焦停 CronManager，StopAll · 3min, 后台任务收尾" aria-pressed="false" data-node-kind="backend" data-node-sublabel="StopAll · 3min" data-node-context="后台任务收尾">
           <title>停 CronManager · StopAll · 3min · 后台任务收尾</title>
-          <rect x="222" y="220" width="92" height="52" rx="6" class="c-mask"/>
-          <rect x="222" y="220" width="92" height="52" rx="6" class="c-backend" data-animate="node" style="--step:2" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(228 226) scale(0.6875)">
+          <rect x="222" y="215" width="92" height="56" rx="6" class="c-mask"/>
+          <rect x="222" y="215" width="92" height="56" rx="6" class="c-backend" data-animate="node" style="--step:2" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(228 221) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="268" y="241" class="t-primary" font-size="10" font-weight="600" text-anchor="middle">停 CronManager</text>
-          <text data-detail="context" x="268" y="258" class="t-muted" font-size="8" text-anchor="middle">StopAll · 3min</text>
+          <text data-node-label="" data-detail-anchor="" x="268" y="236" class="t-primary" font-size="10" font-weight="600" text-anchor="middle">停 CronManager</text>
+          <text data-detail="context" x="268" y="253" class="t-muted" font-size="8" text-anchor="middle">StopAll · 3min</text>
         </g>
 
         <g id="node-pond" data-node-id="pond" data-node-label="停 Pond 协程池" tabindex="0" role="button" aria-label="聚焦停 Pond 协程池，StopWithContext · 3min, 后台任务收尾" aria-pressed="false" data-node-kind="backend" data-node-sublabel="StopWithContext · 3min" data-node-context="后台任务收尾">
           <title>停 Pond 协程池 · StopWithContext · 3min · 后台任务收尾</title>
-          <rect x="360.8" y="220" width="92" height="52" rx="6" class="c-mask"/>
-          <rect x="360.8" y="220" width="92" height="52" rx="6" class="c-backend" data-animate="node" style="--step:3" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(366.8 226) scale(0.6875)">
+          <rect x="384.8" y="215" width="128" height="56" rx="6" class="c-mask"/>
+          <rect x="384.8" y="215" width="128" height="56" rx="6" class="c-backend" data-animate="node" style="--step:3" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(390.8 221) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="406.8" y="241" class="t-primary" font-size="10" font-weight="600" text-anchor="middle">停 Pond 协程池</text>
-          <text data-detail="context" x="406.8" y="258" class="t-muted" font-size="6.3" text-anchor="middle">StopWithContext · 3min</text>
+          <text data-node-label="" data-detail-anchor="" x="448.8" y="236" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">停 Pond 协程池</text>
+          <text data-detail="context" x="448.8" y="253" class="t-muted" font-size="8" text-anchor="middle">StopWithContext · 3min</text>
         </g>
 
-        <g id="node-inflight" data-node-id="inflight" data-node-label="InFlight 泄流" tabindex="0" role="button" aria-label="聚焦InFlight 泄流，CancelOnDrain 守护收尾, 泄流" aria-pressed="false" data-node-kind="backend" data-node-sublabel="CancelOnDrain 守护收尾" data-node-context="泄流">
-          <title>InFlight 泄流 · CancelOnDrain 守护收尾 · 泄流</title>
-          <rect x="360.8" y="346" width="92" height="52" rx="6" class="c-mask"/>
-          <rect x="360.8" y="346" width="92" height="52" rx="6" class="c-backend" data-animate="node" style="--step:4" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(366.8 352) scale(0.6875)">
+        <g id="node-inflight" data-node-id="inflight" data-node-label="InFlight 泄流" tabindex="0" role="button" aria-label="聚焦InFlight 泄流，Tracker.Drain · 5min, 泄流" aria-pressed="false" data-node-kind="backend" data-node-sublabel="Tracker.Drain · 5min" data-node-context="泄流">
+          <title>InFlight 泄流 · Tracker.Drain · 5min · 泄流</title>
+          <rect x="402.8" y="339" width="92" height="56" rx="6" class="c-mask"/>
+          <rect x="402.8" y="339" width="92" height="56" rx="6" class="c-backend" data-animate="node" style="--step:4" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(408.8 345) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="406.8" y="367" class="t-primary" font-size="10.7" font-weight="600" text-anchor="middle">InFlight 泄流</text>
-          <text data-detail="context" x="406.8" y="384" class="t-muted" font-size="6.3" text-anchor="middle">CancelOnDrain 守护收尾</text>
+          <text data-node-label="" data-detail-anchor="" x="448.8" y="360" class="t-primary" font-size="10.7" font-weight="600" text-anchor="middle">InFlight 泄流</text>
+          <text data-detail="context" x="448.8" y="377" class="t-muted" font-size="7" text-anchor="middle">Tracker.Drain · 5min</text>
         </g>
 
-        <g id="node-http" data-node-id="http" data-node-label="关 HTTP Server" tabindex="0" role="button" aria-label="聚焦关 HTTP Server，Shutdown 30s · SSE 收尾, 泄流" aria-pressed="false" data-node-kind="backend" data-node-sublabel="Shutdown 30s · SSE 收尾" data-node-tag="焦点" data-node-context="泄流">
-          <title>关 HTTP Server · Shutdown 30s · SSE 收尾 · 泄流 · 焦点</title>
-          <rect x="509.20000000000005" y="338" width="92" height="68" rx="6" class="c-mask"/>
-          <rect x="509.20000000000005" y="338" width="92" height="68" rx="6" class="c-backend" data-animate="node" style="--step:5" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(515.2 344) scale(0.6875)">
+        <g id="node-http" data-node-id="http" data-node-label="关 HTTP Server" tabindex="0" role="button" aria-label="聚焦关 HTTP Server，Shutdown 30s · SSE 泄流 · 停 Flusher, 泄流" aria-pressed="false" data-node-kind="backend" data-node-sublabel="Shutdown 30s · SSE 泄流 · 停 Flusher" data-node-tag="焦点" data-node-context="泄流">
+          <title>关 HTTP Server · Shutdown 30s · SSE 泄流 · 停 Flusher · 泄流 · 焦点</title>
+          <rect x="570.4" y="339" width="156" height="56" rx="6" class="c-mask"/>
+          <rect x="570.4" y="339" width="156" height="56" rx="6" class="c-backend" data-animate="node" style="--step:5" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(576.4 345) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="555.2" y="359" class="t-primary" font-size="10" font-weight="600" text-anchor="middle">关 HTTP Server</text>
-          <text data-detail="context" x="555.2" y="376" class="t-muted" font-size="6" text-anchor="middle">Shutdown 30s · SSE 收尾</text>
-        <text data-detail="fine" x="555.2" y="394" class="t-backend" font-size="7" text-anchor="middle">焦点</text>
+          <text data-node-label="" data-detail-anchor="" x="648.4" y="360" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">关 HTTP Server</text>
+          <text data-detail="context" x="648.4" y="377" class="t-muted" font-size="6.8" text-anchor="middle">Shutdown 30s · SSE 泄流 · 停 Flusher</text>
+        <text data-detail="fine" x="648.4" y="383" class="t-backend" font-size="7" text-anchor="middle">焦点</text>
         </g>
 
-        <g id="node-log" data-node-id="log" data-node-label="日志 Sync" tabindex="0" role="button" aria-label="聚焦日志 Sync，zap 缓冲落盘, 释放" aria-pressed="false" data-node-kind="backend" data-node-sublabel="zap 缓冲落盘" data-node-context="释放">
-          <title>日志 Sync · zap 缓冲落盘 · 释放</title>
-          <rect x="509.20000000000005" y="472" width="92" height="52" rx="6" class="c-mask"/>
-          <rect x="509.20000000000005" y="472" width="92" height="52" rx="6" class="c-backend" data-animate="node" style="--step:6" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(515.2 478) scale(0.6875)">
+        <g id="node-log" data-node-id="log" data-node-label="同步日志" tabindex="0" role="button" aria-label="聚焦同步日志，zap Sync · TriggerService StopSync, 释放" aria-pressed="false" data-node-kind="backend" data-node-sublabel="zap Sync · TriggerService StopSync" data-node-context="释放">
+          <title>同步日志 · zap Sync · TriggerService StopSync · 释放</title>
+          <rect x="570.4" y="463" width="156" height="56" rx="6" class="c-mask"/>
+          <rect x="570.4" y="463" width="156" height="56" rx="6" class="c-backend" data-animate="node" style="--step:6" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(576.4 469) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="555.2" y="493" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">日志 Sync</text>
-          <text data-detail="context" x="555.2" y="510" class="t-muted" font-size="8" text-anchor="middle">zap 缓冲落盘</text>
+          <text data-node-label="" data-detail-anchor="" x="648.4" y="484" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">同步日志</text>
+          <text data-detail="context" x="648.4" y="501" class="t-muted" font-size="7.2" text-anchor="middle">zap Sync · TriggerService StopSync</text>
         </g>
 
-        <g id="node-rel" data-node-id="rel" data-node-label="释放资源" tabindex="0" role="button" aria-label="聚焦释放资源，关 DB/Redis 连接池, 释放" aria-pressed="false" data-node-kind="database" data-node-sublabel="关 DB/Redis 连接池" data-node-context="释放">
-          <title>释放资源 · 关 DB/Redis 连接池 · 释放</title>
-          <rect x="657.6" y="472" width="92" height="52" rx="6" class="c-mask"/>
-          <rect x="657.6" y="472" width="92" height="52" rx="6" class="c-database" data-animate="node" style="--step:7" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="database" class="semantic-sigil s-database" transform="translate(663.6 478) scale(0.6875)">
+        <g id="node-rel" data-node-id="rel" data-node-label="释放资源" tabindex="0" role="button" aria-label="聚焦释放资源，CloseDatabase · CloseCache, 释放" aria-pressed="false" data-node-kind="database" data-node-sublabel="CloseDatabase · CloseCache" data-node-context="释放">
+          <title>释放资源 · CloseDatabase · CloseCache · 释放</title>
+          <rect x="782.8" y="463" width="116" height="56" rx="6" class="c-mask"/>
+          <rect x="782.8" y="463" width="116" height="56" rx="6" class="c-database" data-animate="node" style="--step:7" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="database" class="semantic-sigil s-database" transform="translate(788.8 469) scale(0.6875)">
             <ellipse cx="8" cy="4" rx="5" ry="2"/>
             <path d="M3 4v8c0 1.1 2.2 2 5 2s5-.9 5-2V4M3 8c0 1.1 2.2 2 5 2s5-.9 5-2"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="703.6" y="493" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">释放资源</text>
-          <text data-detail="context" x="703.6" y="510" class="t-muted" font-size="7.7" text-anchor="middle">关 DB/Redis 连接池</text>
+          <text data-node-label="" data-detail-anchor="" x="840.8" y="484" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">释放资源</text>
+          <text data-detail="context" x="840.8" y="501" class="t-muted" font-size="6.9" text-anchor="middle">CloseDatabase · CloseCache</text>
         </g>
 
         <!-- Edge labels -->
-        <g data-detail="context" data-edge-from="cron" data-edge-to="pond" data-edge-label="停后台" data-edge-key="0">
-          <rect x="318" y="226" width="38.8" height="14" rx="3" class="c-mask"/>
-          <text x="337.4" y="236" class="t-muted" font-size="8" text-anchor="middle">停后台</text>
+        <g data-detail="context" data-edge-from="cron" data-edge-to="pond" data-edge-label="停后台 3min" data-edge-key="0">
+          <rect x="318" y="223" width="62.8" height="14" rx="3" class="c-mask"/>
+          <text x="349.4" y="233" class="t-muted" font-size="8" text-anchor="middle">停后台 3min</text>
         </g>
         <g data-detail="context" data-edge-from="fx" data-edge-to="cron" data-edge-label="逆序第一步" data-edge-key="1">
-          <rect x="270" y="148" width="58" height="14" rx="3" class="c-mask"/>
-          <text x="299" y="158" class="t-muted" font-size="8" text-anchor="middle">逆序第一步</text>
+          <rect x="270" y="146" width="58" height="14" rx="3" class="c-mask"/>
+          <text x="299" y="156" class="t-muted" font-size="8" text-anchor="middle">逆序第一步</text>
         </g>
         <g data-detail="context" data-edge-from="http" data-edge-to="log" data-edge-label="日志落盘" data-edge-key="2">
-          <rect x="562" y="532" width="48.4" height="14" rx="3" class="c-mask"/>
-          <text x="586.2" y="542" class="t-muted" font-size="8" text-anchor="middle">日志落盘</text>
+          <rect x="671.1999999999999" y="394" width="48.4" height="14" rx="3" class="c-mask"/>
+          <text x="695.4" y="404" class="t-muted" font-size="8" text-anchor="middle">日志落盘</text>
         </g>
-        <g data-detail="context" data-edge-from="inflight" data-edge-to="http" data-edge-label="停止接入" data-edge-key="3">
-          <rect x="456.8" y="352" width="48.4" height="14" rx="3" class="c-mask"/>
-          <text x="481" y="362" class="t-muted" font-size="8" text-anchor="middle">停止接入</text>
+        <g data-detail="context" data-edge-from="inflight" data-edge-to="http" data-edge-label="停止接入 30s" data-edge-key="3">
+          <rect x="498.8" y="347" width="67.6" height="14" rx="3" class="c-mask"/>
+          <text x="532.6" y="357" class="t-muted" font-size="8" text-anchor="middle">停止接入 30s</text>
         </g>
         <g data-detail="context" data-edge-from="log" data-edge-to="rel" data-edge-label="最后释放" data-edge-key="4">
-          <rect x="556.6" y="436" width="48.4" height="14" rx="3" class="c-mask"/>
-          <text x="580.8000000000001" y="446" class="t-muted" font-size="8" text-anchor="middle">最后释放</text>
+          <rect x="730.3999999999999" y="471" width="48.4" height="14" rx="3" class="c-mask"/>
+          <text x="754.5999999999999" y="481" class="t-muted" font-size="8" text-anchor="middle">最后释放</text>
         </g>
-        <g data-detail="context" data-edge-from="pond" data-edge-to="inflight" data-edge-label="泄流" data-edge-key="5">
-          <rect x="422.8" y="274" width="30" height="14" rx="3" class="c-mask"/>
-          <text x="437.8" y="284" class="t-muted" font-size="8" text-anchor="middle">泄流</text>
+        <g data-detail="context" data-edge-from="pond" data-edge-to="inflight" data-edge-label="等在途 5min" data-edge-key="5">
+          <rect x="457.4" y="270" width="62.8" height="14" rx="3" class="c-mask"/>
+          <text x="488.79999999999995" y="280" class="t-muted" font-size="8" text-anchor="middle">等在途 5min</text>
         </g>
         <g data-detail="context" data-edge-from="sig" data-edge-to="fx" data-edge-label="触发" data-edge-key="6">
-          <rect x="188" y="100" width="30" height="14" rx="3" class="c-mask"/>
-          <text x="203" y="110" class="t-muted" font-size="8" text-anchor="middle">触发</text>
+          <rect x="188" y="99" width="30" height="14" rx="3" class="c-mask"/>
+          <text x="203" y="109" class="t-muted" font-size="8" text-anchor="middle">触发</text>
         </g>
 
         <!-- Legend -->
         <g data-legend="" data-legend-bridge="">
-          <text x="20" y="560" class="t-primary" font-size="12" font-weight="650">图例</text>
-          <g data-legend-semantic-kind="backend" data-legend-kind="backend" data-legend-label="Agent 逻辑" data-legend-x="20" data-legend-baseline="580" data-legend-width="87">
-            <rect x="20" y="572" width="14" height="9" rx="2" class="c-backend" stroke-width="1"/>
-            <text x="42" y="580" class="t-muted" font-size="7.5" font-weight="500">Agent 逻辑</text>
+          <text x="20" y="552" class="t-primary" font-size="12" font-weight="650">图例</text>
+          <g data-legend-semantic-kind="backend" data-legend-kind="backend" data-legend-label="Agent 逻辑" data-legend-x="20" data-legend-baseline="572" data-legend-width="87">
+            <rect x="20" y="564" width="14" height="9" rx="2" class="c-backend" stroke-width="1"/>
+            <text x="42" y="572" class="t-muted" font-size="7.5" font-weight="500">Agent 逻辑</text>
           </g>
-          <g data-legend-semantic-kind="database" data-legend-kind="database" data-legend-label="上下文 / 追踪" data-legend-x="114" data-legend-baseline="580" data-legend-width="100">
-            <rect x="114" y="572" width="14" height="9" rx="2" class="c-database" stroke-width="1"/>
-            <text x="136" y="580" class="t-muted" font-size="7.5" font-weight="500">上下文 / 追踪</text>
+          <g data-legend-semantic-kind="database" data-legend-kind="database" data-legend-label="上下文 / 追踪" data-legend-x="114" data-legend-baseline="572" data-legend-width="100">
+            <rect x="114" y="564" width="14" height="9" rx="2" class="c-database" stroke-width="1"/>
+            <text x="136" y="572" class="t-muted" font-size="7.5" font-weight="500">上下文 / 追踪</text>
           </g>
-          <g data-legend-semantic-kind="external" data-legend-kind="external" data-legend-label="外部系统" data-legend-x="221" data-legend-baseline="580" data-legend-width="78">
-            <rect x="221" y="572" width="14" height="9" rx="2" class="c-external" stroke-width="1"/>
-            <text x="243" y="580" class="t-muted" font-size="7.5" font-weight="500">外部系统</text>
+          <g data-legend-semantic-kind="external" data-legend-kind="external" data-legend-label="外部系统" data-legend-x="221" data-legend-baseline="572" data-legend-width="78">
+            <rect x="221" y="564" width="14" height="9" rx="2" class="c-external" stroke-width="1"/>
+            <text x="243" y="572" class="t-muted" font-size="7.5" font-weight="500">外部系统</text>
           </g>
         </g>
       </svg>
@@ -5388,8 +5388,8 @@
         </div>
         <ul>
           <li>&bull; preStop sleep 10 让 LB 摘流先于进程退出</li>
-          <li>&bull; terminationGracePeriodSeconds 660，覆盖 3+3min 后台收尾</li>
-          <li>&bull; Deployment maxUnavailable 0，滚动期间不降可用性</li>
+          <li>&bull; grace 660s 覆盖 3+3+5min 后台收尾</li>
+          <li>&bull; Deployment maxUnavailable 0，滚动不降可用性</li>
         </ul>
       </div>
 
@@ -5399,9 +5399,9 @@
           <h3>泄流焦点</h3>
         </div>
         <ul>
-          <li>&bull; InFlight Tracker 在停止接入后等待在途请求收尾</li>
-          <li>&bull; CancelOnDrain 守护 goroutine 绑定上游 body Close 释放</li>
-          <li>&bull; HTTP ShutdownWithContext 30s 兜底 SSE 长连接</li>
+          <li>&bull; InflightTracker.Drain 等在途请求收尾（5min）</li>
+          <li>&bull; CancelOnDrain 守护 goroutine 随上游 body Close 释放</li>
+          <li>&bull; HTTP ShutdownWithContext 30s 兜底 SSE，随后停 Flusher</li>
         </ul>
       </div>
 
@@ -5411,9 +5411,8 @@
           <h3>顺序保证</h3>
         </div>
         <ul>
-          <li>&bull; Fx OnStop 与注册相反的顺序执行，先建的资源后关</li>
-          <li>&bull; 停 cron / pond 各 3min，避免任务被中断</li>
-          <li>&bull; 日志 Sync 在连接池关闭前执行，不丢尾部日志</li>
+          <li>&bull; Fx OnStop 逆序执行 9 Hook，与注册顺序相反</li>
+          <li>&bull; 停 cron/pond 各 3min，日志 Sync 先于连接池关闭</li>
         </ul>
       </div>
     </div>
@@ -6503,7 +6502,7 @@
         var fps = Math.max(1, Number(options.fps) || MOTION_FPS);
         var svg = document.querySelector('.diagram-container svg');
         var vb = svg.viewBox.baseVal;
-        var scale = Math.min(1, 1280 / vb.width);
+        var scale = Math.min(1, Math.min(4096, Math.round(Number(window.__ARCHIFY_MOTION_MAX_W)) || 1280) / vb.width);
         var data = serializeSvg(scale);
         var sourceUrl = URL.createObjectURL(new Blob([data.svgString], { type: 'image/svg+xml;charset=utf-8' }));
 
@@ -6667,7 +6666,7 @@
             var mime = motionMimeType();
             var recorder;
             try {
-              recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 6000000 });
+              recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: Math.round(Number(window.__ARCHIFY_MOTION_BPS)) || 6000000 });
             } catch (err) {
               URL.revokeObjectURL(sourceUrl);
               stream.getTracks().forEach(function (track) { track.stop(); });

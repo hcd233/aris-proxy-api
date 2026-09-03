@@ -5049,30 +5049,30 @@
         <path data-edge-from="mgr" data-edge-to="lock-exec" data-edge-label="加锁执行" data-edge-key="7" data-edge-id="c2" data-composition-points="580,624;660,624" d="M 580 624 L 660 624" class="a-default" data-animate="edge" style="--step:7" stroke-width="1.5" marker-end="url(#arrowhead)"/>
 
         <!-- Components -->
-        <g id="node-collectors" data-node-id="collectors" data-node-label="进程内采集器" tabindex="0" role="button" aria-label="聚焦进程内采集器，HTTP · SSE · Token · runtime, 运行时指标" aria-pressed="false" data-node-kind="backend" data-node-sublabel="HTTP · SSE · Token · runtime" data-node-context="运行时指标">
-          <title>进程内采集器 · HTTP · SSE · Token · runtime · 运行时指标</title>
+        <g id="node-collectors" data-node-id="collectors" data-node-label="进程内采集器" tabindex="0" role="button" aria-label="聚焦进程内采集器，HTTP · SSE · Token · runtime 四类, 运行时指标" aria-pressed="false" data-node-kind="backend" data-node-sublabel="HTTP · SSE · Token · runtime 四类" data-node-context="运行时指标">
+          <title>进程内采集器 · HTTP · SSE · Token · runtime 四类 · 运行时指标</title>
           <rect x="40" y="40" width="260" height="88" rx="6" class="c-mask"/>
           <rect x="40" y="40" width="260" height="88" rx="6" class="c-backend" data-animate="node" style="--step:0" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(46 46) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="170" y="82" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">进程内采集器</text>
-        <text data-detail="context" x="170" y="98" class="t-muted" font-size="9" text-anchor="middle">HTTP · SSE · Token · runtime</text>
+        <text data-detail="context" x="170" y="98" class="t-muted" font-size="9" text-anchor="middle">HTTP · SSE · Token · runtime 四类</text>
         </g>
 
-        <g id="node-flusher" data-node-id="flusher" data-node-label="Metrics Flusher" tabindex="0" role="button" aria-label="聚焦Metrics Flusher，每 Pod 单例 · 5s 周期, 运行时指标" aria-pressed="false" data-node-kind="backend" data-node-sublabel="每 Pod 单例 · 5s 周期" data-node-context="运行时指标">
-          <title>Metrics Flusher · 每 Pod 单例 · 5s 周期 · 运行时指标</title>
+        <g id="node-flusher" data-node-id="flusher" data-node-label="Metrics Flusher" tabindex="0" role="button" aria-label="聚焦Metrics Flusher，每 Pod 单例 · BuildSnapshot 5s, 运行时指标" aria-pressed="false" data-node-kind="backend" data-node-sublabel="每 Pod 单例 · BuildSnapshot 5s" data-node-context="运行时指标">
+          <title>Metrics Flusher · 每 Pod 单例 · BuildSnapshot 5s · 运行时指标</title>
           <rect x="400" y="40" width="240" height="88" rx="6" class="c-mask"/>
           <rect x="400" y="40" width="240" height="88" rx="6" class="c-backend" data-animate="node" style="--step:1" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(406 46) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="520" y="82" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Metrics Flusher</text>
-        <text data-detail="context" x="520" y="98" class="t-muted" font-size="9" text-anchor="middle">每 Pod 单例 · 5s 周期</text>
+        <text data-detail="context" x="520" y="98" class="t-muted" font-size="9" text-anchor="middle">每 Pod 单例 · BuildSnapshot 5s</text>
         </g>
 
-        <g id="node-snapshot" data-node-id="snapshot" data-node-label="Redis 快照" tabindex="0" role="button" aria-label="聚焦Redis 快照，ZSET · 24h 保留, 运行时指标" aria-pressed="false" data-node-kind="database" data-node-sublabel="ZSET · 24h 保留" data-node-context="运行时指标">
-          <title>Redis 快照 · ZSET · 24h 保留 · 运行时指标</title>
+        <g id="node-snapshot" data-node-id="snapshot" data-node-label="Redis 快照" tabindex="0" role="button" aria-label="聚焦Redis 快照，ZSET data:{pod} · retention 24h, 运行时指标" aria-pressed="false" data-node-kind="database" data-node-sublabel="ZSET data:{pod} · retention 24h" data-node-context="运行时指标">
+          <title>Redis 快照 · ZSET data:{pod} · retention 24h · 运行时指标</title>
           <rect x="740" y="40" width="280" height="88" rx="6" class="c-mask"/>
           <rect x="740" y="40" width="280" height="88" rx="6" class="c-database" data-animate="node" style="--step:2" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="database" class="semantic-sigil s-database" transform="translate(746 46) scale(0.6875)">
@@ -5080,7 +5080,7 @@
             <path d="M3 4v8c0 1.1 2.2 2 5 2s5-.9 5-2V4M3 8c0 1.1 2.2 2 5 2s5-.9 5-2"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="880" y="82" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Redis 快照</text>
-        <text data-detail="context" x="880" y="98" class="t-muted" font-size="9" text-anchor="middle">ZSET · 24h 保留</text>
+        <text data-detail="context" x="880" y="98" class="t-muted" font-size="9" text-anchor="middle">ZSET data:{pod} · retention 24h</text>
         </g>
 
         <g id="node-sig" data-node-id="sig" data-node-label="终止信号" tabindex="0" role="button" aria-label="聚焦终止信号，SIGINT/SIGTERM · preStop 10s, 优雅退出" aria-pressed="false" data-node-kind="external" data-node-sublabel="SIGINT/SIGTERM · preStop 10s" data-node-context="优雅退出">
@@ -5106,19 +5106,19 @@
         <text data-detail="context" x="440" y="278" class="t-muted" font-size="9" text-anchor="middle">OnStop 逆序 · 9 Hook</text>
         </g>
 
-        <g id="node-drain" data-node-id="drain" data-node-label="后台收尾与释放" tabindex="0" role="button" aria-label="聚焦后台收尾与释放，停 cron/pond · drain · 关 HTTP · 释放连接池, 优雅退出" aria-pressed="false" data-node-kind="backend" data-node-sublabel="停 cron/pond · drain · 关 HTTP · 释放连接池" data-node-context="优雅退出">
-          <title>后台收尾与释放 · 停 cron/pond · drain · 关 HTTP · 释放连接池 · 优雅退出</title>
+        <g id="node-drain" data-node-id="drain" data-node-label="后台收尾与释放" tabindex="0" role="button" aria-label="聚焦后台收尾与释放，停 cron/pond · inflight drain · 关 HTTP · 释放连接池, 优雅退出" aria-pressed="false" data-node-kind="backend" data-node-sublabel="停 cron/pond · inflight drain · 关 HTTP · 释放连接池" data-node-context="优雅退出">
+          <title>后台收尾与释放 · 停 cron/pond · inflight drain · 关 HTTP · 释放连接池 · 优雅退出</title>
           <rect x="660" y="220" width="360" height="88" rx="6" class="c-mask"/>
           <rect x="660" y="220" width="360" height="88" rx="6" class="c-backend" data-animate="node" style="--step:4" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(666 226) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="840" y="262" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">后台收尾与释放</text>
-        <text data-detail="context" x="840" y="278" class="t-muted" font-size="9" text-anchor="middle">停 cron/pond · drain · 关 HTTP · 释放连接池</text>
+        <text data-detail="context" x="840" y="278" class="t-muted" font-size="9" text-anchor="middle">停 cron/pond · inflight drain · 关 HTTP · 释放连接池</text>
         </g>
 
-        <g id="node-admin-trig" data-node-id="admin-trig" data-node-label="管理后台 /trigger" tabindex="0" role="button" aria-label="聚焦管理后台 /trigger，增删改, 触发词热更新" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="增删改" data-node-context="触发词热更新">
-          <title>管理后台 /trigger · 增删改 · 触发词热更新</title>
+        <g id="node-admin-trig" data-node-id="admin-trig" data-node-label="管理后台 /trigger" tabindex="0" role="button" aria-label="聚焦管理后台 /trigger，增删改 · 写 DB + 广播, 触发词热更新" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="增删改 · 写 DB + 广播" data-node-context="触发词热更新">
+          <title>管理后台 /trigger · 增删改 · 写 DB + 广播 · 触发词热更新</title>
           <rect x="40" y="400" width="220" height="88" rx="6" class="c-mask"/>
           <rect x="40" y="400" width="220" height="88" rx="6" class="c-frontend" data-animate="node" style="--step:4" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(46 406) scale(0.6875)">
@@ -5128,11 +5128,11 @@
             <circle cx="6.3" cy="4.8" r=".7" class="sigil-fill"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="150" y="442" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">管理后台 /trigger</text>
-        <text data-detail="context" x="150" y="458" class="t-muted" font-size="9" text-anchor="middle">增删改</text>
+        <text data-detail="context" x="150" y="458" class="t-muted" font-size="9" text-anchor="middle">增删改 · 写 DB + 广播</text>
         </g>
 
-        <g id="node-signal" data-node-id="signal" data-node-label="变更信号 Redis" tabindex="0" role="button" aria-label="聚焦变更信号 Redis，Publish · INCR version, 触发词热更新" aria-pressed="false" data-node-kind="database" data-node-sublabel="Publish · INCR version" data-node-context="触发词热更新">
-          <title>变更信号 Redis · Publish · INCR version · 触发词热更新</title>
+        <g id="node-signal" data-node-id="signal" data-node-label="变更信号 Redis" tabindex="0" role="button" aria-label="聚焦变更信号 Redis，Publish trigger:changed · INCR, 触发词热更新" aria-pressed="false" data-node-kind="database" data-node-sublabel="Publish trigger:changed · INCR" data-node-context="触发词热更新">
+          <title>变更信号 Redis · Publish trigger:changed · INCR · 触发词热更新</title>
           <rect x="340" y="400" width="240" height="88" rx="6" class="c-mask"/>
           <rect x="340" y="400" width="240" height="88" rx="6" class="c-database" data-animate="node" style="--step:5" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="database" class="semantic-sigil s-database" transform="translate(346 406) scale(0.6875)">
@@ -5140,22 +5140,23 @@
             <path d="M3 4v8c0 1.1 2.2 2 5 2s5-.9 5-2V4M3 8c0 1.1 2.2 2 5 2s5-.9 5-2"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="460" y="442" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">变更信号 Redis</text>
-        <text data-detail="context" x="460" y="458" class="t-muted" font-size="9" text-anchor="middle">Publish · INCR version</text>
+        <text data-detail="context" x="460" y="458" class="t-muted" font-size="9" text-anchor="middle">Publish trigger:changed · INCR</text>
         </g>
 
-        <g id="node-matcher" data-node-id="matcher" data-node-label="AC 匹配器" tabindex="0" role="button" aria-label="聚焦AC 匹配器，三重同步 · 全量 Rebuild, 触发词热更新" aria-pressed="false" data-node-kind="backend" data-node-sublabel="三重同步 · 全量 Rebuild" data-node-context="触发词热更新">
-          <title>AC 匹配器 · 三重同步 · 全量 Rebuild · 触发词热更新</title>
+        <g id="node-matcher" data-node-id="matcher" data-node-label="AC 匹配器" tabindex="0" role="button" aria-label="聚焦AC 匹配器，全量 Rebuild · deny→403 · omit→不落库, 触发词热更新" aria-pressed="false" data-node-kind="backend" data-node-sublabel="全量 Rebuild · deny→403 · omit→不落库" data-node-tag="三重同步" data-node-context="触发词热更新">
+          <title>AC 匹配器 · 全量 Rebuild · deny→403 · omit→不落库 · 触发词热更新 · 三重同步</title>
           <rect x="660" y="400" width="260" height="88" rx="6" class="c-mask"/>
           <rect x="660" y="400" width="260" height="88" rx="6" class="c-backend" data-animate="node" style="--step:6" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(666 406) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="790" y="442" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">AC 匹配器</text>
-        <text data-detail="context" x="790" y="458" class="t-muted" font-size="9" text-anchor="middle">三重同步 · 全量 Rebuild</text>
+        <text data-detail="context" x="790" y="458" class="t-muted" font-size="9" text-anchor="middle">全量 Rebuild · deny→403 · omit→不落库</text>
+        <text data-detail="fine" x="790" y="480" class="t-backend" font-size="7" text-anchor="middle">三重同步</text>
         </g>
 
-        <g id="node-admin-cron" data-node-id="admin-cron" data-node-label="管理后台 /cron" tabindex="0" role="button" aria-label="聚焦管理后台 /cron，更新 spec · 手动触发, 定时任务" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="更新 spec · 手动触发" data-node-context="定时任务">
-          <title>管理后台 /cron · 更新 spec · 手动触发 · 定时任务</title>
+        <g id="node-admin-cron" data-node-id="admin-cron" data-node-label="管理后台 /cron" tabindex="0" role="button" aria-label="聚焦管理后台 /cron，更新 spec · 手动触发 · 核心任务禁关, 定时任务" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="更新 spec · 手动触发 · 核心任务禁关" data-node-context="定时任务">
+          <title>管理后台 /cron · 更新 spec · 手动触发 · 核心任务禁关 · 定时任务</title>
           <rect x="40" y="580" width="220" height="88" rx="6" class="c-mask"/>
           <rect x="40" y="580" width="220" height="88" rx="6" class="c-frontend" data-animate="node" style="--step:6" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(46 586) scale(0.6875)">
@@ -5165,22 +5166,22 @@
             <circle cx="6.3" cy="4.8" r=".7" class="sigil-fill"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="150" y="622" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">管理后台 /cron</text>
-        <text data-detail="context" x="150" y="638" class="t-muted" font-size="9" text-anchor="middle">更新 spec · 手动触发</text>
+        <text data-detail="context" x="150" y="638" class="t-muted" font-size="9" text-anchor="middle">更新 spec · 手动触发 · 核心任务禁关</text>
         </g>
 
-        <g id="node-mgr" data-node-id="mgr" data-node-label="CronManager" tabindex="0" role="button" aria-label="聚焦CronManager，Restart · Enable · Disable, 定时任务" aria-pressed="false" data-node-kind="backend" data-node-sublabel="Restart · Enable · Disable" data-node-context="定时任务">
-          <title>CronManager · Restart · Enable · Disable · 定时任务</title>
+        <g id="node-mgr" data-node-id="mgr" data-node-label="CronManager" tabindex="0" role="button" aria-label="聚焦CronManager，Restart · Enable · Disable · pub/sub 广播, 定时任务" aria-pressed="false" data-node-kind="backend" data-node-sublabel="Restart · Enable · Disable · pub/sub 广播" data-node-context="定时任务">
+          <title>CronManager · Restart · Enable · Disable · pub/sub 广播 · 定时任务</title>
           <rect x="340" y="580" width="240" height="88" rx="6" class="c-mask"/>
           <rect x="340" y="580" width="240" height="88" rx="6" class="c-backend" data-animate="node" style="--step:7" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(346 586) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="460" y="622" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">CronManager</text>
-        <text data-detail="context" x="460" y="638" class="t-muted" font-size="9" text-anchor="middle">Restart · Enable · Disable</text>
+        <text data-detail="context" x="460" y="638" class="t-muted" font-size="9" text-anchor="middle">Restart · Enable · Disable · pub/sub 广播</text>
         </g>
 
-        <g id="node-lock-exec" data-node-id="lock-exec" data-node-label="分布式锁执行 + 审计" tabindex="0" role="button" aria-label="聚焦分布式锁执行 + 审计，Redis 锁 5min · CronCallAudit, 定时任务" aria-pressed="false" data-node-kind="security" data-node-sublabel="Redis 锁 5min · CronCallAudit" data-node-context="定时任务">
-          <title>分布式锁执行 + 审计 · Redis 锁 5min · CronCallAudit · 定时任务</title>
+        <g id="node-lock-exec" data-node-id="lock-exec" data-node-label="分布式锁执行 + 审计" tabindex="0" role="button" aria-label="聚焦分布式锁执行 + 审计，cron:lock:{name} TTL 5min · CronCallAudit, 定时任务" aria-pressed="false" data-node-kind="security" data-node-sublabel="cron:lock:{name} TTL 5min · CronCallAudit" data-node-context="定时任务">
+          <title>分布式锁执行 + 审计 · cron:lock:{name} TTL 5min · CronCallAudit · 定时任务</title>
           <rect x="660" y="580" width="300" height="88" rx="6" class="c-mask"/>
           <rect x="660" y="580" width="300" height="88" rx="6" class="c-security" data-animate="node" style="--step:8" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="security" class="semantic-sigil s-security" transform="translate(666 586) scale(0.6875)">
@@ -5188,7 +5189,7 @@
             <path d="m5.8 8 1.5 1.5 3-3"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="810" y="622" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">分布式锁执行 + 审计</text>
-        <text data-detail="context" x="810" y="638" class="t-muted" font-size="9" text-anchor="middle">Redis 锁 5min · CronCallAudit</text>
+        <text data-detail="context" x="810" y="638" class="t-muted" font-size="9" text-anchor="middle">cron:lock:{name} TTL 5min · CronCallAudit</text>
         </g>
 
         <!-- Connection labels -->
@@ -5474,9 +5475,9 @@
           <h3>关键约束</h3>
         </div>
         <ul>
-          <li>&bull; 指标快照按 Pod 写 ZSET，保留 24h</li>
+          <li>&bull; 指标快照按 Pod 写 ZSET，retention 24h 清理</li>
           <li>&bull; 退出逆序：先停后台再关 HTTP，最后释放连接池</li>
-          <li>&bull; Cron 双 Pod 下由分布式锁保证单点执行</li>
+          <li>&bull; Cron 双 Pod 下由 Redis 锁（TTL 5min）保证单点执行</li>
         </ul>
       </div>
     </div>
@@ -6566,7 +6567,7 @@
         var fps = Math.max(1, Number(options.fps) || MOTION_FPS);
         var svg = document.querySelector('.diagram-container svg');
         var vb = svg.viewBox.baseVal;
-        var scale = Math.min(1, 1280 / vb.width);
+        var scale = Math.min(1, Math.min(4096, Math.round(Number(window.__ARCHIFY_MOTION_MAX_W)) || 1280) / vb.width);
         var data = serializeSvg(scale);
         var sourceUrl = URL.createObjectURL(new Blob([data.svgString], { type: 'image/svg+xml;charset=utf-8' }));
 
@@ -6730,7 +6731,7 @@
             var mime = motionMimeType();
             var recorder;
             try {
-              recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 6000000 });
+              recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: Math.round(Number(window.__ARCHIFY_MOTION_BPS)) || 6000000 });
             } catch (err) {
               URL.revokeObjectURL(sourceUrl);
               stream.getTracks().forEach(function (track) { track.stop(); });

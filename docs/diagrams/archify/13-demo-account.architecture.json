@@ -18,20 +18,21 @@
     ]
   },
   "components": [
-    { "id": "login", "type": "frontend", "label": "登录页", "sublabel": "Continue as Demo · GET /demo/status", "pos": [40, 40], "size": [220, 88] },
-    { "id": "demo-api", "type": "backend", "label": "Demo 公开端点", "sublabel": "/api/web/v1/demo/login · IP 5s/8", "tag": "无 JWT", "pos": [340, 40], "size": [240, 88] },
-    { "id": "cmd", "type": "backend", "label": "DemoLogin 命令", "sublabel": "login_enabled · FindByPermission(demo)", "pos": [660, 40], "size": [260, 88] },
-    { "id": "webfe", "type": "frontend", "label": "Web demo 感知", "sublabel": "isDemo() 三态守卫", "pos": [1000, 40], "size": [180, 88] },
-    { "id": "session-view", "type": "backend", "label": "会话白名单视角", "sublabel": "ListSessionsByIDs · IsAllowed", "pos": [100, 260], "size": [280, 104] },
-    { "id": "defense", "type": "security", "label": "Demo 访问防线", "sublabel": "模块白名单 fail-closed · IP 5s/30", "tag": "埋点 IP/UA", "pos": [460, 260], "size": [240, 104], "sources": [{ "path": "internal/middleware/permission.go" }] },
-    { "id": "masked", "type": "backend", "label": "全量脱敏视图", "sublabel": "身份→*** · 连接→前4..后4", "pos": [780, 260], "size": [280, 104] },
-    { "id": "demo-sessions", "type": "database", "label": "demo_sessions", "sublabel": "session_id uniqueIndex", "pos": [100, 480], "size": [280, 88] },
-    { "id": "admin-ui", "type": "frontend", "label": "Admin /demo tab", "sublabel": "勾选批量增删", "pos": [780, 480], "size": [280, 88] }
+    { "id": "login", "type": "frontend", "label": "登录页", "sublabel": "Continue as Demo · GET /demo/status 显隐", "pos": [40, 40], "size": [220, 88] },
+    { "id": "demo-api", "type": "backend", "label": "Demo 公开端点", "sublabel": "POST /api/web/v1/demo/login · IP 5s/8", "tag": "无 JWT", "pos": [340, 40], "size": [240, 88] },
+    { "id": "cmd", "type": "backend", "label": "DemoLogin 命令", "sublabel": "校验 login_enabled · 签发 access+refresh", "pos": [660, 40], "size": [260, 88] },
+    { "id": "webfe", "type": "frontend", "label": "Web demo 感知", "sublabel": "isDemo() · 三态守卫 · 按钮锁定", "pos": [1000, 40], "size": [220, 88] },
+    { "id": "session-view", "type": "backend", "label": "会话白名单视角", "sublabel": "ListSessionsByIDs · IsAllowed 校验", "tag": "非白名单→不存在", "pos": [100, 260], "size": [280, 104] },
+    { "id": "defense", "type": "security", "label": "Demo 访问防线", "sublabel": "模块白名单 fail-closed · IP 5s/30 → 429", "tag": "非 demo 零开销", "pos": [460, 260], "size": [240, 104], "sources": [{ "path": "internal/middleware/permission.go" }] },
+    { "id": "masked", "type": "backend", "label": "全量脱敏视图", "sublabel": "audit/models/endpoints · 保留数字/别名", "tag": "MaskIdentity ***", "pos": [780, 260], "size": [280, 104] },
+    { "id": "demo-sessions", "type": "database", "label": "demo_sessions", "sublabel": "session_id uniqueIndex · 选取即授权", "pos": [100, 480], "size": [280, 88] },
+    { "id": "audit-db", "type": "database", "label": "demo_access_audits", "sublabel": "登录/模块访问 · path·IP·UA", "pos": [460, 480], "size": [240, 88] },
+    { "id": "admin-ui", "type": "frontend", "label": "Admin /demo tab", "sublabel": "DemoSessionsManager · 批量增删 · 配置开关", "pos": [780, 480], "size": [280, 88] }
   ],
   "boundaries": [
     { "kind": "region", "label": "登录链", "wraps": ["login", "demo-api", "cmd", "webfe"], "pad": 10 },
     { "kind": "region", "label": "访问防线与视角", "wraps": ["session-view", "defense", "masked"], "pad": 10 },
-    { "kind": "region", "label": "白名单存储与治理", "wraps": ["demo-sessions", "admin-ui"], "pad": 10 }
+    { "kind": "region", "label": "存储与治理", "wraps": ["demo-sessions", "audit-db", "admin-ui"], "pad": 10 }
   ],
   "connections": [
     { "id": "l1", "from": "login", "to": "demo-api", "label": "POST /login", "fromSide": "right", "toSide": "left" },
@@ -40,12 +41,13 @@
     { "id": "l4", "from": "webfe", "to": "defense", "label": "demo 只读请求", "variant": "emphasis", "fromSide": "bottom", "toSide": "top", "labelAt": [600, 200] },
     { "id": "d1", "from": "defense", "to": "session-view", "label": "SESSIONS", "fromSide": "left", "toSide": "right" },
     { "id": "d2", "from": "defense", "to": "masked", "label": "全量脱敏", "fromSide": "right", "toSide": "left" },
+    { "id": "d3", "from": "defense", "to": "audit-db", "label": "埋点 IP/UA", "variant": "dashed", "fromSide": "bottom", "toSide": "top", "labelAt": [580, 432] },
     { "id": "g1", "from": "session-view", "to": "demo-sessions", "label": "AllowedIDs", "fromSide": "bottom", "toSide": "top", "labelAt": [240, 415] },
-    { "id": "g2", "from": "admin-ui", "to": "demo-sessions", "label": "批量增删", "variant": "dashed", "fromSide": "left", "toSide": "right" }
+    { "id": "g2", "from": "admin-ui", "to": "demo-sessions", "label": "批量增删", "variant": "dashed", "fromSide": "bottom", "toSide": "bottom", "via": [[920, 616], [240, 616]], "labelAt": [580, 604] }
   ],
   "cards": [
-    { "dot": "cyan", "title": "免登录入口", "items": ["/api/web/v1/demo/login 无 JWT，IP 令牌桶 5s/8", "DemoLogin 校验 login_enabled，按 demo 权限挑会话", "签发受限 JWT，前端 isDemo() 三态守卫收敛 UI"] },
-    { "dot": "emerald", "title": "访问防线", "items": ["模块白名单 fail-closed：SESSIONS 放行，其余 403", "第二层 IP 令牌桶 5s/30 防扫", "埋点记录模块访问 IP/UA，审计 demo 行为"] },
-    { "dot": "rose", "title": "数据视角", "items": ["会话白名单视角：仅可见 demo_sessions 里的会话", "全量脱敏视角：身份 *** · 连接 前4..后4", "Admin /demo tab 勾选批量维护白名单"] }
+    { "dot": "cyan", "title": "免登录入口", "items": ["/api/web/v1/demo/login 无 JWT，IP 令牌桶 5s/8", "DemoLogin 校验 login_enabled，按 demo 权限挑会话，签发 access+refresh", "登录与模块访问事件（path/IP/UA）落 demo_access_audits 供 admin 审计"] },
+    { "dot": "emerald", "title": "访问防线", "items": ["模块白名单 fail-closed：SESSIONS 放行，其余 403", "第二层 IP 令牌桶 5s/30（8 个接口组共享一桶），超限 429 + Retry-After", "非 demo 用户权限过滤不命中直接放行，不碰 Redis"] },
+    { "dot": "rose", "title": "数据视角", "items": ["会话白名单：列表 ListSessionsByIDs，详情 IsAllowed，非白名单返回\"不存在\"防遍历", "全量脱敏：身份 MaskIdentity→*** · 连接 MaskSecret→前4..后4，统计与别名有意保留", "Admin /demo tab 勾选批量维护 demo_sessions，白名单内容明文（选取即授权）"] }
   ]
 }

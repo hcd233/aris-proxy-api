@@ -18,16 +18,16 @@
     ]
   },
   "components": [
-    { "id": "llm-forward", "type": "backend", "label": "LLM 转发", "sublabel": "MessageStoreTask 异步写入", "tag": "checksum 去重", "pos": [40, 80], "size": [260, 88], "sources": [{ "path": "internal/infrastructure/repository/session_repository.go" }] },
-    { "id": "trace-ingest", "type": "backend", "label": "Trace 摄取", "sublabel": "aris CLI → TraceEvent", "tag": "事件重建", "pos": [40, 220], "size": [260, 88] },
+    { "id": "llm-forward", "type": "backend", "label": "LLM 转发", "sublabel": "MessageStoreTask 异步写入 · checksum 去重 · 单事务", "tag": "两路写入", "pos": [40, 80], "size": [260, 88], "sources": [{ "path": "internal/infrastructure/repository/session_repository.go" }] },
+    { "id": "trace-ingest", "type": "backend", "label": "Trace 摄取", "sublabel": "aris CLI → TraceEvent · 事件重建为会话", "tag": "两路写入", "pos": [40, 220], "size": [260, 88] },
     { "id": "session", "type": "backend", "label": "Session 聚合根", "sublabel": "message_ids[] · tool_ids[] · questions[] · score 1-5", "tag": "按 APIKeyOwner 隔离", "pos": [400, 60], "size": [300, 140], "sources": [{ "path": "internal/domain/session/aggregate/session.go" }] },
-    { "id": "msg-tool", "type": "database", "label": "Message · Tool", "sublabel": "协议无关 JSON · 不可变 · check_sum 寻址", "tag": "Tool 属于 Message", "pos": [320, 270], "size": [190, 104] },
-    { "id": "cache", "type": "database", "label": "SessionDetailCache", "sublabel": "Redis 三层读 · TTL 1h", "tag": "miss 降级 DB", "pos": [600, 270], "size": [200, 88], "sources": [{ "path": "internal/infrastructure/cache/session_detail.go" }] },
-    { "id": "cron", "type": "backend", "label": "Cron 治理", "sublabel": "终态清理 · 软删清理 · think-extract", "tag": "Redis 分布式锁", "pos": [420, 420], "size": [260, 88] },
+    { "id": "msg-tool", "type": "database", "label": "Message · Tool", "sublabel": "协议无关 JSON · 不可变 · 内容寻址", "tag": "check_sum unique", "pos": [320, 270], "size": [190, 104] },
+    { "id": "cache", "type": "database", "label": "SessionDetailCache", "sublabel": "Redis 三层 meta+msg+tool · TTL 1h", "tag": "miss 降级 DB", "pos": [600, 270], "size": [200, 88], "sources": [{ "path": "internal/infrastructure/cache/session_detail.go" }] },
+    { "id": "cron", "type": "backend", "label": "Cron 治理", "sublabel": "终态清理(24h) · 软删 · think-extract", "tag": "Redis 分布式锁", "pos": [420, 420], "size": [260, 88] },
     { "id": "web", "type": "frontend", "label": "Web 管理后台", "sublabel": "查询 · 评分 1-5 · 消息数区间筛选", "tag": "详情经缓存", "pos": [820, 40], "size": [280, 88] },
-    { "id": "export", "type": "backend", "label": "训练数据导出", "sublabel": "ShareGPT JSONL 流式 · 不持久化", "tag": "DatasetPreview", "pos": [820, 180], "size": [280, 88] },
-    { "id": "share", "type": "external", "label": "会话分享", "sublabel": "读 Session 生成 · Redis UUID 1d/7d/30d/never", "tag": "无鉴权 IP 限流", "pos": [820, 340], "size": [280, 88] },
-    { "id": "audit", "type": "database", "label": "ModelCallAudit 审计", "sublabel": "由转发收尾产生 · tokens 4 维 · trace_id", "tag": "聚合于会话", "pos": [820, 480], "size": [280, 88] }
+    { "id": "export", "type": "backend", "label": "训练数据导出", "sublabel": "ShareGPT JSONL 流式 · 评分/模型筛选 · 不持久化", "tag": "DatasetPreview", "pos": [820, 180], "size": [280, 88] },
+    { "id": "share", "type": "external", "label": "会话分享", "sublabel": "Redis UUID 默认 24h · 1d/7d/30d/never", "tag": "无鉴权 IP 限流", "pos": [820, 340], "size": [280, 88] },
+    { "id": "audit", "type": "database", "label": "ModelCallAudit 审计", "sublabel": "tokens 4 维 · 延迟 2 段 · UA · upstream_status · trace_id", "tag": "转发收尾产生", "pos": [820, 480], "size": [280, 88] }
   ],
   "boundaries": [
     { "kind": "region", "label": "两路写入", "wraps": ["llm-forward", "trace-ingest"], "pad": 10 },
@@ -44,8 +44,8 @@
     { "id": "cron-govern", "from": "cron", "to": "session", "label": "终态清理", "variant": "dashed", "fromSide": "top", "toSide": "bottom" }
   ],
   "cards": [
-    { "dot": "cyan", "title": "聚合与实体", "items": ["Session 聚合根按 APIKeyOwner 隔离，评分 1-5", "Message/Tool 协议无关 JSON，check_sum 内容寻址去重", "前缀去重实时化：插入事务后独立短事务 + FOR UPDATE"] },
+    { "dot": "cyan", "title": "聚合与实体", "items": ["Session 聚合根按 APIKeyOwner 隔离：message/tool/questions/model_ids[]", "评分 1-5 + scored_at；Message/Tool 协议无关 JSON 内容寻址去重", "前缀去重实时化：独立短事务 + FOR UPDATE"] },
     { "dot": "emerald", "title": "读路径", "items": ["SessionDetailCache 三层 meta+msg+tool，TTL 1h", "miss 降级 DB，详情接口经缓存加速"] },
-    { "dot": "rose", "title": "消费与治理", "items": ["Web 查询评分 · ShareGPT JSONL 流式导出", "分享 Redis UUID 默认 24h，无鉴权走 IP 限流", "Cron 治理：终态清理 · 软删清理 · think-extract"] }
+    { "dot": "rose", "title": "消费与治理", "items": ["Web 查询评分 · ShareGPT JSONL 流式导出（评分/模型筛选）", "分享 Redis UUID 默认 24h，无鉴权走 IP 限流", "Cron 治理：终态清理 · 软删清理 · think-extract"] }
   ]
 }

@@ -16,14 +16,14 @@
     { "label": "命中与回写" }
   ],
   "nodes": [
-    { "id": "admin", "stage": 0, "row": 0, "type": "frontend", "label": "管理后台", "sublabel": "/trigger 增删改" },
-    { "id": "words-db", "stage": 1, "row": 1, "type": "database", "label": "词表 PG", "sublabel": "trigger_words · 后台写" },
-    { "id": "signal-db", "stage": 1, "row": 0, "type": "database", "label": "信号 Redis", "sublabel": "Publish · INCR" },
-    { "id": "svc", "stage": 2, "row": 0, "type": "backend", "label": "TriggerService", "sublabel": "sub·轮询 2s·兜底 5min" },
-    { "id": "matcher", "stage": 3, "row": 0, "type": "backend", "label": "AC 匹配器", "sublabel": "Aho-Corasick", "tag": "全量 Rebuild" },
+    { "id": "admin", "stage": 0, "row": 0, "type": "frontend", "label": "管理后台", "sublabel": "create · update · delete" },
+    { "id": "words-db", "stage": 1, "row": 1, "type": "database", "label": "词表 PG", "sublabel": "trigger_words · deny/omit" },
+    { "id": "signal-db", "stage": 1, "row": 0, "type": "database", "label": "信号 Redis", "sublabel": "Publish + INCR version" },
+    { "id": "svc", "stage": 2, "row": 0, "type": "backend", "label": "TriggerService", "sublabel": "sub · 轮询 2s · 兜底 5min", "tag": "三重同步" },
+    { "id": "matcher", "stage": 3, "row": 0, "type": "backend", "label": "AC 匹配器", "sublabel": "Match → DenyIDs", "tag": "全量 Rebuild" },
     { "id": "llm-use", "stage": 3, "row": 1, "type": "external", "label": "LLM 请求链路", "sublabel": "TriggerChecker.Check" },
-    { "id": "hit-cache", "stage": 4, "row": 0, "type": "database", "label": "命中缓存", "sublabel": "Redis IncrementHits" },
-    { "id": "hitsync", "stage": 4, "row": 1, "type": "backend", "label": "HitSync Cron", "sublabel": "每 5min · PopAll" }
+    { "id": "hit-cache", "stage": 4, "row": 0, "type": "database", "label": "命中缓存", "sublabel": "TriggerHitCache" },
+    { "id": "hitsync", "stage": 4, "row": 1, "type": "backend", "label": "HitSync Cron", "sublabel": "5min · BatchIncr" }
   ],
   "flows": [
     { "from": "admin", "to": "signal-db", "label": "NotifyChanged" },
@@ -35,8 +35,8 @@
     { "from": "hitsync", "to": "words-db", "label": "回写 hit_count", "toSide": "bottom", "via": [[880, 271], [880, 470], [315, 470]], "labelAt": [610, 458] }
   ],
   "cards": [
-    { "dot": "cyan", "title": "变更广播", "items": ["管理后台写词表后 NotifyChanged：Publish + 版本 INCR", "各 Pod 三重同步：pub/sub 即时 · 版本轮询 2s · 兜底扫描 5min"] },
-    { "dot": "emerald", "title": "内存重建", "items": ["全量 Rebuild Aho-Corasick 匹配器，O(n) 单趟扫描", "deny→403 · omit→响应转发但不落库"] },
-    { "dot": "rose", "title": "命中回写", "items": ["命中即时写 Redis 缓存，不阻塞请求链路", "TriggerHitSync 每 5min PopAll 批量回写词表 hit_count"] }
+    { "dot": "cyan", "title": "变更广播", "items": ["管理后台写 trigger_words（word · action deny/omit）后 NotifyChanged", "Redis Publish(trigger:changed) 即时信号 + INCR(trigger:version) 版本广播", "各 Pod 三重同步：pub/sub 即时 · 版本轮询 2s · 兜底扫描 5min"] },
+    { "dot": "emerald", "title": "内存重建", "items": ["ListAll 全量 Rebuild Aho-Corasick 匹配器，O(n) 单趟扫描", "deny→403 拦截 · omit→响应转发但不落库"] },
+    { "dot": "rose", "title": "命中回写", "items": ["命中即时写 Redis TriggerHitCache.IncrementHits，不阻塞请求链路", "TriggerHitSync 每 5min PopAll → BatchIncrementHitCount 回写词表 hit_count"] }
   ]
 }

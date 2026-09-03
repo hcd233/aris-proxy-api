@@ -17,10 +17,10 @@
   "nodes": [
     { "id": "collectors", "stage": 0, "row": 0, "type": "backend", "label": "采集器", "sublabel": "HTTP·SSE·Token·runtime", "tag": "4 类" },
     { "id": "registry", "stage": 1, "row": 0, "type": "backend", "label": "Registry", "sublabel": "GoCollector · Gather()" },
-    { "id": "flusher", "stage": 1, "row": 1, "type": "backend", "label": "Metrics Flusher", "sublabel": "每 Pod 5s", "tag": "单例" },
-    { "id": "redis", "stage": 2, "row": 0, "type": "database", "label": "Redis 快照", "sublabel": "ZSET · 24h", "tag": "跨 Pod" },
-    { "id": "agg", "stage": 3, "row": 0, "type": "backend", "label": "Aggregate", "sublabel": "delta÷桶宽 · P95" },
-    { "id": "dashboard", "stage": 3, "row": 1, "type": "frontend", "label": "运行时大盘", "sublabel": "QPS·P95·tok/s" },
+    { "id": "flusher", "stage": 1, "row": 1, "type": "backend", "label": "Metrics Flusher", "sublabel": "每 Pod 单例 · 5s", "tag": "不进 cron" },
+    { "id": "redis", "stage": 2, "row": 0, "type": "database", "label": "Redis 快照", "sublabel": "ZSET data:{pod} · 24h", "tag": "跨 Pod" },
+    { "id": "agg", "stage": 3, "row": 0, "type": "backend", "label": "Aggregate", "sublabel": "gauge 均值 · delta÷桶宽" },
+    { "id": "dashboard", "stage": 3, "row": 1, "type": "frontend", "label": "运行时大盘", "sublabel": "QPS·P95·成功率·tok/s" },
     { "id": "prom", "stage": 3, "row": 2, "type": "external", "label": "Prometheus", "sublabel": "promhttp 直读" }
   ],
   "flows": [
@@ -31,7 +31,7 @@
     { "from": "agg", "to": "dashboard", "label": "聚合查询", "labelAt": [745, 215] }
   ],
   "cards": [
-    { "dot": "cyan", "title": "采集与快照", "items": ["4 类采集器：HTTP 指标 · SSE Gauge · Token 计数 · runtime", "Prometheus Registry 进程内聚合，Gather() 导出", "Metrics Flusher 每 Pod 单例，5s 写 Redis ZSET 快照，保留 24h"] },
-    { "dot": "emerald", "title": "双消费路径", "items": ["大盘：Redis 快照 → Aggregate（delta÷桶宽 · P95 聚合）→ 跨 Pod 汇总", "Prometheus：promhttp 直接拉取本 Pod Registry", "goroutines 等运行时指标也随快照入库，支撑泄漏时序还原"] }
+    { "dot": "cyan", "title": "采集与快照", "items": ["4 类采集器：HTTP 时延 histogram · SSEGauge 并发连接 · Token 吞吐 · runtime", "Prometheus Registry 进程内聚合（GoCollector/ProcessCollector），Gather() 导出", "Metrics Flusher 每 Pod 单例，5s BuildSnapshot 写 ZSET metrics:runtime:data:{pod}，retention 24h"] },
+    { "dot": "emerald", "title": "双消费路径", "items": ["大盘：Redis 快照 → Aggregate（gauge 桶内均值 / counter delta÷桶宽 / histogram 桶合并 P95）", "Prometheus：/metrics 端点经 promhttp.Handler 直读本 Pod Registry", "goroutines/heap/CPU 随快照入库，支撑泄漏时序还原"] }
   ]
 }

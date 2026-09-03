@@ -18,26 +18,26 @@
     ]
   },
   "components": [
-    { "id": "proxy", "type": "backend", "label": "Proxy 转发调用点", "sublabel": "doUpstreamRequest · sendRequest", "pos": [40, 40], "size": [260, 104] },
-    { "id": "adapt", "type": "backend", "label": "EndpointGuard", "sublabel": "key: BaseURL|APIKey · IsCircuitError", "tag": "容错入口", "pos": [380, 40], "size": [260, 104] },
-    { "id": "guard", "type": "backend", "label": "Guard 组合", "sublabel": "Allow: 熔断→信号量 · defer Report", "pos": [720, 40], "size": [260, 104] },
-    { "id": "retry", "type": "backend", "label": "UpstreamRetry", "sublabel": "指数退避 + jitter", "pos": [1060, 40], "size": [260, 104] },
-    { "id": "upstream", "type": "external", "label": "MaaS 上游", "sublabel": "HTTP/SSE · 5xx 重试 · 429 不计熔断", "pos": [1060, 190], "size": [260, 88] },
-    { "id": "degrade", "type": "backend", "label": "快速失败降级", "sublabel": "503 + Retry-After · 协议错误体", "pos": [40, 240], "size": [240, 104] },
-    { "id": "breaker", "type": "backend", "label": "三态熔断器", "sublabel": "60s×6桶 · min10 · ≥50% · 30s 半开", "pos": [360, 240], "size": [280, 124], "sources": [{ "path": "internal/common/resilience/circuit_breaker.go" }] },
-    { "id": "bulkhead", "type": "backend", "label": "信号量隔离", "sublabel": "per-key ≤32 · 等待 1s", "pos": [730, 240], "size": [240, 104] },
-    { "id": "metrics", "type": "backend", "label": "Prometheus 容错指标", "sublabel": "circuit_state/open/rejected · bulkhead_rejected", "tag": "观测横切", "pos": [360, 430], "size": [600, 88] }
+    { "id": "proxy", "type": "backend", "label": "Proxy 转发调用点", "sublabel": "doUpstreamRequest · sendRequest", "tag": "流式同受保护", "pos": [40, 40], "size": [260, 104] },
+    { "id": "adapt", "type": "backend", "label": "EndpointGuard", "sublabel": "key: BaseURL|APIKey · IsCircuitError", "tag": "9 项容错配置", "pos": [380, 40], "size": [260, 104] },
+    { "id": "guard", "type": "backend", "label": "Guard 组合", "sublabel": "Allow: 熔断→信号量 · defer Report", "tag": "release 幂等", "pos": [720, 40], "size": [260, 104] },
+    { "id": "retry", "type": "backend", "label": "UpstreamRetry", "sublabel": "指数退避 + jitter · Guard 在重试外层", "pos": [1060, 40], "size": [260, 104] },
+    { "id": "upstream", "type": "external", "label": "MaaS 上游", "sublabel": "HTTP/SSE · 429 不计熔断 · 已建 SSE 不受影响", "pos": [1060, 190], "size": [260, 88] },
+    { "id": "degrade", "type": "backend", "label": "快速失败降级", "sublabel": "熔断打开/满载 → 503 · Retry-After", "tag": "协议错误体", "pos": [40, 240], "size": [240, 104] },
+    { "id": "breaker", "type": "security", "label": "三态熔断器", "sublabel": "60s×6桶 · min10 · ≥50% · 30s 半开", "tag": "容错防线", "pos": [360, 240], "size": [280, 124], "sources": [{ "path": "internal/common/resilience/circuit_breaker.go" }] },
+    { "id": "bulkhead", "type": "security", "label": "信号量隔离", "sublabel": "per-key ≤32 · buffered channel · 1s 超时", "tag": "容错防线", "pos": [730, 240], "size": [240, 104] },
+    { "id": "metrics", "type": "backend", "label": "Prometheus 容错指标", "sublabel": "circuit_state/open/rejected · bulkhead_rejected", "tag": "label key", "pos": [360, 430], "size": [600, 88] }
   ],
   "boundaries": [
     { "kind": "region", "label": "转发链", "wraps": ["proxy", "adapt", "guard", "retry", "upstream"], "pad": 10 },
     { "kind": "region", "label": "容错防线", "wraps": ["degrade", "breaker", "bulkhead"], "pad": 10 }
   ],
   "connections": [
-    { "id": "c1", "from": "proxy", "to": "adapt", "label": "Allow()", "fromSide": "right", "toSide": "left" },
+    { "id": "c1", "from": "proxy", "to": "adapt", "label": "Allow(ctx,key)", "fromSide": "right", "toSide": "left" },
     { "id": "c2", "from": "adapt", "to": "guard", "label": "组装", "fromSide": "right", "toSide": "left" },
     { "id": "c3", "from": "guard", "to": "retry", "label": "放行", "fromSide": "right", "toSide": "left" },
     { "id": "c4", "from": "retry", "to": "upstream", "fromSide": "bottom", "toSide": "top" },
-    { "id": "c5", "from": "retry", "to": "guard", "label": "Report", "variant": "dashed", "fromSide": "bottom", "toSide": "right", "via": [[1190, 178], [1010, 178], [1010, 92]], "labelAt": [1060, 164] },
+    { "id": "c5", "from": "retry", "to": "guard", "label": "Report(key, !IsCircuitError)", "variant": "dashed", "fromSide": "bottom", "toSide": "right", "via": [[1190, 178], [1010, 178], [1010, 92]], "labelAt": [1060, 164] },
     { "id": "c6", "from": "guard", "to": "breaker", "label": "熔断判定", "fromSide": "bottom", "toSide": "top", "labelAt": [645, 203] },
     { "id": "c7", "from": "guard", "to": "bulkhead", "label": "并发获取", "fromSide": "bottom", "toSide": "top", "labelAt": [850, 225] },
     { "id": "c8", "from": "breaker", "to": "degrade", "label": "打开→降级", "fromSide": "left", "toSide": "right", "labelAt": [320, 290] },
@@ -45,8 +45,8 @@
     { "id": "c11", "from": "bulkhead", "to": "metrics", "label": "拒绝计数", "variant": "dashed", "fromSide": "bottom", "toSide": "top", "labelAt": [840, 387] }
   ],
   "cards": [
-    { "dot": "cyan", "title": "调用契约", "items": ["Guard key 为 BaseURL|APIKey，故障按上游端点隔离", "Allow 先查熔断再抢信号量，defer Report 回写结果", "IsCircuitError 归一网络与 5xx 错误；429 不计熔断"] },
-    { "dot": "emerald", "title": "两道防线", "items": ["熔断：60s×6 桶滑窗，≥10 次且 ≥50% 失败即打开，30s 半开试探", "隔离：per-key 信号量 ≤32 并发，等待 1s 即拒绝", "任一拒绝立即 503 + Retry-After，不消耗上游配额"] },
-    { "dot": "rose", "title": "可观测", "items": ["upstream_circuit_state 暴露三态", "circuit_open_total / rejected_total / bulkhead_rejected_total", "已建立的 SSE 流不受熔断影响"] }
+    { "dot": "cyan", "title": "调用契约", "items": ["Guard key 为 BaseURL|APIKey，故障按上游端点隔离", "Allow 先查熔断再抢信号量，defer Report 回写结果，release 幂等", "IsCircuitError 归一网络与 5xx 错误；读 9 项容错配置组装"] },
+    { "dot": "emerald", "title": "两道防线", "items": ["熔断：60s×6 桶滑窗，≥10 次且 ≥50% 失败即打开，30s 后半开限量 1 探测", "隔离：per-key 信号量 ≤32 并发，等待 1s 超时即满载拒绝", "任一拒绝立即 503 + Retry-After + 按入口协议格式的错误体"] },
+    { "dot": "rose", "title": "可观测与边界", "items": ["upstream_circuit_state (gauge 0/1/2) · open_total / rejected_total / bulkhead_rejected_total", "429 仍可重试但不计熔断——限流不算故障，与熔断计数是两个独立维度", "守卫只拦「新开上游连接」，已建立的 SSE 流继续读完"] }
   ]
 }

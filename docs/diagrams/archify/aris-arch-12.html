@@ -5004,7 +5004,7 @@
     <!-- Main Diagram -->
     <div class="diagram-container" data-detail-level="read"
          data-preset-badge-editorial-plate="ARCHIFY / 图版 04">
-      <svg viewBox="0 0 1016 404" role="img" lang="zh-CN" aria-labelledby="archify-diagram-title archify-diagram-description" data-animation="trace" data-preset="classic" data-quality-profile="showcase">
+      <svg viewBox="0 0 1056 404" role="img" lang="zh-CN" aria-labelledby="archify-diagram-title archify-diagram-description" data-animation="trace" data-preset="classic" data-quality-profile="showcase">
         <title id="archify-diagram-title">定时任务触发与执行</title>
         <desc id="archify-diagram-description">由 Archify 生成的工作流图。</desc>
         <!-- Definitions -->
@@ -5030,10 +5030,10 @@
         <rect width="100%" height="100%" fill="url(#grid)" />
 
         <!-- Swimlanes -->
-        <rect data-graph-role="structural-frame" data-composition-frame-kind="lane" data-composition-frame-id="lane-0" x="40" y="52" width="960" height="104" rx="10" class="c-lane" stroke-width="1"/>
+        <rect data-graph-role="structural-frame" data-composition-frame-kind="lane" data-composition-frame-id="lane-0" x="40" y="52" width="1000" height="104" rx="10" class="c-lane" stroke-width="1"/>
         <text x="54" y="74" class="t-dim" font-size="10" font-weight="600">01 / 触发与执行</text>
 
-        <rect data-graph-role="structural-frame" data-composition-frame-kind="lane" data-composition-frame-id="lane-1" x="40" y="176" width="960" height="104" rx="10" class="c-lane" stroke-width="1"/>
+        <rect data-graph-role="structural-frame" data-composition-frame-kind="lane" data-composition-frame-id="lane-1" x="40" y="176" width="1000" height="104" rx="10" class="c-lane" stroke-width="1"/>
         <text x="54" y="198" class="t-dim" font-size="10" font-weight="600">02 / 跨 Pod 同步</text>
 
         <!-- Phase headers -->
@@ -5044,12 +5044,12 @@
 
         <!-- Edge paths -->
         <path data-edge-from="admin" data-edge-to="mgr" data-edge-label="更新 / 触发" data-edge-key="0" data-composition-points="140,119;210.8,119" d="M 140 119 L 210.8 119" class="a-default" data-animate="edge" style="--step:0" stroke-width="1.4" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="jobs" data-edge-to="audit" data-edge-label="落审计" data-edge-key="1" data-composition-points="808.8000000000001,119;855.6000000000001,119" d="M 808.8000000000001 119 L 855.6000000000001 119" class="a-default" data-animate="edge" style="--step:4" stroke-width="1.4" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="lock" data-edge-to="wrap" data-edge-label="续期执行" data-edge-key="2" data-composition-points="472.8,119;529.2,119" d="M 472.8 119 L 529.2 119" class="a-default" data-animate="edge" style="--step:2" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="jobs" data-edge-to="audit" data-edge-label="落审计" data-edge-key="1" data-composition-points="848.8000000000001,119;895.6000000000001,119" d="M 848.8000000000001 119 L 895.6000000000001 119" class="a-default" data-animate="edge" style="--step:4" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="lock" data-edge-to="wrap" data-edge-label="续期执行" data-edge-key="2" data-composition-points="512.8,119;569.2,119" d="M 512.8 119 L 569.2 119" class="a-default" data-animate="edge" style="--step:2" stroke-width="1.4" marker-end="url(#arrowhead)"/>
         <path data-edge-from="mgr" data-edge-to="lock" data-edge-label="加锁" data-edge-key="3" data-composition-points="342.8,119;380.8,119" d="M 342.8 119 L 380.8 119" class="a-emphasis" data-animate="edge" style="--step:1" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
-        <path data-edge-from="mgr" data-edge-to="pubsub" data-edge-label="Publish" data-edge-key="4" data-composition-points="276.8,145;276.8,243;380.8,243" d="M 276.8 145 L 276.8 243 L 380.8 243" class="a-dashed" data-animate="edge" style="--step:10" stroke-width="1.4" marker-end="url(#arrowhead-dashed)"/>
-        <path data-edge-from="pubsub" data-edge-to="other" data-edge-label="订阅同步" data-edge-key="5" data-composition-points="472.8,243;529.2,243" d="M 472.8 243 L 529.2 243" class="a-dashed" data-animate="edge" style="--step:11" stroke-width="1.4" marker-end="url(#arrowhead-dashed)"/>
-        <path data-edge-from="wrap" data-edge-to="jobs" data-edge-label="执行 fn" data-edge-key="6" data-composition-points="621.2,119;672.8000000000001,119" d="M 621.2 119 L 672.8000000000001 119" class="a-default" data-animate="edge" style="--step:3" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="mgr" data-edge-to="pubsub" data-edge-label="Publish" data-edge-key="4" data-composition-points="276.8,145;276.8,243;400.8,243" d="M 276.8 145 L 276.8 243 L 400.8 243" class="a-dashed" data-animate="edge" style="--step:10" stroke-width="1.4" marker-end="url(#arrowhead-dashed)"/>
+        <path data-edge-from="pubsub" data-edge-to="other" data-edge-label="订阅同步" data-edge-key="5" data-composition-points="492.8,243;569.2,243" d="M 492.8 243 L 569.2 243" class="a-dashed" data-animate="edge" style="--step:11" stroke-width="1.4" marker-end="url(#arrowhead-dashed)"/>
+        <path data-edge-from="wrap" data-edge-to="jobs" data-edge-label="执行 fn" data-edge-key="6" data-composition-points="661.2,119;712.8000000000001,119" d="M 661.2 119 L 712.8000000000001 119" class="a-default" data-animate="edge" style="--step:3" stroke-width="1.4" marker-end="url(#arrowhead)"/>
 
         <!-- Nodes -->
         <g id="node-admin" data-node-id="admin" data-node-label="管理后台 /cron" tabindex="0" role="button" aria-label="聚焦管理后台 /cron，更新 spec · 手动触发, 触发与执行" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="更新 spec · 手动触发" data-node-context="触发与执行">
@@ -5066,84 +5066,84 @@
           <text data-detail="context" x="94" y="131" class="t-muted" font-size="7" text-anchor="middle">更新 spec · 手动触发</text>
         </g>
 
-        <g id="node-mgr" data-node-id="mgr" data-node-label="CronManager" tabindex="0" role="button" aria-label="聚焦CronManager，Restart · Enable · Disable, 触发与执行" aria-pressed="false" data-node-kind="backend" data-node-sublabel="Restart · Enable · Disable" data-node-context="触发与执行">
-          <title>CronManager · Restart · Enable · Disable · 触发与执行</title>
+        <g id="node-mgr" data-node-id="mgr" data-node-label="CronManager" tabindex="0" role="button" aria-label="聚焦CronManager，Restart · Trigger 持 RLock, 触发与执行" aria-pressed="false" data-node-kind="backend" data-node-sublabel="Restart · Trigger 持 RLock" data-node-context="触发与执行">
+          <title>CronManager · Restart · Trigger 持 RLock · 触发与执行</title>
           <rect x="210.8" y="93" width="132" height="52" rx="6" class="c-mask"/>
           <rect x="210.8" y="93" width="132" height="52" rx="6" class="c-backend" data-animate="node" style="--step:1" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(216.8 99) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="276.8" y="114" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">CronManager</text>
-          <text data-detail="context" x="276.8" y="131" class="t-muted" font-size="7.9" text-anchor="middle">Restart · Enable · Disable</text>
+          <text data-detail="context" x="276.8" y="131" class="t-muted" font-size="7.9" text-anchor="middle">Restart · Trigger 持 RLock</text>
         </g>
 
-        <g id="node-lock" data-node-id="lock" data-node-label="Redis 分布式锁" tabindex="0" role="button" aria-label="聚焦Redis 分布式锁，TTL 5min + 续期, 触发与执行" aria-pressed="false" data-node-kind="security" data-node-sublabel="TTL 5min + 续期" data-node-context="触发与执行">
-          <title>Redis 分布式锁 · TTL 5min + 续期 · 触发与执行</title>
-          <rect x="380.8" y="93" width="92" height="52" rx="6" class="c-mask"/>
-          <rect x="380.8" y="93" width="92" height="52" rx="6" class="c-security" data-animate="node" style="--step:2" stroke-width="1.5"/>
+        <g id="node-lock" data-node-id="lock" data-node-label="Redis 分布式锁" tabindex="0" role="button" aria-label="聚焦Redis 分布式锁，cron:lock:{name} · 续期, 触发与执行" aria-pressed="false" data-node-kind="security" data-node-sublabel="cron:lock:{name} · 续期" data-node-context="触发与执行">
+          <title>Redis 分布式锁 · cron:lock:{name} · 续期 · 触发与执行</title>
+          <rect x="380.8" y="93" width="132" height="52" rx="6" class="c-mask"/>
+          <rect x="380.8" y="93" width="132" height="52" rx="6" class="c-security" data-animate="node" style="--step:2" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="security" class="semantic-sigil s-security" transform="translate(386.8 99) scale(0.6875)">
             <path d="M8 2.2 13 4v3.5c0 3.1-1.8 5.4-5 6.5-3.2-1.1-5-3.4-5-6.5V4Z"/>
             <path d="m5.8 8 1.5 1.5 3-3"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="426.8" y="114" class="t-primary" font-size="10" font-weight="600" text-anchor="middle">Redis 分布式锁</text>
-          <text data-detail="context" x="426.8" y="131" class="t-muted" font-size="8" text-anchor="middle">TTL 5min + 续期</text>
+          <text data-node-label="" data-detail-anchor="" x="446.8" y="114" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Redis 分布式锁</text>
+          <text data-detail="context" x="446.8" y="131" class="t-muted" font-size="8" text-anchor="middle">cron:lock:{name} · 续期</text>
         </g>
 
         <g id="node-wrap" data-node-id="wrap" data-node-label="wrapCronFunc" tabindex="0" role="button" aria-label="聚焦wrapCronFunc，traceID · panic 恢复, 触发与执行" aria-pressed="false" data-node-kind="backend" data-node-sublabel="traceID · panic 恢复" data-node-context="触发与执行">
           <title>wrapCronFunc · traceID · panic 恢复 · 触发与执行</title>
-          <rect x="529.2" y="93" width="92" height="52" rx="6" class="c-mask"/>
-          <rect x="529.2" y="93" width="92" height="52" rx="6" class="c-backend" data-animate="node" style="--step:3" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(535.2 99) scale(0.6875)">
+          <rect x="569.2" y="93" width="92" height="52" rx="6" class="c-mask"/>
+          <rect x="569.2" y="93" width="92" height="52" rx="6" class="c-backend" data-animate="node" style="--step:3" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(575.2 99) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="575.2" y="114" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">wrapCronFunc</text>
-          <text data-detail="context" x="575.2" y="131" class="t-muted" font-size="7" text-anchor="middle">traceID · panic 恢复</text>
+          <text data-node-label="" data-detail-anchor="" x="615.2" y="114" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">wrapCronFunc</text>
+          <text data-detail="context" x="615.2" y="131" class="t-muted" font-size="7" text-anchor="middle">traceID · panic 恢复</text>
         </g>
 
         <g id="node-jobs" data-node-id="jobs" data-node-label="4 个 Cron 任务" tabindex="0" role="button" aria-label="聚焦4 个 Cron 任务，cleanup·purge·think·hitsync, 触发与执行" aria-pressed="false" data-node-kind="backend" data-node-sublabel="cleanup·purge·think·hitsync" data-node-context="触发与执行">
           <title>4 个 Cron 任务 · cleanup·purge·think·hitsync · 触发与执行</title>
-          <rect x="672.8000000000001" y="93" width="136" height="52" rx="6" class="c-mask"/>
-          <rect x="672.8000000000001" y="93" width="136" height="52" rx="6" class="c-backend" data-animate="node" style="--step:4" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(678.8000000000001 99) scale(0.6875)">
+          <rect x="712.8000000000001" y="93" width="136" height="52" rx="6" class="c-mask"/>
+          <rect x="712.8000000000001" y="93" width="136" height="52" rx="6" class="c-backend" data-animate="node" style="--step:4" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(718.8000000000001 99) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="740.8000000000001" y="114" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">4 个 Cron 任务</text>
-          <text data-detail="context" x="740.8000000000001" y="131" class="t-muted" font-size="7.9" text-anchor="middle">cleanup·purge·think·hitsync</text>
+          <text data-node-label="" data-detail-anchor="" x="780.8000000000001" y="114" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">4 个 Cron 任务</text>
+          <text data-detail="context" x="780.8000000000001" y="131" class="t-muted" font-size="7.9" text-anchor="middle">cleanup·purge·think·hitsync</text>
         </g>
 
-        <g id="node-audit" data-node-id="audit" data-node-label="CronCallAudit" tabindex="0" role="button" aria-label="聚焦CronCallAudit，status · duration · trigger, 触发与执行" aria-pressed="false" data-node-kind="database" data-node-sublabel="status · duration · trigger" data-node-context="触发与执行">
-          <title>CronCallAudit · status · duration · trigger · 触发与执行</title>
-          <rect x="855.6000000000001" y="93" width="136" height="52" rx="6" class="c-mask"/>
-          <rect x="855.6000000000001" y="93" width="136" height="52" rx="6" class="c-database" data-animate="node" style="--step:5" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="database" class="semantic-sigil s-database" transform="translate(861.6000000000001 99) scale(0.6875)">
+        <g id="node-audit" data-node-id="audit" data-node-label="CronCallAudit" tabindex="0" role="button" aria-label="聚焦CronCallAudit，status·duration·trigger, 触发与执行" aria-pressed="false" data-node-kind="database" data-node-sublabel="status·duration·trigger" data-node-context="触发与执行">
+          <title>CronCallAudit · status·duration·trigger · 触发与执行</title>
+          <rect x="895.6000000000001" y="93" width="136" height="52" rx="6" class="c-mask"/>
+          <rect x="895.6000000000001" y="93" width="136" height="52" rx="6" class="c-database" data-animate="node" style="--step:5" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="database" class="semantic-sigil s-database" transform="translate(901.6000000000001 99) scale(0.6875)">
             <ellipse cx="8" cy="4" rx="5" ry="2"/>
             <path d="M3 4v8c0 1.1 2.2 2 5 2s5-.9 5-2V4M3 8c0 1.1 2.2 2 5 2s5-.9 5-2"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="923.6000000000001" y="114" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">CronCallAudit</text>
-          <text data-detail="context" x="923.6000000000001" y="131" class="t-muted" font-size="7.9" text-anchor="middle">status · duration · trigger</text>
+          <text data-node-label="" data-detail-anchor="" x="963.6000000000001" y="114" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">CronCallAudit</text>
+          <text data-detail="context" x="963.6000000000001" y="131" class="t-muted" font-size="8" text-anchor="middle">status·duration·trigger</text>
         </g>
 
-        <g id="node-pubsub" data-node-id="pubsub" data-node-label="Redis pub/sub" tabindex="0" role="button" aria-label="聚焦Redis pub/sub，cron:reload, 跨 Pod 同步" aria-pressed="false" data-node-kind="database" data-node-sublabel="cron:reload" data-node-context="跨 Pod 同步">
-          <title>Redis pub/sub · cron:reload · 跨 Pod 同步</title>
-          <rect x="380.8" y="217" width="92" height="52" rx="6" class="c-mask"/>
-          <rect x="380.8" y="217" width="92" height="52" rx="6" class="c-database" data-animate="node" style="--step:12" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="database" class="semantic-sigil s-database" transform="translate(386.8 223) scale(0.6875)">
+        <g id="node-pubsub" data-node-id="pubsub" data-node-label="Redis pub/sub" tabindex="0" role="button" aria-label="聚焦Redis pub/sub，cron:reload 广播, 跨 Pod 同步" aria-pressed="false" data-node-kind="database" data-node-sublabel="cron:reload 广播" data-node-context="跨 Pod 同步">
+          <title>Redis pub/sub · cron:reload 广播 · 跨 Pod 同步</title>
+          <rect x="400.8" y="217" width="92" height="52" rx="6" class="c-mask"/>
+          <rect x="400.8" y="217" width="92" height="52" rx="6" class="c-database" data-animate="node" style="--step:12" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="database" class="semantic-sigil s-database" transform="translate(406.8 223) scale(0.6875)">
             <ellipse cx="8" cy="4" rx="5" ry="2"/>
             <path d="M3 4v8c0 1.1 2.2 2 5 2s5-.9 5-2V4M3 8c0 1.1 2.2 2 5 2s5-.9 5-2"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="426.8" y="238" class="t-primary" font-size="10.7" font-weight="600" text-anchor="middle">Redis pub/sub</text>
-          <text data-detail="context" x="426.8" y="255" class="t-muted" font-size="8" text-anchor="middle">cron:reload</text>
+          <text data-node-label="" data-detail-anchor="" x="446.8" y="238" class="t-primary" font-size="10.7" font-weight="600" text-anchor="middle">Redis pub/sub</text>
+          <text data-detail="context" x="446.8" y="255" class="t-muted" font-size="8" text-anchor="middle">cron:reload 广播</text>
         </g>
 
         <g id="node-other" data-node-id="other" data-node-label="其他 Pod" tabindex="0" role="button" aria-label="聚焦其他 Pod，handleMessage 热重载, 跨 Pod 同步" aria-pressed="false" data-node-kind="backend" data-node-sublabel="handleMessage 热重载" data-node-context="跨 Pod 同步">
           <title>其他 Pod · handleMessage 热重载 · 跨 Pod 同步</title>
-          <rect x="529.2" y="217" width="92" height="52" rx="6" class="c-mask"/>
-          <rect x="529.2" y="217" width="92" height="52" rx="6" class="c-backend" data-animate="node" style="--step:12" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(535.2 223) scale(0.6875)">
+          <rect x="569.2" y="217" width="92" height="52" rx="6" class="c-mask"/>
+          <rect x="569.2" y="217" width="92" height="52" rx="6" class="c-backend" data-animate="node" style="--step:12" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(575.2 223) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="575.2" y="238" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">其他 Pod</text>
-          <text data-detail="context" x="575.2" y="255" class="t-muted" font-size="7" text-anchor="middle">handleMessage 热重载</text>
+          <text data-node-label="" data-detail-anchor="" x="615.2" y="238" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">其他 Pod</text>
+          <text data-detail="context" x="615.2" y="255" class="t-muted" font-size="7" text-anchor="middle">handleMessage 热重载</text>
         </g>
 
         <!-- Edge labels -->
@@ -5152,28 +5152,28 @@
           <text x="175.4" y="109" class="t-muted" font-size="8" text-anchor="middle">更新 / 触发</text>
         </g>
         <g data-detail="context" data-edge-from="jobs" data-edge-to="audit" data-edge-label="落审计" data-edge-key="1">
-          <rect x="812.8000000000001" y="99" width="38.8" height="14" rx="3" class="c-mask"/>
-          <text x="832.2" y="109" class="t-muted" font-size="8" text-anchor="middle">落审计</text>
+          <rect x="852.8000000000001" y="99" width="38.8" height="14" rx="3" class="c-mask"/>
+          <text x="872.2" y="109" class="t-muted" font-size="8" text-anchor="middle">落审计</text>
         </g>
         <g data-detail="context" data-edge-from="lock" data-edge-to="wrap" data-edge-label="续期执行" data-edge-key="2">
-          <rect x="476.8" y="99" width="48.4" height="14" rx="3" class="c-mask"/>
-          <text x="501" y="109" class="t-muted" font-size="8" text-anchor="middle">续期执行</text>
+          <rect x="516.8" y="99" width="48.4" height="14" rx="3" class="c-mask"/>
+          <text x="541" y="109" class="t-muted" font-size="8" text-anchor="middle">续期执行</text>
         </g>
         <g data-detail="context" data-edge-from="mgr" data-edge-to="lock" data-edge-label="加锁" data-edge-key="3">
           <rect x="346.8" y="99" width="30" height="14" rx="3" class="c-mask"/>
           <text x="361.8" y="109" class="t-backend" font-size="8" text-anchor="middle">加锁</text>
         </g>
         <g data-detail="context" data-edge-from="mgr" data-edge-to="pubsub" data-edge-label="Publish" data-edge-key="4">
-          <rect x="307" y="223" width="43.6" height="14" rx="3" class="c-mask"/>
-          <text x="328.8" y="233" class="t-database" font-size="8" text-anchor="middle">Publish</text>
+          <rect x="317" y="223" width="43.6" height="14" rx="3" class="c-mask"/>
+          <text x="338.8" y="233" class="t-database" font-size="8" text-anchor="middle">Publish</text>
         </g>
         <g data-detail="context" data-edge-from="pubsub" data-edge-to="other" data-edge-label="订阅同步" data-edge-key="5">
-          <rect x="476.8" y="223" width="48.4" height="14" rx="3" class="c-mask"/>
-          <text x="501" y="233" class="t-database" font-size="8" text-anchor="middle">订阅同步</text>
+          <rect x="506.8" y="223" width="48.4" height="14" rx="3" class="c-mask"/>
+          <text x="531" y="233" class="t-database" font-size="8" text-anchor="middle">订阅同步</text>
         </g>
         <g data-detail="context" data-edge-from="wrap" data-edge-to="jobs" data-edge-label="执行 fn" data-edge-key="6">
-          <rect x="625.2" y="99" width="43.6" height="14" rx="3" class="c-mask"/>
-          <text x="647" y="109" class="t-muted" font-size="8" text-anchor="middle">执行 fn</text>
+          <rect x="665.2" y="99" width="43.6" height="14" rx="3" class="c-mask"/>
+          <text x="687" y="109" class="t-muted" font-size="8" text-anchor="middle">执行 fn</text>
         </g>
 
         <!-- Legend -->
@@ -5388,7 +5388,7 @@
           <h3>热重载</h3>
         </div>
         <ul>
-          <li>&bull; 管理后台更新 spec / 手动触发，CronManager Restart</li>
+          <li>&bull; 管理后台更新 spec / enabled（核心任务禁关）或手动触发 CronManager.Trigger</li>
           <li>&bull; Redis pub/sub 广播 cron:reload，其他 Pod handleMessage 同步</li>
           <li>&bull; 双 Pod 部署下配置变更秒级生效</li>
         </ul>
@@ -5400,9 +5400,9 @@
           <h3>单点执行</h3>
         </div>
         <ul>
-          <li>&bull; 执行前抢 Redis 分布式锁 cron:lock:{name}，TTL 5min 自动续期</li>
-          <li>&bull; wrapCronFunc 注入 traceID、panic 恢复、enabled 开关</li>
-          <li>&bull; 4 个任务：终态清理 · 软删清理 · think-extract · 命中回写</li>
+          <li>&bull; 执行前抢 Redis 分布式锁 cron:lock:{name}，TTL 5min + ticker 续期</li>
+          <li>&bull; wrapCronFunc 注入 traceID、enabled 检查、panic 恢复</li>
+          <li>&bull; 4 个任务：terminal-cleanup 每小时(24h 窗口) · purge 周日 04:00 · think 每日 00:00 · hit-sync 每 5min</li>
         </ul>
       </div>
 
@@ -5412,7 +5412,7 @@
           <h3>可观测</h3>
         </div>
         <ul>
-          <li>&bull; 每次执行落 CronCallAudit：status · duration · trigger</li>
+          <li>&bull; 每次执行落 CronCallAudit：status · duration · trigger source</li>
           <li>&bull; 管理后台可查看执行历史与手动补跑</li>
         </ul>
       </div>
@@ -6503,7 +6503,7 @@
         var fps = Math.max(1, Number(options.fps) || MOTION_FPS);
         var svg = document.querySelector('.diagram-container svg');
         var vb = svg.viewBox.baseVal;
-        var scale = Math.min(1, 1280 / vb.width);
+        var scale = Math.min(1, Math.min(4096, Math.round(Number(window.__ARCHIFY_MOTION_MAX_W)) || 1280) / vb.width);
         var data = serializeSvg(scale);
         var sourceUrl = URL.createObjectURL(new Blob([data.svgString], { type: 'image/svg+xml;charset=utf-8' }));
 
@@ -6667,7 +6667,7 @@
             var mime = motionMimeType();
             var recorder;
             try {
-              recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 6000000 });
+              recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: Math.round(Number(window.__ARCHIFY_MOTION_BPS)) || 6000000 });
             } catch (err) {
               URL.revokeObjectURL(sourceUrl);
               stream.getTracks().forEach(function (track) { track.stop(); });

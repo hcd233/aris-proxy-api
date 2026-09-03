@@ -5030,25 +5030,26 @@
         <rect width="100%" height="100%" fill="url(#grid)" />
 
         <!-- Boundaries (behind everything) -->
-        <rect data-graph-role="structural-frame" data-composition-frame-kind="region" data-composition-frame-id="0" data-composition-frame-label="登录链" x="30" y="16" width="1160" height="132" rx="12" class="c-region" stroke-width="1"/>
+        <rect data-graph-role="structural-frame" data-composition-frame-kind="region" data-composition-frame-id="0" data-composition-frame-label="登录链" x="30" y="16" width="1200" height="132" rx="12" class="c-region" stroke-width="1"/>
 
         <rect data-graph-role="structural-frame" data-composition-frame-kind="region" data-composition-frame-id="1" data-composition-frame-label="访问防线与视角" x="90" y="236" width="980" height="148" rx="12" class="c-region" stroke-width="1"/>
 
-        <rect data-graph-role="structural-frame" data-composition-frame-kind="region" data-composition-frame-id="2" data-composition-frame-label="白名单存储与治理" x="90" y="456" width="980" height="132" rx="12" class="c-region" stroke-width="1"/>
+        <rect data-graph-role="structural-frame" data-composition-frame-kind="region" data-composition-frame-id="2" data-composition-frame-label="存储与治理" x="90" y="456" width="980" height="132" rx="12" class="c-region" stroke-width="1"/>
 
         <!-- Connection paths (before components for correct z-order) -->
         <path data-edge-from="login" data-edge-to="demo-api" data-edge-label="POST /login" data-edge-key="0" data-edge-id="l1" data-composition-points="260,84;340,84" d="M 260 84 L 340 84" class="a-default" data-animate="edge" style="--step:0" stroke-width="1.5" marker-end="url(#arrowhead)"/>
         <path data-edge-from="demo-api" data-edge-to="cmd" data-edge-label="登录校验" data-edge-key="1" data-edge-id="l2" data-composition-points="580,84;660,84" d="M 580 84 L 660 84" class="a-default" data-animate="edge" style="--step:1" stroke-width="1.5" marker-end="url(#arrowhead)"/>
         <path data-edge-from="cmd" data-edge-to="webfe" data-edge-label="JWT 签发" data-edge-key="2" data-edge-id="l3" data-composition-points="920,84;1000,84" d="M 920 84 L 1000 84" class="a-default" data-animate="edge" style="--step:2" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="webfe" data-edge-to="defense" data-edge-label="demo 只读请求" data-edge-key="3" data-edge-id="l4" data-composition-points="1090,128;1090,194;580,194;580,260" d="M 1090 128 L 1090 186 Q 1090 194 1082 194 L 588 194 Q 580 194 580 202 L 580 260" class="a-emphasis" data-animate="edge" style="--step:3" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <path data-edge-from="webfe" data-edge-to="defense" data-edge-label="demo 只读请求" data-edge-key="3" data-edge-id="l4" data-composition-points="1110,128;1110,194;580,194;580,260" d="M 1110 128 L 1110 186 Q 1110 194 1102 194 L 588 194 Q 580 194 580 202 L 580 260" class="a-emphasis" data-animate="edge" style="--step:3" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
         <path data-edge-from="defense" data-edge-to="session-view" data-edge-label="SESSIONS" data-edge-key="4" data-edge-id="d1" data-composition-points="460,312;380,312" d="M 460 312 L 380 312" class="a-default" data-animate="edge" style="--step:4" stroke-width="1.5" marker-end="url(#arrowhead)"/>
         <path data-edge-from="defense" data-edge-to="masked" data-edge-label="全量脱敏" data-edge-key="5" data-edge-id="d2" data-composition-points="700,312;780,312" d="M 700 312 L 780 312" class="a-default" data-animate="edge" style="--step:5" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="session-view" data-edge-to="demo-sessions" data-edge-label="AllowedIDs" data-edge-key="6" data-edge-id="g1" data-composition-points="240,364;240,480" d="M 240 364 L 240 480" class="a-default" data-animate="edge" style="--step:6" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="admin-ui" data-edge-to="demo-sessions" data-edge-label="批量增删" data-edge-key="7" data-edge-id="g2" data-composition-points="780,524;380,524" d="M 780 524 L 380 524" class="a-dashed" data-animate="edge" style="--step:7" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
+        <path data-edge-from="defense" data-edge-to="audit-db" data-edge-label="埋点 IP/UA" data-edge-key="6" data-edge-id="d3" data-composition-points="580,364;580,480" d="M 580 364 L 580 480" class="a-dashed" data-animate="edge" style="--step:6" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
+        <path data-edge-from="session-view" data-edge-to="demo-sessions" data-edge-label="AllowedIDs" data-edge-key="7" data-edge-id="g1" data-composition-points="240,364;240,480" d="M 240 364 L 240 480" class="a-default" data-animate="edge" style="--step:7" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="admin-ui" data-edge-to="demo-sessions" data-edge-label="批量增删" data-edge-key="8" data-edge-id="g2" data-composition-points="920,568;920,616;240,616;240,568" d="M 920 568 L 920 608 Q 920 616 912 616 L 248 616 Q 240 616 240 608 L 240 568" class="a-dashed" data-animate="edge" style="--step:8" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
 
         <!-- Components -->
-        <g id="node-login" data-node-id="login" data-node-label="登录页" tabindex="0" role="button" aria-label="聚焦登录页，Continue as Demo · GET /demo/status, 登录链" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="Continue as Demo · GET /demo/status" data-node-context="登录链">
-          <title>登录页 · Continue as Demo · GET /demo/status · 登录链</title>
+        <g id="node-login" data-node-id="login" data-node-label="登录页" tabindex="0" role="button" aria-label="聚焦登录页，Continue as Demo · GET /demo/status 显隐, 登录链" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="Continue as Demo · GET /demo/status 显隐" data-node-context="登录链">
+          <title>登录页 · Continue as Demo · GET /demo/status 显隐 · 登录链</title>
           <rect x="40" y="40" width="220" height="88" rx="6" class="c-mask"/>
           <rect x="40" y="40" width="220" height="88" rx="6" class="c-frontend" data-animate="node" style="--step:0" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(46 46) scale(0.6875)">
@@ -5058,59 +5059,60 @@
             <circle cx="6.3" cy="4.8" r=".7" class="sigil-fill"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="150" y="82" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">登录页</text>
-        <text data-detail="context" x="150" y="98" class="t-muted" font-size="9" text-anchor="middle">Continue as Demo · GET /demo/status</text>
+        <text data-detail="context" x="150" y="98" class="t-muted" font-size="8.8" text-anchor="middle">Continue as Demo · GET /demo/status 显隐</text>
         </g>
 
-        <g id="node-demo-api" data-node-id="demo-api" data-node-label="Demo 公开端点" tabindex="0" role="button" aria-label="聚焦Demo 公开端点，/api/web/v1/demo/login · IP 5s/8, 登录链" aria-pressed="false" data-node-kind="backend" data-node-sublabel="/api/web/v1/demo/login · IP 5s/8" data-node-tag="无 JWT" data-node-context="登录链">
-          <title>Demo 公开端点 · /api/web/v1/demo/login · IP 5s/8 · 登录链 · 无 JWT</title>
+        <g id="node-demo-api" data-node-id="demo-api" data-node-label="Demo 公开端点" tabindex="0" role="button" aria-label="聚焦Demo 公开端点，POST /api/web/v1/demo/login · IP 5s/8, 登录链" aria-pressed="false" data-node-kind="backend" data-node-sublabel="POST /api/web/v1/demo/login · IP 5s/8" data-node-tag="无 JWT" data-node-context="登录链">
+          <title>Demo 公开端点 · POST /api/web/v1/demo/login · IP 5s/8 · 登录链 · 无 JWT</title>
           <rect x="340" y="40" width="240" height="88" rx="6" class="c-mask"/>
           <rect x="340" y="40" width="240" height="88" rx="6" class="c-backend" data-animate="node" style="--step:1" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(346 46) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="460" y="82" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Demo 公开端点</text>
-        <text data-detail="context" x="460" y="98" class="t-muted" font-size="9" text-anchor="middle">/api/web/v1/demo/login · IP 5s/8</text>
+        <text data-detail="context" x="460" y="98" class="t-muted" font-size="9" text-anchor="middle">POST /api/web/v1/demo/login · IP 5s/8</text>
         <text data-detail="fine" x="460" y="120" class="t-backend" font-size="7" text-anchor="middle">无 JWT</text>
         </g>
 
-        <g id="node-cmd" data-node-id="cmd" data-node-label="DemoLogin 命令" tabindex="0" role="button" aria-label="聚焦DemoLogin 命令，login_enabled · FindByPermission(demo), 登录链" aria-pressed="false" data-node-kind="backend" data-node-sublabel="login_enabled · FindByPermission(demo)" data-node-context="登录链">
-          <title>DemoLogin 命令 · login_enabled · FindByPermission(demo) · 登录链</title>
+        <g id="node-cmd" data-node-id="cmd" data-node-label="DemoLogin 命令" tabindex="0" role="button" aria-label="聚焦DemoLogin 命令，校验 login_enabled · 签发 access+refresh, 登录链" aria-pressed="false" data-node-kind="backend" data-node-sublabel="校验 login_enabled · 签发 access+refresh" data-node-context="登录链">
+          <title>DemoLogin 命令 · 校验 login_enabled · 签发 access+refresh · 登录链</title>
           <rect x="660" y="40" width="260" height="88" rx="6" class="c-mask"/>
           <rect x="660" y="40" width="260" height="88" rx="6" class="c-backend" data-animate="node" style="--step:2" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(666 46) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="790" y="82" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">DemoLogin 命令</text>
-        <text data-detail="context" x="790" y="98" class="t-muted" font-size="9" text-anchor="middle">login_enabled · FindByPermission(demo)</text>
+        <text data-detail="context" x="790" y="98" class="t-muted" font-size="9" text-anchor="middle">校验 login_enabled · 签发 access+refresh</text>
         </g>
 
-        <g id="node-webfe" data-node-id="webfe" data-node-label="Web demo 感知" tabindex="0" role="button" aria-label="聚焦Web demo 感知，isDemo() 三态守卫, 登录链" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="isDemo() 三态守卫" data-node-context="登录链">
-          <title>Web demo 感知 · isDemo() 三态守卫 · 登录链</title>
-          <rect x="1000" y="40" width="180" height="88" rx="6" class="c-mask"/>
-          <rect x="1000" y="40" width="180" height="88" rx="6" class="c-frontend" data-animate="node" style="--step:3" stroke-width="1.5"/>
+        <g id="node-webfe" data-node-id="webfe" data-node-label="Web demo 感知" tabindex="0" role="button" aria-label="聚焦Web demo 感知，isDemo() · 三态守卫 · 按钮锁定, 登录链" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="isDemo() · 三态守卫 · 按钮锁定" data-node-context="登录链">
+          <title>Web demo 感知 · isDemo() · 三态守卫 · 按钮锁定 · 登录链</title>
+          <rect x="1000" y="40" width="220" height="88" rx="6" class="c-mask"/>
+          <rect x="1000" y="40" width="220" height="88" rx="6" class="c-frontend" data-animate="node" style="--step:3" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(1006 46) scale(0.6875)">
             <rect x="2" y="3" width="12" height="10" rx="2"/>
             <path d="M2 6.5h12"/>
             <circle cx="4.1" cy="4.8" r=".7" class="sigil-fill"/>
             <circle cx="6.3" cy="4.8" r=".7" class="sigil-fill"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="1090" y="82" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Web demo 感知</text>
-        <text data-detail="context" x="1090" y="98" class="t-muted" font-size="9" text-anchor="middle">isDemo() 三态守卫</text>
+          <text data-node-label="" data-detail-anchor="" x="1110" y="82" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Web demo 感知</text>
+        <text data-detail="context" x="1110" y="98" class="t-muted" font-size="9" text-anchor="middle">isDemo() · 三态守卫 · 按钮锁定</text>
         </g>
 
-        <g id="node-session-view" data-node-id="session-view" data-node-label="会话白名单视角" tabindex="0" role="button" aria-label="聚焦会话白名单视角，ListSessionsByIDs · IsAllowed, 访问防线与视角" aria-pressed="false" data-node-kind="backend" data-node-sublabel="ListSessionsByIDs · IsAllowed" data-node-context="访问防线与视角">
-          <title>会话白名单视角 · ListSessionsByIDs · IsAllowed · 访问防线与视角</title>
+        <g id="node-session-view" data-node-id="session-view" data-node-label="会话白名单视角" tabindex="0" role="button" aria-label="聚焦会话白名单视角，ListSessionsByIDs · IsAllowed 校验, 访问防线与视角" aria-pressed="false" data-node-kind="backend" data-node-sublabel="ListSessionsByIDs · IsAllowed 校验" data-node-tag="非白名单→不存在" data-node-context="访问防线与视角">
+          <title>会话白名单视角 · ListSessionsByIDs · IsAllowed 校验 · 访问防线与视角 · 非白名单→不存在</title>
           <rect x="100" y="260" width="280" height="104" rx="6" class="c-mask"/>
           <rect x="100" y="260" width="280" height="104" rx="6" class="c-backend" data-animate="node" style="--step:5" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(106 266) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="240" y="310" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">会话白名单视角</text>
-        <text data-detail="context" x="240" y="326" class="t-muted" font-size="9" text-anchor="middle">ListSessionsByIDs · IsAllowed</text>
+        <text data-detail="context" x="240" y="326" class="t-muted" font-size="9" text-anchor="middle">ListSessionsByIDs · IsAllowed 校验</text>
+        <text data-detail="fine" x="240" y="356" class="t-backend" font-size="7" text-anchor="middle">非白名单→不存在</text>
         </g>
 
-        <g id="node-defense" data-node-id="defense" data-node-label="Demo 访问防线" tabindex="0" role="button" aria-label="聚焦Demo 访问防线，模块白名单 fail-closed · IP 5s/30, 访问防线与视角" aria-pressed="false" data-node-kind="security" data-node-sublabel="模块白名单 fail-closed · IP 5s/30" data-node-tag="埋点 IP/UA" data-node-context="访问防线与视角">
-          <title>Demo 访问防线 · 模块白名单 fail-closed · IP 5s/30 · 访问防线与视角 · 埋点 IP/UA</title>
+        <g id="node-defense" data-node-id="defense" data-node-label="Demo 访问防线" tabindex="0" role="button" aria-label="聚焦Demo 访问防线，模块白名单 fail-closed · IP 5s/30 → 429, 访问防线与视角" aria-pressed="false" data-node-kind="security" data-node-sublabel="模块白名单 fail-closed · IP 5s/30 → 429" data-node-tag="非 demo 零开销" data-node-context="访问防线与视角">
+          <title>Demo 访问防线 · 模块白名单 fail-closed · IP 5s/30 → 429 · 访问防线与视角 · 非 demo 零开销</title>
           <rect x="460" y="260" width="240" height="104" rx="6" class="c-mask"/>
           <rect x="460" y="260" width="240" height="104" rx="6" class="c-security" data-animate="node" style="--step:4" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="security" class="semantic-sigil s-security" transform="translate(466 266) scale(0.6875)">
@@ -5118,37 +5120,50 @@
             <path d="m5.8 8 1.5 1.5 3-3"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="580" y="310" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Demo 访问防线</text>
-        <text data-detail="context" x="580" y="326" class="t-muted" font-size="9" text-anchor="middle">模块白名单 fail-closed · IP 5s/30</text>
-        <text data-detail="fine" x="580" y="356" class="t-security" font-size="7" text-anchor="middle">埋点 IP/UA</text>
+        <text data-detail="context" x="580" y="326" class="t-muted" font-size="9" text-anchor="middle">模块白名单 fail-closed · IP 5s/30 → 429</text>
+        <text data-detail="fine" x="580" y="356" class="t-security" font-size="7" text-anchor="middle">非 demo 零开销</text>
         </g>
 
-        <g id="node-masked" data-node-id="masked" data-node-label="全量脱敏视图" tabindex="0" role="button" aria-label="聚焦全量脱敏视图，身份→*** · 连接→前4..后4, 访问防线与视角" aria-pressed="false" data-node-kind="backend" data-node-sublabel="身份→*** · 连接→前4..后4" data-node-context="访问防线与视角">
-          <title>全量脱敏视图 · 身份→*** · 连接→前4..后4 · 访问防线与视角</title>
+        <g id="node-masked" data-node-id="masked" data-node-label="全量脱敏视图" tabindex="0" role="button" aria-label="聚焦全量脱敏视图，audit/models/endpoints · 保留数字/别名, 访问防线与视角" aria-pressed="false" data-node-kind="backend" data-node-sublabel="audit/models/endpoints · 保留数字/别名" data-node-tag="MaskIdentity ***" data-node-context="访问防线与视角">
+          <title>全量脱敏视图 · audit/models/endpoints · 保留数字/别名 · 访问防线与视角 · MaskIdentity ***</title>
           <rect x="780" y="260" width="280" height="104" rx="6" class="c-mask"/>
           <rect x="780" y="260" width="280" height="104" rx="6" class="c-backend" data-animate="node" style="--step:6" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(786 266) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="920" y="310" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">全量脱敏视图</text>
-        <text data-detail="context" x="920" y="326" class="t-muted" font-size="9" text-anchor="middle">身份→*** · 连接→前4..后4</text>
+        <text data-detail="context" x="920" y="326" class="t-muted" font-size="9" text-anchor="middle">audit/models/endpoints · 保留数字/别名</text>
+        <text data-detail="fine" x="920" y="356" class="t-backend" font-size="7" text-anchor="middle">MaskIdentity ***</text>
         </g>
 
-        <g id="node-demo-sessions" data-node-id="demo-sessions" data-node-label="demo_sessions" tabindex="0" role="button" aria-label="聚焦demo_sessions，session_id uniqueIndex, 白名单存储与治理" aria-pressed="false" data-node-kind="database" data-node-sublabel="session_id uniqueIndex" data-node-context="白名单存储与治理">
-          <title>demo_sessions · session_id uniqueIndex · 白名单存储与治理</title>
+        <g id="node-demo-sessions" data-node-id="demo-sessions" data-node-label="demo_sessions" tabindex="0" role="button" aria-label="聚焦demo_sessions，session_id uniqueIndex · 选取即授权, 存储与治理" aria-pressed="false" data-node-kind="database" data-node-sublabel="session_id uniqueIndex · 选取即授权" data-node-context="存储与治理">
+          <title>demo_sessions · session_id uniqueIndex · 选取即授权 · 存储与治理</title>
           <rect x="100" y="480" width="280" height="88" rx="6" class="c-mask"/>
-          <rect x="100" y="480" width="280" height="88" rx="6" class="c-database" data-animate="node" style="--step:7" stroke-width="1.5"/>
+          <rect x="100" y="480" width="280" height="88" rx="6" class="c-database" data-animate="node" style="--step:8" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="database" class="semantic-sigil s-database" transform="translate(106 486) scale(0.6875)">
             <ellipse cx="8" cy="4" rx="5" ry="2"/>
             <path d="M3 4v8c0 1.1 2.2 2 5 2s5-.9 5-2V4M3 8c0 1.1 2.2 2 5 2s5-.9 5-2"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="240" y="522" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">demo_sessions</text>
-        <text data-detail="context" x="240" y="538" class="t-muted" font-size="9" text-anchor="middle">session_id uniqueIndex</text>
+        <text data-detail="context" x="240" y="538" class="t-muted" font-size="9" text-anchor="middle">session_id uniqueIndex · 选取即授权</text>
         </g>
 
-        <g id="node-admin-ui" data-node-id="admin-ui" data-node-label="Admin /demo tab" tabindex="0" role="button" aria-label="聚焦Admin /demo tab，勾选批量增删, 白名单存储与治理" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="勾选批量增删" data-node-context="白名单存储与治理">
-          <title>Admin /demo tab · 勾选批量增删 · 白名单存储与治理</title>
+        <g id="node-audit-db" data-node-id="audit-db" data-node-label="demo_access_audits" tabindex="0" role="button" aria-label="聚焦demo_access_audits，登录/模块访问 · path·IP·UA, 存储与治理" aria-pressed="false" data-node-kind="database" data-node-sublabel="登录/模块访问 · path·IP·UA" data-node-context="存储与治理">
+          <title>demo_access_audits · 登录/模块访问 · path·IP·UA · 存储与治理</title>
+          <rect x="460" y="480" width="240" height="88" rx="6" class="c-mask"/>
+          <rect x="460" y="480" width="240" height="88" rx="6" class="c-database" data-animate="node" style="--step:7" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="database" class="semantic-sigil s-database" transform="translate(466 486) scale(0.6875)">
+            <ellipse cx="8" cy="4" rx="5" ry="2"/>
+            <path d="M3 4v8c0 1.1 2.2 2 5 2s5-.9 5-2V4M3 8c0 1.1 2.2 2 5 2s5-.9 5-2"/>
+          </g>
+          <text data-node-label="" data-detail-anchor="" x="580" y="522" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">demo_access_audits</text>
+        <text data-detail="context" x="580" y="538" class="t-muted" font-size="9" text-anchor="middle">登录/模块访问 · path·IP·UA</text>
+        </g>
+
+        <g id="node-admin-ui" data-node-id="admin-ui" data-node-label="Admin /demo tab" tabindex="0" role="button" aria-label="聚焦Admin /demo tab，DemoSessionsManager · 批量增删 · 配置开关, 存储与治理" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="DemoSessionsManager · 批量增删 · 配置开关" data-node-context="存储与治理">
+          <title>Admin /demo tab · DemoSessionsManager · 批量增删 · 配置开关 · 存储与治理</title>
           <rect x="780" y="480" width="280" height="88" rx="6" class="c-mask"/>
-          <rect x="780" y="480" width="280" height="88" rx="6" class="c-frontend" data-animate="node" style="--step:7" stroke-width="1.5"/>
+          <rect x="780" y="480" width="280" height="88" rx="6" class="c-frontend" data-animate="node" style="--step:8" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(786 486) scale(0.6875)">
             <rect x="2" y="3" width="12" height="10" rx="2"/>
             <path d="M2 6.5h12"/>
@@ -5156,7 +5171,7 @@
             <circle cx="6.3" cy="4.8" r=".7" class="sigil-fill"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="920" y="522" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Admin /demo tab</text>
-        <text data-detail="context" x="920" y="538" class="t-muted" font-size="9" text-anchor="middle">勾选批量增删</text>
+        <text data-detail="context" x="920" y="538" class="t-muted" font-size="9" text-anchor="middle">DemoSessionsManager · 批量增删 · 配置开关</text>
         </g>
 
         <!-- Connection labels -->
@@ -5184,13 +5199,17 @@
           <rect x="715.8" y="292" width="48.4" height="14" rx="3" class="c-mask"/>
           <text x="740" y="302" class="t-muted" font-size="8" text-anchor="middle">全量脱敏</text>
         </g>
-        <g data-detail="context" data-edge-from="session-view" data-edge-to="demo-sessions" data-edge-label="AllowedIDs" data-edge-key="6" data-edge-id="g1">
+        <g data-detail="context" data-edge-from="defense" data-edge-to="audit-db" data-edge-label="埋点 IP/UA" data-edge-key="6" data-edge-id="d3">
+          <rect x="551" y="422" width="58" height="14" rx="3" class="c-mask"/>
+          <text x="580" y="432" class="t-messagebus" font-size="8" text-anchor="middle">埋点 IP/UA</text>
+        </g>
+        <g data-detail="context" data-edge-from="session-view" data-edge-to="demo-sessions" data-edge-label="AllowedIDs" data-edge-key="7" data-edge-id="g1">
           <rect x="211" y="405" width="58" height="14" rx="3" class="c-mask"/>
           <text x="240" y="415" class="t-muted" font-size="8" text-anchor="middle">AllowedIDs</text>
         </g>
-        <g data-detail="context" data-edge-from="admin-ui" data-edge-to="demo-sessions" data-edge-label="批量增删" data-edge-key="7" data-edge-id="g2">
-          <rect x="555.8" y="504" width="48.4" height="14" rx="3" class="c-mask"/>
-          <text x="580" y="514" class="t-messagebus" font-size="8" text-anchor="middle">批量增删</text>
+        <g data-detail="context" data-edge-from="admin-ui" data-edge-to="demo-sessions" data-edge-label="批量增删" data-edge-key="8" data-edge-id="g2">
+          <rect x="555.8" y="594" width="48.4" height="14" rx="3" class="c-mask"/>
+          <text x="580" y="604" class="t-messagebus" font-size="8" text-anchor="middle">批量增删</text>
         </g>
 
         <!-- Boundary labels (foreground masks keep routes out of titles) -->
@@ -5204,9 +5223,9 @@
           <text data-boundary-label="" x="98" y="253" class="t-cloud" font-size="9" font-weight="600">访问防线与视角</text>
         </g>
 
-        <g data-graph-role="structural-frame-label" data-composition-frame-id="2" data-composition-frame-kind="region" data-composition-frame-label="白名单存储与治理">
-          <rect data-graph-role="structural-frame-label-mask" x="94" y="460" width="96.39999999999999" height="16" rx="3" class="c-mask"/>
-          <text data-boundary-label="" x="98" y="473" class="t-cloud" font-size="9" font-weight="600">白名单存储与治理</text>
+        <g data-graph-role="structural-frame-label" data-composition-frame-id="2" data-composition-frame-kind="region" data-composition-frame-label="存储与治理">
+          <rect data-graph-role="structural-frame-label-mask" x="94" y="460" width="64" height="16" rx="3" class="c-mask"/>
+          <text data-boundary-label="" x="98" y="473" class="t-cloud" font-size="9" font-weight="600">存储与治理</text>
         </g>
 
         <!-- Legend -->
@@ -5404,8 +5423,8 @@
         </div>
         <ul>
           <li>&bull; /api/web/v1/demo/login 无 JWT，IP 令牌桶 5s/8</li>
-          <li>&bull; DemoLogin 校验 login_enabled，按 demo 权限挑会话</li>
-          <li>&bull; 签发受限 JWT，前端 isDemo() 三态守卫收敛 UI</li>
+          <li>&bull; DemoLogin 校验 login_enabled，按 demo 权限挑会话，签发 access+refresh</li>
+          <li>&bull; 登录与模块访问事件（path/IP/UA）落 demo_access_audits 供 admin 审计</li>
         </ul>
       </div>
 
@@ -5416,8 +5435,8 @@
         </div>
         <ul>
           <li>&bull; 模块白名单 fail-closed：SESSIONS 放行，其余 403</li>
-          <li>&bull; 第二层 IP 令牌桶 5s/30 防扫</li>
-          <li>&bull; 埋点记录模块访问 IP/UA，审计 demo 行为</li>
+          <li>&bull; 第二层 IP 令牌桶 5s/30（8 个接口组共享一桶），超限 429 + Retry-After</li>
+          <li>&bull; 非 demo 用户权限过滤不命中直接放行，不碰 Redis</li>
         </ul>
       </div>
 
@@ -5427,9 +5446,9 @@
           <h3>数据视角</h3>
         </div>
         <ul>
-          <li>&bull; 会话白名单视角：仅可见 demo_sessions 里的会话</li>
-          <li>&bull; 全量脱敏视角：身份 *** · 连接 前4..后4</li>
-          <li>&bull; Admin /demo tab 勾选批量维护白名单</li>
+          <li>&bull; 会话白名单：列表 ListSessionsByIDs，详情 IsAllowed，非白名单返回&quot;不存在&quot;防遍历</li>
+          <li>&bull; 全量脱敏：身份 MaskIdentity→*** · 连接 MaskSecret→前4..后4，统计与别名有意保留</li>
+          <li>&bull; Admin /demo tab 勾选批量维护 demo_sessions，白名单内容明文（选取即授权）</li>
         </ul>
       </div>
     </div>
@@ -6519,7 +6538,7 @@
         var fps = Math.max(1, Number(options.fps) || MOTION_FPS);
         var svg = document.querySelector('.diagram-container svg');
         var vb = svg.viewBox.baseVal;
-        var scale = Math.min(1, 1280 / vb.width);
+        var scale = Math.min(1, Math.min(4096, Math.round(Number(window.__ARCHIFY_MOTION_MAX_W)) || 1280) / vb.width);
         var data = serializeSvg(scale);
         var sourceUrl = URL.createObjectURL(new Blob([data.svgString], { type: 'image/svg+xml;charset=utf-8' }));
 
@@ -6683,7 +6702,7 @@
             var mime = motionMimeType();
             var recorder;
             try {
-              recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 6000000 });
+              recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: Math.round(Number(window.__ARCHIFY_MOTION_BPS)) || 6000000 });
             } catch (err) {
               URL.revokeObjectURL(sourceUrl);
               stream.getTracks().forEach(function (track) { track.stop(); });

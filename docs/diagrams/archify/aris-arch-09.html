@@ -5073,20 +5073,20 @@
           <text data-detail="context" x="315" y="165" class="t-muted" font-size="7" text-anchor="middle">GoCollector · Gather()</text>
         </g>
 
-        <g id="node-flusher" data-node-id="flusher" data-node-label="Metrics Flusher" tabindex="0" role="button" aria-label="聚焦Metrics Flusher，每 Pod 5s, 02 / Registry · Flusher" aria-pressed="false" data-node-kind="backend" data-node-sublabel="每 Pod 5s" data-node-tag="单例" data-node-context="02 / Registry · Flusher">
-          <title>Metrics Flusher · 每 Pod 5s · 02 / Registry · Flusher · 单例</title>
+        <g id="node-flusher" data-node-id="flusher" data-node-label="Metrics Flusher" tabindex="0" role="button" aria-label="聚焦Metrics Flusher，每 Pod 单例 · 5s, 02 / Registry · Flusher" aria-pressed="false" data-node-kind="backend" data-node-sublabel="每 Pod 单例 · 5s" data-node-tag="不进 cron" data-node-context="02 / Registry · Flusher">
+          <title>Metrics Flusher · 每 Pod 单例 · 5s · 02 / Registry · Flusher · 不进 cron</title>
           <rect x="259" y="242" width="112" height="58" rx="6" class="c-mask"/>
           <rect x="259" y="242" width="112" height="58" rx="6" class="c-backend" data-animate="node" style="--step:2" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(265 248) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="315" y="263" class="t-primary" font-size="10" font-weight="600" text-anchor="middle">Metrics Flusher</text>
-          <text data-detail="context" x="315" y="279" class="t-muted" font-size="7" text-anchor="middle">每 Pod 5s</text>
-        <text data-detail="fine" x="315" y="289" class="t-backend" font-size="7" text-anchor="middle">单例</text>
+          <text data-detail="context" x="315" y="279" class="t-muted" font-size="7" text-anchor="middle">每 Pod 单例 · 5s</text>
+        <text data-detail="fine" x="315" y="289" class="t-backend" font-size="7" text-anchor="middle">不进 cron</text>
         </g>
 
-        <g id="node-redis" data-node-id="redis" data-node-label="Redis 快照" tabindex="0" role="button" aria-label="聚焦Redis 快照，ZSET · 24h, 03 / Redis 快照" aria-pressed="false" data-node-kind="database" data-node-sublabel="ZSET · 24h" data-node-tag="跨 Pod" data-node-context="03 / Redis 快照">
-          <title>Redis 快照 · ZSET · 24h · 03 / Redis 快照 · 跨 Pod</title>
+        <g id="node-redis" data-node-id="redis" data-node-label="Redis 快照" tabindex="0" role="button" aria-label="聚焦Redis 快照，ZSET data:{pod} · 24h, 03 / Redis 快照" aria-pressed="false" data-node-kind="database" data-node-sublabel="ZSET data:{pod} · 24h" data-node-tag="跨 Pod" data-node-context="03 / Redis 快照">
+          <title>Redis 快照 · ZSET data:{pod} · 24h · 03 / Redis 快照 · 跨 Pod</title>
           <rect x="474" y="128" width="112" height="58" rx="6" class="c-mask"/>
           <rect x="474" y="128" width="112" height="58" rx="6" class="c-database" data-animate="node" style="--step:3" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="database" class="semantic-sigil s-database" transform="translate(480 134) scale(0.6875)">
@@ -5094,23 +5094,23 @@
             <path d="M3 4v8c0 1.1 2.2 2 5 2s5-.9 5-2V4M3 8c0 1.1 2.2 2 5 2s5-.9 5-2"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="530" y="149" class="t-primary" font-size="10" font-weight="600" text-anchor="middle">Redis 快照</text>
-          <text data-detail="context" x="530" y="165" class="t-muted" font-size="7" text-anchor="middle">ZSET · 24h</text>
+          <text data-detail="context" x="530" y="165" class="t-muted" font-size="7" text-anchor="middle">ZSET data:{pod} · 24h</text>
         <text data-detail="fine" x="530" y="175" class="t-database" font-size="7" text-anchor="middle">跨 Pod</text>
         </g>
 
-        <g id="node-agg" data-node-id="agg" data-node-label="Aggregate" tabindex="0" role="button" aria-label="聚焦Aggregate，delta÷桶宽 · P95, 04 / 聚合与消费" aria-pressed="false" data-node-kind="backend" data-node-sublabel="delta÷桶宽 · P95" data-node-context="04 / 聚合与消费">
-          <title>Aggregate · delta÷桶宽 · P95 · 04 / 聚合与消费</title>
+        <g id="node-agg" data-node-id="agg" data-node-label="Aggregate" tabindex="0" role="button" aria-label="聚焦Aggregate，gauge 均值 · delta÷桶宽, 04 / 聚合与消费" aria-pressed="false" data-node-kind="backend" data-node-sublabel="gauge 均值 · delta÷桶宽" data-node-context="04 / 聚合与消费">
+          <title>Aggregate · gauge 均值 · delta÷桶宽 · 04 / 聚合与消费</title>
           <rect x="689" y="128" width="112" height="58" rx="6" class="c-mask"/>
           <rect x="689" y="128" width="112" height="58" rx="6" class="c-backend" data-animate="node" style="--step:4" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(695 134) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="745" y="149" class="t-primary" font-size="10" font-weight="600" text-anchor="middle">Aggregate</text>
-          <text data-detail="context" x="745" y="165" class="t-muted" font-size="7" text-anchor="middle">delta÷桶宽 · P95</text>
+          <text data-detail="context" x="745" y="165" class="t-muted" font-size="7" text-anchor="middle">gauge 均值 · delta÷桶宽</text>
         </g>
 
-        <g id="node-dashboard" data-node-id="dashboard" data-node-label="运行时大盘" tabindex="0" role="button" aria-label="聚焦运行时大盘，QPS·P95·tok/s, 04 / 聚合与消费" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="QPS·P95·tok/s" data-node-context="04 / 聚合与消费">
-          <title>运行时大盘 · QPS·P95·tok/s · 04 / 聚合与消费</title>
+        <g id="node-dashboard" data-node-id="dashboard" data-node-label="运行时大盘" tabindex="0" role="button" aria-label="聚焦运行时大盘，QPS·P95·成功率·tok/s, 04 / 聚合与消费" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="QPS·P95·成功率·tok/s" data-node-context="04 / 聚合与消费">
+          <title>运行时大盘 · QPS·P95·成功率·tok/s · 04 / 聚合与消费</title>
           <rect x="689" y="242" width="112" height="58" rx="6" class="c-mask"/>
           <rect x="689" y="242" width="112" height="58" rx="6" class="c-frontend" data-animate="node" style="--step:5" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(695 248) scale(0.6875)">
@@ -5120,7 +5120,7 @@
             <circle cx="6.3" cy="4.8" r=".7" class="sigil-fill"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="745" y="263" class="t-primary" font-size="10" font-weight="600" text-anchor="middle">运行时大盘</text>
-          <text data-detail="context" x="745" y="279" class="t-muted" font-size="7" text-anchor="middle">QPS·P95·tok/s</text>
+          <text data-detail="context" x="745" y="279" class="t-muted" font-size="7" text-anchor="middle">QPS·P95·成功率·tok/s</text>
         </g>
 
         <g id="node-prom" data-node-id="prom" data-node-label="Prometheus" tabindex="0" role="button" aria-label="聚焦Prometheus，promhttp 直读, 04 / 聚合与消费" aria-pressed="false" data-node-kind="external" data-node-sublabel="promhttp 直读" data-node-context="04 / 聚合与消费">
@@ -5361,9 +5361,9 @@
           <h3>采集与快照</h3>
         </div>
         <ul>
-          <li>&bull; 4 类采集器：HTTP 指标 · SSE Gauge · Token 计数 · runtime</li>
-          <li>&bull; Prometheus Registry 进程内聚合，Gather() 导出</li>
-          <li>&bull; Metrics Flusher 每 Pod 单例，5s 写 Redis ZSET 快照，保留 24h</li>
+          <li>&bull; 4 类采集器：HTTP 时延 histogram · SSEGauge 并发连接 · Token 吞吐 · runtime</li>
+          <li>&bull; Prometheus Registry 进程内聚合（GoCollector/ProcessCollector），Gather() 导出</li>
+          <li>&bull; Metrics Flusher 每 Pod 单例，5s BuildSnapshot 写 ZSET metrics:runtime:data:{pod}，retention 24h</li>
         </ul>
       </div>
 
@@ -5373,9 +5373,9 @@
           <h3>双消费路径</h3>
         </div>
         <ul>
-          <li>&bull; 大盘：Redis 快照 → Aggregate（delta÷桶宽 · P95 聚合）→ 跨 Pod 汇总</li>
-          <li>&bull; Prometheus：promhttp 直接拉取本 Pod Registry</li>
-          <li>&bull; goroutines 等运行时指标也随快照入库，支撑泄漏时序还原</li>
+          <li>&bull; 大盘：Redis 快照 → Aggregate（gauge 桶内均值 / counter delta÷桶宽 / histogram 桶合并 P95）</li>
+          <li>&bull; Prometheus：/metrics 端点经 promhttp.Handler 直读本 Pod Registry</li>
+          <li>&bull; goroutines/heap/CPU 随快照入库，支撑泄漏时序还原</li>
         </ul>
       </div>
     </div>
@@ -6465,7 +6465,7 @@
         var fps = Math.max(1, Number(options.fps) || MOTION_FPS);
         var svg = document.querySelector('.diagram-container svg');
         var vb = svg.viewBox.baseVal;
-        var scale = Math.min(1, 1280 / vb.width);
+        var scale = Math.min(1, Math.min(4096, Math.round(Number(window.__ARCHIFY_MOTION_MAX_W)) || 1280) / vb.width);
         var data = serializeSvg(scale);
         var sourceUrl = URL.createObjectURL(new Blob([data.svgString], { type: 'image/svg+xml;charset=utf-8' }));
 
@@ -6629,7 +6629,7 @@
             var mime = motionMimeType();
             var recorder;
             try {
-              recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 6000000 });
+              recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: Math.round(Number(window.__ARCHIFY_MOTION_BPS)) || 6000000 });
             } catch (err) {
               URL.revokeObjectURL(sourceUrl);
               stream.getTracks().forEach(function (track) { track.stop(); });

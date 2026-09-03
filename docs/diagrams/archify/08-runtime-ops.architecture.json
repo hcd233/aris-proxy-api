@@ -19,18 +19,18 @@
     ]
   },
   "components": [
-    { "id": "collectors", "type": "backend", "label": "进程内采集器", "sublabel": "HTTP · SSE · Token · runtime", "pos": [40, 40], "size": [260, 88] },
-    { "id": "flusher", "type": "backend", "label": "Metrics Flusher", "sublabel": "每 Pod 单例 · 5s 周期", "pos": [400, 40], "size": [240, 88], "sources": [{ "path": "internal/infrastructure/metrics/flusher.go" }] },
-    { "id": "snapshot", "type": "database", "label": "Redis 快照", "sublabel": "ZSET · 24h 保留", "pos": [740, 40], "size": [280, 88] },
+    { "id": "collectors", "type": "backend", "label": "进程内采集器", "sublabel": "HTTP · SSE · Token · runtime 四类", "pos": [40, 40], "size": [260, 88] },
+    { "id": "flusher", "type": "backend", "label": "Metrics Flusher", "sublabel": "每 Pod 单例 · BuildSnapshot 5s", "pos": [400, 40], "size": [240, 88], "sources": [{ "path": "internal/infrastructure/metrics/flusher.go" }] },
+    { "id": "snapshot", "type": "database", "label": "Redis 快照", "sublabel": "ZSET data:{pod} · retention 24h", "pos": [740, 40], "size": [280, 88] },
     { "id": "sig", "type": "external", "label": "终止信号", "sublabel": "SIGINT/SIGTERM · preStop 10s", "pos": [40, 220], "size": [200, 88] },
     { "id": "fx", "type": "backend", "label": "Fx Lifecycle", "sublabel": "OnStop 逆序 · 9 Hook", "pos": [320, 220], "size": [240, 88] },
-    { "id": "drain", "type": "backend", "label": "后台收尾与释放", "sublabel": "停 cron/pond · drain · 关 HTTP · 释放连接池", "pos": [660, 220], "size": [360, 88] },
-    { "id": "admin-trig", "type": "frontend", "label": "管理后台 /trigger", "sublabel": "增删改", "pos": [40, 400], "size": [220, 88] },
-    { "id": "signal", "type": "database", "label": "变更信号 Redis", "sublabel": "Publish · INCR version", "pos": [340, 400], "size": [240, 88] },
-    { "id": "matcher", "type": "backend", "label": "AC 匹配器", "sublabel": "三重同步 · 全量 Rebuild", "pos": [660, 400], "size": [260, 88], "sources": [{ "path": "internal/application/llmproxy/util/trigger_content_filter.go" }] },
-    { "id": "admin-cron", "type": "frontend", "label": "管理后台 /cron", "sublabel": "更新 spec · 手动触发", "pos": [40, 580], "size": [220, 88] },
-    { "id": "mgr", "type": "backend", "label": "CronManager", "sublabel": "Restart · Enable · Disable", "pos": [340, 580], "size": [240, 88] },
-    { "id": "lock-exec", "type": "security", "label": "分布式锁执行 + 审计", "sublabel": "Redis 锁 5min · CronCallAudit", "pos": [660, 580], "size": [300, 88], "sources": [{ "path": "internal/cron/trigger_hit_sync.go" }] }
+    { "id": "drain", "type": "backend", "label": "后台收尾与释放", "sublabel": "停 cron/pond · inflight drain · 关 HTTP · 释放连接池", "pos": [660, 220], "size": [360, 88] },
+    { "id": "admin-trig", "type": "frontend", "label": "管理后台 /trigger", "sublabel": "增删改 · 写 DB + 广播", "pos": [40, 400], "size": [220, 88] },
+    { "id": "signal", "type": "database", "label": "变更信号 Redis", "sublabel": "Publish trigger:changed · INCR", "pos": [340, 400], "size": [240, 88] },
+    { "id": "matcher", "type": "backend", "label": "AC 匹配器", "sublabel": "全量 Rebuild · deny→403 · omit→不落库", "tag": "三重同步", "pos": [660, 400], "size": [260, 88], "sources": [{ "path": "internal/application/llmproxy/util/trigger_content_filter.go" }] },
+    { "id": "admin-cron", "type": "frontend", "label": "管理后台 /cron", "sublabel": "更新 spec · 手动触发 · 核心任务禁关", "pos": [40, 580], "size": [220, 88] },
+    { "id": "mgr", "type": "backend", "label": "CronManager", "sublabel": "Restart · Enable · Disable · pub/sub 广播", "pos": [340, 580], "size": [240, 88] },
+    { "id": "lock-exec", "type": "security", "label": "分布式锁执行 + 审计", "sublabel": "cron:lock:{name} TTL 5min · CronCallAudit", "pos": [660, 580], "size": [300, 88], "sources": [{ "path": "internal/cron/trigger_hit_sync.go" }] }
   ],
   "boundaries": [
     { "kind": "region", "label": "运行时指标", "wraps": ["collectors", "flusher", "snapshot"], "pad": 10 },
@@ -50,6 +50,6 @@
   ],
   "cards": [
     { "dot": "cyan", "title": "四域总览", "items": ["本图为 09-12 四张分图的治理域总览", "每域独立闭环：指标、退出、触发词、定时任务", "共同底座：Redis 协调 + 管理后台触发"] },
-    { "dot": "emerald", "title": "关键约束", "items": ["指标快照按 Pod 写 ZSET，保留 24h", "退出逆序：先停后台再关 HTTP，最后释放连接池", "Cron 双 Pod 下由分布式锁保证单点执行"] }
+    { "dot": "emerald", "title": "关键约束", "items": ["指标快照按 Pod 写 ZSET，retention 24h 清理", "退出逆序：先停后台再关 HTTP，最后释放连接池", "Cron 双 Pod 下由 Redis 锁（TTL 5min）保证单点执行"] }
   ]
 }

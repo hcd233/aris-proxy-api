@@ -5035,11 +5035,11 @@
         <rect data-graph-role="structural-frame" data-composition-frame-kind="region" data-composition-frame-id="1" data-composition-frame-label="容错防线" x="30" y="216" width="950" height="168" rx="12" class="c-region" stroke-width="1"/>
 
         <!-- Connection paths (before components for correct z-order) -->
-        <path data-edge-from="proxy" data-edge-to="adapt" data-edge-label="Allow()" data-edge-key="0" data-edge-id="c1" data-composition-points="300,92;380,92" d="M 300 92 L 380 92" class="a-default" data-animate="edge" style="--step:0" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="proxy" data-edge-to="adapt" data-edge-label="Allow(ctx,key)" data-edge-key="0" data-edge-id="c1" data-composition-points="300,92;380,92" d="M 300 92 L 380 92" class="a-default" data-animate="edge" style="--step:0" stroke-width="1.5" marker-end="url(#arrowhead)"/>
         <path data-edge-from="adapt" data-edge-to="guard" data-edge-label="组装" data-edge-key="1" data-edge-id="c2" data-composition-points="640,92;720,92" d="M 640 92 L 720 92" class="a-default" data-animate="edge" style="--step:1" stroke-width="1.5" marker-end="url(#arrowhead)"/>
         <path data-edge-from="guard" data-edge-to="retry" data-edge-label="放行" data-edge-key="2" data-edge-id="c3" data-composition-points="980,92;1060,92" d="M 980 92 L 1060 92" class="a-default" data-animate="edge" style="--step:2" stroke-width="1.5" marker-end="url(#arrowhead)"/>
         <path data-edge-from="retry" data-edge-to="upstream" data-edge-key="3" data-edge-id="c4" data-composition-points="1190,144;1190,190" d="M 1190 144 L 1190 190" class="a-default" data-animate="edge" style="--step:3" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="retry" data-edge-to="guard" data-edge-label="Report" data-edge-key="4" data-edge-id="c5" data-composition-points="1190,144;1190,178;1010,178;1010,92;980,92" d="M 1190 144 L 1190 170 Q 1190 178 1182 178 L 1018 178 Q 1010 178 1010 170 L 1010 100 Q 1010 92 1002 92 L 980 92" class="a-dashed" data-animate="edge" style="--step:4" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
+        <path data-edge-from="retry" data-edge-to="guard" data-edge-label="Report(key, !IsCircuitError)" data-edge-key="4" data-edge-id="c5" data-composition-points="1190,144;1190,178;1010,178;1010,92;980,92" d="M 1190 144 L 1190 170 Q 1190 178 1182 178 L 1018 178 Q 1010 178 1010 170 L 1010 100 Q 1010 92 1002 92 L 980 92" class="a-dashed" data-animate="edge" style="--step:4" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
         <path data-edge-from="guard" data-edge-to="breaker" data-edge-label="熔断判定" data-edge-key="5" data-edge-id="c6" data-composition-points="850,144;850,192;500,192;500,240" d="M 850 144 L 850 184 Q 850 192 842 192 L 508 192 Q 500 192 500 200 L 500 240" class="a-default" data-animate="edge" style="--step:5" stroke-width="1.5" marker-end="url(#arrowhead)"/>
         <path data-edge-from="guard" data-edge-to="bulkhead" data-edge-label="并发获取" data-edge-key="6" data-edge-id="c7" data-composition-points="850,144;850,240" d="M 850 144 L 850 240" class="a-default" data-animate="edge" style="--step:6" stroke-width="1.5" marker-end="url(#arrowhead)"/>
         <path data-edge-from="breaker" data-edge-to="degrade" data-edge-label="打开→降级" data-edge-key="7" data-edge-id="c8" data-composition-points="360,302;336,302;336,318;304,318;304,292;280,292" d="M 360 302 L 344 302 Q 336 302 336 310 L 336 310 Q 336 318 328 318 L 312 318 Q 304 318 304 310 L 304 300 Q 304 292 296 292 L 280 292" class="a-default" data-animate="edge" style="--step:7" stroke-width="1.5" marker-end="url(#arrowhead)"/>
@@ -5047,8 +5047,8 @@
         <path data-edge-from="bulkhead" data-edge-to="metrics" data-edge-label="拒绝计数" data-edge-key="9" data-edge-id="c11" data-composition-points="850,344;850,387;660,387;660,430" d="M 850 344 L 850 379 Q 850 387 842 387 L 668 387 Q 660 387 660 395 L 660 430" class="a-dashed" data-animate="edge" style="--step:9" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
 
         <!-- Components -->
-        <g id="node-proxy" data-node-id="proxy" data-node-label="Proxy 转发调用点" tabindex="0" role="button" aria-label="聚焦Proxy 转发调用点，doUpstreamRequest · sendRequest, 转发链" aria-pressed="false" data-node-kind="backend" data-node-sublabel="doUpstreamRequest · sendRequest" data-node-context="转发链">
-          <title>Proxy 转发调用点 · doUpstreamRequest · sendRequest · 转发链</title>
+        <g id="node-proxy" data-node-id="proxy" data-node-label="Proxy 转发调用点" tabindex="0" role="button" aria-label="聚焦Proxy 转发调用点，doUpstreamRequest · sendRequest, 转发链" aria-pressed="false" data-node-kind="backend" data-node-sublabel="doUpstreamRequest · sendRequest" data-node-tag="流式同受保护" data-node-context="转发链">
+          <title>Proxy 转发调用点 · doUpstreamRequest · sendRequest · 转发链 · 流式同受保护</title>
           <rect x="40" y="40" width="260" height="104" rx="6" class="c-mask"/>
           <rect x="40" y="40" width="260" height="104" rx="6" class="c-backend" data-animate="node" style="--step:0" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(46 46) scale(0.6875)">
@@ -5056,10 +5056,11 @@
           </g>
           <text data-node-label="" data-detail-anchor="" x="170" y="90" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Proxy 转发调用点</text>
         <text data-detail="context" x="170" y="106" class="t-muted" font-size="9" text-anchor="middle">doUpstreamRequest · sendRequest</text>
+        <text data-detail="fine" x="170" y="136" class="t-backend" font-size="7" text-anchor="middle">流式同受保护</text>
         </g>
 
-        <g id="node-adapt" data-node-id="adapt" data-node-label="EndpointGuard" tabindex="0" role="button" aria-label="聚焦EndpointGuard，key: BaseURL|APIKey · IsCircuitError, 转发链" aria-pressed="false" data-node-kind="backend" data-node-sublabel="key: BaseURL|APIKey · IsCircuitError" data-node-tag="容错入口" data-node-context="转发链">
-          <title>EndpointGuard · key: BaseURL|APIKey · IsCircuitError · 转发链 · 容错入口</title>
+        <g id="node-adapt" data-node-id="adapt" data-node-label="EndpointGuard" tabindex="0" role="button" aria-label="聚焦EndpointGuard，key: BaseURL|APIKey · IsCircuitError, 转发链" aria-pressed="false" data-node-kind="backend" data-node-sublabel="key: BaseURL|APIKey · IsCircuitError" data-node-tag="9 项容错配置" data-node-context="转发链">
+          <title>EndpointGuard · key: BaseURL|APIKey · IsCircuitError · 转发链 · 9 项容错配置</title>
           <rect x="380" y="40" width="260" height="104" rx="6" class="c-mask"/>
           <rect x="380" y="40" width="260" height="104" rx="6" class="c-backend" data-animate="node" style="--step:1" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(386 46) scale(0.6875)">
@@ -5067,11 +5068,11 @@
           </g>
           <text data-node-label="" data-detail-anchor="" x="510" y="90" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">EndpointGuard</text>
         <text data-detail="context" x="510" y="106" class="t-muted" font-size="9" text-anchor="middle">key: BaseURL|APIKey · IsCircuitError</text>
-        <text data-detail="fine" x="510" y="136" class="t-backend" font-size="7" text-anchor="middle">容错入口</text>
+        <text data-detail="fine" x="510" y="136" class="t-backend" font-size="7" text-anchor="middle">9 项容错配置</text>
         </g>
 
-        <g id="node-guard" data-node-id="guard" data-node-label="Guard 组合" tabindex="0" role="button" aria-label="聚焦Guard 组合，Allow: 熔断→信号量 · defer Report, 转发链" aria-pressed="false" data-node-kind="backend" data-node-sublabel="Allow: 熔断→信号量 · defer Report" data-node-context="转发链">
-          <title>Guard 组合 · Allow: 熔断→信号量 · defer Report · 转发链</title>
+        <g id="node-guard" data-node-id="guard" data-node-label="Guard 组合" tabindex="0" role="button" aria-label="聚焦Guard 组合，Allow: 熔断→信号量 · defer Report, 转发链" aria-pressed="false" data-node-kind="backend" data-node-sublabel="Allow: 熔断→信号量 · defer Report" data-node-tag="release 幂等" data-node-context="转发链">
+          <title>Guard 组合 · Allow: 熔断→信号量 · defer Report · 转发链 · release 幂等</title>
           <rect x="720" y="40" width="260" height="104" rx="6" class="c-mask"/>
           <rect x="720" y="40" width="260" height="104" rx="6" class="c-backend" data-animate="node" style="--step:2" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(726 46) scale(0.6875)">
@@ -5079,21 +5080,22 @@
           </g>
           <text data-node-label="" data-detail-anchor="" x="850" y="90" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Guard 组合</text>
         <text data-detail="context" x="850" y="106" class="t-muted" font-size="9" text-anchor="middle">Allow: 熔断→信号量 · defer Report</text>
+        <text data-detail="fine" x="850" y="136" class="t-backend" font-size="7" text-anchor="middle">release 幂等</text>
         </g>
 
-        <g id="node-retry" data-node-id="retry" data-node-label="UpstreamRetry" tabindex="0" role="button" aria-label="聚焦UpstreamRetry，指数退避 + jitter, 转发链" aria-pressed="false" data-node-kind="backend" data-node-sublabel="指数退避 + jitter" data-node-context="转发链">
-          <title>UpstreamRetry · 指数退避 + jitter · 转发链</title>
+        <g id="node-retry" data-node-id="retry" data-node-label="UpstreamRetry" tabindex="0" role="button" aria-label="聚焦UpstreamRetry，指数退避 + jitter · Guard 在重试外层, 转发链" aria-pressed="false" data-node-kind="backend" data-node-sublabel="指数退避 + jitter · Guard 在重试外层" data-node-context="转发链">
+          <title>UpstreamRetry · 指数退避 + jitter · Guard 在重试外层 · 转发链</title>
           <rect x="1060" y="40" width="260" height="104" rx="6" class="c-mask"/>
           <rect x="1060" y="40" width="260" height="104" rx="6" class="c-backend" data-animate="node" style="--step:3" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(1066 46) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="1190" y="90" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">UpstreamRetry</text>
-        <text data-detail="context" x="1190" y="106" class="t-muted" font-size="9" text-anchor="middle">指数退避 + jitter</text>
+        <text data-detail="context" x="1190" y="106" class="t-muted" font-size="9" text-anchor="middle">指数退避 + jitter · Guard 在重试外层</text>
         </g>
 
-        <g id="node-upstream" data-node-id="upstream" data-node-label="MaaS 上游" tabindex="0" role="button" aria-label="聚焦MaaS 上游，HTTP/SSE · 5xx 重试 · 429 不计熔断, 转发链" aria-pressed="false" data-node-kind="external" data-node-sublabel="HTTP/SSE · 5xx 重试 · 429 不计熔断" data-node-context="转发链">
-          <title>MaaS 上游 · HTTP/SSE · 5xx 重试 · 429 不计熔断 · 转发链</title>
+        <g id="node-upstream" data-node-id="upstream" data-node-label="MaaS 上游" tabindex="0" role="button" aria-label="聚焦MaaS 上游，HTTP/SSE · 429 不计熔断 · 已建 SSE 不受影响, 转发链" aria-pressed="false" data-node-kind="external" data-node-sublabel="HTTP/SSE · 429 不计熔断 · 已建 SSE 不受影响" data-node-context="转发链">
+          <title>MaaS 上游 · HTTP/SSE · 429 不计熔断 · 已建 SSE 不受影响 · 转发链</title>
           <rect x="1060" y="190" width="260" height="88" rx="6" class="c-mask"/>
           <rect x="1060" y="190" width="260" height="88" rx="6" class="c-external" data-animate="node" style="--step:4" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="external" class="semantic-sigil s-external" transform="translate(1066 196) scale(0.6875)">
@@ -5101,44 +5103,49 @@
             <path d="M8 2.5h5.5V8M13.5 2.5 7.5 8.5"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="1190" y="232" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">MaaS 上游</text>
-        <text data-detail="context" x="1190" y="248" class="t-muted" font-size="9" text-anchor="middle">HTTP/SSE · 5xx 重试 · 429 不计熔断</text>
+        <text data-detail="context" x="1190" y="248" class="t-muted" font-size="9" text-anchor="middle">HTTP/SSE · 429 不计熔断 · 已建 SSE 不受影响</text>
         </g>
 
-        <g id="node-degrade" data-node-id="degrade" data-node-label="快速失败降级" tabindex="0" role="button" aria-label="聚焦快速失败降级，503 + Retry-After · 协议错误体, 容错防线" aria-pressed="false" data-node-kind="backend" data-node-sublabel="503 + Retry-After · 协议错误体" data-node-context="容错防线">
-          <title>快速失败降级 · 503 + Retry-After · 协议错误体 · 容错防线</title>
+        <g id="node-degrade" data-node-id="degrade" data-node-label="快速失败降级" tabindex="0" role="button" aria-label="聚焦快速失败降级，熔断打开/满载 → 503 · Retry-After, 容错防线" aria-pressed="false" data-node-kind="backend" data-node-sublabel="熔断打开/满载 → 503 · Retry-After" data-node-tag="协议错误体" data-node-context="容错防线">
+          <title>快速失败降级 · 熔断打开/满载 → 503 · Retry-After · 容错防线 · 协议错误体</title>
           <rect x="40" y="240" width="240" height="104" rx="6" class="c-mask"/>
           <rect x="40" y="240" width="240" height="104" rx="6" class="c-backend" data-animate="node" style="--step:8" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(46 246) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="160" y="290" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">快速失败降级</text>
-        <text data-detail="context" x="160" y="306" class="t-muted" font-size="9" text-anchor="middle">503 + Retry-After · 协议错误体</text>
+        <text data-detail="context" x="160" y="306" class="t-muted" font-size="9" text-anchor="middle">熔断打开/满载 → 503 · Retry-After</text>
+        <text data-detail="fine" x="160" y="336" class="t-backend" font-size="7" text-anchor="middle">协议错误体</text>
         </g>
 
-        <g id="node-breaker" data-node-id="breaker" data-node-label="三态熔断器" tabindex="0" role="button" aria-label="聚焦三态熔断器，60s×6桶 · min10 · ≥50% · 30s 半开, 容错防线" aria-pressed="false" data-node-kind="backend" data-node-sublabel="60s×6桶 · min10 · ≥50% · 30s 半开" data-node-context="容错防线">
-          <title>三态熔断器 · 60s×6桶 · min10 · ≥50% · 30s 半开 · 容错防线</title>
+        <g id="node-breaker" data-node-id="breaker" data-node-label="三态熔断器" tabindex="0" role="button" aria-label="聚焦三态熔断器，60s×6桶 · min10 · ≥50% · 30s 半开, 容错防线" aria-pressed="false" data-node-kind="security" data-node-sublabel="60s×6桶 · min10 · ≥50% · 30s 半开" data-node-tag="容错防线" data-node-context="容错防线">
+          <title>三态熔断器 · 60s×6桶 · min10 · ≥50% · 30s 半开 · 容错防线 · 容错防线</title>
           <rect x="360" y="240" width="280" height="124" rx="6" class="c-mask"/>
-          <rect x="360" y="240" width="280" height="124" rx="6" class="c-backend" data-animate="node" style="--step:6" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(366 246) scale(0.6875)">
-            <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
+          <rect x="360" y="240" width="280" height="124" rx="6" class="c-security" data-animate="node" style="--step:6" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="security" class="semantic-sigil s-security" transform="translate(366 246) scale(0.6875)">
+            <path d="M8 2.2 13 4v3.5c0 3.1-1.8 5.4-5 6.5-3.2-1.1-5-3.4-5-6.5V4Z"/>
+            <path d="m5.8 8 1.5 1.5 3-3"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="500" y="300" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">三态熔断器</text>
         <text data-detail="context" x="500" y="316" class="t-muted" font-size="9" text-anchor="middle">60s×6桶 · min10 · ≥50% · 30s 半开</text>
+        <text data-detail="fine" x="500" y="356" class="t-security" font-size="7" text-anchor="middle">容错防线</text>
         </g>
 
-        <g id="node-bulkhead" data-node-id="bulkhead" data-node-label="信号量隔离" tabindex="0" role="button" aria-label="聚焦信号量隔离，per-key ≤32 · 等待 1s, 容错防线" aria-pressed="false" data-node-kind="backend" data-node-sublabel="per-key ≤32 · 等待 1s" data-node-context="容错防线">
-          <title>信号量隔离 · per-key ≤32 · 等待 1s · 容错防线</title>
+        <g id="node-bulkhead" data-node-id="bulkhead" data-node-label="信号量隔离" tabindex="0" role="button" aria-label="聚焦信号量隔离，per-key ≤32 · buffered channel · 1s 超时, 容错防线" aria-pressed="false" data-node-kind="security" data-node-sublabel="per-key ≤32 · buffered channel · 1s 超时" data-node-tag="容错防线" data-node-context="容错防线">
+          <title>信号量隔离 · per-key ≤32 · buffered channel · 1s 超时 · 容错防线 · 容错防线</title>
           <rect x="730" y="240" width="240" height="104" rx="6" class="c-mask"/>
-          <rect x="730" y="240" width="240" height="104" rx="6" class="c-backend" data-animate="node" style="--step:7" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(736 246) scale(0.6875)">
-            <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
+          <rect x="730" y="240" width="240" height="104" rx="6" class="c-security" data-animate="node" style="--step:7" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="security" class="semantic-sigil s-security" transform="translate(736 246) scale(0.6875)">
+            <path d="M8 2.2 13 4v3.5c0 3.1-1.8 5.4-5 6.5-3.2-1.1-5-3.4-5-6.5V4Z"/>
+            <path d="m5.8 8 1.5 1.5 3-3"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="850" y="290" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">信号量隔离</text>
-        <text data-detail="context" x="850" y="306" class="t-muted" font-size="9" text-anchor="middle">per-key ≤32 · 等待 1s</text>
+        <text data-detail="context" x="850" y="306" class="t-muted" font-size="9" text-anchor="middle">per-key ≤32 · buffered channel · 1s 超时</text>
+        <text data-detail="fine" x="850" y="336" class="t-security" font-size="7" text-anchor="middle">容错防线</text>
         </g>
 
-        <g id="node-metrics" data-node-id="metrics" data-node-label="Prometheus 容错指标" tabindex="0" role="button" aria-label="聚焦Prometheus 容错指标，circuit_state/open/rejected · bulkhead_rejected, 架构组件" aria-pressed="false" data-node-kind="backend" data-node-sublabel="circuit_state/open/rejected · bulkhead_rejected" data-node-tag="观测横切" data-node-context="架构组件">
-          <title>Prometheus 容错指标 · circuit_state/open/rejected · bulkhead_rejected · 架构组件 · 观测横切</title>
+        <g id="node-metrics" data-node-id="metrics" data-node-label="Prometheus 容错指标" tabindex="0" role="button" aria-label="聚焦Prometheus 容错指标，circuit_state/open/rejected · bulkhead_rejected, 架构组件" aria-pressed="false" data-node-kind="backend" data-node-sublabel="circuit_state/open/rejected · bulkhead_rejected" data-node-tag="label key" data-node-context="架构组件">
+          <title>Prometheus 容错指标 · circuit_state/open/rejected · bulkhead_rejected · 架构组件 · label key</title>
           <rect x="360" y="430" width="600" height="88" rx="6" class="c-mask"/>
           <rect x="360" y="430" width="600" height="88" rx="6" class="c-backend" data-animate="node" style="--step:9" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(366 436) scale(0.6875)">
@@ -5146,13 +5153,13 @@
           </g>
           <text data-node-label="" data-detail-anchor="" x="660" y="472" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Prometheus 容错指标</text>
         <text data-detail="context" x="660" y="488" class="t-muted" font-size="9" text-anchor="middle">circuit_state/open/rejected · bulkhead_rejected</text>
-        <text data-detail="fine" x="660" y="510" class="t-backend" font-size="7" text-anchor="middle">观测横切</text>
+        <text data-detail="fine" x="660" y="510" class="t-backend" font-size="7" text-anchor="middle">label key</text>
         </g>
 
         <!-- Connection labels -->
-        <g data-detail="context" data-edge-from="proxy" data-edge-to="adapt" data-edge-label="Allow()" data-edge-key="0" data-edge-id="c1">
-          <rect x="318.2" y="72" width="43.6" height="14" rx="3" class="c-mask"/>
-          <text x="340" y="82" class="t-muted" font-size="8" text-anchor="middle">Allow()</text>
+        <g data-detail="context" data-edge-from="proxy" data-edge-to="adapt" data-edge-label="Allow(ctx,key)" data-edge-key="0" data-edge-id="c1">
+          <rect x="301.4" y="72" width="77.2" height="14" rx="3" class="c-mask"/>
+          <text x="340" y="82" class="t-muted" font-size="8" text-anchor="middle">Allow(ctx,key)</text>
         </g>
         <g data-detail="context" data-edge-from="adapt" data-edge-to="guard" data-edge-label="组装" data-edge-key="1" data-edge-id="c2">
           <rect x="665" y="72" width="30" height="14" rx="3" class="c-mask"/>
@@ -5163,9 +5170,9 @@
           <text x="1020" y="82" class="t-muted" font-size="8" text-anchor="middle">放行</text>
         </g>
 
-        <g data-detail="context" data-edge-from="retry" data-edge-to="guard" data-edge-label="Report" data-edge-key="4" data-edge-id="c5">
-          <rect x="1040.6" y="154" width="38.8" height="14" rx="3" class="c-mask"/>
-          <text x="1060" y="164" class="t-messagebus" font-size="8" text-anchor="middle">Report</text>
+        <g data-detail="context" data-edge-from="retry" data-edge-to="guard" data-edge-label="Report(key, !IsCircuitError)" data-edge-key="4" data-edge-id="c5">
+          <rect x="987.8" y="154" width="144.4" height="14" rx="3" class="c-mask"/>
+          <text x="1060" y="164" class="t-messagebus" font-size="8" text-anchor="middle">Report(key, !IsCircuitError)</text>
         </g>
         <g data-detail="context" data-edge-from="guard" data-edge-to="breaker" data-edge-label="熔断判定" data-edge-key="5" data-edge-id="c6">
           <rect x="620.8" y="193" width="48.4" height="14" rx="3" class="c-mask"/>
@@ -5206,9 +5213,13 @@
             <rect x="40" y="615" width="16" height="10" rx="2.5" class="c-backend" stroke-width="1"/>
             <text x="62" y="624" class="t-muted" font-size="10" font-weight="500">后端</text>
           </g>
-          <g data-legend-semantic-kind="external" data-legend-kind="external" data-legend-label="外部系统" data-legend-x="125" data-legend-baseline="624" data-legend-width="83">
-            <rect x="125" y="615" width="16" height="10" rx="2.5" class="c-external" stroke-width="1"/>
-            <text x="147" y="624" class="t-muted" font-size="10" font-weight="500">外部系统</text>
+          <g data-legend-semantic-kind="security" data-legend-kind="security" data-legend-label="安全" data-legend-x="125" data-legend-baseline="624" data-legend-width="63">
+            <rect x="125" y="615" width="16" height="10" rx="2.5" class="c-security" stroke-width="1"/>
+            <text x="147" y="624" class="t-muted" font-size="10" font-weight="500">安全</text>
+          </g>
+          <g data-legend-semantic-kind="external" data-legend-kind="external" data-legend-label="外部系统" data-legend-x="210" data-legend-baseline="624" data-legend-width="83">
+            <rect x="210" y="615" width="16" height="10" rx="2.5" class="c-external" stroke-width="1"/>
+            <text x="232" y="624" class="t-muted" font-size="10" font-weight="500">外部系统</text>
           </g>
         </g>
       </svg>
@@ -5404,8 +5415,8 @@
         </div>
         <ul>
           <li>&bull; Guard key 为 BaseURL|APIKey，故障按上游端点隔离</li>
-          <li>&bull; Allow 先查熔断再抢信号量，defer Report 回写结果</li>
-          <li>&bull; IsCircuitError 归一网络与 5xx 错误；429 不计熔断</li>
+          <li>&bull; Allow 先查熔断再抢信号量，defer Report 回写结果，release 幂等</li>
+          <li>&bull; IsCircuitError 归一网络与 5xx 错误；读 9 项容错配置组装</li>
         </ul>
       </div>
 
@@ -5415,21 +5426,21 @@
           <h3>两道防线</h3>
         </div>
         <ul>
-          <li>&bull; 熔断：60s×6 桶滑窗，≥10 次且 ≥50% 失败即打开，30s 半开试探</li>
-          <li>&bull; 隔离：per-key 信号量 ≤32 并发，等待 1s 即拒绝</li>
-          <li>&bull; 任一拒绝立即 503 + Retry-After，不消耗上游配额</li>
+          <li>&bull; 熔断：60s×6 桶滑窗，≥10 次且 ≥50% 失败即打开，30s 后半开限量 1 探测</li>
+          <li>&bull; 隔离：per-key 信号量 ≤32 并发，等待 1s 超时即满载拒绝</li>
+          <li>&bull; 任一拒绝立即 503 + Retry-After + 按入口协议格式的错误体</li>
         </ul>
       </div>
 
       <div class="card">
         <div class="card-header">
           <div class="card-dot rose"></div>
-          <h3>可观测</h3>
+          <h3>可观测与边界</h3>
         </div>
         <ul>
-          <li>&bull; upstream_circuit_state 暴露三态</li>
-          <li>&bull; circuit_open_total / rejected_total / bulkhead_rejected_total</li>
-          <li>&bull; 已建立的 SSE 流不受熔断影响</li>
+          <li>&bull; upstream_circuit_state (gauge 0/1/2) · open_total / rejected_total / bulkhead_rejected_total</li>
+          <li>&bull; 429 仍可重试但不计熔断——限流不算故障，与熔断计数是两个独立维度</li>
+          <li>&bull; 守卫只拦「新开上游连接」，已建立的 SSE 流继续读完</li>
         </ul>
       </div>
     </div>
@@ -6519,7 +6530,7 @@
         var fps = Math.max(1, Number(options.fps) || MOTION_FPS);
         var svg = document.querySelector('.diagram-container svg');
         var vb = svg.viewBox.baseVal;
-        var scale = Math.min(1, 1280 / vb.width);
+        var scale = Math.min(1, Math.min(4096, Math.round(Number(window.__ARCHIFY_MOTION_MAX_W)) || 1280) / vb.width);
         var data = serializeSvg(scale);
         var sourceUrl = URL.createObjectURL(new Blob([data.svgString], { type: 'image/svg+xml;charset=utf-8' }));
 
@@ -6683,7 +6694,7 @@
             var mime = motionMimeType();
             var recorder;
             try {
-              recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 6000000 });
+              recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: Math.round(Number(window.__ARCHIFY_MOTION_BPS)) || 6000000 });
             } catch (err) {
               URL.revokeObjectURL(sourceUrl);
               stream.getTracks().forEach(function (track) { track.stop(); });
