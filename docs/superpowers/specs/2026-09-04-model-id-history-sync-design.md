@@ -95,38 +95,16 @@ type ModelIDSyncCounts struct {
 ReplaceHistoricalModelID(ctx context.Context, userID uint, oldID, newID string) (ModelIDSyncCounts, error)
 ```
 
-单事务（`db.Transaction`）内三条 UPDATE，全部以该 user 的 API Key 集合为界：
+**实现方式修订（2026-09-04，计划阶段确认）**：不采用 PG 专用的 jsonb 原生 SQL，而是用 GORM 单事务 + Go 内替换实现。
+原因：① e2e 基建为内嵌服务器 + 内存 SQLite（无 jsonb 函数），PG 方言 SQL 无法测试；② 纯 Go 实现跨 sqlite/PG 可移植，单测/集成均可跑。本操作是偶发管理操作，行数处理性能足够。
 
-```sql
--- ① 审计：api_key_id 直接关联
-UPDATE model_call_audits SET model_id = :new
-WHERE model_id = :old
-  AND api_key_id IN (SELECT id FROM proxy_api_keys WHERE user_id = :uid);
+单事务（`db.Transaction`）内三步，全部以该 user 的 API Key 集合为界：
 
--- ② 会话：JSONB 数组逐元素替换
-UPDATE sessions SET model_ids = (
-  SELECT COALESCE(jsonb_agg(CASE WHEN v = :old THEN :new::jsonb ELSE to_jsonb(v) END), '[]'::jsonb)
-  FROM jsonb_array_elements_text(model_ids::jsonb) AS v
-)
-WHERE model_ids::jsonb @> to_jsonb(:old)
-  AND api_key_name IN (SELECT name FROM proxy_api_keys WHERE user_id = :uid);
--- （具体参数绑定形式以实现为准；:old 为带引号的 JSON 字符串）
+1. **审计**：单条 UPDATE——`model_id = :old AND api_key_id IN (SELECT id FROM proxy_api_keys WHERE user_id = :uid)`，取 `RowsAffected`。
+2. **会话**：查出该 user 的 key 名称集合（不过滤 deleted_at，已删 key 的历史会话仍归属该 user）；再查 `api_key_name IN (名称集合)` 的会话，**预过滤** `model_ids LIKE '%"old"%'`（对 old 中的 `%`/`_` 做转义；含引号/反斜杠的极端 modelId 可能被 LIKE 漏匹配，已知边界，见下）；Go 内解析 `model_ids`（serializer:json）后用 `lo.Contains` 精确确认并逐元素替换，逐行 Update（事务内），累加 RowsAffected。
+3. **消息**：**scope 收紧为上一步实际命中的会话**（比 spec 初稿“该 user 全部会话”更精确：历史同步只关心模型 X→Y 变更，产生于模型 X 的消息必属于含 X 的会话）；收集这些会话的 `message_ids`，分块（`lo.Chunk`，500/块）执行 `UPDATE messages SET model_id = :new WHERE model_id = :old AND id IN (块)`，累加 RowsAffected。
 
--- ③ 消息：经该 user 的 session 引用限定
-UPDATE messages SET model_id = :new
-WHERE model_id = :old
-  AND id IN (
-    SELECT DISTINCT jsonb_array_elements(message_ids::jsonb)::text::bigint
-    FROM sessions
-    WHERE api_key_name IN (SELECT name FROM proxy_api_keys WHERE user_id = :uid)
-  );
-```
-
-实现要点：
-- 全程 PG 方言（jsonb 函数），repository 已直接面向 PG，无需跨方言兼容。
-- 排除已删除的 API Key **不适用**：`proxy_api_keys` 不过滤 `deleted_at`，保证已删 key 的历史数据同样被同步。
-- 会话表软删除行（若有）同样在 UPDATE 范围内（按 `api_key_name` 命中，不加 deleted 过滤）。
-- 三条 UPDATE 原子性由单事务保证；行数统计用 `RowsAffected` 累加。
+已知边界：LIKE 预过滤对包含 `"` / `\` 的 modelId 失效（JSON 转义后字节序列不同）；此类 modelId 属于极端输入，记录于本 spec 不做额外防护。
 
 ## 6. 已知 trade-off（明确接受）
 
@@ -164,13 +142,12 @@ WHERE model_id = :old
 
 ## 10. 测试计划
 
-- **E2E**（`test/e2e/model_id/`，沿用现有 harness 与真实 PG）：
+- **E2E / 集成测试**（`test/e2e/model_id/`，内嵌服务器 + SQLite + miniredis 装配，模板参照 `test/e2e/cross_tenant_reference`；替换逻辑为纯 Go 实现，可跑）：
   - `TestModelID_SyncHistory`：
-    1. 用户 A 创建模型（modelId=X）；
-    2. 造历史数据：A 的 audit（model_id=X）、A 的 session（model_ids 含 X）、A 引用的 message（model_id=X）；
-    3. 用户 B 建同名 modelId=X 并造一条 audit（隔离对照）；
-    4. A 更新模型 modelId=X→Y 且 syncHistory=true；
-    5. 断言：A 三表全部变为 Y、影响行数返回正确；B 的 audit 仍为 X（隔离不误伤）。
+    1. 用户 A 创建模型（modelId=X）；fixture 直接向 sqlite 种历史数据：A 的 audit（api_key_id=A 的 key）、A 的 session（model_ids 含 X）、A 会话引用的 message（model_id=X）；
+    2. 用户 B 建同名 modelId=X 并种一条 audit（隔离对照）；
+    3. A 更新模型 modelId=X→Y 且 syncHistory=true；
+    4. 断言：A 三表全部变为 Y、响应影响行数正确；B 的 audit 仍为 X（隔离不误伤）。
   - `TestModelID_SyncHistoryNoChange`：modelId 未变 + syncHistory=true → 返回 0 行，无副作用。
   - `TestModelID_SyncHistoryUnchecked`：modelId 变化但 syncHistory 缺省 → 历史数据保持旧值。
 - 单元测试：repo 层 SQL 为 PG 方言，单测环境无法覆盖 jsonb 函数的部分以 E2E 为准；
