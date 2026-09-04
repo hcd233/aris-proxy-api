@@ -31,6 +31,7 @@ import type {
   UpdateEndpointReqBody,
   CreateModelReqBody,
   UpdateModelReqBody,
+  ModelUpdateRsp,
   OAuth2Provider,
   CreateShareReqBody,
   CreateShareRsp,
@@ -615,8 +616,8 @@ class ApiClient {
     });
   }
 
-  async updateModel(id: number, body: UpdateModelReqBody): Promise<void> {
-    await this.request(`${API_PREFIX}/model?id=${id}`, {
+  async updateModel(id: number, body: UpdateModelReqBody): Promise<ModelUpdateRsp> {
+    return this.request<ModelUpdateRsp>(`${API_PREFIX}/model?id=${id}`, {
       method: "PATCH",
       body: JSON.stringify(body),
     });

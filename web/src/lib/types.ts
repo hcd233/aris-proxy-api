@@ -462,12 +462,21 @@ export interface CreateModelReqBody {
 export interface UpdateModelReqBody {
   alias?: string;
   modelId?: string;
+  /** modelId 变化时同步更新历史记录（audit/session/message） */
+  syncHistory?: boolean;
   upstreamModel?: string;
   endpointID?: number;
   enabled?: boolean;
   contextLength?: number;
   maxOutputTokens?: number;
   capabilities?: ModelCapability[];
+}
+
+/** 更新模型响应：历史同步的各表影响行数（未同步时全 0） */
+export interface ModelUpdateRsp {
+  auditCount: number;
+  sessionCount: number;
+  messageCount: number;
 }
 
 // ─── Model flat list（平铺视图，GET /api/web/v1/model/list） ───────────────────
