@@ -130,7 +130,7 @@ test-cover:
 
 ## lint: 运行全部 lint（conv + static 并发执行，底层使用 go run ./cmd/lint）
 lint:
-	@go run ./cmd/lint all ./...
+	@go run ./cmd/lint ./...
 
 ## lint-conv: 扫描项目自定义编码规范
 lint-conv:
