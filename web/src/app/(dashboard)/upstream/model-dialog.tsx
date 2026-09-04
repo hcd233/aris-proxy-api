@@ -92,6 +92,10 @@ export interface ModelDialogProps {
   setForm: React.Dispatch<React.SetStateAction<ModelForm>>;
   onModelIdTouched: () => void;
   modelIdTouched: boolean;
+  /** 仅编辑模式且 modelId 相对原值变化时为 true（此时展示同步历史开关） */
+  showSyncHistory: boolean;
+  syncHistory: boolean;
+  onSyncHistoryChange: (v: boolean) => void;
   saving: boolean;
   onSave: () => void;
 }
@@ -105,6 +109,9 @@ export function ModelDialog({
   setForm,
   onModelIdTouched,
   modelIdTouched,
+  showSyncHistory,
+  syncHistory,
+  onSyncHistoryChange,
   saving,
   onSave,
 }: ModelDialogProps) {
@@ -149,6 +156,15 @@ export function ModelDialog({
             />
             <p className="text-[11px] text-muted-foreground">{t("models.model_id_hint")}</p>
           </div>
+          {showSyncHistory && (
+            <div className="space-y-1 rounded-lg border border-input px-3 py-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm">{t("models.sync_history")}</span>
+                <Switch size="sm" checked={syncHistory} onCheckedChange={onSyncHistoryChange} />
+              </div>
+              <p className="text-[11px] text-muted-foreground">{t("models.sync_history_desc")}</p>
+            </div>
+          )}
           <div className="space-y-1">
             <Label htmlFor="model-upstream">{t("models.upstream_model")}</Label>
             <Input

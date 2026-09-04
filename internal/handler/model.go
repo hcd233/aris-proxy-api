@@ -19,7 +19,7 @@ import (
 
 type ModelHandler interface {
 	HandleCreateModel(ctx context.Context, req *dto.CreateModelReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
-	HandleUpdateModel(ctx context.Context, req *dto.UpdateModelReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
+	HandleUpdateModel(ctx context.Context, req *dto.UpdateModelReq) (*dto.HTTPResponse[*dto.ModelUpdateRsp], error)
 	HandleDeleteModel(ctx context.Context, req *dto.DeleteModelReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
 	HandleListModels(ctx context.Context, req *dto.ListModelsReq) (*dto.HTTPResponse[*dto.ListModelsRsp], error)
 }
@@ -75,14 +75,13 @@ func (h *modelHandler) HandleCreateModel(ctx context.Context, req *dto.CreateMod
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 
-func (h *modelHandler) HandleUpdateModel(ctx context.Context, req *dto.UpdateModelReq) (*dto.HTTPResponse[*dto.EmptyRsp], error) {
-	rsp := &dto.EmptyRsp{}
+func (h *modelHandler) HandleUpdateModel(ctx context.Context, req *dto.UpdateModelReq) (*dto.HTTPResponse[*dto.ModelUpdateRsp], error) {
 	scope, err := scopeFor(ctx, util.CtxValuePermission(ctx))
 	if err != nil {
 		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrUnauthorized.BizError())
 	}
 
-	err = h.update.Handle(ctx, port.UpdateModelCommand{
+	counts, err := h.update.Handle(ctx, port.UpdateModelCommand{
 		ScopeUserID:     scope,
 		ID:              req.ID,
 		Alias:           req.Body.Alias,
@@ -93,12 +92,17 @@ func (h *modelHandler) HandleUpdateModel(ctx context.Context, req *dto.UpdateMod
 		MaxOutputTokens: req.Body.MaxOutputTokens,
 		Capabilities:    req.Body.Capabilities,
 		ModelID:         req.Body.ModelID,
+		SyncHistory:     req.Body.SyncHistory,
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[ModelHandler] Update model failed", zap.Error(err))
 		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
-	return apiutil.WrapHTTPResponse(rsp, nil)
+	return apiutil.WrapHTTPResponse(&dto.ModelUpdateRsp{
+		AuditCount:   counts.AuditCount,
+		SessionCount: counts.SessionCount,
+		MessageCount: counts.MessageCount,
+	}, nil)
 }
 
 func (h *modelHandler) HandleDeleteModel(ctx context.Context, req *dto.DeleteModelReq) (*dto.HTTPResponse[*dto.EmptyRsp], error) {

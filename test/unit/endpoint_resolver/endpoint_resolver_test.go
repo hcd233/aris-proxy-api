@@ -105,6 +105,10 @@ func (s *stubModelRepo) Paginate(_ context.Context, _ model.CommonParam, _ *uint
 	return nil, nil, nil
 }
 
+func (s *stubModelRepo) ReplaceHistoricalModelID(context.Context, uint, string, string) (llmproxy.ModelIDSyncCounts, error) {
+	return llmproxy.ModelIDSyncCounts{}, nil
+}
+
 func (s *stubModelRepo) PaginateWithFilter(_ context.Context, _ model.CommonParam, _ llmproxy.ModelListFilter, _ *uint) ([]*aggregate.Model, *model.PageInfo, error) {
 	return nil, nil, nil
 }
@@ -179,6 +183,10 @@ func (s *staticModelRepo) Delete(_ context.Context, _ uint, _ *uint) error {
 
 func (s *staticModelRepo) DeleteByEndpointID(_ context.Context, _ uint) error {
 	return nil
+}
+
+func (s *staticModelRepo) ReplaceHistoricalModelID(context.Context, uint, string, string) (llmproxy.ModelIDSyncCounts, error) {
+	return llmproxy.ModelIDSyncCounts{}, nil
 }
 
 func (s *staticModelRepo) PaginateWithFilter(context.Context, model.CommonParam, llmproxy.ModelListFilter, *uint) ([]*aggregate.Model, *model.PageInfo, error) {
@@ -357,6 +365,10 @@ type ownedModelRepo struct {
 	alias       string
 }
 
+func (r *ownedModelRepo) ReplaceHistoricalModelID(context.Context, uint, string, string) (llmproxy.ModelIDSyncCounts, error) {
+	return llmproxy.ModelIDSyncCounts{}, nil
+}
+
 func (r *ownedModelRepo) PaginateWithFilter(context.Context, model.CommonParam, llmproxy.ModelListFilter, *uint) ([]*aggregate.Model, *model.PageInfo, error) {
 	return nil, nil, nil
 }
@@ -437,6 +449,10 @@ func (r *sharedPoolModelRepo) List(context.Context) ([]*aggregate.Model, error) 
 func (r *sharedPoolModelRepo) Paginate(context.Context, model.CommonParam, *uint) ([]*aggregate.Model, *model.PageInfo, error) {
 	return nil, nil, nil
 }
+func (r *sharedPoolModelRepo) ReplaceHistoricalModelID(context.Context, uint, string, string) (llmproxy.ModelIDSyncCounts, error) {
+	return llmproxy.ModelIDSyncCounts{}, nil
+}
+
 func (r *sharedPoolModelRepo) PaginateWithFilter(context.Context, model.CommonParam, llmproxy.ModelListFilter, *uint) ([]*aggregate.Model, *model.PageInfo, error) {
 	return nil, nil, nil
 }

@@ -81,6 +81,10 @@ export default function UpstreamPage() {
   const [modelForm, setModelForm] = useState<ModelForm>(emptyModelForm);
   // 标记用户是否手动改过 modelId；未手动改时新建表单跟随 alias 同步输入
   const [modelIdTouched, setModelIdTouched] = useState(false);
+  // modelId 相对打开弹窗时的原值变化时，展示「同步更新历史记录」开关
+  const [originalModelId, setOriginalModelId] = useState("");
+  const [syncHistory, setSyncHistory] = useState(false);
+  const showSyncHistory = editingModel !== null && modelForm.modelId !== originalModelId;
 
   // 当前视图：分组（端点为组）/ 平铺（模型为行）
   const [view, setView] = usePersistentState<"grouped" | "flat">(
@@ -315,6 +319,8 @@ export default function UpstreamPage() {
   const openCreateModel = (ep: UpstreamEndpointItem) => {
     setEditingModel(null);
     setModelIdTouched(false);
+    setOriginalModelId("");
+    setSyncHistory(false);
     setTargetEndpointID(ep.id);
     setModelForm(emptyModelForm);
     setModelDialogOpen(true);
@@ -334,6 +340,8 @@ export default function UpstreamPage() {
   ) => {
     setEditingModel({ id: model.id });
     setModelIdTouched(true);
+    setOriginalModelId(model.modelId ?? "");
+    setSyncHistory(false);
     setTargetEndpointID(ep.id);
     setModelForm({
       alias: model.alias,
@@ -369,15 +377,22 @@ export default function UpstreamPage() {
     setSaving(true);
     try {
       if (editingModel) {
-        await api.updateModel(editingModel.id, {
+        const rsp = await api.updateModel(editingModel.id, {
           alias: modelForm.alias,
           ...(modelForm.modelId.trim() ? { modelId: modelForm.modelId.trim() } : {}),
+          ...(showSyncHistory && syncHistory ? { syncHistory: true } : {}),
           upstreamModel: modelForm.upstreamModel,
           contextLength: modelForm.contextLength,
           maxOutputTokens: modelForm.maxOutputTokens,
           capabilities,
         });
-        toast.success(t("models.updated_success"));
+        if (showSyncHistory && syncHistory) {
+          toast.success(
+            `${t("models.history_synced")}: ${rsp.auditCount} / ${rsp.sessionCount} / ${rsp.messageCount}`,
+          );
+        } else {
+          toast.success(t("models.updated_success"));
+        }
       } else {
         await api.createModel({
           alias: modelForm.alias,
@@ -643,6 +658,9 @@ export default function UpstreamPage() {
             setForm={setModelForm}
             onModelIdTouched={() => setModelIdTouched(true)}
             modelIdTouched={modelIdTouched}
+            showSyncHistory={showSyncHistory}
+            syncHistory={syncHistory}
+            onSyncHistoryChange={setSyncHistory}
             saving={saving}
             onSave={handleSaveModel}
           />

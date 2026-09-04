@@ -85,6 +85,10 @@ func (r *recordingModelRepo) List(context.Context) ([]*aggregate.Model, error) {
 func (r *recordingModelRepo) Paginate(context.Context, model.CommonParam, *uint) ([]*aggregate.Model, *model.PageInfo, error) {
 	return nil, nil, nil
 }
+func (r *recordingModelRepo) ReplaceHistoricalModelID(context.Context, uint, string, string) (llmproxy.ModelIDSyncCounts, error) {
+	return llmproxy.ModelIDSyncCounts{}, nil
+}
+
 func (r *recordingModelRepo) PaginateWithFilter(context.Context, model.CommonParam, llmproxy.ModelListFilter, *uint) ([]*aggregate.Model, *model.PageInfo, error) {
 	return nil, nil, nil
 }

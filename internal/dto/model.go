@@ -34,12 +34,22 @@ type UpdateModelReq struct {
 type UpdateModelReqBody struct {
 	Alias           *string               `json:"alias,omitempty" doc:"模型别名"`
 	ModelID         *string               `json:"modelId,omitempty" doc:"业务模型ID(非空)"`
+	SyncHistory     *bool                 `json:"syncHistory,omitempty" doc:"modelId 变化时是否同步更新历史记录（audit/session/message）"`
 	UpstreamModel   *string               `json:"upstreamModel,omitempty" doc:"上游实际模型名"`
 	EndpointID      *uint                 `json:"endpointID,omitempty" minimum:"1" doc:"关联 Endpoint ID"`
 	Enabled         *bool                 `json:"enabled,omitempty" doc:"是否启用"`
 	ContextLength   *int                  `json:"contextLength,omitempty" minimum:"0" doc:"上下文窗口长度（tokens）"`
 	MaxOutputTokens *int                  `json:"maxOutputTokens,omitempty" minimum:"0" doc:"最大输出长度（tokens）"`
 	Capabilities    *[]enum.InputModality `json:"capabilities,omitempty" doc:"模型能力（输入模态集合；合法值 text/image；必须包含 text）"`
+}
+
+// ModelUpdateRsp 更新 Model 响应
+//
+// 三项计数为历史同步（syncHistory）的各表影响行数；未同步时全 0。
+type ModelUpdateRsp struct {
+	AuditCount   int64 `json:"auditCount" doc:"审计记录替换行数"`
+	SessionCount int64 `json:"sessionCount" doc:"会话替换行数"`
+	MessageCount int64 `json:"messageCount" doc:"消息替换行数"`
 }
 
 // DeleteModelReq 删除 Model 请求

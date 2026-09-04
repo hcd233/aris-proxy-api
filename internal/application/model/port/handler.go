@@ -5,6 +5,7 @@ import (
 	"context"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 )
 
 // CreateModelCommand 创建 Model 命令
@@ -45,11 +46,14 @@ type UpdateModelCommand struct {
 	MaxOutputTokens *int
 	Capabilities    *[]enum.InputModality
 	ModelID         *string
+	SyncHistory     *bool // 为 true 且 ModelID 实际变化时，同步替换归属 user 的历史数据
 }
 
 // UpdateModelHandler 更新命令处理器
+//
+// Handle 返回历史同步的三表影响行数（llmproxy.ModelIDSyncCounts，未同步时全 0）。
 type UpdateModelHandler interface {
-	Handle(ctx context.Context, cmd UpdateModelCommand) error
+	Handle(ctx context.Context, cmd UpdateModelCommand) (llmproxy.ModelIDSyncCounts, error)
 }
 
 // DeleteModelCommand 删除 Model 命令
