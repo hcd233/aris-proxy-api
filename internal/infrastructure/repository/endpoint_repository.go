@@ -582,8 +582,8 @@ func (r *modelRepository) ReplaceHistoricalModelID(ctx context.Context, userID u
 		if err := replaceAuditModelIDs(tx, userID, oldID, newID, &counts); err != nil {
 			return err
 		}
-		var affectedSessionIDs, referencedMsgIDs []uint
-		if err := replaceSessionModelIDs(tx, userID, oldID, newID, &counts, &affectedSessionIDs, &referencedMsgIDs); err != nil {
+		var referencedMsgIDs []uint
+		if err := replaceSessionModelIDs(tx, userID, oldID, newID, &counts, &referencedMsgIDs); err != nil {
 			return err
 		}
 		return replaceMessageModelIDs(tx, oldID, newID, &counts, referencedMsgIDs)
@@ -608,8 +608,8 @@ func replaceAuditModelIDs(tx *gorm.DB, userID uint, oldID, newID string, counts 
 }
 
 // replaceSessionModelIDs 替换归属 user 的会话 model_ids 数组中的旧 model id，
-// 返回实际命中的会话 ID 列表（供 message scope 收紧）。
-func replaceSessionModelIDs(tx *gorm.DB, userID uint, oldID, newID string, counts *llmproxy.ModelIDSyncCounts, affectedSessionIDs, referencedMsgIDs *[]uint) error {
+// 并收集命中会话引用到的消息 ID（供 message scope 收紧）。
+func replaceSessionModelIDs(tx *gorm.DB, userID uint, oldID, newID string, counts *llmproxy.ModelIDSyncCounts, referencedMsgIDs *[]uint) error {
 	var names []string
 	if err := tx.Model(&dbmodel.ProxyAPIKey{}).Where(constant.WhereUserIDEquals, userID).
 		Distinct().Pluck(constant.FieldName, &names).Error; err != nil {
@@ -637,7 +637,6 @@ func replaceSessionModelIDs(tx *gorm.DB, userID uint, oldID, newID string, count
 			return ierr.Wrap(ierr.ErrDBUpdate, err, "update session model_ids")
 		}
 		counts.SessionCount++
-		*affectedSessionIDs = append(*affectedSessionIDs, sessions[i].ID)
 		*referencedMsgIDs = append(*referencedMsgIDs, sessions[i].MessageIDs...)
 	}
 	return nil

@@ -81,7 +81,7 @@ func (h *modelHandler) HandleUpdateModel(ctx context.Context, req *dto.UpdateMod
 		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrUnauthorized.BizError())
 	}
 
-	result, err := h.update.Handle(ctx, port.UpdateModelCommand{
+	counts, err := h.update.Handle(ctx, port.UpdateModelCommand{
 		ScopeUserID:     scope,
 		ID:              req.ID,
 		Alias:           req.Body.Alias,
@@ -99,9 +99,9 @@ func (h *modelHandler) HandleUpdateModel(ctx context.Context, req *dto.UpdateMod
 		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 	return apiutil.WrapHTTPResponse(&dto.ModelUpdateRsp{
-		AuditCount:   result.AuditCount,
-		SessionCount: result.SessionCount,
-		MessageCount: result.MessageCount,
+		AuditCount:   counts.AuditCount,
+		SessionCount: counts.SessionCount,
+		MessageCount: counts.MessageCount,
 	}, nil)
 }
 

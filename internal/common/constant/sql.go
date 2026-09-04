@@ -183,13 +183,11 @@ var (
 	WhereUserIDEquals = "user_id = ?"
 
 	// ── ReplaceHistoricalModelID 条件与块大小 ──
-	WhereModelIDEquals       = "model_id = ?"
-	WhereAPIKeyIDIn          = "api_key_id IN (?)"
-	WhereAPIKeyNameIn        = "api_key_name IN (?)"
-	WhereSessionModelIDsLike = "model_ids LIKE ?"
-	WhereSessionKeyAndModel  = "api_key_name IN (?) AND model_ids LIKE ?"
-	WhereMessageIDAndModel   = "model_id = ? AND id IN (?)"
-	ModelIDSyncINChunkSize   = 500
+	WhereModelIDEquals      = "model_id = ?"
+	WhereAPIKeyIDIn         = "api_key_id IN (?)"
+	WhereSessionKeyAndModel = "api_key_name IN (?) AND model_ids LIKE ?"
+	WhereMessageIDAndModel  = "model_id = ? AND id IN (?)"
+	ModelIDSyncINChunkSize  = 500
 
 	// SessionListINChunkSize session 列表「空 summary fallback」批量加载消息时，
 	// 每条 SELECT ... WHERE id IN (?) 携带的 ID 上限。

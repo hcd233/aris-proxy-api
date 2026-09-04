@@ -13,6 +13,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/application/model/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/handler"
 )
@@ -40,8 +41,8 @@ func newModelHandlerWithCapture(t *testing.T) (handler.ModelHandler, *captureCre
 
 type captureUpdateHandler struct{}
 
-func (c *captureUpdateHandler) Handle(_ context.Context, cmd port.UpdateModelCommand) (port.UpdateModelResult, error) {
-	return port.UpdateModelResult{}, nil
+func (c *captureUpdateHandler) Handle(_ context.Context, cmd port.UpdateModelCommand) (llmproxy.ModelIDSyncCounts, error) {
+	return llmproxy.ModelIDSyncCounts{}, nil
 }
 
 type captureDeleteHandler struct{}
