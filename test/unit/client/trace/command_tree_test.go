@@ -32,9 +32,28 @@ func runGo(t *testing.T, args ...string) string {
 func TestServerCommandTreePreservesExistingCommands(t *testing.T) {
 	t.Parallel()
 	out := runGo(t, "run", "./cmd/server", "--help")
-	for _, name := range []string{"server", "database", "object", "lint"} {
+	for _, name := range []string{"server", "database", "object"} {
 		if !strings.Contains(out, name) {
 			t.Errorf("help missing %q:\n%s", name, out)
+		}
+	}
+	// lint 已拆分到 cmd/lint 独立入口，不应再寄生在 server 命令树
+	if strings.Contains(out, "lint") {
+		t.Errorf("server help should not contain lint (moved to cmd/lint):\n%s", out)
+	}
+}
+
+func TestLintCommandTree(t *testing.T) {
+	t.Parallel()
+	out := runGo(t, "run", "./cmd/lint", "--help")
+	for _, name := range []string{"conv", "static"} {
+		if !strings.Contains(out, name) {
+			t.Errorf("lint help missing %q:\n%s", name, out)
+		}
+	}
+	for _, forbidden := range []string{"server", "database", "object"} {
+		if strings.Contains(out, forbidden) {
+			t.Errorf("lint help contains %q:\n%s", forbidden, out)
 		}
 	}
 }

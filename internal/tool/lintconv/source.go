@@ -75,7 +75,8 @@ func expandGoFiles(arg string) ([]goFilePath, error) {
 		}
 		if entry.IsDir() {
 			name := entry.Name()
-			if name == constant.ConvCheckSkipGitDir || name == constant.ConvCheckSkipWorktrees || name == constant.ConvCheckSkipVendor {
+			if name == constant.ConvCheckSkipGitDir || name == constant.ConvCheckSkipWorktrees || name == constant.ConvCheckSkipVendor ||
+				name == constant.ConvCheckSkipNodeModules || name == constant.ConvCheckSkipNextBuild {
 				return filepath.SkipDir
 			}
 			return nil

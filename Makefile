@@ -128,16 +128,17 @@ test-cover:
 	go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report: coverage.html"
 
-## lint: 运行全部 lint（conv + static）
-lint: lint-conv lint-static
+## lint: 运行全部 lint（conv + static 并发执行，底层使用 go run ./cmd/lint）
+lint:
+	@go run ./cmd/lint ./...
 
 ## lint-conv: 扫描项目自定义编码规范
-lint-conv: web-build
-	@go run $(SERVER_MAIN) lint conv ./...
+lint-conv:
+	@go run ./cmd/lint conv ./...
 
-## lint-static: run go vet + staticcheck + golangci-lint
-lint-static: web-build
-	@go run $(SERVER_MAIN) lint static ./...
+## lint-static: run golangci-lint（内置 govet/staticcheck linter，与 CI 覆盖一致）
+lint-static:
+	@go run ./cmd/lint static ./...
 
 ## fgprof: 从远程服务拉取 fgprof profile 并打开 Web 可视化（火焰图+调用图）
 fgprof:
