@@ -27,6 +27,15 @@ type EndpointRepository interface {
 	FindIDsByScope(ctx context.Context, scopeUserID *uint) ([]uint, error)
 }
 
+// ModelIDSyncCounts 历史 model ID 替换的三表影响行数
+//
+// 未命中任何行时三值均为 0（幂等）。
+type ModelIDSyncCounts struct {
+	AuditCount   int64
+	SessionCount int64
+	MessageCount int64
+}
+
 // ModelRepository Model 聚合根仓储接口
 //
 // scopeUserID 语义同 EndpointRepository；FindByAlias 为网关解析专用，userID 传真实值，
@@ -50,6 +59,12 @@ type ModelRepository interface {
 	// filter 各字段为零值时该维度不过滤；param.SortField 必须落在 constant.ModelListSortFields
 	// 内，否则回退 ModelListDefaultSortField，不报错。
 	PaginateWithFilter(ctx context.Context, param model.CommonParam, filter ModelListFilter, scopeUserID *uint) ([]*aggregate.Model, *model.PageInfo, error)
+	// ReplaceHistoricalModelID 将归属 userID 的历史数据中业务模型 ID oldID 批量替换为 newID。
+	//
+	// 单事务内依次替换 model_call_audit / session / message 三表，返回各表影响行数；
+	// message 的 scope 为「实际命中的会话引用到的消息」（见 spec 2026-09-04-model-id-history-sync §5.4）。
+	// userID 以模型归属 user 为准（调用方传入 m.UserID()），替换不排除已删除的 API Key。
+	ReplaceHistoricalModelID(ctx context.Context, userID uint, oldID, newID string) (ModelIDSyncCounts, error)
 }
 
 // ModelListFilter 模型列表筛选条件（零值表示该维度不过滤）

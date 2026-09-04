@@ -565,3 +565,84 @@ func toEndpointProjection(ep *dbmodel.Endpoint) *llmproxy.EndpointProjection {
 		SupportAnthropicMessage:     ep.SupportAnthropicMessage,
 	}
 }
+
+// ReplaceHistoricalModelID 将归属 userID 的历史数据中业务模型 ID oldID 批量替换为 newID。
+//
+// 单事务三步（spec 2026-09-04-model-id-history-sync §5.4）：
+//  1. audit：api_key_id 关联 user 的全部 key（含已删 key）；
+//  2. session：api_key_name 关联，model_ids 数组逐元素替换（LIKE 预过滤 + lo.Contains 精确确认）；
+//  3. message：scope 为第 2 步实际命中会话引用到的消息，分块更新。
+//
+// 纯 Go 实现而非 PG jsonb SQL：sqlite 测试基建可运行，且本操作为偶发管理操作。
+// 已知边界：modelId 含引号/反斜杠时 LIKE 预过滤可能漏匹配（JSON 转义字节序列不同），spec §5.4 已记录。
+func (r *modelRepository) ReplaceHistoricalModelID(ctx context.Context, userID uint, oldID, newID string) (llmproxy.ModelIDSyncCounts, error) {
+	var counts llmproxy.ModelIDSyncCounts
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		counts = llmproxy.ModelIDSyncCounts{}
+
+		// ① audit：api_key_id 直接关联
+		res := tx.Model(&dbmodel.ModelCallAudit{}).
+			Where("model_id = ? AND api_key_id IN (?)", oldID,
+				tx.Model(&dbmodel.ProxyAPIKey{}).Select("id").Where("user_id = ?", userID)).
+			Update("model_id", newID)
+		if res.Error != nil {
+			return ierr.Wrap(ierr.ErrDBUpdate, res.Error, "replace audit model id")
+		}
+		counts.AuditCount = res.RowsAffected
+
+		// ② session：预过滤后 Go 内精确替换
+		var names []string
+		if err := tx.Model(&dbmodel.ProxyAPIKey{}).Where("user_id = ?", userID).
+			Distinct().Pluck("name", &names).Error; err != nil {
+			return ierr.Wrap(ierr.ErrDBQuery, err, "pluck api key names")
+		}
+		if len(names) == 0 {
+			return nil
+		}
+		var sessions []dbmodel.Session
+		if err := tx.Where("api_key_name IN (?) AND model_ids LIKE ?", names, "%"+oldID+"%").
+			Find(&sessions).Error; err != nil {
+			return ierr.Wrap(ierr.ErrDBQuery, err, "find sessions with old model id")
+		}
+		var affectedSessionIDs []uint
+		for i := range sessions {
+			if !lo.Contains(sessions[i].ModelIDs, oldID) {
+				continue
+			}
+			sessions[i].ModelIDs = lo.Map(sessions[i].ModelIDs, func(id string, _ int) string {
+				if id == oldID {
+					return newID
+				}
+				return id
+			})
+			if err := tx.Save(&sessions[i]).Error; err != nil {
+				return ierr.Wrap(ierr.ErrDBUpdate, err, "update session model_ids")
+			}
+			counts.SessionCount++
+			affectedSessionIDs = append(affectedSessionIDs, sessions[i].ID)
+		}
+
+		// ③ message：命中会话引用到的消息，分块更新
+		if len(affectedSessionIDs) == 0 {
+			return nil
+		}
+		var msgIDs []uint
+		for i := range sessions {
+			msgIDs = append(msgIDs, sessions[i].MessageIDs...)
+		}
+		for _, chunk := range lo.Chunk(lo.Uniq(msgIDs), 500) {
+			res := tx.Model(&dbmodel.Message{}).
+				Where("model_id = ? AND id IN (?)", oldID, chunk).
+				Update("model_id", newID)
+			if res.Error != nil {
+				return ierr.Wrap(ierr.ErrDBUpdate, res.Error, "replace message model id")
+			}
+			counts.MessageCount += res.RowsAffected
+		}
+		return nil
+	})
+	if err != nil {
+		return llmproxy.ModelIDSyncCounts{}, err
+	}
+	return counts, nil
+}
