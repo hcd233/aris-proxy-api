@@ -70,6 +70,10 @@ type fakeModelRepo struct {
 	models []*llmagg.Model
 }
 
+func (f *fakeModelRepo) ReplaceHistoricalModelID(context.Context, uint, string, string) (llmproxy.ModelIDSyncCounts, error) {
+	return llmproxy.ModelIDSyncCounts{}, nil
+}
+
 func (f *fakeModelRepo) PaginateWithFilter(context.Context, model.CommonParam, llmproxy.ModelListFilter, *uint) ([]*llmagg.Model, *model.PageInfo, error) {
 	return nil, nil, nil
 }

@@ -58,6 +58,10 @@ func (r *updateModelRepo) Paginate(context.Context, model.CommonParam, *uint) ([
 
 var _ llmproxy.ModelRepository = (*updateModelRepo)(nil)
 
+func (r *updateModelRepo) ReplaceHistoricalModelID(context.Context, uint, string, string) (llmproxy.ModelIDSyncCounts, error) {
+	return llmproxy.ModelIDSyncCounts{}, nil
+}
+
 func (r *updateModelRepo) PaginateWithFilter(context.Context, model.CommonParam, llmproxy.ModelListFilter, *uint) ([]*aggregate.Model, *model.PageInfo, error) {
 	return nil, nil, nil
 }
@@ -89,7 +93,7 @@ func TestUpdateModel_CrossTenantEndpointRejected(t *testing.T) {
 	repo := &updateModelRepo{model: mustOwnedModel(t)}
 	h := command.NewUpdateModelHandler(newScopedEndpointRepo(), repo)
 
-	err := h.Handle(context.Background(), updateCmd(uptr(101), uptr(2)))
+	_, err := h.Handle(context.Background(), updateCmd(uptr(101), uptr(2)))
 	if !errors.Is(err, ierr.ErrDataNotExists) {
 		t.Fatalf("cross-tenant endpoint swap must be ErrDataNotExists, got %v", err)
 	}
@@ -104,7 +108,7 @@ func TestUpdateModel_AdminOwnerMismatchRejected(t *testing.T) {
 	repo := &updateModelRepo{model: mustOwnedModel(t)}
 	h := command.NewUpdateModelHandler(newScopedEndpointRepo(), repo)
 
-	err := h.Handle(context.Background(), updateCmd(nil, uptr(2)))
+	_, err := h.Handle(context.Background(), updateCmd(nil, uptr(2)))
 	if !errors.Is(err, ierr.ErrNoPermission) {
 		t.Fatalf("admin mismatched swap must be ErrNoPermission, got %v", err)
 	}
@@ -119,7 +123,7 @@ func TestUpdateModel_OwnEndpointSwapAllowed(t *testing.T) {
 	repo := &updateModelRepo{model: mustOwnedModel(t)}
 	h := command.NewUpdateModelHandler(newScopedEndpointRepo(), repo)
 
-	if err := h.Handle(context.Background(), updateCmd(uptr(101), uptr(1))); err != nil {
+	if _, err := h.Handle(context.Background(), updateCmd(uptr(101), uptr(1))); err != nil {
 		t.Fatalf("own endpoint swap should succeed: %v", err)
 	}
 	if repo.updated == nil {
@@ -133,7 +137,7 @@ func TestUpdateModel_TargetEndpointNotFound(t *testing.T) {
 	repo := &updateModelRepo{model: mustOwnedModel(t)}
 	h := command.NewUpdateModelHandler(newScopedEndpointRepo(), repo)
 
-	err := h.Handle(context.Background(), updateCmd(uptr(101), uptr(999)))
+	_, err := h.Handle(context.Background(), updateCmd(uptr(101), uptr(999)))
 	if !errors.Is(err, ierr.ErrDataNotExists) {
 		t.Fatalf("want ErrDataNotExists, got %v", err)
 	}
@@ -145,7 +149,7 @@ func TestUpdateModel_WithoutEndpointSwapNoCheck(t *testing.T) {
 	repo := &updateModelRepo{model: mustOwnedModel(t)}
 	h := command.NewUpdateModelHandler(newScopedEndpointRepo(), repo)
 
-	if err := h.Handle(context.Background(), updateCmd(uptr(101), nil)); err != nil {
+	if _, err := h.Handle(context.Background(), updateCmd(uptr(101), nil)); err != nil {
 		t.Fatalf("update without endpoint swap should succeed: %v", err)
 	}
 	if repo.updated == nil {

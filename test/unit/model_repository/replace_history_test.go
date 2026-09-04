@@ -61,6 +61,7 @@ func seedHistorySyncData(t *testing.T, db *gorm.DB) {
 }
 
 func TestReplaceHistoricalModelID(t *testing.T) {
+	t.Parallel()
 	db := newHistorySyncDB(t)
 	seedHistorySyncData(t, db)
 	repo := repository.NewModelRepository(db)
@@ -103,6 +104,7 @@ func TestReplaceHistoricalModelID(t *testing.T) {
 }
 
 func TestReplaceHistoricalModelIDNoHit(t *testing.T) {
+	t.Parallel()
 	db := newHistorySyncDB(t)
 	repo := repository.NewModelRepository(db)
 

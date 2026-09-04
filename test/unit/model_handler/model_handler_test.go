@@ -40,8 +40,8 @@ func newModelHandlerWithCapture(t *testing.T) (handler.ModelHandler, *captureCre
 
 type captureUpdateHandler struct{}
 
-func (c *captureUpdateHandler) Handle(_ context.Context, cmd port.UpdateModelCommand) error {
-	return nil
+func (c *captureUpdateHandler) Handle(_ context.Context, cmd port.UpdateModelCommand) (port.UpdateModelResult, error) {
+	return port.UpdateModelResult{}, nil
 }
 
 type captureDeleteHandler struct{}

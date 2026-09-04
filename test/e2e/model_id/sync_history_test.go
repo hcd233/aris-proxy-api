@@ -264,6 +264,7 @@ func (f *syncHistoryFixture) patchModel(t *testing.T, modelID uint, token, body 
 
 // TestSyncHistory_ReplacesAndIsolates 同步替换 + 租户隔离
 func TestSyncHistory_ReplacesAndIsolates(t *testing.T) {
+	t.Parallel()
 	f := newSyncHistoryFixture(t)
 	tokenA := f.tokenFor(t, f.userA.ID)
 
@@ -299,6 +300,7 @@ func TestSyncHistory_ReplacesAndIsolates(t *testing.T) {
 
 // TestSyncHistory_NoChangeReturnsZero modelId 未变时幂等，无副作用
 func TestSyncHistory_NoChangeReturnsZero(t *testing.T) {
+	t.Parallel()
 	f := newSyncHistoryFixture(t)
 	tokenA := f.tokenFor(t, f.userA.ID)
 
@@ -317,6 +319,7 @@ func TestSyncHistory_NoChangeReturnsZero(t *testing.T) {
 
 // TestSyncHistory_UncheckedKeepsOld 未带 syncHistory 时历史数据保持旧值
 func TestSyncHistory_UncheckedKeepsOld(t *testing.T) {
+	t.Parallel()
 	f := newSyncHistoryFixture(t)
 	tokenA := f.tokenFor(t, f.userA.ID)
 
