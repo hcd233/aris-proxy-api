@@ -45,11 +45,19 @@ type UpdateModelCommand struct {
 	MaxOutputTokens *int
 	Capabilities    *[]enum.InputModality
 	ModelID         *string
+	SyncHistory     *bool // 为 true 且 ModelID 实际变化时，同步替换归属 user 的历史数据
+}
+
+// UpdateModelResult 更新结果（含历史同步影响行数；未同步时全 0）
+type UpdateModelResult struct {
+	AuditCount   int64
+	SessionCount int64
+	MessageCount int64
 }
 
 // UpdateModelHandler 更新命令处理器
 type UpdateModelHandler interface {
-	Handle(ctx context.Context, cmd UpdateModelCommand) error
+	Handle(ctx context.Context, cmd UpdateModelCommand) (UpdateModelResult, error)
 }
 
 // DeleteModelCommand 删除 Model 命令
