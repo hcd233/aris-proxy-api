@@ -45,9 +45,7 @@ const (
 	ParseFloat64BitSize       = 64
 	DecimalBase               = 10
 	GoCommand                 = "go"
-	GoVetCommand              = "vet"
 	GoAllPackagesPattern      = "./..."
-	StaticcheckCommand        = "staticcheck"
 	GolangciLintCommand       = "golangci-lint"
 	GolangciLintRunCommand    = "run"
 	StaticChecksFailedMessage = "static checks failed"

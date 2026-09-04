@@ -259,6 +259,9 @@ const (
 	ConvCheckSkipGitDir      = ".git"
 	ConvCheckSkipWorktrees   = ".worktrees"
 	ConvCheckSkipVendor      = "vendor"
+	// 前端依赖/构建目录含数万级文件但几乎无 Go 源码，遍历代价高（>2s），与 golangci paths 排除保持一致
+	ConvCheckSkipNodeModules = "node_modules"
+	ConvCheckSkipNextBuild   = ".next"
 )
 
 // diagnostic 常量

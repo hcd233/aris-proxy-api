@@ -17,61 +17,29 @@ type Result struct {
 	Err    error
 }
 
-// Run 执行 go vet、staticcheck 和 golangci-lint（若已安装）静态分析。
+// Run 执行 golangci-lint（若已安装）静态分析。
+// govet 与 staticcheck 已作为 golangci-lint 内置 linter 启用（见 .golangci.yml），
+// 与 CI（golangci-lint-action）覆盖一致，无需再单独跑 go vet / staticcheck 进程。
 // 默认扫描 ./...，可通过 args 指定其他路径。
 func Run(args []string) Result {
 	if len(args) == 0 {
 		args = []string{constant.GoAllPackagesPattern}
 	}
 
-	var out strings.Builder
-	var hasErr bool
-
-	// go vet
-	vetCmd := exec.Command(constant.GoCommand, append([]string{constant.GoVetCommand}, args...)...) //nolint:gosec,noctx // args are trusted package paths
-	vetOut, vetErr := vetCmd.CombinedOutput()
-	if len(vetOut) > 0 {
-		out.Write(vetOut)
-		out.WriteByte('\n')
-	}
-	if vetErr != nil {
-		hasErr = true
-	}
-
-	// staticcheck
-	scPath := resolveStaticcheck()
-	if scPath != "" {
-		scCmd := exec.Command(scPath, args...) //nolint:gosec,noctx // args are trusted package paths
-		scOut, scErr := scCmd.CombinedOutput()
-		if len(scOut) > 0 {
-			out.Write(scOut)
-			out.WriteByte('\n')
-		}
-		if scErr != nil {
-			hasErr = true
-		}
-	} else {
-		out.WriteString("[lintstatic] staticcheck not found in PATH or $(go env GOPATH)/bin, skipping. Install with: go install honnef.co/go/tools/cmd/staticcheck@latest\n")
-	}
-
-	// golangci-lint
 	glPath := resolveGolangciLint()
-	if glPath != "" {
-		glCmd := exec.Command(glPath, append([]string{constant.GolangciLintRunCommand}, args...)...) //nolint:gosec,noctx // args are trusted package paths
-		glOut, glErr := glCmd.CombinedOutput()
-		if len(glOut) > 0 {
-			out.Write(glOut)
-			out.WriteByte('\n')
+	if glPath == "" {
+		return Result{
+			Output: "[lintstatic] golangci-lint not found in PATH or $(go env GOPATH)/bin, skipping. Install with: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest\n",
 		}
-		if glErr != nil {
-			hasErr = true
-		}
-	} else {
-		out.WriteString("[lintstatic] golangci-lint not found in PATH or $(go env GOPATH)/bin, skipping. Install with: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest\n")
 	}
 
-	res := Result{Output: out.String()}
-	if hasErr {
+	glCmd := exec.Command(glPath, append([]string{constant.GolangciLintRunCommand}, args...)...) //nolint:gosec,noctx // args are trusted package paths
+	glOut, glErr := glCmd.CombinedOutput()
+	res := Result{}
+	if len(glOut) > 0 {
+		res.Output = string(glOut) + "\n"
+	}
+	if glErr != nil {
 		res.Err = ierr.New(ierr.ErrInternal, constant.StaticChecksFailedMessage)
 	}
 	return res
@@ -95,29 +63,6 @@ func (r Result) Log() {
 			log.Info("[LintStatic] Static check info", zap.String("detail", line))
 		}
 	}
-}
-
-// resolveStaticcheck 按优先级查找 staticcheck 二进制：
-// 1. 系统 PATH
-// 2. GOBIN 环境变量
-// 3. $(go env GOPATH)/bin
-func resolveStaticcheck() string {
-	if p, err := exec.LookPath(constant.StaticcheckCommand); err == nil {
-		return p
-	}
-	if gobin := os.Getenv(constant.GobinEnvKey); gobin != constant.ZeroString {
-		p := filepath.Join(gobin, constant.StaticcheckCommand)
-		if info, err := os.Stat(p); err == nil && info.Mode()&constant.GopathBinFileMode != 0 { //nolint:gosec // gobin comes from GOBIN env var
-			return p
-		}
-	}
-	if out, err := exec.Command(constant.GoCommand, constant.GoEnvCommand, constant.GoEnvKeyGOPATH).Output(); err == nil { //nolint:gosec,noctx // resolving staticcheck from GOPATH is safe, CLI tool without context
-		p := filepath.Join(strings.TrimSpace(string(out)), constant.GopathBinSubDir, constant.StaticcheckCommand)
-		if info, err := os.Stat(p); err == nil && info.Mode()&constant.GopathBinFileMode != 0 { //nolint:gosec // path from GOPATH env var
-			return p
-		}
-	}
-	return ""
 }
 
 func resolveGolangciLint() string {
