@@ -160,11 +160,7 @@ export function ModelDialog({
             <div className="space-y-1 rounded-lg border border-input px-3 py-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm">{t("models.sync_history")}</span>
-                <Switch
-                  size="sm"
-                  checked={syncHistory}
-                  onCheckedChange={onSyncHistoryChange}
-                />
+                <Switch size="sm" checked={syncHistory} onCheckedChange={onSyncHistoryChange} />
               </div>
               <p className="text-[11px] text-muted-foreground">{t("models.sync_history_desc")}</p>
             </div>
