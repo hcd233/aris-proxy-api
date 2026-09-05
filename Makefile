@@ -12,6 +12,9 @@ GOMAXPROCS ?= $(shell nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo
 # 编译优化参数
 # -s: 去除符号表  -w: 去除 DWARF 调试信息
 LDFLAGS    := -s -w
+# 客户端版本号：release 构建传 tag（如 VERSION=v0.2.0 make build-client-all），本地默认 dev
+VERSION    ?= dev
+CLIENT_LDFLAGS := $(LDFLAGS) -X main.version=$(VERSION)
 # -trimpath: 去除编译路径信息（减小体积 + 安全）
 BUILD_FLAGS := -trimpath -p $(GOMAXPROCS)
 
@@ -36,7 +39,7 @@ build-server: web-build
 build-client:
 	CGO_ENABLED=0 go build \
 		$(BUILD_FLAGS) \
-		-ldflags="$(LDFLAGS)" \
+		-ldflags="$(CLIENT_LDFLAGS)" \
 		-o aris $(CLIENT_MAIN)
 	@echo "Built aris ($$(du -h aris | cut -f1))"
 
@@ -55,7 +58,7 @@ build-client-all:
 		echo "Building aris-$$name..."; \
 		CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build \
 			$(BUILD_FLAGS) \
-			-ldflags="$(LDFLAGS)" \
+			-ldflags="$(CLIENT_LDFLAGS)" \
 			-o $(CLIENT_OUTPUT_DIR)/aris-$$name $(CLIENT_MAIN) || exit 1; \
 	done
 	@echo "Built 4 client binaries in $(CLIENT_OUTPUT_DIR)/"
