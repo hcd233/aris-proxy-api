@@ -222,9 +222,9 @@ _Avoid_: log scraping, import, sync, ingestion
 客户端按 agent 抹平 hook 与 transcript 格式差异的抽象（`ParseHook` / `ClassifyTranscriptLine` / `StdoutAck`），经轻量注册表按 `--agent` 名称分发；服务端另有完成事件注册表（codex: Stop/task_complete；claude: SessionEnd）。新 agent 接入 = 客户端 1 个 adapter 文件 + 服务端 2 行 registry 注册。hook 命令统一为 `aris trace ingest --agent <name>`。
 _Avoid_: agent plugin, hook parser
 
-**TraceClient（Trace 客户端）**:
-独立编译的 `aris` 二进制，从 `cmd/client` 构建，包含 `init`（huh 交互式配置向导：健康检查 → 选 agent（Codex / Claude Code / Both）→ API Key → 注册对应 hooks：codex 写 `~/.codex/hooks.json`，claude 写 `~/.claude/settings.json`，均幂等去重、保留既有配置、写前 .bak 备份）、`status`（状态面板：连通性、API Key 校验、hooks 注册状态、本地 spool/日志，支持 `--json`）、`trace ingest`（非交互 hook 回调，fail-open）三个命令，不链接数据库、Server、lint 或 Web 静态资源。支持 `darwin/amd64`、`darwin/arm64`、`linux/amd64`、`linux/arm64` 四个平台，产物发布到 GitHub Releases；`GET /install.sh` 返回的自包含脚本只负责下载、校验、原子安装，末尾 `exec aris init --host <origin>` 进入配置向导。
-_Avoid_: trace cli, codex hook script, install script
+**ArisClient（Aris 客户端）**:
+独立编译的 `aris` 二进制，从 `cmd/client` 构建，包含 `init`（huh 交互式配置向导：健康检查 → 选 agent（Codex / Claude Code / Both）→ API Key → 注册对应 hooks：codex 写 `~/.codex/hooks.json`，claude 写 `~/.claude/settings.json`，均幂等去重、保留既有配置、写前 .bak 备份）、`status`（状态面板：连通性、API Key 校验、hooks 注册状态、本地 spool/日志，支持 `--json`）、`trace ingest`（非交互 hook 回调，fail-open）三个命令，不链接数据库、Server、lint 或 Web 静态资源。支持 `darwin/amd64`、`darwin/arm64`、`linux/amd64`、`linux/arm64` 四个平台，产物发布到 GitHub Releases；`GET /install.sh` 返回的自包含脚本负责下载、校验、原子安装，并按 `$SHELL` 将安装目录 `$HOME/.aris/bin` 幂等写入 shell rc（zsh→`~/.zshrc`；bash→`~/.bashrc`，macOS 无 `.bashrc` 时用 `~/.bash_profile`；其他→`~/.profile`，写入失败仅告警不阻塞），末尾 `exec aris init --host <origin>` 进入配置向导。API Key 校验接口为 `GET /api/cli/v1/aris/client/check`（2026-09-06 由 `/trace/client/check` 更名，破坏性变更，旧客户端需重装）。
+_Avoid_: TraceClient, trace client, trace cli, codex hook script, install script
 
 **TraceSpool（本地 spool）**:
 `aris trace ingest` 在 `~/.aris/trace/spool/` 维护的待上报记录队列。Hook 事件和 rollout 记录先原子落盘（0600），再以 5 秒超时批量 POST。服务端确认 `accepted` / `duplicate` 后删除 pending，`rejected` 移入隔离区。spool 全局上限 256 MiB，达到上限后停止接收新记录但保留既有未确认记录，始终 fail-open。
