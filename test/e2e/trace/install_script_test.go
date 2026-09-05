@@ -77,6 +77,13 @@ func TestInstallScript_ReturnsScriptWithHost(t *testing.T) {
 	if !strings.Contains(script, "PATH already configured") {
 		t.Fatalf("script must skip PATH setup when already configured (idempotent)")
 	}
+	// 下载进度条：交互终端显示 --progress-bar，非 TTY（CI）退回静默 -sS
+	if !strings.Contains(script, "--progress-bar") {
+		t.Fatalf("script must show a progress bar when downloading the archive, got:\n%s", script)
+	}
+	if !strings.Contains(script, "[ -t 2 ]") {
+		t.Fatalf("script must fall back to silent download on non-TTY stderr (CI), got:\n%s", script)
+	}
 	installedIdx := strings.Index(script, "Installed to")
 	pathIdx := strings.Index(script, pathMarker)
 	execIdx := strings.Index(script, `exec "$aris_bin" init`)
