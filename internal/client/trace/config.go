@@ -37,11 +37,11 @@ func (s *configStore) Load(ctx context.Context) (Config, error) {
 		return Config{}, nil
 	}
 	if err != nil {
-		return Config{}, ierr.Wrap(ierr.ErrInternal, err, "read trace client config")
+		return Config{}, ierr.Wrap(ierr.ErrInternal, err, "read aris client config")
 	}
 	var config Config
 	if err := sonic.Unmarshal(data, &config); err != nil {
-		return Config{}, ierr.Wrap(ierr.ErrDTOUnmarshal, err, "decode trace client config")
+		return Config{}, ierr.Wrap(ierr.ErrDTOUnmarshal, err, "decode aris client config")
 	}
 	return config, nil
 }
@@ -52,7 +52,7 @@ func (s *configStore) Save(ctx context.Context, config Config) error {
 	}
 	data, err := sonic.Marshal(config)
 	if err != nil {
-		return ierr.Wrap(ierr.ErrDTOMarshal, err, "encode trace client config")
+		return ierr.Wrap(ierr.ErrDTOMarshal, err, "encode aris client config")
 	}
 	return writePrivateFile(s.paths.ConfigFile(), data)
 }

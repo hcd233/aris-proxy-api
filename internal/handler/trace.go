@@ -25,10 +25,10 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
-//go:embed install_trace_client.sh.tmpl
+//go:embed install_aris_client.sh.tmpl
 var installScriptTemplate string
 
-var installScriptTmpl = template.Must(template.New(constant.TraceClientInstallScriptTmplName).Parse(installScriptTemplate))
+var installScriptTmpl = template.Must(template.New(constant.ArisClientInstallScriptTmplName).Parse(installScriptTemplate))
 
 type installScriptData struct {
 	Host string
@@ -41,7 +41,7 @@ type TraceHandler interface {
 	HandleGetTrace(ctx context.Context, req *dto.GetTraceReq) (*dto.HTTPResponse[*dto.GetTraceRsp], error)
 	HandleListTraceEvents(ctx context.Context, req *dto.ListTraceEventsReq) (*dto.HTTPResponse[*dto.ListTraceEventsRsp], error)
 	HandleDeleteTraces(ctx context.Context, req *dto.DeleteTraceReq) (*dto.HTTPResponse[*dto.DeleteTraceRsp], error)
-	HandleCheckTraceClient(ctx context.Context, req *dto.CheckTraceClientReq) (*huma.StreamResponse, error)
+	HandleCheckArisClient(ctx context.Context, req *dto.CheckArisClientReq) (*huma.StreamResponse, error)
 	HandleInstallScript(ctx context.Context, req *dto.InstallScriptReq) (*huma.StreamResponse, error)
 }
 
@@ -73,10 +73,10 @@ func NewTraceHandler(deps TraceDependencies) TraceHandler {
 	}
 }
 
-// HandleCheckTraceClient validates the API key through middleware.
-func (h *traceHandler) HandleCheckTraceClient(
+// HandleCheckArisClient validates the API key through middleware.
+func (h *traceHandler) HandleCheckArisClient(
 	_ context.Context,
-	_ *dto.CheckTraceClientReq,
+	_ *dto.CheckArisClientReq,
 ) (*huma.StreamResponse, error) {
 	return &huma.StreamResponse{Body: func(ctx huma.Context) {
 		ctx.SetStatus(fiber.StatusNoContent)
@@ -116,7 +116,7 @@ func (h *traceHandler) HandleInstallScript(
 				"[TraceHandler] Invalid origin for install script",
 				zap.String("origin", origin),
 			)
-			writeInstallScriptError(humaCtx, constant.TraceClientInstallOriginErrorMessage)
+			writeInstallScriptError(humaCtx, constant.ArisClientInstallOriginErrorMessage)
 			return
 		}
 
@@ -126,7 +126,7 @@ func (h *traceHandler) HandleInstallScript(
 				"[TraceHandler] Failed to execute install script template",
 				zap.Error(err),
 			)
-			writeInstallScriptError(humaCtx, constant.TraceClientInstallGenErrorMessage)
+			writeInstallScriptError(humaCtx, constant.ArisClientInstallGenErrorMessage)
 			return
 		}
 

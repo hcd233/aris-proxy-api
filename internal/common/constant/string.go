@@ -173,9 +173,9 @@ const (
 
 	// CLIAPIPrefix 下的组内注册路径（服务端 router/cli.go 消费；客户端可见的
 	// 绝对路径常量由 CLIAPIPrefix + RoutePath 派生）。
-	TraceClientIngestRoutePath = "/trace/event"
-	TraceClientCheckRoutePath  = "/trace/client/check"
-	ClientModelsRoutePath      = "/model/list"
+	ArisClientIngestRoutePath = "/trace/event"
+	ArisClientCheckRoutePath  = "/aris/client/check"
+	ClientModelsRoutePath     = "/model/list"
 
 	// ClientModelsAPIPrefix 客户端模型分发接口前缀，与 CLI 分区前缀同源。
 	ClientModelsAPIPrefix = CLIAPIPrefix

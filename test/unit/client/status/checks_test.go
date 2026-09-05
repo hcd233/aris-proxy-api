@@ -45,7 +45,7 @@ func TestCollectWithoutConfigSkipsNetwork(t *testing.T) {
 func TestCollectAgainstLiveServer(t *testing.T) {
 	t.Parallel()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == constant.TraceClientCheckPath {
+		if r.URL.Path == constant.ArisClientCheckPath {
 			if r.Header.Get(constant.HTTPHeaderAuthorization) != "Bearer sk-12345678" {
 				w.WriteHeader(http.StatusUnauthorized)
 				return
@@ -102,7 +102,7 @@ func TestCollectLocalFiles(t *testing.T) {
 	if err := os.MkdirAll(paths.LogDir(), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	logName := constant.TraceClientLogPrefix + time.Now().UTC().Format(constant.TraceClientLogDateFormat) + constant.TraceClientLogSuffix
+	logName := constant.ArisClientLogPrefix + time.Now().UTC().Format(constant.ArisClientLogDateFormat) + constant.ArisClientLogSuffix
 	if err := os.WriteFile(filepath.Join(paths.LogDir(), logName), []byte("l1\nl2\nl3\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}

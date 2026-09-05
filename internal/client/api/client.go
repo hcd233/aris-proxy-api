@@ -24,10 +24,10 @@ type Client struct {
 // New 构造控制面客户端；hc 为 nil 或超时为 0 时使用默认超时
 func New(baseURL, apiKey string, hc *http.Client) *Client {
 	if hc == nil {
-		hc = &http.Client{Timeout: constant.TraceClientHTTPTimeout}
+		hc = &http.Client{Timeout: constant.ArisClientHTTPTimeout}
 	} else if hc.Timeout == 0 {
 		clone := *hc
-		clone.Timeout = constant.TraceClientHTTPTimeout
+		clone.Timeout = constant.ArisClientHTTPTimeout
 		hc = &clone
 	}
 	return &Client{baseURL: strings.TrimRight(baseURL, "/"), apiKey: apiKey, http: hc}
@@ -91,9 +91,9 @@ func (c *Client) ListModels(ctx context.Context) ([]ClientModel, error) {
 	return rsp.Models, nil
 }
 
-// CheckAPIKey 请求 GET {base}/api/cli/v1/trace/client/check 校验 API Key；2xx 视为有效
+// CheckAPIKey 请求 GET {base}/api/cli/v1/aris/client/check 校验 API Key；2xx 视为有效
 func (c *Client) CheckAPIKey(ctx context.Context) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+constant.TraceClientCheckPath, http.NoBody)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+constant.ArisClientCheckPath, http.NoBody)
 	if err != nil {
 		return ierr.Wrap(ierr.ErrBadRequest, err, "create API key check request")
 	}

@@ -23,7 +23,7 @@ func Render(w io.Writer, r *Report) error {
 	case !r.ConfigFound:
 		lines = append(lines, indent+ui.CheckRowWarn(constant.ClientUIStatusNotInitialized, constant.ClientUIStatusRunInitHint))
 	case r.ServerOK:
-		lines = append(lines, indent+ui.CheckRowOK(r.Host, fmt.Sprintf(constant.TraceClientReachableFormat, r.ServerLatency.Round(time.Millisecond))))
+		lines = append(lines, indent+ui.CheckRowOK(r.Host, fmt.Sprintf(constant.ArisClientReachableFormat, r.ServerLatency.Round(time.Millisecond))))
 	default:
 		lines = append(lines, indent+ui.CheckRowFail(r.Host, r.ServerErr))
 	}
@@ -40,7 +40,7 @@ func Render(w io.Writer, r *Report) error {
 
 	agent := r.Agent
 	if agent == "" {
-		agent = constant.TraceClientAgentCodex
+		agent = constant.ArisClientAgentCodex
 	}
 	hooksDetail := fmt.Sprintf(constant.ClientUIStatusHooksFormat, r.HooksFound, r.HooksTotal)
 	lines = append(lines, ui.SectionTitle(constant.ClientUISectionAgent))
@@ -82,7 +82,7 @@ func Render(w io.Writer, r *Report) error {
 
 // RenderJSON 将检查结果渲染为机器可读 JSON（--json）
 func RenderJSON(w io.Writer, r *Report) error {
-	data, err := sonic.MarshalIndent(newJSONReport(r), "", constant.TraceClientJSONIndent)
+	data, err := sonic.MarshalIndent(newJSONReport(r), "", constant.ArisClientJSONIndent)
 	if err != nil {
 		return ierr.Wrap(ierr.ErrDTOMarshal, err, "encode status report")
 	}

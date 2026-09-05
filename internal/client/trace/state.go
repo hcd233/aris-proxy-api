@@ -22,14 +22,14 @@ func nextSequence(ctx context.Context, paths Paths) (spoolID string, sequence in
 	if ctxErr := ctx.Err(); ctxErr != nil {
 		return "", 0, ctxErr
 	}
-	err = withFileLock(filepath.Join(paths.StateDir(), constant.TraceClientStateLockFile), func() error {
+	err = withFileLock(filepath.Join(paths.StateDir(), constant.ArisClientStateLockFile), func() error {
 		var state clientState
 		state, err = loadClientState(paths)
 		if err != nil {
 			return err
 		}
 		if state.SpoolID == "" {
-			random := make([]byte, constant.TraceClientSpoolIDRandomBytes)
+			random := make([]byte, constant.ArisClientSpoolIDRandomBytes)
 			if _, err = rand.Read(random); err != nil {
 				return ierr.Wrap(ierr.ErrInternal, err, "generate trace spool id")
 			}
@@ -44,24 +44,24 @@ func nextSequence(ctx context.Context, paths Paths) (spoolID string, sequence in
 		var data []byte
 		data, err = sonic.Marshal(state)
 		if err != nil {
-			return ierr.Wrap(ierr.ErrDTOMarshal, err, "encode trace client state")
+			return ierr.Wrap(ierr.ErrDTOMarshal, err, "encode aris client state")
 		}
-		return writePrivateFile(filepath.Join(paths.StateDir(), constant.TraceClientStateFileName), data)
+		return writePrivateFile(filepath.Join(paths.StateDir(), constant.ArisClientStateFileName), data)
 	})
 	return spoolID, sequence, err
 }
 
 func loadClientState(paths Paths) (clientState, error) {
-	data, err := os.ReadFile(filepath.Join(paths.StateDir(), constant.TraceClientStateFileName))
+	data, err := os.ReadFile(filepath.Join(paths.StateDir(), constant.ArisClientStateFileName))
 	if errors.Is(err, os.ErrNotExist) {
 		return clientState{}, nil
 	}
 	if err != nil {
-		return clientState{}, ierr.Wrap(ierr.ErrInternal, err, "read trace client state")
+		return clientState{}, ierr.Wrap(ierr.ErrInternal, err, "read aris client state")
 	}
 	var state clientState
 	if err := sonic.Unmarshal(data, &state); err != nil {
-		return clientState{}, ierr.Wrap(ierr.ErrDTOUnmarshal, err, "decode trace client state")
+		return clientState{}, ierr.Wrap(ierr.ErrDTOUnmarshal, err, "decode aris client state")
 	}
 	return state, nil
 }

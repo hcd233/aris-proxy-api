@@ -9,7 +9,7 @@ func InstallClaudeHooks(paths Paths, binPath string) (int, error) {
 		paths.ClaudeSettingsFile(),
 		paths.ClaudeSettingsBackupFile(),
 		ingestCommand(binPath, constant.TraceAgentClaude),
-		constant.TraceClientClaudeHookEvents,
+		constant.ArisClientClaudeHookEvents,
 	)
 }
 
@@ -18,6 +18,6 @@ func InspectClaudeHooks(paths Paths, binPath string) (found int, missing []strin
 	return inspectAgentHooks(
 		paths.ClaudeSettingsFile(),
 		ingestCommand(binPath, constant.TraceAgentClaude),
-		constant.TraceClientClaudeHookEvents,
+		constant.ArisClientClaudeHookEvents,
 	)
 }

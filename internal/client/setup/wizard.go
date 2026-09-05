@@ -71,13 +71,13 @@ func RunInit(ctx context.Context, opts InitOptions) error {
 		return err
 	}
 
-	printStep(out, 1, constant.TraceClientInitTitleConnect)
+	printStep(out, 1, constant.ArisClientInitTitleConnect)
 	if err := checkHealthWithRetry(ctx, api.New(host, "", opts.HTTPClient), ttyIn, ttyOut, out, host); err != nil {
 		return err
 	}
 
-	printStep(out, 2, constant.TraceClientInitTitleAPIKey)
-	apiKey := os.Getenv(constant.TraceClientAPIKeyEnv)
+	printStep(out, 2, constant.ArisClientInitTitleAPIKey)
+	apiKey := os.Getenv(constant.ArisClientAPIKeyEnv)
 	if apiKey == "" {
 		if apiKey, err = promptAPIKey(ttyIn, ttyOut, existing.APIKey); err != nil {
 			return err
@@ -88,18 +88,18 @@ func RunInit(ctx context.Context, opts InitOptions) error {
 		return err
 	}
 
-	printStep(out, 3, constant.TraceClientInitTitleSave)
-	if err := ui.RunWithSpinner(ttyIn, ttyOut, constant.TraceClientInitSavingConfig, func() error {
+	printStep(out, 3, constant.ArisClientInitTitleSave)
+	if err := ui.RunWithSpinner(ttyIn, ttyOut, constant.ArisClientInitSavingConfig, func() error {
 		return store.Save(ctx, trace.Config{Host: host, APIKey: apiKey})
 	}); err != nil {
 		return err
 	}
 
 	printLine(out, "", ui.SummaryPanel(
-		constant.TraceClientInitDone,
-		fmt.Sprintf(constant.TraceClientInitConfigFormat, paths.ConfigFile()),
-		constant.TraceClientNextHintTraceInstall,
-		constant.TraceClientNextHintModelExport,
+		constant.ArisClientInitDone,
+		fmt.Sprintf(constant.ArisClientInitConfigFormat, paths.ConfigFile()),
+		constant.ArisClientNextHintTraceInstall,
+		constant.ArisClientNextHintModelExport,
 	))
 	return nil
 }
@@ -107,8 +107,8 @@ func RunInit(ctx context.Context, opts InitOptions) error {
 func promptHost(in io.Reader, out io.Writer) (string, error) {
 	var host string
 	field := huh.NewInput().
-		Title(constant.TraceClientInitHostPrompt).
-		Placeholder(constant.TraceClientInitHostPlaceholder).
+		Title(constant.ArisClientInitHostPrompt).
+		Placeholder(constant.ArisClientInitHostPlaceholder).
 		Value(&host)
 	if err := newForm(in, out, field).Run(); err != nil {
 		return "", err
@@ -119,17 +119,17 @@ func promptHost(in io.Reader, out io.Writer) (string, error) {
 func promptAPIKey(in io.Reader, out io.Writer, existing string) (string, error) {
 	key := ""
 	input := huh.NewInput().
-		Title(constant.TraceClientInitAPIKeyTitle).
+		Title(constant.ArisClientInitAPIKeyTitle).
 		EchoMode(huh.EchoModePassword).
 		Value(&key).
 		Validate(func(s string) error {
 			if s == "" && existing == "" {
-				return ierr.New(ierr.ErrValidation, constant.TraceClientInitMissingAPIKeyMessage)
+				return ierr.New(ierr.ErrValidation, constant.ArisClientInitMissingAPIKeyMessage)
 			}
 			return nil
 		})
 	if existing != "" {
-		input.Description(constant.TraceClientInitKeepAPIKeyHint)
+		input.Description(constant.ArisClientInitKeepAPIKeyHint)
 	}
 	if err := newForm(in, out, input).Run(); err != nil {
 		return "", err
@@ -140,17 +140,17 @@ func promptAPIKey(in io.Reader, out io.Writer, existing string) (string, error) 
 func checkHealthWithRetry(ctx context.Context, client *api.Client, ttyIn io.Reader, ttyOut, out io.Writer, host string) error {
 	for {
 		var latency time.Duration
-		err := ui.RunWithSpinner(ttyIn, ttyOut, fmt.Sprintf(constant.TraceClientInitConnectingFormat, host), func() error {
+		err := ui.RunWithSpinner(ttyIn, ttyOut, fmt.Sprintf(constant.ArisClientInitConnectingFormat, host), func() error {
 			var checkErr error
 			latency, checkErr = client.CheckHealth(ctx)
 			return checkErr
 		})
 		if err == nil {
-			printLine(out, ui.CheckRowOK(host, fmt.Sprintf(constant.TraceClientReachableFormat, latency.Round(time.Millisecond))))
+			printLine(out, ui.CheckRowOK(host, fmt.Sprintf(constant.ArisClientReachableFormat, latency.Round(time.Millisecond))))
 			return nil
 		}
 		printLine(out, ui.CheckRowFail(host, err.Error()))
-		retry, confirmErr := confirm(ttyIn, ttyOut, constant.TraceClientInitRetryPrompt)
+		retry, confirmErr := confirm(ttyIn, ttyOut, constant.ArisClientInitRetryPrompt)
 		if confirmErr != nil {
 			return confirmErr
 		}
@@ -162,15 +162,15 @@ func checkHealthWithRetry(ctx context.Context, client *api.Client, ttyIn io.Read
 
 func checkAPIKeyWithRetry(ctx context.Context, client *api.Client, ttyIn io.Reader, ttyOut, out io.Writer) error {
 	for {
-		err := ui.RunWithSpinner(ttyIn, ttyOut, constant.TraceClientInitValidatingKey, func() error {
+		err := ui.RunWithSpinner(ttyIn, ttyOut, constant.ArisClientInitValidatingKey, func() error {
 			return client.CheckAPIKey(ctx)
 		})
 		if err == nil {
-			printLine(out, ui.CheckRowOK(constant.TraceClientInitAPIKeyTitle, ""))
+			printLine(out, ui.CheckRowOK(constant.ArisClientInitAPIKeyTitle, ""))
 			return nil
 		}
-		printLine(out, ui.CheckRowFail(constant.TraceClientInitAPIKeyFailed, err.Error()))
-		retry, confirmErr := confirm(ttyIn, ttyOut, constant.TraceClientInitAPIKeyRetryPrompt)
+		printLine(out, ui.CheckRowFail(constant.ArisClientInitAPIKeyFailed, err.Error()))
+		retry, confirmErr := confirm(ttyIn, ttyOut, constant.ArisClientInitAPIKeyRetryPrompt)
 		if confirmErr != nil {
 			return confirmErr
 		}
@@ -185,9 +185,9 @@ func terminalIO(in io.Reader) (io.Reader, io.Writer, func(), error) {
 	if file, ok := in.(*os.File); ok && term.IsTerminal(int(file.Fd())) {
 		return in, os.Stdout, func() {}, nil
 	}
-	tty, err := os.OpenFile(constant.TraceClientDevTTYPath, os.O_RDWR, 0)
+	tty, err := os.OpenFile(constant.ArisClientDevTTYPath, os.O_RDWR, 0)
 	if err != nil {
-		return nil, nil, nil, ierr.New(ierr.ErrValidation, constant.TraceClientInitNonInteractiveMessage)
+		return nil, nil, nil, ierr.New(ierr.ErrValidation, constant.ArisClientInitNonInteractiveMessage)
 	}
 	return tty, tty, func() { _ = tty.Close() }, nil //nolint:errcheck // best-effort close
 }
@@ -196,12 +196,12 @@ func terminalIO(in io.Reader) (io.Reader, io.Writer, func(), error) {
 func NormalizeHost(raw string) (string, error) {
 	host := strings.TrimSpace(raw)
 	if host == "" {
-		return "", ierr.New(ierr.ErrValidation, constant.TraceClientInitHostRequiredMessage)
+		return "", ierr.New(ierr.ErrValidation, constant.ArisClientInitHostRequiredMessage)
 	}
-	httpPrefix := constant.TraceClientSchemeHTTP + "://"
-	httpsPrefix := constant.TraceClientSchemeHTTPS + "://"
+	httpPrefix := constant.ArisClientSchemeHTTP + "://"
+	httpsPrefix := constant.ArisClientSchemeHTTPS + "://"
 	if !strings.HasPrefix(host, httpPrefix) && !strings.HasPrefix(host, httpsPrefix) {
-		return "", ierr.New(ierr.ErrValidation, constant.TraceClientInitHostSchemeMessage)
+		return "", ierr.New(ierr.ErrValidation, constant.ArisClientInitHostSchemeMessage)
 	}
 	return strings.TrimRight(host, "/"), nil
 }
@@ -228,7 +228,7 @@ func ExecutablePath() (string, error) {
 }
 
 func printStep(out io.Writer, step int, title string) {
-	printLine(out, "", ui.StepHeader(step, constant.TraceClientInitSteps, title))
+	printLine(out, "", ui.StepHeader(step, constant.ArisClientInitSteps, title))
 }
 
 func printLine(out io.Writer, lines ...string) {
@@ -249,8 +249,8 @@ func confirm(in io.Reader, out io.Writer, title string) (bool, error) {
 	value := true
 	field := huh.NewConfirm().
 		Title(title).
-		Affirmative(constant.TraceClientInitContinueLabel).
-		Negative(constant.TraceClientInitCancelLabel).
+		Affirmative(constant.ArisClientInitContinueLabel).
+		Negative(constant.ArisClientInitCancelLabel).
 		Value(&value)
 	if err := newForm(in, out, field).Run(); err != nil {
 		return false, err

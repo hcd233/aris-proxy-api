@@ -36,16 +36,16 @@ func RegisterCLIAPIRoutes(cliGroup huma.API, deps APIRouterDependencies) {
 	}, deps.ClientHandler.HandleListModels)
 
 	huma.Register(cliGroup, huma.Operation{
-		OperationID: "reportTraceEvent", Method: http.MethodPost, Path: constant.TraceClientIngestRoutePath,
+		OperationID: "reportTraceEvent", Method: http.MethodPost, Path: constant.ArisClientIngestRoutePath,
 		Summary: "ReportTraceEvent", Description: "Report a codex hook event (API key auth)",
 		Tags:     []string{constant.TagTrace},
 		Security: []map[string][]string{{constant.SecuritySchemeAPIKey: {}}},
 	}, deps.TraceHandler.HandleReportTraceEvent)
 
 	huma.Register(cliGroup, huma.Operation{
-		OperationID: "checkTraceClientAPIKey", Method: http.MethodGet, Path: constant.TraceClientCheckRoutePath,
-		Summary: "CheckTraceClientAPIKey", Description: "Validate the trace client API key",
+		OperationID: "checkArisClientAPIKey", Method: http.MethodGet, Path: constant.ArisClientCheckRoutePath,
+		Summary: "CheckArisClientAPIKey", Description: "Validate the aris client API key",
 		Tags:     []string{constant.TagTrace},
 		Security: []map[string][]string{{constant.SecuritySchemeAPIKey: {}}},
-	}, deps.TraceHandler.HandleCheckTraceClient)
+	}, deps.TraceHandler.HandleCheckArisClient)
 }

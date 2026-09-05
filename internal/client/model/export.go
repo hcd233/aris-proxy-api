@@ -173,9 +173,9 @@ func terminalIO(in io.Reader) (io.Reader, io.Writer, func(), error) {
 	if file, ok := in.(*os.File); ok && term.IsTerminal(int(file.Fd())) {
 		return in, os.Stdout, func() {}, nil
 	}
-	tty, err := os.OpenFile(constant.TraceClientDevTTYPath, os.O_RDWR, 0)
+	tty, err := os.OpenFile(constant.ArisClientDevTTYPath, os.O_RDWR, 0)
 	if err != nil {
-		return nil, nil, nil, ierr.New(ierr.ErrValidation, constant.TraceClientInitNonInteractiveMessage)
+		return nil, nil, nil, ierr.New(ierr.ErrValidation, constant.ArisClientInitNonInteractiveMessage)
 	}
 	return tty, tty, func() { _ = tty.Close() }, nil //nolint:errcheck // best-effort close
 }
