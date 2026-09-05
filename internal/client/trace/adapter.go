@@ -68,10 +68,10 @@ func TrimStopHookPayload(raw []byte) []byte {
 	if err := sonic.Unmarshal(raw, &root); err != nil {
 		return raw
 	}
-	if _, ok := root[constant.TraceClientStopTrimKey]; !ok {
+	if _, ok := root[constant.ArisClientStopTrimKey]; !ok {
 		return raw
 	}
-	delete(root, constant.TraceClientStopTrimKey)
+	delete(root, constant.ArisClientStopTrimKey)
 	trimmed, err := sonic.Marshal(root)
 	if err != nil {
 		return raw

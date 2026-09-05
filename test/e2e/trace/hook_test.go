@@ -75,7 +75,7 @@ func TestCodexHook_TriggersTranscriptReportWithoutHookRecords(t *testing.T) {
 	if err := os.WriteFile(paths.ConfigFile(), []byte(configJSON), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	binary := buildTraceClient(t)
+	binary := buildArisClient(t)
 
 	// 预置 transcript：codex hook 纯触发后只上报 rollout 记录
 	transcriptPath := filepath.Join(home, "rollout.jsonl")
@@ -178,7 +178,7 @@ func TestClaudeHook_SilentStdoutAndReportsAgent(t *testing.T) {
 	if err := os.WriteFile(paths.ConfigFile(), []byte(configJSON), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	binary := buildTraceClient(t)
+	binary := buildArisClient(t)
 
 	transcript := filepath.Join(home, "session.jsonl")
 	transcriptLines := []string{
@@ -222,7 +222,7 @@ func TestClaudeHook_SilentStdoutAndReportsAgent(t *testing.T) {
 	}
 }
 
-func buildTraceClient(t *testing.T) string {
+func buildArisClient(t *testing.T) string {
 	t.Helper()
 	binary := filepath.Join(t.TempDir(), "aris")
 	cmd := exec.CommandContext(t.Context(), "go", "build", "-buildvcs=false", "-o", binary, "./cmd/client")

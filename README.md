@@ -147,7 +147,7 @@ cd web && npm ci && npm run dev   # http://localhost:3000
 | 前缀 | 认证 | 说明 |
 | --- | --- | --- |
 | `/api/openai/v1` · `/api/anthropic/v1` | `X-API-Key` | LLM 兼容入口：chat/completions、responses、messages、count_tokens、models |
-| `/api/cli/v1/model/list` · `/trace/event` · `/trace/client/check` | `X-API-Key` | `aris` 客户端模型分发、Trace 事件上报与客户端 Key 检查 |
+| `/api/cli/v1/model/list` · `/trace/event` · `/aris/client/check` | `X-API-Key` | `aris` 客户端模型分发、Trace 事件上报与客户端 Key 检查 |
 | `/api/web/v1/oauth2` · `/token` | 公开（限流） | OAuth2 登录/回调、Token 刷新 |
 | `/api/web/v1/user` | JWT | 个人资料；管理员可列表、审核（approve/demote）、删除用户 |
 | `/api/web/v1/apikey` · `/session` · `/dataset` · `/trace` | JWT + Owner 隔离 | API Key、会话/分享、数据集导出、Trace 查询 |

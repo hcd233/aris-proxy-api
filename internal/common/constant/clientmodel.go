@@ -126,16 +126,16 @@ const (
 
 // ClientInitMessages aris init 瘦身后的新文案
 const (
-	TraceClientInitTitleSave        = "Save configuration"
-	TraceClientInitSavingConfig     = "Saving configuration..."
-	TraceClientNextHintTraceInstall = "Next: aris trace install  # register hooks in Codex/Claude Code"
-	TraceClientNextHintModelExport  = "Next: aris model export    # configure models for your agents"
+	ArisClientInitTitleSave        = "Save configuration"
+	ArisClientInitSavingConfig     = "Saving configuration..."
+	ArisClientNextHintTraceInstall = "Next: aris trace install  # register hooks in Codex/Claude Code"
+	ArisClientNextHintModelExport  = "Next: aris model export    # configure models for your agents"
 )
 
 // TraceInstallMessages aris trace install 文案
 const (
-	TraceClientInstallNeedInitMessage = "Not initialized. Run `aris init` first."
-	TraceClientInstallDone            = "✓ Hooks installation complete"
+	ArisClientInstallNeedInitMessage = "Not initialized. Run `aris init` first."
+	ArisClientInstallDone            = "✓ Hooks installation complete"
 )
 
 // ClientStatusMessages status 面板 Providers 节文案

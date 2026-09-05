@@ -76,13 +76,13 @@ type IngestCommandOptions struct {
 
 func NewIngestor(paths Paths, client *http.Client, adapter AgentAdapter) *Ingestor {
 	if client == nil {
-		client = &http.Client{Timeout: constant.TraceClientHTTPTimeout}
+		client = &http.Client{Timeout: constant.ArisClientHTTPTimeout}
 	} else if client.Timeout == 0 {
 		clone := *client
-		clone.Timeout = constant.TraceClientHTTPTimeout
+		clone.Timeout = constant.ArisClientHTTPTimeout
 		client = &clone
 	}
-	spool := NewSpool(paths, constant.TraceClientSpoolLimit)
+	spool := NewSpool(paths, constant.ArisClientSpoolLimit)
 	return &Ingestor{
 		adapter: adapter,
 		paths:   paths,
@@ -130,7 +130,7 @@ func (i *Ingestor) Ingest(ctx context.Context, raw []byte) error {
 		TurnID:         info.TurnID,
 		CallID:         info.CallID,
 		ClientSequence: sequence,
-		DedupKey:       fmt.Sprintf(constant.TraceClientHookDedupFormat, spoolID, sequence),
+		DedupKey:       fmt.Sprintf(constant.ArisClientHookDedupFormat, spoolID, sequence),
 		Payload:        append(sonic.NoCopyRawMessage{}, payload...),
 	}
 	if err := i.spool.Append(ctx, record); err != nil {
@@ -138,7 +138,7 @@ func (i *Ingestor) Ingest(ctx context.Context, raw []byte) error {
 	}
 	if info.TranscriptPath != "" {
 		if _, err := i.rollout.ReadNew(ctx, info.SessionID, info.TranscriptPath); err != nil {
-			writeLocalError(i.paths, constant.TraceClientLogCategoryRollout)
+			writeLocalError(i.paths, constant.ArisClientLogCategoryRollout)
 		}
 	}
 	config, err := i.config.Load(ctx)
@@ -146,7 +146,7 @@ func (i *Ingestor) Ingest(ctx context.Context, raw []byte) error {
 		return err
 	}
 	if config.Host == "" || config.APIKey == "" {
-		return ierr.New(ierr.ErrValidation, "trace client is not initialized")
+		return ierr.New(ierr.ErrValidation, "aris client is not initialized")
 	}
 	return i.flush(ctx, config)
 }
@@ -162,7 +162,7 @@ func (i *Ingestor) ingestCodexHookTrigger(ctx context.Context, info HookInfo) er
 	}
 	if info.TranscriptPath != "" {
 		if _, err := i.rollout.ReadNew(ctx, info.SessionID, info.TranscriptPath); err != nil {
-			writeLocalError(i.paths, constant.TraceClientLogCategoryRollout)
+			writeLocalError(i.paths, constant.ArisClientLogCategoryRollout)
 		}
 	}
 	config, err := i.config.Load(ctx)
@@ -170,7 +170,7 @@ func (i *Ingestor) ingestCodexHookTrigger(ctx context.Context, info HookInfo) er
 		return err
 	}
 	if config.Host == "" || config.APIKey == "" {
-		return ierr.New(ierr.ErrValidation, "trace client is not initialized")
+		return ierr.New(ierr.ErrValidation, "aris client is not initialized")
 	}
 	return i.flush(ctx, config)
 }
@@ -178,8 +178,8 @@ func (i *Ingestor) ingestCodexHookTrigger(ctx context.Context, info HookInfo) er
 func (i *Ingestor) flush(ctx context.Context, config Config) error {
 	batch, err := i.spool.Batch(
 		ctx,
-		constant.TraceClientBatchMaxRecords,
-		constant.TraceClientBatchMaxBytes,
+		constant.ArisClientBatchMaxRecords,
+		constant.ArisClientBatchMaxBytes,
 	)
 	if err != nil || len(batch) == 0 {
 		return err
@@ -228,7 +228,7 @@ func (i *Ingestor) ingestSubagentStop(ctx context.Context, info HookInfo) error 
 	if _, err := i.rollout.ReadNewForSubagent(
 		ctx, childID, info.AgentTranscriptPath, info.SessionID, info.AgentID, info.AgentType,
 	); err != nil {
-		writeLocalError(i.paths, constant.TraceClientLogCategoryRollout)
+		writeLocalError(i.paths, constant.ArisClientLogCategoryRollout)
 		return nil //nolint:nilerr // fail-open: never block agent CLI
 	}
 	config, err := i.config.Load(ctx)
@@ -236,7 +236,7 @@ func (i *Ingestor) ingestSubagentStop(ctx context.Context, info HookInfo) error 
 		return err
 	}
 	if config.Host == "" || config.APIKey == "" {
-		return ierr.New(ierr.ErrValidation, "trace client is not initialized")
+		return ierr.New(ierr.ErrValidation, "aris client is not initialized")
 	}
 	return i.flushSubagent(ctx, config, childID, info)
 }
@@ -247,8 +247,8 @@ func (i *Ingestor) flushSubagent(ctx context.Context, config Config, childID str
 	batch, err := i.spool.BatchForSession(
 		ctx,
 		childID,
-		constant.TraceClientBatchMaxRecords,
-		constant.TraceClientBatchMaxBytes,
+		constant.ArisClientBatchMaxRecords,
+		constant.ArisClientBatchMaxBytes,
 	)
 	if err != nil || len(batch) == 0 {
 		return err
@@ -292,7 +292,7 @@ func (i *Ingestor) postBatch(ctx context.Context, config Config, body []byte) er
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodPost,
-		config.Host+constant.TraceClientIngestPath,
+		config.Host+constant.ArisClientIngestPath,
 		bytes.NewReader(body),
 	)
 	if err != nil {
@@ -337,12 +337,12 @@ func RunIngestCommand(ctx context.Context, opts IngestCommandOptions) error {
 	}
 	adapter, err := LookupAdapter(opts.AgentName)
 	if err != nil {
-		writeLocalError(paths, constant.TraceClientLogCategoryIngest)
+		writeLocalError(paths, constant.ArisClientLogCategoryIngest)
 		return nil //nolint:nilerr // fail-open: never block agent CLI
 	}
-	raw, err := io.ReadAll(io.LimitReader(in, constant.TraceClientHookInputLimit+1))
-	if err != nil || len(raw) > constant.TraceClientHookInputLimit {
-		writeLocalError(paths, constant.TraceClientLogCategoryIngest)
+	raw, err := io.ReadAll(io.LimitReader(in, constant.ArisClientHookInputLimit+1))
+	if err != nil || len(raw) > constant.ArisClientHookInputLimit {
+		writeLocalError(paths, constant.ArisClientLogCategoryIngest)
 		return nil //nolint:nilerr // fail-open: never block agent CLI
 	}
 	if info, parseErr := adapter.ParseHook(raw); parseErr == nil {
@@ -351,7 +351,7 @@ func RunIngestCommand(ctx context.Context, opts IngestCommandOptions) error {
 		}
 	}
 	if err := NewIngestor(paths, opts.HTTPClient, adapter).Ingest(ctx, raw); err != nil {
-		writeLocalError(paths, constant.TraceClientLogCategoryIngest)
+		writeLocalError(paths, constant.ArisClientLogCategoryIngest)
 	} //nolint:nilerr // fail-open: never block agent CLI
 	return nil
 }
@@ -362,8 +362,8 @@ func writeLocalError(paths Paths, category string) {
 	}
 	_ = os.Chmod(paths.LogDir(), 0o700) //nolint:errcheck,gosec // directory needs 0700
 	now := time.Now().UTC()
-	name := constant.TraceClientLogPrefix + now.Format(constant.TraceClientLogDateFormat) +
-		constant.TraceClientLogSuffix
+	name := constant.ArisClientLogPrefix + now.Format(constant.ArisClientLogDateFormat) +
+		constant.ArisClientLogSuffix
 	file, err := os.OpenFile(
 		filepath.Join(paths.LogDir(), name),
 		os.O_CREATE|os.O_APPEND|os.O_WRONLY,
@@ -372,10 +372,10 @@ func writeLocalError(paths Paths, category string) {
 	if err != nil {
 		return
 	}
-	defer func() { _ = file.Close() }()                                                             //nolint:errcheck // best-effort close
-	_ = file.Chmod(0o600)                                                                           //nolint:errcheck // best-effort permission
-	_, _ = fmt.Fprintf(file, constant.TraceClientLogLineFormat, now.Format(time.RFC3339), category) //nolint:errcheck // best-effort write
-	cleanupOldFiles(paths.LogDir(), now.Add(-constant.TraceClientRejectedRetention))
+	defer func() { _ = file.Close() }()                                                            //nolint:errcheck // best-effort close
+	_ = file.Chmod(0o600)                                                                          //nolint:errcheck // best-effort permission
+	_, _ = fmt.Fprintf(file, constant.ArisClientLogLineFormat, now.Format(time.RFC3339), category) //nolint:errcheck // best-effort write
+	cleanupOldFiles(paths.LogDir(), now.Add(-constant.ArisClientRejectedRetention))
 }
 
 func cleanupOldFiles(dir string, cutoff time.Time) {

@@ -16,7 +16,7 @@ func fileIdentity(info os.FileInfo) string {
 		return ""
 	}
 	return fmt.Sprintf(
-		constant.TraceClientFileIdentityFormat,
+		constant.ArisClientFileIdentityFormat,
 		uint64(uint32(stat.Dev)), //nolint:gosec // device number is always non-negative
 		stat.Ino,
 	)

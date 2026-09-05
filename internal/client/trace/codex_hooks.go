@@ -24,7 +24,7 @@ type hookGroup struct {
 
 // ingestCommand 返回指定 agent 的完整 ingest hook 命令（显式携带 --agent）
 func ingestCommand(binPath, agent string) string {
-	return binPath + constant.TraceClientIngestCommandSuffix + " --agent " + agent
+	return binPath + constant.ArisClientIngestCommandSuffix + " --agent " + agent
 }
 
 // InstallCodexHooks 将 aris hook 幂等写入 ~/.codex/hooks.json（写前备份 .bak），返回注册事件数
@@ -33,7 +33,7 @@ func InstallCodexHooks(paths Paths, binPath string) (int, error) {
 		paths.CodexHooksFile(),
 		paths.CodexHooksBackupFile(),
 		ingestCommand(binPath, constant.TraceAgentCodex),
-		constant.TraceClientCodexHookEvents,
+		constant.ArisClientCodexHookEvents,
 	)
 }
 
@@ -42,7 +42,7 @@ func InspectCodexHooks(paths Paths, binPath string) (found int, missing []string
 	return inspectAgentHooks(
 		paths.CodexHooksFile(),
 		ingestCommand(binPath, constant.TraceAgentCodex),
-		constant.TraceClientCodexHookEvents,
+		constant.ArisClientCodexHookEvents,
 	)
 }
 
@@ -64,9 +64,9 @@ func installAgentHooks(settingsFile, backupFile, command string, events []string
 		hooks[event] = append(kept, hookGroup{
 			Matcher: "",
 			Hooks: []hookSpec{{
-				Type:    constant.TraceClientHookTypeCommand,
+				Type:    constant.ArisClientHookTypeCommand,
 				Command: command,
-				Timeout: constant.TraceClientHookTimeout,
+				Timeout: constant.ArisClientHookTimeout,
 			}},
 		})
 	}
@@ -76,7 +76,7 @@ func installAgentHooks(settingsFile, backupFile, command string, events []string
 	if err != nil {
 		return 0, ierr.Wrap(ierr.ErrDTOMarshal, err, "encode hooks field")
 	}
-	root[constant.TraceClientHooksField] = hooksData
+	root[constant.ArisClientHooksField] = hooksData
 
 	if existed {
 		raw, err := os.ReadFile(settingsFile)
@@ -88,7 +88,7 @@ func installAgentHooks(settingsFile, backupFile, command string, events []string
 		}
 	}
 
-	data, err := sonic.MarshalIndent(root, "", constant.TraceClientJSONIndent)
+	data, err := sonic.MarshalIndent(root, "", constant.ArisClientJSONIndent)
 	if err != nil {
 		return 0, ierr.Wrap(ierr.ErrDTOMarshal, err, "encode hooks file")
 	}
@@ -134,7 +134,7 @@ func readHooksFile(settingsFile string) (root map[string]sonic.NoCopyRawMessage,
 		return nil, nil, false, ierr.Wrap(ierr.ErrDTOUnmarshal, err, "decode hooks file")
 	}
 	hooks = map[string][]hookGroup{}
-	if raw, ok := root[constant.TraceClientHooksField]; ok && len(raw) > 0 {
+	if raw, ok := root[constant.ArisClientHooksField]; ok && len(raw) > 0 {
 		if err := sonic.Unmarshal(raw, &hooks); err != nil {
 			return nil, nil, false, ierr.Wrap(ierr.ErrDTOUnmarshal, err, "decode hooks field")
 		}
@@ -173,7 +173,7 @@ func groupHasCommand(group hookGroup, command string) bool {
 
 func groupHasIngestHook(group hookGroup) bool {
 	for _, hook := range group.Hooks {
-		if strings.Contains(hook.Command, constant.TraceClientIngestCommandSuffix) {
+		if strings.Contains(hook.Command, constant.ArisClientIngestCommandSuffix) {
 			return true
 		}
 	}

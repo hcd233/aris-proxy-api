@@ -44,7 +44,7 @@ func SubagentSessionIDFromPath(path string) string {
 	if path == "" {
 		return ""
 	}
-	base := strings.TrimSuffix(filepath.Base(path), constant.TraceClientRolloutFileSuffix)
+	base := strings.TrimSuffix(filepath.Base(path), constant.ArisClientRolloutFileSuffix)
 	if m := rolloutSessionIDPattern.FindStringSubmatch(base); len(m) == 2 {
 		return m[1]
 	}

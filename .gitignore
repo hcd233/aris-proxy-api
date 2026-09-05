@@ -6,7 +6,7 @@ __debug*
 
 # Binary files
 aris-proxy-api
-client
+/client
 server
 test_embed
 *.bin

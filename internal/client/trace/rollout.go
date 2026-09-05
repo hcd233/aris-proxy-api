@@ -184,23 +184,23 @@ func (r *RolloutReader) rolloutRecord(
 // （payload.id，压缩重写后行号变化不产生重复），其余记录保持 line:hash。
 func RolloutDedupKey(sessionID string, meta TranscriptMeta, line int64, raw []byte) string {
 	if meta.RecordType == constant.TraceRolloutTypeSessionMeta && meta.SessionID != "" {
-		return fmt.Sprintf(constant.TraceClientSessionMetaDedupFormat, sessionID, meta.SessionID)
+		return fmt.Sprintf(constant.ArisClientSessionMetaDedupFormat, sessionID, meta.SessionID)
 	}
 	if meta.RecordType == constant.TraceRolloutTypeEventMsg && meta.Event == constant.TraceEventTokenCount {
 		// token_count 固定 key：同一会话多条 token_count 共用同一 key，服务端
 		// ON CONFLICT DO UPDATE 后库里只保留最后一条（会话累计 token 汇总）。
-		return fmt.Sprintf(constant.TraceClientTokenCountDedupFormat, sessionID)
+		return fmt.Sprintf(constant.ArisClientTokenCountDedupFormat, sessionID)
 	}
 	digest := sha256.Sum256(raw)
-	return fmt.Sprintf(constant.TraceClientRolloutDedupFormat, sessionID, line, hex.EncodeToString(digest[:]))
+	return fmt.Sprintf(constant.ArisClientRolloutDedupFormat, sessionID, line, hex.EncodeToString(digest[:]))
 }
 
 func (r *RolloutReader) transcriptPaths(transcriptPath string) (statePath, lockPath string) {
 	digest := sha256.Sum256([]byte(transcriptPath))
 	name := hex.EncodeToString(digest[:])
-	dir := filepath.Join(r.paths.StateDir(), constant.TraceClientTranscriptStateDir)
-	return filepath.Join(dir, name+constant.TraceClientRecordFileSuffix),
-		filepath.Join(dir, name+constant.TraceClientTranscriptLockSuffix)
+	dir := filepath.Join(r.paths.StateDir(), constant.ArisClientTranscriptStateDir)
+	return filepath.Join(dir, name+constant.ArisClientRecordFileSuffix),
+		filepath.Join(dir, name+constant.ArisClientTranscriptLockSuffix)
 }
 
 func loadTranscriptState(path string) (transcriptState, error) {

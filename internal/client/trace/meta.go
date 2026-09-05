@@ -16,7 +16,7 @@ type sessionMeta struct {
 }
 
 func sessionMetaPath(paths Paths, sessionID string) string {
-	return filepath.Join(paths.StateDir(), constant.TraceClientSessionMetaDir, sessionID+constant.TraceClientSessionMetaSuffix)
+	return filepath.Join(paths.StateDir(), constant.ArisClientSessionMetaDir, sessionID+constant.ArisClientSessionMetaSuffix)
 }
 
 // writeSessionMeta 覆盖写入 per-session 元数据（codex SessionStart/Stop hook 触发时调用）。
@@ -29,7 +29,7 @@ func writeSessionMeta(paths Paths, sessionID string, meta sessionMeta) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return ierr.Wrap(ierr.ErrInternal, err, "mkdir session meta dir")
 	}
-	return withFileLock(path+constant.TraceClientSessionMetaLockSuffix, func() error {
+	return withFileLock(path+constant.ArisClientSessionMetaLockSuffix, func() error {
 		return writePrivateFile(path, data)
 	})
 }

@@ -56,7 +56,7 @@ type pendingFile struct {
 
 func NewSpool(paths Paths, hardLimit int64) *Spool {
 	if hardLimit <= 0 {
-		hardLimit = constant.TraceClientSpoolLimit
+		hardLimit = constant.ArisClientSpoolLimit
 	}
 	return &Spool{paths: paths, hardLimit: hardLimit}
 }
@@ -75,7 +75,7 @@ func (s *Spool) Append(ctx context.Context, record PendingRecord) error {
 	if err != nil {
 		return ierr.Wrap(ierr.ErrDTOMarshal, err, "encode pending trace record")
 	}
-	if int64(len(data)) > constant.TraceClientBatchMaxBytes {
+	if int64(len(data)) > constant.ArisClientBatchMaxBytes {
 		return ierr.New(ierr.ErrQuotaExceeded, "pending trace record exceeds batch limit")
 	}
 	return withFileLock(s.lockFile(), func() error {
@@ -105,10 +105,10 @@ func (s *Spool) Batch(
 		return nil, err
 	}
 	if maxRecords <= 0 {
-		maxRecords = constant.TraceClientBatchMaxRecords
+		maxRecords = constant.ArisClientBatchMaxRecords
 	}
 	if maxBytes <= 0 {
-		maxBytes = constant.TraceClientBatchMaxBytes
+		maxBytes = constant.ArisClientBatchMaxBytes
 	}
 	batch := []PendingRecord{}
 	err := withFileLock(s.lockFile(), func() error {
@@ -158,10 +158,10 @@ func (s *Spool) BatchForSession(
 		return nil, err
 	}
 	if maxRecords <= 0 {
-		maxRecords = constant.TraceClientBatchMaxRecords
+		maxRecords = constant.ArisClientBatchMaxRecords
 	}
 	if maxBytes <= 0 {
-		maxBytes = constant.TraceClientBatchMaxBytes
+		maxBytes = constant.ArisClientBatchMaxBytes
 	}
 	batch := []PendingRecord{}
 	err := withFileLock(s.lockFile(), func() error {
@@ -223,12 +223,12 @@ func (s *Spool) Acknowledge(ctx context.Context, results []RecordResult) error {
 }
 
 func (s *Spool) lockFile() string {
-	return filepath.Join(s.paths.StateDir(), constant.TraceClientSpoolLockFile)
+	return filepath.Join(s.paths.StateDir(), constant.ArisClientSpoolLockFile)
 }
 
 func (s *Spool) recordPath(dedupKey string) string {
 	digest := sha256.Sum256([]byte(dedupKey))
-	name := hex.EncodeToString(digest[:]) + constant.TraceClientRecordFileSuffix
+	name := hex.EncodeToString(digest[:]) + constant.ArisClientRecordFileSuffix
 	return filepath.Join(s.paths.PendingDir(), name)
 }
 
@@ -267,7 +267,7 @@ func pendingFiles(dir string) ([]pendingFile, error) {
 		if err != nil {
 			return nil, ierr.Wrap(ierr.ErrInternal, err, "inspect pending trace record")
 		}
-		if info.Mode().IsRegular() && filepath.Ext(entry.Name()) == constant.TraceClientRecordFileSuffix {
+		if info.Mode().IsRegular() && filepath.Ext(entry.Name()) == constant.ArisClientRecordFileSuffix {
 			files = append(files, pendingFile{
 				path:    filepath.Join(dir, entry.Name()),
 				name:    entry.Name(),

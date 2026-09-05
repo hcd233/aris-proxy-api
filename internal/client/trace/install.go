@@ -46,7 +46,7 @@ func RunInstall(ctx context.Context, opts InstallOptions) error {
 	store := NewConfigStore(paths)
 	cfg, loadErr := store.Load(ctx) //nolint:errcheck // 读不到按未初始化处理
 	if loadErr != nil || cfg.Host == "" || cfg.APIKey == "" {
-		return ierr.New(ierr.ErrValidation, constant.TraceClientInstallNeedInitMessage)
+		return ierr.New(ierr.ErrValidation, constant.ArisClientInstallNeedInitMessage)
 	}
 
 	ttyIn, ttyOut, cleanup, err := terminalIO(in)
@@ -68,7 +68,7 @@ func RunInstall(ctx context.Context, opts InstallOptions) error {
 	installCodex := slices.Contains(agents, constant.TraceAgentCodex)
 	installClaude := slices.Contains(agents, constant.TraceAgentClaude)
 	var codexRegistered, claudeRegistered int
-	err = ui.RunWithSpinner(ttyIn, ttyOut, constant.TraceClientInitInstallingHooks, func() error {
+	err = ui.RunWithSpinner(ttyIn, ttyOut, constant.ArisClientInitInstallingHooks, func() error {
 		var installErr error
 		if installCodex {
 			if codexRegistered, installErr = InstallCodexHooks(paths, binPath); installErr != nil {
@@ -86,17 +86,17 @@ func RunInstall(ctx context.Context, opts InstallOptions) error {
 		return err
 	}
 
-	summary := []string{constant.TraceClientInstallDone}
+	summary := []string{constant.ArisClientInstallDone}
 	if installCodex {
 		summary = append(summary,
-			fmt.Sprintf(constant.TraceClientInitHooksFormat, constant.TraceClientInitAgentOptionCodex, codexRegistered, len(constant.TraceClientCodexHookEvents)),
-			constant.TraceClientInitApprovalHint,
+			fmt.Sprintf(constant.ArisClientInitHooksFormat, constant.ArisClientInitAgentOptionCodex, codexRegistered, len(constant.ArisClientCodexHookEvents)),
+			constant.ArisClientInitApprovalHint,
 		)
 	}
 	if installClaude {
 		summary = append(summary,
-			fmt.Sprintf(constant.TraceClientInitHooksFormat, constant.TraceClientInitAgentOptionClaude, claudeRegistered, len(constant.TraceClientClaudeHookEvents)),
-			constant.TraceClientInitClaudeApprovalHint,
+			fmt.Sprintf(constant.ArisClientInitHooksFormat, constant.ArisClientInitAgentOptionClaude, claudeRegistered, len(constant.ArisClientClaudeHookEvents)),
+			constant.ArisClientInitClaudeApprovalHint,
 		)
 	}
 	_, _ = fmt.Fprintln(out, ui.SummaryPanel(summary...)) //nolint:errcheck // best-effort stdout
@@ -107,14 +107,14 @@ func RunInstall(ctx context.Context, opts InstallOptions) error {
 func selectAgents(in io.Reader, out io.Writer) ([]string, error) {
 	agents := []string{constant.TraceAgentCodex, constant.TraceAgentClaude}
 	field := huh.NewMultiSelect[string]().
-		Title(constant.TraceClientInitAgentSelectTitle).
+		Title(constant.ArisClientInitAgentSelectTitle).
 		Options(
-			huh.NewOption(constant.TraceClientInitAgentOptionCodex, constant.TraceAgentCodex),
-			huh.NewOption(constant.TraceClientInitAgentOptionClaude, constant.TraceAgentClaude),
+			huh.NewOption(constant.ArisClientInitAgentOptionCodex, constant.TraceAgentCodex),
+			huh.NewOption(constant.ArisClientInitAgentOptionClaude, constant.TraceAgentClaude),
 		).
 		Validate(func(selected []string) error {
 			if len(selected) == 0 {
-				return ierr.New(ierr.ErrValidation, constant.TraceClientInitAgentRequired)
+				return ierr.New(ierr.ErrValidation, constant.ArisClientInitAgentRequired)
 			}
 			return nil
 		}).
@@ -135,9 +135,9 @@ func terminalIO(in io.Reader) (io.Reader, io.Writer, func(), error) {
 	if file, ok := in.(*os.File); ok && term.IsTerminal(int(file.Fd())) {
 		return in, os.Stdout, func() {}, nil
 	}
-	tty, err := os.OpenFile(constant.TraceClientDevTTYPath, os.O_RDWR, 0)
+	tty, err := os.OpenFile(constant.ArisClientDevTTYPath, os.O_RDWR, 0)
 	if err != nil {
-		return nil, nil, nil, ierr.New(ierr.ErrValidation, constant.TraceClientInitNonInteractiveMessage)
+		return nil, nil, nil, ierr.New(ierr.ErrValidation, constant.ArisClientInitNonInteractiveMessage)
 	}
 	return tty, tty, func() { _ = tty.Close() }, nil //nolint:errcheck // best-effort close
 }

@@ -101,8 +101,8 @@ type ListTraceEventsReq struct {
 	model.PageParam
 }
 
-// CheckTraceClientReq 验证 ProxyAPIKey 请求。
-type CheckTraceClientReq struct{}
+// CheckArisClientReq 验证 ProxyAPIKey 请求。
+type CheckArisClientReq struct{}
 
 // InstallScriptReq 安装脚本请求（无鉴权，服务端嵌入 host）。
 type InstallScriptReq struct{}

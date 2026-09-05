@@ -43,7 +43,7 @@ type Report struct {
 // Collect 并发收集本地扫描与网络检查结果；无 config 时跳过网络请求
 func Collect(ctx context.Context, paths trace.Paths, hc *http.Client) *Report {
 	report := &Report{
-		HooksTotal: len(constant.TraceClientCodexHookEvents),
+		HooksTotal: len(constant.ArisClientCodexHookEvents),
 		LogDir:     paths.LogDir(),
 	}
 	store := trace.NewConfigStore(paths)
@@ -88,7 +88,7 @@ func collectLocal(paths trace.Paths, report *Report) {
 	report.RecentErrors = countTodayLogEntries(paths)
 	binPath, err := setup.ExecutablePath()
 	if err != nil {
-		report.HooksMissing = append([]string{}, constant.TraceClientCodexHookEvents...)
+		report.HooksMissing = append([]string{}, constant.ArisClientCodexHookEvents...)
 		return
 	}
 	report.HooksFound, report.HooksMissing = trace.InspectCodexHooks(paths, binPath)
@@ -119,7 +119,7 @@ func scanRecordDir(dir string) (count int, totalBytes int64) {
 	}
 	for _, entry := range entries {
 		info, err := entry.Info()
-		if err != nil || !info.Mode().IsRegular() || filepath.Ext(entry.Name()) != constant.TraceClientRecordFileSuffix {
+		if err != nil || !info.Mode().IsRegular() || filepath.Ext(entry.Name()) != constant.ArisClientRecordFileSuffix {
 			continue
 		}
 		count++
@@ -130,7 +130,7 @@ func scanRecordDir(dir string) (count int, totalBytes int64) {
 
 // countTodayLogEntries 统计当日客户端日志条目数
 func countTodayLogEntries(paths trace.Paths) int {
-	name := constant.TraceClientLogPrefix + time.Now().UTC().Format(constant.TraceClientLogDateFormat) + constant.TraceClientLogSuffix
+	name := constant.ArisClientLogPrefix + time.Now().UTC().Format(constant.ArisClientLogDateFormat) + constant.ArisClientLogSuffix
 	data, err := os.ReadFile(filepath.Join(paths.LogDir(), name))
 	if err != nil {
 		return 0
