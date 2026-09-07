@@ -177,10 +177,6 @@ const (
 	ArisClientCheckRoutePath  = "/aris/client/check"
 	ClientModelsRoutePath     = "/model/list"
 
-	// TraceClientCheckLegacyRoutePath check 接口的旧路径（2026-09-06 #175 更名前的
-	// 值），保留为 deprecated 兼容路由，供未重装的存量客户端二进制使用。
-	TraceClientCheckLegacyRoutePath = "/trace/client/check"
-
 	// ClientModelsAPIPrefix 客户端模型分发接口前缀，与 CLI 分区前缀同源。
 	ClientModelsAPIPrefix = CLIAPIPrefix
 

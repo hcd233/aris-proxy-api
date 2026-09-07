@@ -48,14 +48,4 @@ func RegisterCLIAPIRoutes(cliGroup huma.API, deps APIRouterDependencies) {
 		Tags:     []string{constant.TagTrace},
 		Security: []map[string][]string{{constant.SecuritySchemeAPIKey: {}}},
 	}, deps.TraceHandler.HandleCheckArisClient)
-
-	// 旧路径兼容：#175 更名前的 check 路由，deprecated，供未重装的存量客户端二进制
-	// （其 init/status 硬编码旧路径）继续工作；新客户端一律走 ArisClientCheckRoutePath。
-	huma.Register(cliGroup, huma.Operation{
-		OperationID: "checkTraceClientAPIKeyLegacy", Method: http.MethodGet, Path: constant.TraceClientCheckLegacyRoutePath,
-		Summary: "CheckTraceClientAPIKey (legacy)", Description: "Deprecated legacy path of aris client API key check, kept for old client binaries",
-		Tags:       []string{constant.TagTrace},
-		Security:   []map[string][]string{{constant.SecuritySchemeAPIKey: {}}},
-		Deprecated: true,
-	}, deps.TraceHandler.HandleCheckArisClient)
 }
