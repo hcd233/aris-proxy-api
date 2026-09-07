@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"math/rand"
+	"slices"
+	"strings"
 
 	"github.com/bytedance/sonic"
 	"github.com/samber/lo"
@@ -570,11 +572,11 @@ func toEndpointProjection(ep *dbmodel.Endpoint) *llmproxy.EndpointProjection {
 //
 // 单事务三步（spec 2026-09-04-model-id-history-sync §5.4）：
 //  1. audit：api_key_id 关联 user 的全部 key（含已删 key）；
-//  2. session：api_key_name 关联，model_ids 数组逐元素替换（LIKE 预过滤 + lo.Contains 精确确认）；
+//  2. session：api_key_name 关联（跨用户同名冲突名整体跳过，见 ownedKeyNames），
+//     model_ids 数组逐元素替换（按存储字节构造的 LIKE 预过滤 + 精确等值确认）；
 //  3. message：scope 为第 2 步实际命中会话引用到的消息，分块更新。
 //
 // 纯 Go 实现而非 PG jsonb SQL：sqlite 测试基建可运行，且本操作为偶发管理操作。
-// 已知边界：modelId 含引号/反斜杠时 LIKE 预过滤可能漏匹配（JSON 转义字节序列不同），spec §5.4 已记录。
 func (r *modelRepository) ReplaceHistoricalModelID(ctx context.Context, userID uint, oldID, newID string) (llmproxy.ModelIDSyncCounts, error) {
 	var counts llmproxy.ModelIDSyncCounts
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -610,36 +612,91 @@ func replaceAuditModelIDs(tx *gorm.DB, userID uint, oldID, newID string, counts 
 // replaceSessionModelIDs 替换归属 user 的会话 model_ids 数组中的旧 model id，
 // 并收集命中会话引用到的消息 ID（供 message scope 收紧）。
 func replaceSessionModelIDs(tx *gorm.DB, userID uint, oldID, newID string, counts *llmproxy.ModelIDSyncCounts, referencedMsgIDs *[]uint) error {
-	var names []string
-	if err := tx.Model(&dbmodel.ProxyAPIKey{}).Where(constant.WhereUserIDEquals, userID).
-		Distinct().Pluck(constant.FieldName, &names).Error; err != nil {
-		return ierr.Wrap(ierr.ErrDBQuery, err, "pluck api key names")
+	names, err := ownedKeyNames(tx, userID)
+	if err != nil {
+		return err
 	}
 	if len(names) == 0 {
 		return nil
 	}
 	var sessions []dbmodel.Session
-	if err := tx.Where(constant.WhereSessionKeyAndModel, names, "%"+oldID+"%").
+	if err := tx.Select(constant.SessionRepoFieldsModelIDSync).
+		Where(constant.WhereSessionKeyAndModel, names, likeJSONSubstring(oldID)).
 		Find(&sessions).Error; err != nil {
 		return ierr.Wrap(ierr.ErrDBQuery, err, "find sessions with old model id")
 	}
 	for i := range sessions {
-		if !lo.Contains(sessions[i].ModelIDs, oldID) {
+		if !slices.Contains(sessions[i].ModelIDs, oldID) {
 			continue
 		}
-		sessions[i].ModelIDs = lo.Map(sessions[i].ModelIDs, func(id string, _ int) string {
+		newIDs := lo.Map(sessions[i].ModelIDs, func(id string, _ int) string {
 			if id == oldID {
 				return newID
 			}
 			return id
 		})
-		if err := tx.Save(&sessions[i]).Error; err != nil {
+		// 单列更新（Save 是全字段 UPDATE，会携带 questions/metadata 等大 JSON 列回写）。
+		// Update(column, slice) 不走字段 serializer（多元素会被驱动解析成 row value），
+		// 须先按标准 JSON 序列化为与 serializer:json 一致的文本。
+		encoded, err := sonic.Marshal(newIDs)
+		if err != nil {
+			return ierr.Wrap(ierr.ErrDBUpdate, err, "encode session model_ids")
+		}
+		if err := tx.Model(&sessions[i]).Update(constant.FieldModelIDs, string(encoded)).Error; err != nil {
 			return ierr.Wrap(ierr.ErrDBUpdate, err, "update session model_ids")
 		}
 		counts.SessionCount++
 		*referencedMsgIDs = append(*referencedMsgIDs, sessions[i].MessageIDs...)
 	}
 	return nil
+}
+
+// ownedKeyNames 返回归属 user 的全部 API Key 名（含已删 key），并剔除与其他用户同名的冲突名。
+//
+// session 仅按 api_key_name 归属，而 key 名仅 (user_id, name, deleted_at) 复合唯一、
+// 跨用户可重名；同名冲突时无法区分 session 归属，必须宁漏勿越——冲突名下的 session
+// 一律不替换（含 user 自己的），防止批量写越界改写他人会话。
+func ownedKeyNames(tx *gorm.DB, userID uint) ([]string, error) {
+	var names []string
+	if err := tx.Model(&dbmodel.ProxyAPIKey{}).Where(constant.WhereUserIDEquals, userID).
+		Distinct().Pluck(constant.FieldName, &names).Error; err != nil {
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "pluck api key names")
+	}
+	if len(names) == 0 {
+		return names, nil
+	}
+	var conflicted []string
+	if err := tx.Model(&dbmodel.ProxyAPIKey{}).
+		Where(constant.WhereNameInAndUserIDNotEquals, names, userID).
+		Distinct().Pluck(constant.FieldName, &conflicted).Error; err != nil {
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "pluck conflicted api key names")
+	}
+	if len(conflicted) == 0 {
+		return names, nil
+	}
+	return lo.Reject(names, func(name string, _ int) bool {
+		return slices.Contains(conflicted, name)
+	}), nil
+}
+
+// likeJSONSubstring 构造与 sessions.model_ids 存储字节一致的 LIKE 子串模式。
+//
+// model_ids 经 GORM serializer:json（标准 JSON 转义）序列化存储：`gpt"4` 存储为
+// `gpt\"4`、`a&b` 存储为 `a\u0026b`（HTML 转义）、`gpt\4` 存储为 `gpt\\4`——
+// 直接用原始串构造 LIKE 会因转义字节差异漏匹配。先按标准 JSON 编码取转义形式
+// （sonic.ConfigStd 与 encoding/json 转义行为兼容），再转义 LIKE 通配符，
+// 配合 ESCAPE 子句按字面匹配。
+func likeJSONSubstring(s string) string {
+	inner := s
+	if encoded, err := sonic.ConfigStd.Marshal(s); err == nil {
+		inner = string(encoded[1 : len(encoded)-1])
+	}
+	return "%" + escapeLikeWildcards(inner) + "%"
+}
+
+// escapeLikeWildcards 转义 LIKE 通配符（% _ \），配合 ESCAPE '\' 子句按字面匹配。
+func escapeLikeWildcards(s string) string {
+	return strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(s)
 }
 
 // replaceMessageModelIDs 替换命中会话引用到的消息中的旧 model id（分块 IN 更新）。

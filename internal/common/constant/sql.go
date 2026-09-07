@@ -5,6 +5,7 @@ const (
 	FieldDeletedAt                   = "deleted_at"
 	FieldCheckSum                    = "check_sum"
 	FieldMessageIDs                  = "message_ids"
+	FieldModelIDs                    = "model_ids"
 	FieldToolIDs                     = "tool_ids"
 	FieldMetadata                    = "metadata"
 	FieldScore                       = "score"
@@ -124,6 +125,10 @@ var (
 	SessionRepoFieldsDedup      = []string{FieldID, FieldMessageIDs, FieldToolIDs}
 	SessionRepoFieldsSummarize  = []string{FieldID, FieldMessageIDs}
 
+	// SessionRepoFieldsModelIDSync 模型 ID 历史同步的查询投影（只需定位与替换所需列，
+	// 不载入 questions/metadata 等大 JSON 列）。
+	SessionRepoFieldsModelIDSync = []string{FieldID, FieldModelIDs, FieldMessageIDs}
+
 	// SessionRepoFieldsTerminalScan 终态清理窗口扫描的查询列（不需要 tool_ids）
 	SessionRepoFieldsTerminalScan = []string{FieldID, FieldMessageIDs}
 
@@ -183,11 +188,16 @@ var (
 	WhereUserIDEquals = "user_id = ?"
 
 	// ── ReplaceHistoricalModelID 条件与块大小 ──
-	WhereModelIDEquals      = "model_id = ?"
-	WhereAPIKeyIDIn         = "api_key_id IN (?)"
-	WhereSessionKeyAndModel = "api_key_name IN (?) AND model_ids LIKE ?"
+	WhereModelIDEquals = "model_id = ?"
+	WhereAPIKeyIDIn    = "api_key_id IN (?)"
+	// WhereSessionKeyAndModel session 历史同步的圈定条件。LIKE 模式必须按存储字节
+	// （JSON 转义形式）构造并转义通配符（见 repository.likeJSONSubstring），
+	// ESCAPE 子句让 % _ \ 按字面匹配（sqlite/PG 均支持）。
+	WhereSessionKeyAndModel = "api_key_name IN (?) AND model_ids LIKE ? ESCAPE '\\'"
 	WhereMessageIDAndModel  = "model_id = ? AND id IN (?)"
-	ModelIDSyncINChunkSize  = 500
+	// WhereNameInAndUserIDNotEquals 查找与其他用户同名的 key（跨租户冲突名剔除）。
+	WhereNameInAndUserIDNotEquals = "name IN (?) AND user_id <> ?"
+	ModelIDSyncINChunkSize        = 500
 
 	// SessionListINChunkSize session 列表「空 summary fallback」批量加载消息时，
 	// 每条 SELECT ... WHERE id IN (?) 携带的 ID 上限。

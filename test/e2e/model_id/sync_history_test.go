@@ -336,3 +336,47 @@ func TestSyncHistory_UncheckedKeepsOld(t *testing.T) {
 		t.Fatalf("history must keep old id: audit=%d session=%d", auditOld, sessOld)
 	}
 }
+
+// TestSyncHistory_CrossTenantSameNameKey 跨用户同名 key 名下的 session 不被同步替换（宁漏勿越）。
+//
+// key 名仅 (user_id, name, deleted_at) 复合唯一、跨用户可重名，session 仅按
+// api_key_name 归属；同名冲突时无法区分归属，冲突名整体跳过（含发起者自己的同名
+// session），防止批量写越界改写他人会话。audit 按 api_key_id 精确关联不受影响。
+func TestSyncHistory_CrossTenantSameNameKey(t *testing.T) {
+	t.Parallel()
+	f := newSyncHistoryFixture(t)
+	tokenA := f.tokenFor(t, f.userA.ID)
+
+	// userB 持有与 keyA 同名的 key，其 session 的 model_ids 恰含 A 的旧 modelId
+	conflictKey := &dbmodel.ProxyAPIKey{UserID: f.userB.ID, Name: f.keyA.Name, Key: "sk-conflict-b"}
+	if err := f.db.Create(conflictKey).Error; err != nil {
+		t.Fatalf("create conflict key: %v", err)
+	}
+	sessB := &dbmodel.Session{APIKeyName: f.keyA.Name, ModelIDs: []string{"old-id"}}
+	if err := f.db.Create(sessB).Error; err != nil {
+		t.Fatalf("create B session under same-name key: %v", err)
+	}
+
+	counts := f.patchModel(t, f.modelA.ID, tokenA, `{"modelId":"new-id","syncHistory":true}`)
+	// audit 按 api_key_id 关联（精确无碰撞）仍替换；session 同名冲突全部跳过；
+	// message scope 为命中 session 引用到的消息，同步为 0
+	if counts.AuditCount != 1 || counts.SessionCount != 0 || counts.MessageCount != 0 {
+		t.Fatalf("counts = %+v, want audit=1 session=0 message=0", counts)
+	}
+
+	// B 的 session 与 A 自己的 key-a session 都保持旧值
+	var keptOld int64
+	f.db.Model(&dbmodel.Session{}).
+		Where("id IN (?)", []uint{sessB.ID, f.sessA.ID}).
+		Where("model_ids LIKE ?", `%old-id%`).
+		Count(&keptOld)
+	if keptOld != 2 {
+		t.Fatalf("conflict-name sessions must stay old, kept=%d want 2", keptOld)
+	}
+	// 被跳过 session 引用的 msgA 不连带替换
+	var msgOld int64
+	f.db.Model(&dbmodel.Message{}).Where("id = ? AND model_id = ?", f.msgA.ID, "old-id").Count(&msgOld)
+	if msgOld != 1 {
+		t.Fatalf("message referenced by skipped session must stay old, got %d", msgOld)
+	}
+}
