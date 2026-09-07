@@ -31,7 +31,7 @@ trap 'rm -f "$tmp" "$checksum_tmp"' EXIT
 curl_progress="-sS"
 if [ -t 2 ]; then curl_progress="--progress-bar"; fi
 echo "Downloading aris-$os-$arch.tar.gz..."
-curl -fL $curl_progress -o "$tmp" "$gh_base/aris-$os-$arch.tar.gz"
+curl -fL "$curl_progress" -o "$tmp" "$gh_base/aris-$os-$arch.tar.gz"
 curl -fsSL -o "$checksum_tmp" "$gh_base/aris-$os-$arch.tar.gz.sha256"
 checksum=$(awk 'NF == 1 { print $1 } NF == 2 { print $1; next } { exit 1 }' "$checksum_tmp")
 [ "$(printf '%s\n' "$checksum" | awk 'NF == 1 { count++ } END { print count + 0 }')" -eq 1 ] || { echo "Invalid checksum file" >&2; exit 1; }
