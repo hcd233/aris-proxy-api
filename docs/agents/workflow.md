@@ -66,6 +66,11 @@
 - **Git 分支与 worktree**：任何开发任务都必须先在 `.worktrees/` 下创建或切换 git worktree，并在该 worktree 上 checkout 分支进行开发，禁止直接在主工作区开发。开发完成后询问用户是否需要提 MR 或直接合并到 `master`，禁止擅自操作。
 - **分支命名规范**：`{feature|bugfix|refactor|chore|docs|test|hotfix}/{5个以内小写英文单词描述功能或修复，使用连字符}-{当前 datetime，例如 2026-05-28}`。
 - **分支示例**：`feature/session-share-2026-05-28`、`bugfix/token-expiry-2026-05-28`、`refactor/split-endpoint-model-2026-05-28`。
+- **Worktree 精简创建（控制目录体积）**：`git worktree add` 本身只检出跟踪文件（约 50MB），目录膨胀全部来自 worktree 内产生的构建产物（实测单个含前端的 worktree 可达 2G+）。创建后按需执行：
+  - 涉前端改动时软链主工作区依赖，**禁止在 worktree 内 `npm ci`**（每份 `node_modules` 约 1.3G）：`ln -s ../../../web/node_modules .worktrees/<name>/web/node_modules`。前提是主工作区已 `npm ci` 过一次；软链后 `npm run lint` / `test` / `build` 均可正常运行。
+  - 需要 `go build` / 跑 Go 测试时补 embed 占位文件（`//go:embed all:dist` 不跟随软链，只能放真实文件）：`mkdir -p .worktrees/<name>/internal/web/dist && echo '<!doctype html>' > .worktrees/<name>/internal/web/dist/index.html`。
+  - 验证结束后删除 `web/.next` 与 `web/out`（next build/dev 产物，单份可达数百 MB）。
+- **Worktree 清理**：分支合并或任务结束后及时 `git worktree remove .worktrees/<name>` 回收磁盘（remove 失败可先手动删目录再 `git worktree prune`）。
 - **Brainstorming-first 设计先行**：收到需求或 bug 任务后，在着手编码前优先加载 `brainstorming`（superpowers）skill 对设计方案进行压力测试。需求模糊或存在多种方案时先进入 brainstorming 的澄清循环厘清。process skill（设计评审、调试等）优先于 implementation skill。禁止以"这不是正式任务""我先收集信息"等理由跳过设计评审。
 - **开发前先读 `CONTEXT.md`**：动手前阅读根 `CONTEXT.md`（涉前端时一并读 `web/CONTEXT.md`），确认相关领域概念与术语；开发中新出现的领域概念、术语或语义边界，及时回写 `CONTEXT.md`。
 - **编写或修改 Go 代码时，必须按上文「Go 后端 Skill 加载清单」加载对应 skill**：`use-modern-go`（编辑文件前先跑 `list`）、`golang-naming`、`golang-code-style`、`golang-samber-lo`、`golang-samber-mo`，以及按改动范围触发的 `golang-uber-fx` / `golang-spf13-*` / `huma-dto-conventions`。
