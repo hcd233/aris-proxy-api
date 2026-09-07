@@ -35,6 +35,22 @@ func applyPassthroughRequestHeaders(ctx context.Context, header http.Header) {
 			header.Set(k, v)
 		}
 	}
+	// 上游 OpenCode（Console Go 等，如 opencode.ai/zen/go/v1）要求 x-opencode-session 会话头
+	// 用于路由与 prompt 缓存，缺失时返回 400 MissingSessionID。客户端已带 x-opencode-session 则
+	// 原样保留；否则回退取 X-Session-Id / x-session-id（同一 canonical 头，ZCode / openrouter 等
+	// 客户端形态自带）的值补上，避免无谓的上游 400。
+	ensureOpencodeSessionHeader(header)
+}
+
+// ensureOpencodeSessionHeader 仅在缺失时用客户端会话头回填 x-opencode-session；
+// 客户端未带任何会话头时不虚构值（保持原转发行为）。
+func ensureOpencodeSessionHeader(header http.Header) {
+	if header.Get(constant.HTTPHeaderOpencodeSession) != "" {
+		return
+	}
+	if sessionID := header.Get(constant.HTTPHeaderSessionID); sessionID != "" {
+		header.Set(constant.HTTPHeaderOpencodeSession, sessionID)
+	}
 }
 
 // capturePassthroughResponseHeaders 从上游响应中提取需要透传的响应头

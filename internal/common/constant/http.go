@@ -46,6 +46,8 @@ const (
 	HTTPHeaderXForwardedFor       = "X-Forwarded-For"
 	HTTPHeaderXForwardedPort      = "X-Forwarded-Port"
 	HTTPHeaderXForwardedProto     = "X-Forwarded-Proto"
+	HTTPHeaderOpencodeSession     = "X-Opencode-Session"
+	HTTPHeaderSessionID           = "X-Session-Id"
 	HTTPHeaderXRateLimitLimit     = "X-RateLimit-Limit"
 	HTTPHeaderXRateLimitRemaining = "X-RateLimit-Remaining"
 	HTTPHeaderXRealIP             = "X-Real-IP"
