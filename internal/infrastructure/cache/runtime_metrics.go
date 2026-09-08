@@ -52,6 +52,10 @@ func (c *RuntimeMetricsCache) WriteSnapshot(instanceID string, score int64, payl
 	// retention 由 score - retentionCutoff 推导（Flusher 传入 cutoff = now - retention）。
 	// TTL = retention + 宽限：活跃实例每次写入续期，消亡实例的 key 自动过期回收，
 	// 否则 pod 消亡后 data key 会以满窗口体积（约 10MB）永久残留。
+	// 不变量：key 越过本 pipeline 存活 ⇔ score > cutoff（窗口内成员不被下方
+	// ZRemRangeByScore 裁剪），此时 TTL ≥ 宽限期恒为正；score ≤ cutoff 时成员必然
+	// 被裁剪、空 ZSET key 自行消亡——故推导出的非正 TTL 不可能作用于存活 key，
+	// 无需对 score/cutoff 的输入关系做额外防护。
 	ttl := time.Duration(score-retentionCutoff)*time.Second + constant.RuntimeMetricsKeyGracePeriod
 
 	pipe := c.client.Pipeline()

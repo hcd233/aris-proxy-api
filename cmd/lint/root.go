@@ -10,9 +10,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// lintFailedMessage lint 检查失败提示
-const lintFailedMessage = "lint checks failed"
-
 // newRootCommand 构造 lint 根命令，默认执行全部检查（conv + static 并发）。
 func newRootCommand() *cobra.Command {
 	root := &cobra.Command{
@@ -48,7 +45,7 @@ func runAll(paths []string) error {
 	convResult.Log()
 	staticResult.Log()
 	if convResult.ErrorCount() > 0 || staticResult.Err != nil {
-		return ierr.New(ierr.ErrInternal, lintFailedMessage)
+		return ierr.New(ierr.ErrInternal, constant.LintFailedMessage)
 	}
 	return nil
 }

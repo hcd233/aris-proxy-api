@@ -65,21 +65,18 @@ func (h *updateModelHandler) Handle(ctx context.Context, cmd port.UpdateModelCom
 	if uerr := m.Update(aliasPtr, cmd.UpstreamModel, cmd.EndpointID, cmd.Enabled, cmd.ContextLength, cmd.MaxOutputTokens, cmd.Capabilities, cmd.ModelID); uerr != nil {
 		return llmproxy.ModelIDSyncCounts{}, uerr
 	}
-	if err := h.repo.Update(ctx, m); err != nil {
-		log.Error("[ModelCommand] Update model failed", zap.Error(err))
-		return llmproxy.ModelIDSyncCounts{}, err
-	}
 
+	// 改名路径（syncHistory 且 modelId 实际变化）：模型更新与历史替换必须走
+	// UpdateWithHistorySync 单事务原子完成。若分两步，替换失败时模型本体已改名，
+	// 同样的更新请求重试时新旧 ID 相等、同步条件不再触发，历史将永久停留旧 ID。
+	// scope 取模型归属 user（m.UserID()，非操作者）：admin 代管时只作用于模型 owner 的数据。
 	result := llmproxy.ModelIDSyncCounts{}
 	if cmd.SyncHistory != nil && *cmd.SyncHistory && cmd.ModelID != nil && *cmd.ModelID != oldModelID {
-		// scope 取模型归属 user（m.UserID()，非操作者）：admin 代管时只作用于模型 owner 的数据。
-		// 替换失败时模型本体已改名、历史未同步（spec §7）：返回错误，前端提示可重试。
-		var serr error
-		result, serr = h.repo.ReplaceHistoricalModelID(ctx, m.UserID(), oldModelID, *cmd.ModelID)
-		if serr != nil {
-			log.Error("[ModelCommand] Replace historical model id failed",
-				zap.Uint("id", cmd.ID), zap.Error(serr))
-			return llmproxy.ModelIDSyncCounts{}, serr
+		result, err = h.repo.UpdateWithHistorySync(ctx, m, oldModelID)
+		if err != nil {
+			log.Error("[ModelCommand] Update model with history sync failed",
+				zap.Uint("id", cmd.ID), zap.Error(err))
+			return llmproxy.ModelIDSyncCounts{}, err
 		}
 		log.Info("[ModelCommand] Historical model id synced",
 			zap.Uint("id", cmd.ID),
@@ -87,6 +84,11 @@ func (h *updateModelHandler) Handle(ctx context.Context, cmd port.UpdateModelCom
 			zap.Int64("auditCount", result.AuditCount),
 			zap.Int64("sessionCount", result.SessionCount),
 			zap.Int64("messageCount", result.MessageCount))
+	} else {
+		if err := h.repo.Update(ctx, m); err != nil {
+			log.Error("[ModelCommand] Update model failed", zap.Error(err))
+			return llmproxy.ModelIDSyncCounts{}, err
+		}
 	}
 
 	log.Info("[ModelCommand] Update model success", zap.Uint("id", cmd.ID))

@@ -116,8 +116,10 @@ ReplaceHistoricalModelID(ctx context.Context, userID uint, oldID, newID string) 
 
 ## 7. 错误处理
 
-- 替换事务失败：返回 `ierr` 业务错误（统一走 `internal/common/ierr`），接口返回错误；
-  模型本体已更新（模型改名成功、历史未同步），前端提示"历史同步失败，可重试或手动处理"。
+- 替换事务失败：返回 `ierr` 业务错误（统一走 `internal/common/ierr`），接口返回错误。
+  2026-09-08 修订：模型更新与历史替换改为**同一事务原子执行**（`ModelRepository.UpdateWithHistorySync`）。
+  初版为两步非原子——替换失败时模型本体已改名，同样的更新请求重试时新旧 ID 相等、同步条件
+  不再触发，历史将永久停留旧 ID；现失败整体回滚，重试即完整重放，前端提示"历史同步失败，可重试"。
 - modelId 未实际变化却传 `syncHistory=true`：不执行替换，返回 0 行（幂等，不报错）。
 - 请求超时风险：同步执行大表 UPDATE 可能耗时数秒；HTTP 超时沿用现有网关默认值，前端 loading 态等待。
 

@@ -105,7 +105,7 @@ func (s *stubModelRepo) Paginate(_ context.Context, _ model.CommonParam, _ *uint
 	return nil, nil, nil
 }
 
-func (s *stubModelRepo) ReplaceHistoricalModelID(context.Context, uint, string, string) (llmproxy.ModelIDSyncCounts, error) {
+func (s *stubModelRepo) UpdateWithHistorySync(context.Context, *aggregate.Model, string) (llmproxy.ModelIDSyncCounts, error) {
 	return llmproxy.ModelIDSyncCounts{}, nil
 }
 
@@ -185,7 +185,7 @@ func (s *staticModelRepo) DeleteByEndpointID(_ context.Context, _ uint) error {
 	return nil
 }
 
-func (s *staticModelRepo) ReplaceHistoricalModelID(context.Context, uint, string, string) (llmproxy.ModelIDSyncCounts, error) {
+func (s *staticModelRepo) UpdateWithHistorySync(context.Context, *aggregate.Model, string) (llmproxy.ModelIDSyncCounts, error) {
 	return llmproxy.ModelIDSyncCounts{}, nil
 }
 
@@ -365,7 +365,7 @@ type ownedModelRepo struct {
 	alias       string
 }
 
-func (r *ownedModelRepo) ReplaceHistoricalModelID(context.Context, uint, string, string) (llmproxy.ModelIDSyncCounts, error) {
+func (r *ownedModelRepo) UpdateWithHistorySync(context.Context, *aggregate.Model, string) (llmproxy.ModelIDSyncCounts, error) {
 	return llmproxy.ModelIDSyncCounts{}, nil
 }
 
@@ -449,7 +449,7 @@ func (r *sharedPoolModelRepo) List(context.Context) ([]*aggregate.Model, error) 
 func (r *sharedPoolModelRepo) Paginate(context.Context, model.CommonParam, *uint) ([]*aggregate.Model, *model.PageInfo, error) {
 	return nil, nil, nil
 }
-func (r *sharedPoolModelRepo) ReplaceHistoricalModelID(context.Context, uint, string, string) (llmproxy.ModelIDSyncCounts, error) {
+func (r *sharedPoolModelRepo) UpdateWithHistorySync(context.Context, *aggregate.Model, string) (llmproxy.ModelIDSyncCounts, error) {
 	return llmproxy.ModelIDSyncCounts{}, nil
 }
 

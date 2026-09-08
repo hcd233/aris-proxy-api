@@ -49,6 +49,7 @@ const (
 	GolangciLintCommand       = "golangci-lint"
 	GolangciLintRunCommand    = "run"
 	StaticChecksFailedMessage = "static checks failed"
+	LintFailedMessage         = "lint checks failed"
 	GoEnvCommand              = "env"
 	GoEnvKeyGOPATH            = "GOPATH"
 	GobinEnvKey               = "GOBIN"

@@ -296,12 +296,16 @@ func (r *modelRepository) Create(ctx context.Context, m *aggregate.Model, ownerU
 }
 
 // Update 更新模型（仅更新非零值字段）
+func (r *modelRepository) Update(ctx context.Context, m *aggregate.Model) error {
+	return updateModelTx(r.db.WithContext(ctx), m)
+}
+
+// updateModelTx 更新模型行（仅更新非零值字段），可在事务内复用。
 //
 // user_id 一并写入：model 归属始终跟随其 endpoint（命令层已校验 owner 一致），
 // 换绑 endpoint 后同步归属，避免出现"endpoint 在 A 名下、model 记在 B 名下"的悬挂状态。
-func (r *modelRepository) Update(ctx context.Context, m *aggregate.Model) error {
-	db := r.db.WithContext(ctx)
-	// GORM 的 Updates(map) 不经过 field serializer，capabilities 需手动序列化为 JSON 字符串
+// GORM 的 Updates(map) 不经过 field serializer，capabilities 需手动序列化为 JSON 字符串。
+func updateModelTx(tx *gorm.DB, m *aggregate.Model) error {
 	capJSON, _ := sonic.Marshal(m.Capabilities()) //nolint:errcheck // []string 序列化不会失败，且值已经聚合校验
 	updates := map[string]any{
 		constant.FieldUserID:               m.UserID(),
@@ -314,7 +318,7 @@ func (r *modelRepository) Update(ctx context.Context, m *aggregate.Model) error 
 		constant.FieldModelMaxOutputTokens: m.MaxOutputTokens(),
 		constant.FieldModelCapabilities:    string(capJSON),
 	}
-	if err := db.Model(&dbmodel.Model{}).Where(constant.WhereIDEquals, m.AggregateID()).Updates(updates).Error; err != nil {
+	if err := tx.Model(&dbmodel.Model{}).Where(constant.WhereIDEquals, m.AggregateID()).Updates(updates).Error; err != nil {
 		return ierr.Wrap(ierr.ErrDBUpdate, err, "update model")
 	}
 	return nil
@@ -568,32 +572,44 @@ func toEndpointProjection(ep *dbmodel.Endpoint) *llmproxy.EndpointProjection {
 	}
 }
 
-// ReplaceHistoricalModelID 将归属 userID 的历史数据中业务模型 ID oldID 批量替换为 newID。
+// UpdateWithHistorySync 在单事务内更新模型并把历史数据中的旧业务模型 ID 批量替换为当前值。
 //
-// 单事务三步（spec 2026-09-04-model-id-history-sync §5.4）：
+// 模型更新与历史替换必须原子（接口契约见 domain）：若分两步，替换失败时模型本体
+// 已改名，同样的更新请求重试时新旧 ID 相等、同步条件不再触发，历史将永久停留旧 ID。
+func (r *modelRepository) UpdateWithHistorySync(ctx context.Context, m *aggregate.Model, oldModelID string) (llmproxy.ModelIDSyncCounts, error) {
+	var counts llmproxy.ModelIDSyncCounts
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		counts = llmproxy.ModelIDSyncCounts{}
+		if err := updateModelTx(tx, m); err != nil {
+			return err
+		}
+		return replaceHistoricalModelIDs(tx, m.UserID(), oldModelID, m.ModelID(), &counts)
+	})
+	if err != nil {
+		return llmproxy.ModelIDSyncCounts{}, err
+	}
+	return counts, nil
+}
+
+// replaceHistoricalModelIDs 在传入事务内将归属 userID 的历史数据中业务模型 ID oldID
+// 批量替换为 newID（由 UpdateWithHistorySync 的外层事务包裹）。
+//
+// 三步（spec 2026-09-04-model-id-history-sync §5.4）：
 //  1. audit：api_key_id 关联 user 的全部 key（含已删 key）；
 //  2. session：api_key_name 关联（跨用户同名冲突名整体跳过，见 ownedKeyNames），
 //     model_ids 数组逐元素替换（按存储字节构造的 LIKE 预过滤 + 精确等值确认）；
 //  3. message：scope 为第 2 步实际命中会话引用到的消息，分块更新。
 //
 // 纯 Go 实现而非 PG jsonb SQL：sqlite 测试基建可运行，且本操作为偶发管理操作。
-func (r *modelRepository) ReplaceHistoricalModelID(ctx context.Context, userID uint, oldID, newID string) (llmproxy.ModelIDSyncCounts, error) {
-	var counts llmproxy.ModelIDSyncCounts
-	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		counts = llmproxy.ModelIDSyncCounts{}
-		if err := replaceAuditModelIDs(tx, userID, oldID, newID, &counts); err != nil {
-			return err
-		}
-		var referencedMsgIDs []uint
-		if err := replaceSessionModelIDs(tx, userID, oldID, newID, &counts, &referencedMsgIDs); err != nil {
-			return err
-		}
-		return replaceMessageModelIDs(tx, oldID, newID, &counts, referencedMsgIDs)
-	})
-	if err != nil {
-		return llmproxy.ModelIDSyncCounts{}, err
+func replaceHistoricalModelIDs(tx *gorm.DB, userID uint, oldID, newID string, counts *llmproxy.ModelIDSyncCounts) error {
+	if err := replaceAuditModelIDs(tx, userID, oldID, newID, counts); err != nil {
+		return err
 	}
-	return counts, nil
+	var referencedMsgIDs []uint
+	if err := replaceSessionModelIDs(tx, userID, oldID, newID, counts, &referencedMsgIDs); err != nil {
+		return err
+	}
+	return replaceMessageModelIDs(tx, oldID, newID, counts, referencedMsgIDs)
 }
 
 // replaceAuditModelIDs 替换归属 user（含已删 key）的审计记录中的旧 model id。

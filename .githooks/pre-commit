@@ -79,17 +79,41 @@ elif [ ! -d web/node_modules ]; then
 else
     printf "$INFO Running prettier -w ...\n"
 
-    # cd 进 web/ 使 prettier 解析 web/ 的配置与本地依赖；路径去掉 web/ 前缀
-    RELATIVE=$(printf '%s\n' "$WEB_CHANGES" | sed 's|^web/||')
-    if ! ( cd web && npx prettier --write --log-level warn $RELATIVE ); then
-        fail "prettier failed. Please fix the issues above before committing."
-    fi
+    # 跳过「部分暂存」的文件（工作区仍有未暂存改动）：prettier 重排的是工作区文件，
+    # 若整文件 re-stage 会把未暂存内容一并带入提交，必须留给用户手动处理。
+    # 路径经 `set --` 逐个引号追加，文件名含空格安全（POSIX sh 无数组）。
+    SKIP_NOTE=""
+    set --
+    while IFS= read -r f; do
+        [ -z "$f" ] && continue
+        if ! git diff --quiet -- "$f"; then
+            SKIP_NOTE="$SKIP_NOTE       $f (has unstaged changes — skipped, restage manually)\n"
+        else
+            set -- "$@" "${f#web/}"
+        fi
+    done <<EOF
+$WEB_CHANGES
+EOF
 
-    if ! git diff --quiet -- $WEB_CHANGES; then
-        printf "$INFO prettier reformatted the following files (auto-staging):\n"
-        echo "$WEB_CHANGES" | sed 's/^/       /'
-        echo ""
-        git add $WEB_CHANGES
+    if [ "$#" -eq 0 ]; then
+        printf "$INFO No fully-staged web file to format — skipping prettier\n"
+    else
+        # cd 进 web/ 使 prettier 解析 web/ 的配置与本地依赖；路径去掉 web/ 前缀
+        if ! ( cd web && npx prettier --write --log-level warn "$@" ); then
+            fail "prettier failed. Please fix the issues above before committing."
+        fi
+
+        # 仅对安全子集（"$@"，与上面过滤结果一致）重排后工作区有变化的文件 re-stage；
+        # 被跳过的部分暂存文件不得在此被整文件带入
+        for f in "$@"; do
+            if ! git diff --quiet -- "web/$f"; then
+                printf "$INFO prettier reformatted (auto-staging): web/%s\n" "$f"
+                git add -- "web/$f"
+            fi
+        done
+    fi
+    if [ -n "$SKIP_NOTE" ]; then
+        printf "$INFO Skipped partially-staged web files:\n%b" "$SKIP_NOTE"
     fi
     printf "$PASS prettier\n"
 fi
