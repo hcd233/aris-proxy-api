@@ -59,12 +59,16 @@ type ModelRepository interface {
 	// filter 各字段为零值时该维度不过滤；param.SortField 必须落在 constant.ModelListSortFields
 	// 内，否则回退 ModelListDefaultSortField，不报错。
 	PaginateWithFilter(ctx context.Context, param model.CommonParam, filter ModelListFilter, scopeUserID *uint) ([]*aggregate.Model, *model.PageInfo, error)
-	// ReplaceHistoricalModelID 将归属 userID 的历史数据中业务模型 ID oldID 批量替换为 newID。
+	// UpdateWithHistorySync 在单事务内更新模型聚合，并把归属 user 的历史数据中业务模型 ID
+	// oldModelID 批量替换为聚合当前的 ModelID。
 	//
-	// 单事务内依次替换 model_call_audit / session / message 三表，返回各表影响行数；
-	// message 的 scope 为「实际命中的会话引用到的消息」（见 spec 2026-09-04-model-id-history-sync §5.4）。
-	// userID 以模型归属 user 为准（调用方传入 m.UserID()），替换不排除已删除的 API Key。
-	ReplaceHistoricalModelID(ctx context.Context, userID uint, oldID, newID string) (ModelIDSyncCounts, error)
+	// 模型更新与历史替换必须原子：若分开执行，替换失败时模型本体已改名，同样的更新请求
+	// 重试时新旧 ID 相等、同步条件不再触发，历史将永久停留在旧 ID（2026-09-08 CR P1）。
+	// 单事务内依次更新 model 行、替换 model_call_audit / session / message 三表，
+	// 任一步失败整体回滚；返回各表影响行数，message 的 scope 为「实际命中的会话引用到
+	// 的消息」（见 spec 2026-09-04-model-id-history-sync §5.4）。替换以模型归属 user
+	// （m.UserID()）为界，不排除已删除的 API Key。
+	UpdateWithHistorySync(ctx context.Context, m *aggregate.Model, oldModelID string) (ModelIDSyncCounts, error)
 }
 
 // ModelListFilter 模型列表筛选条件（零值表示该维度不过滤）

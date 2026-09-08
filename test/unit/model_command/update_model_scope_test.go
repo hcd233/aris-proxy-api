@@ -21,8 +21,10 @@ import (
 )
 
 type updateModelRepo struct {
-	model   *aggregate.Model
-	updated *aggregate.Model
+	model     *aggregate.Model
+	updated   *aggregate.Model // 记录 plain Update 调用
+	synced    *aggregate.Model // 记录 UpdateWithHistorySync 调用
+	syncOldID string           // 记录同步路径收到的 oldModelID
 }
 
 func (r *updateModelRepo) FindByID(_ context.Context, id uint, scope *uint) (*aggregate.Model, error) {
@@ -58,8 +60,10 @@ func (r *updateModelRepo) Paginate(context.Context, model.CommonParam, *uint) ([
 
 var _ llmproxy.ModelRepository = (*updateModelRepo)(nil)
 
-func (r *updateModelRepo) ReplaceHistoricalModelID(context.Context, uint, string, string) (llmproxy.ModelIDSyncCounts, error) {
-	return llmproxy.ModelIDSyncCounts{}, nil
+func (r *updateModelRepo) UpdateWithHistorySync(_ context.Context, m *aggregate.Model, oldModelID string) (llmproxy.ModelIDSyncCounts, error) {
+	r.synced = m
+	r.syncOldID = oldModelID
+	return llmproxy.ModelIDSyncCounts{AuditCount: 1}, nil
 }
 
 func (r *updateModelRepo) PaginateWithFilter(context.Context, model.CommonParam, llmproxy.ModelListFilter, *uint) ([]*aggregate.Model, *model.PageInfo, error) {
@@ -156,3 +160,84 @@ func TestUpdateModel_WithoutEndpointSwapNoCheck(t *testing.T) {
 		t.Fatal("update should be persisted")
 	}
 }
+
+// 改名 + syncHistory：必须走 UpdateWithHistorySync 原子路径（plain Update 不再单独执行），
+// 且 oldModelID 取自领域更新前的值——否则替换失败后重试时新旧 ID 相等、同步条件不再触发。
+func TestUpdateModel_RenameWithSyncUsesAtomicPath(t *testing.T) {
+	t.Parallel()
+	m := mustOwnedModel(t)
+	m.SetModelID("old-id")
+	repo := &updateModelRepo{model: m}
+	h := command.NewUpdateModelHandler(newScopedEndpointRepo(), repo)
+
+	cmd := updateCmd(uptr(101), nil)
+	newID := "new-id"
+	cmd.ModelID = &newID
+	cmd.SyncHistory = boolPtr(true)
+
+	counts, err := h.Handle(context.Background(), cmd)
+	if err != nil {
+		t.Fatalf("rename with sync: %v", err)
+	}
+	if repo.updated != nil {
+		t.Fatal("plain Update must not run on the rename+sync path (atomicity)")
+	}
+	if repo.synced == nil {
+		t.Fatal("UpdateWithHistorySync must run on the rename+sync path")
+	}
+	if repo.syncOldID != "old-id" {
+		t.Fatalf("oldModelID = %q, want old-id (captured before domain update)", repo.syncOldID)
+	}
+	if counts.AuditCount != 1 {
+		t.Fatalf("counts.AuditCount = %d, want 1 (from repo stub)", counts.AuditCount)
+	}
+}
+
+// 改名但未带 syncHistory：走 plain Update，不触发历史同步。
+func TestUpdateModel_RenameWithoutSyncSkipsSync(t *testing.T) {
+	t.Parallel()
+	m := mustOwnedModel(t)
+	m.SetModelID("old-id")
+	repo := &updateModelRepo{model: m}
+	h := command.NewUpdateModelHandler(newScopedEndpointRepo(), repo)
+
+	cmd := updateCmd(uptr(101), nil)
+	newID := "new-id"
+	cmd.ModelID = &newID
+
+	if _, err := h.Handle(context.Background(), cmd); err != nil {
+		t.Fatalf("rename without sync: %v", err)
+	}
+	if repo.synced != nil {
+		t.Fatal("history sync must not run without syncHistory flag")
+	}
+	if repo.updated == nil {
+		t.Fatal("plain update should be persisted")
+	}
+}
+
+// modelId 未变 + syncHistory=true：幂等，走 plain Update、不同步（与 e2e 幂等用例一致）。
+func TestUpdateModel_UnchangedIDWithSyncIsIdempotent(t *testing.T) {
+	t.Parallel()
+	m := mustOwnedModel(t)
+	m.SetModelID("same-id")
+	repo := &updateModelRepo{model: m}
+	h := command.NewUpdateModelHandler(newScopedEndpointRepo(), repo)
+
+	cmd := updateCmd(uptr(101), nil)
+	sameID := "same-id"
+	cmd.ModelID = &sameID
+	cmd.SyncHistory = boolPtr(true)
+
+	if _, err := h.Handle(context.Background(), cmd); err != nil {
+		t.Fatalf("idempotent rename: %v", err)
+	}
+	if repo.synced != nil {
+		t.Fatal("unchanged model id must not trigger history sync")
+	}
+	if repo.updated == nil {
+		t.Fatal("plain update should be persisted")
+	}
+}
+
+func boolPtr(b bool) *bool { return &b }

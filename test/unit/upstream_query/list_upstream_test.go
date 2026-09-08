@@ -70,7 +70,7 @@ type fakeModelRepo struct {
 	models []*llmagg.Model
 }
 
-func (f *fakeModelRepo) ReplaceHistoricalModelID(context.Context, uint, string, string) (llmproxy.ModelIDSyncCounts, error) {
+func (f *fakeModelRepo) UpdateWithHistorySync(context.Context, *llmagg.Model, string) (llmproxy.ModelIDSyncCounts, error) {
 	return llmproxy.ModelIDSyncCounts{}, nil
 }
 

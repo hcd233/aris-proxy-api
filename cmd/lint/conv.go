@@ -21,7 +21,7 @@ func newConvCommand() *cobra.Command {
 			result := lintconv.Run(args)
 			result.Log()
 			if result.ErrorCount() > 0 {
-				return ierr.New(ierr.ErrInternal, lintFailedMessage)
+				return ierr.New(ierr.ErrInternal, constant.LintFailedMessage)
 			}
 			return nil
 		},
