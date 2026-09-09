@@ -50,11 +50,14 @@ const (
 	GolangciLintRunCommand    = "run"
 	StaticChecksFailedMessage = "static checks failed"
 	LintFailedMessage         = "lint checks failed"
-	GoEnvCommand              = "env"
-	GoEnvKeyGOPATH            = "GOPATH"
-	GobinEnvKey               = "GOBIN"
-	GopathBinSubDir           = "bin"
-	GopathBinFileMode         = 0o111
+	// GolangciLintMissingMessage golangci-lint 缺失时直接失败（而非静默跳过），
+	// 否则 govet/staticcheck 覆盖会被悄悄绕过，直到 CI 才暴露。
+	GolangciLintMissingMessage = "[lintstatic] golangci-lint not found in PATH or $(go env GOPATH)/bin. Install with: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest"
+	GoEnvCommand               = "env"
+	GoEnvKeyGOPATH             = "GOPATH"
+	GobinEnvKey                = "GOBIN"
+	GopathBinSubDir            = "bin"
+	GopathBinFileMode          = 0o111
 
 	// OpenAPI / Huma configuration
 	OpenAPIVersion       = "3.1.0"

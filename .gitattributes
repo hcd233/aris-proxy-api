@@ -1,0 +1,6 @@
+# archify 生成的交互式架构图产物：单文件数百 KB～数 MB、二进制或不可 diff，
+# 统一走 Git LFS，避免每次重绘把几十 MB 写进 git 历史。
+# 源文件（docs/diagrams/archify/*.json）仍按普通文本跟踪，便于 review diff。
+docs/diagrams/**/*.gif filter=lfs diff=lfs merge=lfs -text
+docs/diagrams/**/*.png filter=lfs diff=lfs merge=lfs -text
+docs/diagrams/archify/*.html filter=lfs diff=lfs merge=lfs -text

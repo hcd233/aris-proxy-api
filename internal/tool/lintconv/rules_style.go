@@ -117,8 +117,14 @@ func isImplementationDetailName(name string) bool {
 	return !slices.Contains(allowedImplNames, name)
 }
 
+// checkLocalConst 扫描 internal/ 与 cmd/ 下的本地 const 块。
+// cmd/ 早期被遗漏：仅扫 internal/ 时 `cmd/lint` 的 lintFailedMessage 这类常量不会被拦，
+// 只能靠评审；常量统一归位 internal/common/constant（或 enum）。
 func (c *checker) checkLocalConst(file SourceFile) {
-	if !isUnder(file.Path, constant.ConvCheckPathInternal) || strings.HasSuffix(file.Path, constant.ConvCheckSuffixTestGo) {
+	if strings.HasSuffix(file.Path, constant.ConvCheckSuffixTestGo) {
+		return
+	}
+	if !isUnder(file.Path, constant.ConvCheckPathInternal) && !isUnder(file.Path, constant.ConvCheckPathCMD) {
 		return
 	}
 	if isUnder(file.Path, constant.ConvCheckPathConstant) || isUnder(file.Path, constant.ConvCheckPathEnum) || isUnder(file.Path, constant.ConvCheckPathCommonEnum) {

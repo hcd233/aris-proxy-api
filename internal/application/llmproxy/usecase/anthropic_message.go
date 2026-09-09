@@ -214,8 +214,10 @@ func (s *anthropicMessageNativeStream) Read(ctx context.Context, sink port.Event
 	return nil
 }
 
+// Close 兜底关闭上游 body：Read 内部已 defer Close，此处覆盖 adapter 未调用 Read
+// 的路径（drainCancelBody 包装保证重复 Close 安全）。
 func (s *anthropicMessageNativeStream) Close() error {
-	return nil // ReadCreateMessageStream 内部已经关闭 stream
+	return s.stream.Close()
 }
 
 // anthropicMessageViaChatStream 实现 port.Stream，消费 OpenAI Chat 上游流并转换为 Anthropic 事件。
@@ -273,8 +275,10 @@ func (s *anthropicMessageViaChatStream) Read(ctx context.Context, sink port.Even
 	return nil
 }
 
+// Close 兜底关闭上游 body：Read 内部已 defer Close，此处覆盖 adapter 未调用 Read
+// 的路径（drainCancelBody 包装保证重复 Close 安全）。
 func (s *anthropicMessageViaChatStream) Close() error {
-	return nil // ReadChatCompletionStream 内部已经关闭 stream
+	return s.stream.Close()
 }
 
 func (s *anthropicMessageViaChatStream) finalizeAnthropicChatStream(ctx context.Context, sink port.EventSink, completion *dto.OpenAIChatCompletion, upstreamErr error) *dto.AnthropicMessage {

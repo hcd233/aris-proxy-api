@@ -151,6 +151,63 @@ func TestUpstreamRequestBodyCloseReleasesDrainGoroutine(t *testing.T) {
 	}
 }
 
+// TestUpstreamRequestBodyCloseWithoutReadIsIdempotent 覆盖 adapter 未 Read 的兜底路径：
+// 未消费上游 body 时直接 Close 两次必须安全（drainCancelBody 幂等），且 drain 守护 goroutine 释放。
+func TestUpstreamRequestBodyCloseWithoutReadIsIdempotent(t *testing.T) {
+	t.Parallel()
+	tracker := inflight.NewTracker()
+	proxy := transport.NewOpenAIProxy(tracker, transport.NewEndpointGuard(nil))
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.WriteHeader(http.StatusOK)
+		_, _ = fmt.Fprint(w, "data: [DONE]\n\n")
+		if flusher, ok := w.(http.Flusher); ok {
+			flusher.Flush()
+		}
+	}))
+	t.Cleanup(srv.Close)
+	ep := vo.UpstreamEndpoint{BaseURL: srv.URL, Model: "test-model", APIKey: "test-key"}
+
+	// 预热建立基线（连接池、guard 等懒初始化）
+	for range 2 {
+		stream, err := proxy.OpenChatCompletionStream(context.Background(), ep, []byte(`{}`))
+		if err != nil {
+			t.Fatalf("warmup open stream: %v", err)
+		}
+		_ = stream.Close()
+	}
+	runtime.GC()
+	baseline := runtime.NumGoroutine()
+
+	const rounds = 20
+	for range rounds {
+		stream, err := proxy.OpenChatCompletionStream(context.Background(), ep, []byte(`{}`))
+		if err != nil {
+			t.Fatalf("open stream: %v", err)
+		}
+		// 未 Read 直接 Close 两次：覆盖 adapter 兜底路径与 drainCancelBody 幂等性
+		if err := stream.Close(); err != nil {
+			t.Errorf("first close: %v", err)
+		}
+		if err := stream.Close(); err != nil {
+			t.Errorf("second close: %v", err)
+		}
+	}
+
+	deadline := time.Now().Add(3 * time.Second)
+	for {
+		runtime.GC()
+		if runtime.NumGoroutine() <= baseline+2 || time.Now().After(deadline) {
+			break
+		}
+		<-time.After(100 * time.Millisecond) //nolint:revive // goroutine 回落轮询间隔
+	}
+	if after := runtime.NumGoroutine(); after > baseline+2 {
+		t.Fatalf("drain guard goroutines leaked on close-without-read: baseline=%d after=%d", baseline, after)
+	}
+}
+
 func TestAnthropicProxy_DrainCancelInterruptsStream(t *testing.T) {
 	t.Parallel()
 	tracker := inflight.NewTracker()

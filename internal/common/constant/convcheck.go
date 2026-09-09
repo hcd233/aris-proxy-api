@@ -135,7 +135,7 @@ const (
 
 	ConvCheckMsgCommentedCode         = "possible dead code in comment, please confirm whether to delete"
 	ConvCheckMsgImplementation        = "variable naming may expose implementation details; consider using plural form"
-	ConvCheckMsgLocalConst            = "local const blocks are prohibited in business packages; move to internal/common/constant or internal/enum"
+	ConvCheckMsgLocalConst            = "local const blocks are prohibited in internal/ and cmd/ packages; move to internal/common/constant or internal/enum"
 	ConvCheckMsgTypeAlias             = "type alias (type X = Y) is only allowed in enum and vo packages"
 	ConvCheckMsgTypeDef               = "type definition from another type (type X Y) is only allowed in enum and vo packages"
 	ConvCheckMsgImportAliasUnderscore = "package alias must be all lowercase, no underscores or CamelCase"

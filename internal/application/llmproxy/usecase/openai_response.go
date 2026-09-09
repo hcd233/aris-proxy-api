@@ -299,8 +299,10 @@ func (s *responseNativeStream) Read(ctx context.Context, sink port.EventSink) er
 	return nil
 }
 
+// Close 兜底关闭上游 body：Read 内部已 defer Close，此处覆盖 adapter 未调用 Read
+// 的路径（drainCancelBody 包装保证重复 Close 安全）。
 func (s *responseNativeStream) Close() error {
-	return nil // ReadCreateResponseStream 内部已经关闭 stream
+	return s.stream.Close()
 }
 
 func (s *responseNativeStream) onEvent(sink port.EventSink, event string, data []byte) error {
@@ -440,8 +442,10 @@ func (s *responseViaChatStream) Read(ctx context.Context, sink port.EventSink) e
 	return nil
 }
 
+// Close 兜底关闭上游 body：Read 内部已 defer Close，此处覆盖 adapter 未调用 Read
+// 的路径（drainCancelBody 包装保证重复 Close 安全）。
 func (s *responseViaChatStream) Close() error {
-	return nil // ReadChatCompletionStream 内部已经关闭 stream
+	return s.stream.Close()
 }
 
 // responseViaAnthropicStream 实现 port.Stream，消费 Anthropic 上游流并转换为 Responses API 事件。
@@ -496,8 +500,10 @@ func (s *responseViaAnthropicStream) Read(ctx context.Context, sink port.EventSi
 	return nil
 }
 
+// Close 兜底关闭上游 body：Read 内部已 defer Close，此处覆盖 adapter 未调用 Read
+// 的路径（drainCancelBody 包装保证重复 Close 安全）。
 func (s *responseViaAnthropicStream) Close() error {
-	return nil // ReadCreateMessageStream 内部已经关闭 stream
+	return s.stream.Close()
 }
 
 func (s *responseViaAnthropicStream) onAnthropicEvent(sink port.EventSink, event dto.AnthropicSSEEvent) error {

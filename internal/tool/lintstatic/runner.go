@@ -17,9 +17,11 @@ type Result struct {
 	Err    error
 }
 
-// Run 执行 golangci-lint（若已安装）静态分析。
+// Run 执行 golangci-lint 静态分析。
 // govet 与 staticcheck 已作为 golangci-lint 内置 linter 启用（见 .golangci.yml），
 // 与 CI（golangci-lint-action）覆盖一致，无需再单独跑 go vet / staticcheck 进程。
+// golangci-lint 缺失时返回错误而非静默跳过：跳过会让本地 lint 失去 govet/staticcheck
+// 覆盖，直到 CI 才暴露。
 // 默认扫描 ./...，可通过 args 指定其他路径。
 func Run(args []string) Result {
 	if len(args) == 0 {
@@ -29,7 +31,8 @@ func Run(args []string) Result {
 	glPath := resolveGolangciLint()
 	if glPath == "" {
 		return Result{
-			Output: "[lintstatic] golangci-lint not found in PATH or $(go env GOPATH)/bin, skipping. Install with: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest\n",
+			Output: constant.GolangciLintMissingMessage + "\n",
+			Err:    ierr.New(ierr.ErrInternal, constant.StaticChecksFailedMessage),
 		}
 	}
 

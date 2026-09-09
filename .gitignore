@@ -80,3 +80,8 @@ migrate_think_extract
 
 # ZCode
 .zcode/plans
+# Git LFS hooks（由 `git lfs install` / .githooks/setup.sh 生成，不应提交）
+/.githooks/post-checkout
+/.githooks/post-commit
+/.githooks/post-merge
+/.githooks/pre-push

@@ -32,6 +32,8 @@ type mockOpenAIProxy struct {
 	lastChatBody             []byte
 	openChatStreamErr        error
 	openResponseStreamErr    error
+	// chatStreamClosed 记录上游 body 是否被关闭（验证 port.Stream.Close 兜底路径）
+	chatStreamClosed bool
 }
 
 func (p *mockOpenAIProxy) ForwardChatCompletion(ctx context.Context, ep vo.UpstreamEndpoint, body []byte) (*dto.OpenAIChatCompletion, error) {
@@ -58,7 +60,7 @@ func (p *mockOpenAIProxy) OpenChatCompletionStream(_ context.Context, _ vo.Upstr
 	if p.openChatStreamErr != nil {
 		return nil, p.openChatStreamErr
 	}
-	return io.NopCloser(strings.NewReader("")), nil
+	return &trackedReadCloser{ReadCloser: io.NopCloser(strings.NewReader("")), closed: &p.chatStreamClosed}, nil
 }
 
 func (p *mockOpenAIProxy) ReadChatCompletionStream(_ context.Context, _ io.ReadCloser, onChunk func(*dto.OpenAIChatCompletionChunk) error) (*dto.OpenAIChatCompletion, error) {
@@ -106,6 +108,17 @@ func (p *mockOpenAIProxy) ReadCreateResponseStream(_ context.Context, _ io.ReadC
 }
 
 var _ usecase.OpenAIProxyPort = (*mockOpenAIProxy)(nil)
+
+// trackedReadCloser 记录底层 body 是否被 Close，用于验证 port.Stream.Close 兜底路径。
+type trackedReadCloser struct {
+	io.ReadCloser
+	closed *bool
+}
+
+func (c *trackedReadCloser) Close() error {
+	*c.closed = true
+	return c.ReadCloser.Close()
+}
 
 type mockResolver struct {
 	resolveEndpoint *aggregate.Endpoint

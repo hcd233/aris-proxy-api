@@ -81,10 +81,14 @@ export default function UpstreamPage() {
   const [modelForm, setModelForm] = useState<ModelForm>(emptyModelForm);
   // 标记用户是否手动改过 modelId；未手动改时新建表单跟随 alias 同步输入
   const [modelIdTouched, setModelIdTouched] = useState(false);
-  // modelId 相对打开弹窗时的原值变化时，展示「同步更新历史记录」开关
+  // modelId 相对打开弹窗时的原值变化时，展示「同步更新历史记录」开关。
   const [originalModelId, setOriginalModelId] = useState("");
   const [syncHistory, setSyncHistory] = useState(false);
-  const showSyncHistory = editingModel !== null && modelForm.modelId !== originalModelId;
+  // 必须用 trim 后的非空值判定：提交时 modelId 会 trim，纯空白/尾随空格若按原值比较，
+  // 会出现「开关显示但后端未收到 modelId、未实际同步」的误导。
+  const trimmedModelId = modelForm.modelId.trim();
+  const showSyncHistory =
+    editingModel !== null && trimmedModelId !== "" && trimmedModelId !== originalModelId.trim();
 
   // 当前视图：分组（端点为组）/ 平铺（模型为行）
   const [view, setView] = usePersistentState<"grouped" | "flat">(
@@ -379,7 +383,7 @@ export default function UpstreamPage() {
       if (editingModel) {
         const rsp = await api.updateModel(editingModel.id, {
           alias: modelForm.alias,
-          ...(modelForm.modelId.trim() ? { modelId: modelForm.modelId.trim() } : {}),
+          ...(trimmedModelId ? { modelId: trimmedModelId } : {}),
           ...(showSyncHistory && syncHistory ? { syncHistory: true } : {}),
           upstreamModel: modelForm.upstreamModel,
           contextLength: modelForm.contextLength,

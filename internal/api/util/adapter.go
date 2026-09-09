@@ -113,7 +113,6 @@ func wrapStreamResult(ctx context.Context, r *port.StreamResult, fallbackBody []
 				}
 				return
 			}
-			defer func() { _ = stream.Close() }() //nolint:errcheck // stream close errors are best-effort during shutdown
 
 			fiberCtx.Set(constant.HTTPHeaderContentType, constant.HTTPContentTypeEventStream)
 			fiberCtx.Set(constant.HTTPHeaderCacheControl, constant.HTTPCacheControlNoCache)
@@ -121,7 +120,11 @@ func wrapStreamResult(ctx context.Context, r *port.StreamResult, fallbackBody []
 			fiberCtx.Set(constant.HTTPHeaderTransferEncoding, constant.HTTPTransferEncodingChunked)
 			fiberCtx.Set(constant.HTTPHeaderXAccelBuffering, constant.HTTPHeaderDisabled)
 			fiberCtx.Status(fiber.StatusOK)
-			_ = fiberCtx.SendStreamWriter(func(w *bufio.Writer) { //nolint:errcheck // stream write errors propagate via the Fiber error handler
+			// 流关闭必须发生在 Read 结束之后：SendStreamWriter 的 writer 由 fasthttp
+			// 以独立 goroutine 执行（NewStreamReader），若在 body callback 里 defer Close，
+			// 会在 Read 开始前就关闭上游 body，把正在进行的流转断。
+			if sendErr := fiberCtx.SendStreamWriter(func(w *bufio.Writer) {
+				defer func() { _ = stream.Close() }() //nolint:errcheck // stream close errors are best-effort during shutdown
 				if lc.onStart != nil {
 					lc.onStart()
 				}
@@ -130,7 +133,9 @@ func wrapStreamResult(ctx context.Context, r *port.StreamResult, fallbackBody []
 				}
 				sink := NewSSEWriter(w)
 				_ = stream.Read(ctx, sink) //nolint:errcheck // stream read errors propagate via SSE error frames written by application
-			})
+			}); sendErr != nil {
+				_ = stream.Close() //nolint:errcheck // best-effort close when the stream writer cannot be registered
+			}
 		},
 	}
 }

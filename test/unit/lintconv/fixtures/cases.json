@@ -697,5 +697,29 @@
     "notWant": [
       {"rule": "architecture.database_model_dependency", "severity": "error"}
     ]
+  },
+  {
+    "name": "cmd local const is rejected",
+    "files": [
+      {
+        "path": "cmd/lint/root.go",
+        "content": "package main\n\nconst lintFailedMessage = \"lint checks failed\"\n\nfunc run() string {\n\treturn lintFailedMessage\n}\n"
+      }
+    ],
+    "want": [
+      {"rule": "style.local_const", "severity": "error"}
+    ]
+  },
+  {
+    "name": "constant package const is not flagged",
+    "files": [
+      {
+        "path": "internal/common/constant/string.go",
+        "content": "package constant\n\nconst LintFailedMessage = \"lint checks failed\"\n"
+      }
+    ],
+    "notWant": [
+      {"rule": "style.local_const", "severity": "error"}
+    ]
   }
 ]
