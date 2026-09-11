@@ -34,7 +34,7 @@
 
 ## 强制规则
 
-- **代码搜索必须使用 CodeGraph**：搜索函数、方法、类、接口、类型、路由、调用链和影响范围时，优先使用 `codegraph_codegraph_context`；必要时使用 `codegraph_codegraph_search`、`codegraph_codegraph_callers`、`codegraph_codegraph_callees`、`codegraph_codegraph_impact`。不要用 `grep`、`rg` 或 `find` 替代 CodeGraph 的代码符号搜索。
+- **代码搜索必须使用 CodeGraph**：代码理解、符号/路由/调用链/影响范围搜索统一优先使用 `codegraph_codegraph_explore`（一次调用返回带行号源码、调用路径和影响范围）；需要精确定位时再用 `codegraph_codegraph_search`、`codegraph_codegraph_node`、`codegraph_codegraph_callers`、`codegraph_codegraph_callees`、`codegraph_codegraph_impact`。不要用 `grep`、`rg` 或 `find` 替代 CodeGraph 的代码符号搜索。
 - **跨文件代码/符号重构必须使用 Serena**：跨文件重命名、查找引用、替换符号实现、批量修改和安全删除时，使用 `serena_rename_symbol`、`serena_find_referencing_symbols`、`serena_replace_symbol_body`、`serena_replace_in_files`、`serena_safe_delete_symbol` 等语义工具。
 - **开发前读取工程经验**：开始开发、排障或重构前，必须先使用 `serena_list_memories` 和相关的 `serena_read_memory` 读取历史沉淀；没有相关记录时继续执行，并在任务结束时补充沉淀。
 - **提交前沉淀工程经验**：准备提交代码前，必须使用 `serena_write_memory` 记录本次可复用的架构决策、关键约束、踩坑、验证方式或排障结论；不要记录临时状态、凭据或敏感信息。

@@ -8,22 +8,23 @@ CodeGraph 是代码知识图谱工具，负责建立项目结构、符号和调�
 
 ### 工具选择
 
-- `codegraph_codegraph_status`：检查索引状态。
-- `codegraph_codegraph_files`：查看项目文件树；探索目录结构时优先使用。
-- `codegraph_codegraph_context`：根据任务描述获取入口、相关符号、调用者、被调用者和关键源码；这是代码理解的首选入口。
+- `codegraph_codegraph_explore`：代码理解的首选入口。接受自然语言问题或一组符号/文件名，一次调用返回相关符号的带行号源码、它们之间的调用路径（含回调、动态分发跳转）和影响范围；通常一次调用即可回答整个问题。
 - `codegraph_codegraph_search`：按名称搜索函数、方法、类、接口、类型、变量、路由或组件。
+- `codegraph_codegraph_node`：查看单个符号的定义、源码及调用者/被调用者轨迹；也可按文件返回带行号源码和依赖方。
 - `codegraph_codegraph_callers`：查找调用指定符号的函数或方法。
 - `codegraph_codegraph_callees`：查找指定符号调用的函数或方法。
 - `codegraph_codegraph_impact`：分析修改指定符号的潜在影响范围。
-- `codegraph_codegraph_node`：查看单个符号的定义和源码。
-- `codegraph_codegraph_explore`：集中查看多个相关符号的源码和关系。
+- `codegraph_codegraph_files`：查看项目文件树；探索目录结构时优先使用。
+- `codegraph_codegraph_status`：检查索引状态。
+
+> 索引维护使用命令行：`codegraph index`（全量重建）与 `codegraph sync`（增量同步）。codegraph 1.6 自带运行时，不依赖宿主机 Node 版本。
 
 ### 强制使用规则
 
 - 代码搜索必须使用 CodeGraph，尤其是符号、调用关系和影响范围搜索。
 - 不得用 `grep`、`rg` 或 `find` 替代 CodeGraph 的代码搜索。
 - 命令行搜索仅用于 CodeGraph 不覆盖的非代码文件、配置文本、日志或已知字符串的精确检查。
-- 推荐顺序：`codegraph_context` → `codegraph_explore` → `callers` / `callees` / `impact` → Serena 精确修改。
+- 推荐顺序：`codegraph_explore` → 必要时 `search` / `node` / `callers` / `callees` / `impact` → Serena 精确修改。拿到 `explore` 返回的源码后视为已读取，不要再用 grep/read 复验。
 
 ## Serena：语义级编辑与工程记忆
 
