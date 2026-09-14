@@ -17,6 +17,7 @@ func newRootCommand() *cobra.Command {
 	root.AddCommand(newTraceCommand())
 	root.AddCommand(newModelCommand())
 	root.AddCommand(newVersionCommand())
+	root.AddCommand(newUpdateCommand())
 	return root
 }
 
