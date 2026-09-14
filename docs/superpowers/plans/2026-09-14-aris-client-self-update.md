@@ -1289,6 +1289,7 @@ Expected: PASS
 package main
 
 import (
+	"context"
 	"os"
 	"strings"
 
@@ -1319,18 +1320,21 @@ func newRootCommand() *cobra.Command {
 
 func execute() error {
 	root := newRootCommand()
-	finishCheck := startUpdateCheck(root)
+	// cobra 的 Context() 在 Execute() 之前为 nil，根 context 由入口显式创建并注入
+	ctx := context.Background()
+	root.SetContext(ctx)
+	finishCheck := startUpdateCheck(ctx, root)
 	err := root.Execute()
 	finishCheck()
 	return err
 }
 
 // startUpdateCheck 对符合条件的交互式命令启动一次后台更新检查；返回等待并打印提示的函数
-func startUpdateCheck(root *cobra.Command) func() {
+func startUpdateCheck(ctx context.Context, root *cobra.Command) func() {
 	if !update.ShouldCheck(version, isStderrTerminal()) || !isUpdateCheckCommand(root) {
 		return func() {}
 	}
-	return update.StartCheck(root.Context(), update.CheckOptions{Current: version, Out: os.Stderr})
+	return update.StartCheck(ctx, update.CheckOptions{Current: version, Out: os.Stderr})
 }
 
 // isUpdateCheckCommand 判断本次调用的命令是否参与更新检查（裸 aris 与 --version 不参与）
@@ -1390,19 +1394,62 @@ cd .worktrees/client-update && go test -count=1 ./test/unit/client/... ./test/e2
 
 Expected: 测试全 PASS；`make lint` 输出 `lint conv` 与静态检查均通过（无 error/warning）
 
-- [ ] **Step 4: 冒烟（真实 GitHub，可选中途跳过）**
+> 注意：不要与 `sh .githooks/pre-commit`、`go test ./...` 并发执行——`test/e2e/cross_tenant_reference` 等 E2E 共用进程内的 sqlite/全局 config，两套件并发时会出现 `{"code":10000,"message":"Internal Error"}` 假失败。
+
+- [ ] **Step 4: TTY 运行时验证（单测覆盖不到的门控）**
+
+自动化测试的 stderr 都是管道（非 TTY），使用中提示不会触发；用 pty 复现真实交互：
+
+```bash
+# 造一个只回 302 的假 release 源
+cat > /tmp/fake_release.py <<'EOF'
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+class Handler(BaseHTTPRequestHandler):
+    def do_HEAD(self):
+        self.send_response(302)
+        self.send_header("Location", "http://127.0.0.1:8931/releases/download/v9.9.9/aris-darwin-arm64.tar.gz")
+        self.end_headers()
+
+    def log_message(self, *args):
+        pass
+
+HTTPServer(("127.0.0.1", 8931), Handler).serve_forever()
+EOF
+(python3 /tmp/fake_release.py &)
+go build -ldflags "-X main.version=v0.1.0" -o /tmp/aris-dev ./cmd/client
+# macOS：script -q /dev/null <cmd>；Linux：script -qec "<cmd>" /dev/null
+ARIS_UPDATE_BASE_URL=http://127.0.0.1:8931 script -q /dev/null /tmp/aris-dev status | tail -1
+```
+
+Expected（实测结论，已在本分支验证）：
+
+| 场景 | 预期 |
+|------|------|
+| TTY + `status` + 有新版 | 末尾一行 `! A new version v9.9.9 is available (current v0.1.0) — run aris update` |
+| TTY + `status` + `ARIS_NO_UPDATE_CHECK=1` | 无提示 |
+| TTY + `version` / `update --help` | 无提示 |
+| 非 TTY（管道）+ `status` | 无提示 |
+| 非 TTY + `trace ingest` | 无提示 |
+| `aris --version` | 仍输出裸版本号，无提示、不崩溃 |
+
+验证完 `pkill -f fake_release.py`。
+
+> 该步骤曾抓到 `root.Context()` 在 `Execute()` 之前为 nil 导致 `context.WithTimeout(nil, ...)` panic 的真实缺陷，修复为入口显式 `context.Background()` + `root.SetContext(ctx)`；此路径无自动化测试覆盖（需 pty），**改 `cmd/client/root.go` 后必须重跑本步骤**。
+
+- [ ] **Step 5: 冒烟（真实 GitHub，可选中途跳过）**
 
 Run: `cd .worktrees/client-update && make build-client && ./aris version && ./aris update`
 Expected: `./aris version` 输出 `dev`；`./aris update` 输出 `Updated aris dev → <最新 tag> (<路径>)`（会把仓库根目录的 dev 构建替换为 release 产物，属预期；需要还原时重跑 `make build-client`）。若本地网络不通 GitHub，记录实际报错并在汇报中说明，跳过此步。
 
-- [ ] **Step 5: 提交**
+- [ ] **Step 6: 提交**
 
 ```bash
-rtk git add CONTEXT.md README.md
+rtk git add CONTEXT.md README.md docs/superpowers/plans/2026-09-14-aris-client-self-update.md
 rtk git commit -m "docs: 同步 aris update 与使用中更新检查说明"
 ```
 
-- [ ] **Step 6: 清理构建产物**
+- [ ] **Step 7: 清理构建产物**
 
 Run: `cd .worktrees/client-update && rm -f aris && rm -rf build`（worktree 只保留源码，避免磁盘膨胀）
 

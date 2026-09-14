@@ -138,7 +138,7 @@ cd web && npm ci && npm run dev   # http://localhost:3000
 | `make web-lint` / `make web-format` | 前端 ESLint / Prettier |
 | `make fgprof` | 拉取远程 fgprof profile 并打开火焰图 |
 
-服务端 CLI：`server start`、`database migrate`、`lint conv/static`（`cmd/server`）；Trace 客户端 CLI：`aris init`、`aris model export`、`aris trace ingest`、`aris trace install`、`aris status`（`cmd/client`）。
+服务端 CLI：`server start`、`database migrate`、`lint conv/static`（`cmd/server`）；Trace 客户端 CLI：`aris init`、`aris model export`、`aris trace ingest`、`aris trace install`、`aris status`、`aris update`（`cmd/client`）。
 
 ## API 概览
 
