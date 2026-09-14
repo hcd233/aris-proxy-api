@@ -71,3 +71,17 @@ func envTrue(name string) bool {
 	values := strings.Split(constant.ArisClientEnvValueTrueList, constant.ArisClientEnvValueSeparator)
 	return slices.Contains(values, value)
 }
+
+// ShouldCheckCommand 判断命令路径是否参与使用中更新检查：hook 高频命令、自更新与版本命令不参与
+func ShouldCheckCommand(commandPath []string) bool {
+	if len(commandPath) == 0 {
+		return false
+	}
+	for _, name := range commandPath {
+		switch name {
+		case constant.ArisClientCommandTrace, constant.ArisClientCommandUpdate, constant.ArisClientCommandVersion:
+			return false
+		}
+	}
+	return true
+}

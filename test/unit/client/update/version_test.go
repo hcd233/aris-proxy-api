@@ -89,3 +89,29 @@ func TestShouldCheck(t *testing.T) {
 		})
 	}
 }
+
+func TestShouldCheckCommand(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name        string
+		commandPath []string
+		expected    bool
+	}{
+		{name: "status participates", commandPath: []string{"status"}, expected: true},
+		{name: "init participates", commandPath: []string{"init"}, expected: true},
+		{name: "model export participates", commandPath: []string{"model", "export"}, expected: true},
+		{name: "trace ingest skipped", commandPath: []string{constant.ArisClientCommandTrace, "ingest"}, expected: false},
+		{name: "trace install skipped", commandPath: []string{constant.ArisClientCommandTrace, "install"}, expected: false},
+		{name: "update skipped", commandPath: []string{constant.ArisClientCommandUpdate}, expected: false},
+		{name: "version skipped", commandPath: []string{constant.ArisClientCommandVersion}, expected: false},
+		{name: "empty path skipped", commandPath: nil, expected: false},
+	}
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			if got := update.ShouldCheckCommand(testCase.commandPath); got != testCase.expected {
+				t.Fatalf("ShouldCheckCommand(%v) = %v, want %v", testCase.commandPath, got, testCase.expected)
+			}
+		})
+	}
+}
