@@ -48,7 +48,7 @@ interface SeriesState {
   sseActive: Record<string, Pt[]>;
   tokenInput: Pt[];
   tokenOutput: Pt[];
-  successRate: Pt[];
+  statusCodes: Record<string, Pt[]>;
   instances: Record<string, InstanceState>;
   latestTime: number; // 后端当前桶起点 unix 秒，用于头部卡片活跃实例判定
 }
@@ -61,7 +61,7 @@ const EMPTY_STATE: SeriesState = {
   sseActive: {},
   tokenInput: [],
   tokenOutput: [],
-  successRate: [],
+  statusCodes: {},
   instances: {},
   latestTime: 0,
 };
@@ -76,15 +76,16 @@ function mergePoints(prev: Pt[], incoming: Pt[], cutoff: number): Pt[] {
     .map(([time, value]) => ({ time, value }));
 }
 
-function mergeSSE(
+// mergeKeyedSeries 按 key（SSE provider / HTTP 状态码）逐曲线增量合并时序。
+function mergeKeyedSeries(
   prev: Record<string, Pt[]>,
   incoming: Record<string, Pt[]>,
   cutoff: number,
 ): Record<string, Pt[]> {
-  const providers = new Set([...Object.keys(prev), ...Object.keys(incoming)]);
+  const keys = new Set([...Object.keys(prev), ...Object.keys(incoming)]);
   const out: Record<string, Pt[]> = {};
-  for (const prov of providers) {
-    out[prov] = mergePoints(prev[prov] ?? [], incoming[prov] ?? [], cutoff);
+  for (const key of keys) {
+    out[key] = mergePoints(prev[key] ?? [], incoming[key] ?? [], cutoff);
   }
   return out;
 }
@@ -179,12 +180,13 @@ function toChartData(points: Pt[]): Array<Record<string, number>> {
   return points.map((p) => ({ time: p.time, value: p.value }));
 }
 
-function sseChartData(sse: Record<string, Pt[]>): Array<Record<string, number>> {
+// seriesMapChartData 把 map<key, 时序点> 合并为同一时间轴上的多列（列名 = key），用于 SSE provider 与状态码。
+function seriesMapChartData(seriesMap: Record<string, Pt[]>): Array<Record<string, number>> {
   const rows = new Map<number, Record<string, number>>();
-  for (const [prov, points] of Object.entries(sse)) {
+  for (const [key, points] of Object.entries(seriesMap)) {
     for (const p of points) {
       const row = rows.get(p.time) ?? { time: p.time };
-      row[prov] = p.value;
+      row[key] = p.value;
       rows.set(p.time, row);
     }
   }
@@ -225,10 +227,10 @@ export default function MonitorPage() {
       setState((prev) => ({
         qps: mergePoints(prev.qps, s.qps ?? [], cutoff),
         p95Ms: mergePoints(prev.p95Ms, s.p95Ms ?? [], cutoff),
-        sseActive: mergeSSE(prev.sseActive, s.sseActive ?? {}, cutoff),
+        sseActive: mergeKeyedSeries(prev.sseActive, s.sseActive ?? {}, cutoff),
         tokenInput: mergePoints(prev.tokenInput, s.tokenInput ?? [], cutoff),
         tokenOutput: mergePoints(prev.tokenOutput, s.tokenOutput ?? [], cutoff),
-        successRate: mergePoints(prev.successRate, s.successRate ?? [], cutoff),
+        statusCodes: mergeKeyedSeries(prev.statusCodes, s.statusCodes ?? {}, cutoff),
         instances: mergeInstances(prev.instances, s.instances ?? {}, cutoff),
         latestTime: rsp.latestTime,
       }));
@@ -291,6 +293,13 @@ export default function MonitorPage() {
     { key: "input", label: t("monitor.request_tps_input"), color: seriesColors[0] },
     { key: "output", label: t("monitor.request_tps_output"), color: seriesColors[1] },
   ];
+  const statusCodeSeries = Object.keys(state.statusCodes)
+    .sort()
+    .map((code, i) => ({
+      key: code,
+      label: code,
+      color: seriesColors[i % seriesColors.length],
+    }));
 
   return (
     <PermissionGuard module="monitor">
@@ -374,7 +383,7 @@ export default function MonitorPage() {
           />
           <RuntimeChart
             title={t("monitor.sse_active")}
-            data={sseChartData(state.sseActive)}
+            data={seriesMapChartData(state.sseActive)}
             series={sseSeries}
             rangeKey={range}
             emptyLabel={t("monitor.collecting")}
@@ -403,10 +412,9 @@ export default function MonitorPage() {
             emptyLabel={t("monitor.collecting")}
           />
           <RuntimeChart
-            title={t("monitor.success_rate")}
-            data={toChartData(state.successRate)}
-            series={[{ key: "value", label: t("monitor.success_rate"), color: seriesColors[2] }]}
-            unit="%"
+            title={t("monitor.status_code")}
+            data={seriesMapChartData(state.statusCodes)}
+            series={statusCodeSeries}
             rangeKey={range}
             emptyLabel={t("monitor.collecting")}
           />

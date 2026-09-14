@@ -22,14 +22,14 @@ type RuntimeMetricsRsp struct {
 // RuntimeSeries 各运行时指标的时序
 //
 //	@author centonhuang
-//	@update 2026-08-02 10:00:00
+//	@update 2026-09-14 10:00:00
 type RuntimeSeries struct {
 	QPS         []RuntimePoint                   `json:"qps" doc:"每秒请求数（跨 pod 求和）"`
 	P95Ms       []RuntimePoint                   `json:"p95Ms" doc:"P95 请求时延 ms（跨 pod 合并 bucket）"`
 	SSEActive   map[string][]RuntimePoint        `json:"sseActive" doc:"各 provider 的 SSE 活跃连接数"`
 	TokenInput  []RuntimePoint                   `json:"tokenInput" doc:"输入 token 速率 /s（跨 pod 求和）"`
 	TokenOutput []RuntimePoint                   `json:"tokenOutput" doc:"输出 token 速率 /s（跨 pod 求和）"`
-	SuccessRate []RuntimePoint                   `json:"successRate" doc:"HTTP 200 请求占比 %（0-100）"`
+	StatusCodes map[string][]RuntimePoint        `json:"statusCodes" doc:"各 HTTP 状态码的请求数（跨 pod 求和；key 为状态码）"`
 	Instances   map[string]RuntimeInstanceSeries `json:"instances" doc:"各 pod 的运行时曲线（goroutines/heapMB/cpuPercent）"`
 }
 

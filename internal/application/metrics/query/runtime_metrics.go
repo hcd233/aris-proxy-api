@@ -88,7 +88,8 @@ func (h *runtimeMetricsHandler) RuntimeMetrics(ctx context.Context, rangeKey str
 
 // Aggregate 把各 instance 的快照按桶聚合成可展示时序：
 // gauge 取桶内均值后跨 instance 求和；counter 取相邻快照正向 delta（reset 清零）求速率后跨 instance 求和；
-// histogram 取相邻快照各 le 的正向 delta 后跨 instance 合并、求 P95。只返回时间 >= outputStart 的桶。
+// histogram 取相邻快照各 le 的正向 delta 后跨 instance 合并、求 P95；状态码按 code 求正向 delta 后跨 instance 求和。
+// 只返回时间 >= outputStart 的桶。
 //
 //	@param byInstance map[string][]metrics.Snapshot
 //	@param alignedStart int64 对齐到桶边界的起始 unix 秒
@@ -123,11 +124,10 @@ type bucketAgg struct {
 	cpuPercent  float64
 	histBuckets map[string]float64
 	histTotal   float64
-	tokenInput  float64 // 桶内累计输入 token delta（跨实例求和）→ 除以桶宽得速率
-	tokenOutput float64 // 桶内累计输出 token delta（跨实例求和）
-	reqTotal    float64 // 桶内累计请求 delta（跨实例求和）
-	reqSuccess  float64 // 桶内累计 200 请求 delta（跨实例求和）
-	samples     float64 // 桶内跨实例累计的快照数；为 0 表示该桶无数据，不应输出
+	tokenInput  float64            // 桶内累计输入 token delta（跨实例求和）→ 除以桶宽得速率
+	tokenOutput float64            // 桶内累计输出 token delta（跨实例求和）
+	reqStatus   map[string]float64 // 桶内累计各状态码请求 delta（跨实例求和）
+	samples     float64            // 桶内跨实例累计的快照数；为 0 表示该桶无数据，不应输出
 }
 
 func newBucketAggs(n int) []bucketAgg {
@@ -135,6 +135,7 @@ func newBucketAggs(n int) []bucketAgg {
 	for i := range aggs {
 		aggs[i].sse = map[string]float64{}
 		aggs[i].histBuckets = map[string]float64{}
+		aggs[i].reqStatus = map[string]float64{}
 	}
 	return aggs
 }
@@ -158,7 +159,7 @@ func accumulateInstance(agg []bucketAgg, snaps []metrics.Snapshot, alignedStart,
 		mergeGaugeBucket(&agg[idx], gauges[idx].sse, gauges[idx].count)
 		mergeRateBucket(&agg[idx], deltas[idx].count, deltas[idx].cpu, deltas[idx].hist, bucketSeconds)
 		mergeTokenBucket(&agg[idx], deltas[idx].tokenIn, deltas[idx].tokenOut)
-		mergeReqBucket(&agg[idx], deltas[idx].reqTotal, deltas[idx].reqSuccess)
+		mergeStatusCodeBucket(&agg[idx], deltas[idx].reqStatus)
 	}
 }
 
@@ -199,18 +200,17 @@ func instanceGauges(snaps []metrics.Snapshot, alignedStart, bucket int64, n int)
 	return gauges
 }
 
-// instanceDelta 单实例某桶的相邻快照正向 delta 汇总（速率与比例在跨实例合并后统一计算）。
+// instanceDelta 单实例某桶的相邻快照正向 delta 汇总（速率与计数在跨实例合并后统一计算）。
 type instanceDelta struct {
-	count      float64
-	cpu        float64
-	hist       map[string]float64
-	tokenIn    float64
-	tokenOut   float64
-	reqTotal   float64
-	reqSuccess float64
+	count     float64
+	cpu       float64
+	hist      map[string]float64
+	tokenIn   float64
+	tokenOut  float64
+	reqStatus map[string]float64
 }
 
-// instanceDeltas 按桶累加单实例相邻快照的正向 delta（速率与 histogram），归属到后一个快照所在的桶。
+// instanceDeltas 按桶累加单实例相邻快照的正向 delta（速率、histogram 与状态码计数），归属到后一个快照所在的桶。
 func instanceDeltas(snaps []metrics.Snapshot, alignedStart, bucket int64, n int) []instanceDelta {
 	deltas := make([]instanceDelta, n)
 	for i := 1; i < len(snaps); i++ {
@@ -223,13 +223,18 @@ func instanceDeltas(snaps []metrics.Snapshot, alignedStart, bucket int64, n int)
 		deltas[idx].cpu += nonNeg(cur.CPUSeconds - prev.CPUSeconds)
 		deltas[idx].tokenIn += nonNeg(cur.TokenInput - prev.TokenInput)
 		deltas[idx].tokenOut += nonNeg(cur.TokenOutput - prev.TokenOutput)
-		deltas[idx].reqTotal += nonNeg(cur.ReqTotal - prev.ReqTotal)
-		deltas[idx].reqSuccess += nonNeg(cur.ReqSuccess - prev.ReqSuccess)
 		if deltas[idx].hist == nil {
 			deltas[idx].hist = map[string]float64{}
 		}
 		for le, cum := range cur.LatBuckets {
 			deltas[idx].hist[le] += nonNeg(cum - prev.LatBuckets[le])
+		}
+		if deltas[idx].reqStatus == nil {
+			deltas[idx].reqStatus = map[string]float64{}
+		}
+		// 旧版快照无 reqStatus 字段（nil map，读取得 0），reset 时的负 delta 被 nonNeg 截断为 0。
+		for code, cum := range cur.ReqStatus {
+			deltas[idx].reqStatus[code] += nonNeg(cum - prev.ReqStatus[code])
 		}
 	}
 	return deltas
@@ -264,15 +269,17 @@ func mergeTokenBucket(b *bucketAgg, dTokenIn, dTokenOut float64) {
 	b.tokenOutput += dTokenOut
 }
 
-// mergeReqBucket 把单实例某桶的请求结果 delta 跨实例累加进全局桶（比例在 buildSeries 统一计算）。
-func mergeReqBucket(b *bucketAgg, dReqTotal, dReqSuccess float64) {
-	b.reqTotal += dReqTotal
-	b.reqSuccess += dReqSuccess
+// mergeStatusCodeBucket 把单实例某桶的各状态码请求 delta 跨实例累加进全局桶。
+func mergeStatusCodeBucket(b *bucketAgg, dReqStatus map[string]float64) {
+	for code, d := range dReqStatus {
+		b.reqStatus[code] += d
+	}
 }
 
 func buildSeries(agg []bucketAgg, alignedStart, bucket, outputStart int64) dto.RuntimeSeries {
 	series := emptySeries()
 	providers := collectProviders(agg)
+	statusCodes := collectStatusCodes(agg, alignedStart, bucket, outputStart)
 	bucketSeconds := float64(bucket)
 
 	for idx := range agg {
@@ -287,9 +294,9 @@ func buildSeries(agg []bucketAgg, alignedStart, bucket, outputStart int64) dto.R
 		series.P95Ms = append(series.P95Ms, dto.RuntimePoint{Time: t, Value: round2(percentileP95(agg[idx].histBuckets, agg[idx].histTotal))})
 		series.TokenInput = append(series.TokenInput, dto.RuntimePoint{Time: t, Value: round2(agg[idx].tokenInput / bucketSeconds)})
 		series.TokenOutput = append(series.TokenOutput, dto.RuntimePoint{Time: t, Value: round2(agg[idx].tokenOutput / bucketSeconds)})
-		// 无请求的桶不输出 successRate，避免 0% 误导。
-		if agg[idx].reqTotal > 0 {
-			series.SuccessRate = append(series.SuccessRate, dto.RuntimePoint{Time: t, Value: round2(agg[idx].reqSuccess / agg[idx].reqTotal * constant.RuntimeMetricsPercentToRatio)})
+		// 状态码集合在输出窗口内固定，缺失桶补 0（无请求即真空值），保证各曲线列对齐、不断线。
+		for _, code := range statusCodes {
+			series.StatusCodes[code] = append(series.StatusCodes[code], dto.RuntimePoint{Time: t, Value: agg[idx].reqStatus[code]})
 		}
 		for _, prov := range providers {
 			series.SSEActive[prov] = append(series.SSEActive[prov], dto.RuntimePoint{Time: t, Value: round2(agg[idx].sse[prov])})
@@ -368,6 +375,20 @@ func collectProviders(agg []bucketAgg) []string {
 	return slices.Sorted(maps.Keys(set))
 }
 
+// collectStatusCodes 收集输出窗口内出现过的状态码，作为状态码曲线的固定列集合（按码值排序保证响应稳定）。
+func collectStatusCodes(agg []bucketAgg, alignedStart, bucket, outputStart int64) []string {
+	set := map[string]struct{}{}
+	for idx := range agg {
+		if alignedStart+int64(idx)*bucket < outputStart {
+			continue
+		}
+		for code := range agg[idx].reqStatus {
+			set[code] = struct{}{}
+		}
+	}
+	return slices.Sorted(maps.Keys(set))
+}
+
 func percentileP95(buckets map[string]float64, total float64) float64 {
 	if total <= 0 || len(buckets) == 0 {
 		return 0
@@ -395,7 +416,10 @@ func percentileP95(buckets map[string]float64, total float64) float64 {
 }
 
 func emptySeries() dto.RuntimeSeries {
-	return dto.RuntimeSeries{SSEActive: map[string][]dto.RuntimePoint{}}
+	return dto.RuntimeSeries{
+		SSEActive:   map[string][]dto.RuntimePoint{},
+		StatusCodes: map[string][]dto.RuntimePoint{},
+	}
 }
 
 func nonNeg(v float64) float64 {

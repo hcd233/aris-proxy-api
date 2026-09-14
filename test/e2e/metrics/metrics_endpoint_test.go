@@ -107,21 +107,23 @@ func TestRuntimeMetricsEndpoint_AdminReturnsSeries(t *testing.T) {
 		t.Fatalf("failed to read body: %v", err)
 	}
 
-	var result dto.HTTPResponse[dto.RuntimeMetricsRsp]
+	var result dto.RuntimeMetricsRsp
 	if err := sonic.Unmarshal(body, &result); err != nil {
 		t.Fatalf("failed to unmarshal response: %v", err)
 	}
 
-	if result.Body.Error != nil {
-		t.Fatalf("expected no error in response, got %v", result.Body.Error)
+	if result.Error != nil {
+		t.Fatalf("expected no error in response, got %v", result.Error)
 	}
-	if result.Body.Series.SSEActive == nil {
+	if result.Series.SSEActive == nil {
 		t.Error("expected series.sseActive map to be present (may be empty)")
 	}
 	// 新指标字段 key 必须存在（可为空数组）。== nil 无法区分"字段缺失"与"空数组"（
 	// sonic 对缺失 key 与 nil slice 都解析为 nil），故用 sonic.Get 按 JSON 路径断言 key 存在。
-	for _, key := range []string{"tokenInput", "tokenOutput", "successRate"} {
-		node, getErr := sonic.Get(body, "body", "series", key)
+	// 注意：huma 会把 HTTPResponse.Body 字段直接作为响应体写出（无 data/body 外层），
+	// 因此路径从 series 开始。
+	for _, key := range []string{"tokenInput", "tokenOutput", "statusCodes"} {
+		node, getErr := sonic.Get(body, "series", key)
 		if getErr != nil || !node.Exists() {
 			t.Errorf("expected series.%s key to be present", key)
 		}
