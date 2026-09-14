@@ -755,7 +755,7 @@ export interface RuntimeSeries {
   sseActive?: Record<string, RuntimePoint[]>;
   tokenInput?: RuntimePoint[]; // 输入 token 速率 /s
   tokenOutput?: RuntimePoint[]; // 输出 token 速率 /s
-  successRate?: RuntimePoint[]; // HTTP 200 占比 %（0-100）
+  statusCodes?: Record<string, RuntimePoint[]>; // 状态码 → 该状态码请求数时序（跨 pod 求和）
   instances?: Record<string, RuntimeInstanceSeries>; // pod 名 → 该 pod 曲线
 }
 

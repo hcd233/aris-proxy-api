@@ -16,19 +16,19 @@ const (
 	MetricNameRequestDuration = "request_duration_seconds"
 	// MetricNameTokenUsage token 吞吐 counter（不含 namespace；完整名 llm_token_usage_total）
 	MetricNameTokenUsage = "token_usage_total"
-	// MetricNameRequests HTTP 请求结果 counter（不含 namespace；完整名 http_requests_total）
+	// MetricNameRequests HTTP 请求状态码 counter（不含 namespace；完整名 http_requests_total）
 	MetricNameRequests = "requests_total"
 
 	MetricSSEActiveConnectionsName = "sse_active_connections"
 	MetricSSEActiveConnectionsHelp = "Number of active SSE streaming connections"
 	MetricRequestDurationHelp      = "HTTP request latency in seconds"
 	MetricTokenUsageHelp           = "Cumulative LLM token usage by direction"
-	MetricRequestsHelp             = "HTTP business requests by result"
+	MetricRequestsHelp             = "HTTP business requests by status code"
 	MetricLabelProvider            = "provider"
 	// MetricLabelDirection token 吞吐 counter 的方向 label
 	MetricLabelDirection = "direction"
-	// MetricLabelResult HTTP 请求结果 counter 的结果 label
-	MetricLabelResult = "result"
+	// MetricLabelStatusCode HTTP 请求 counter 的 HTTP 状态码 label
+	MetricLabelStatusCode = "status_code"
 
 	// —— 上游容错指标（Namespace=upstream；完整名如 upstream_circuit_state）——
 	// MetricUpstreamCircuitStateName 熔断状态 gauge（0=closed, 1=open, 2=half-open）
@@ -65,12 +65,6 @@ const (
 const (
 	TokenUsageDirectionInput  = "input"
 	TokenUsageDirectionOutput = "output"
-)
-
-// —— HTTP 请求结果 counter 的 result 枚举 ——
-const (
-	HTTPResultSuccess = "success"
-	HTTPResultFailure = "failure"
 )
 
 var PrometheusRequestDurationBuckets = []float64{

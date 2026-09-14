@@ -134,13 +134,13 @@ func TestAggregate_CounterResetClamped(t *testing.T) {
 	}
 }
 
-func TestAggregate_TokenRateAndSuccessRate(t *testing.T) {
+func TestAggregate_TokenRateAndStatusCodes(t *testing.T) {
 	t.Parallel()
 	const bucket int64 = 60
-	// 桶内两份快照：token 输入 0→120、输出 0→30；请求 0→2（成功 1）——每 pod 相同，跨 2 pod 聚合。
+	// 桶内两份快照：token 输入 0→120、输出 0→30；状态码 200 0→3、500 0→1——每 pod 相同，跨 2 pod 聚合。
 	instanceSnaps := []metrics.Snapshot{
-		{TS: 0, TokenInput: 0, TokenOutput: 0, ReqTotal: 0, ReqSuccess: 0},
-		{TS: 30, TokenInput: 120, TokenOutput: 30, ReqTotal: 2, ReqSuccess: 1},
+		{TS: 0, ReqStatus: map[string]float64{"200": 0, "500": 0}},
+		{TS: 30, TokenInput: 120, TokenOutput: 30, ReqStatus: map[string]float64{"200": 3, "500": 1}},
 	}
 	byInstance := map[string][]metrics.Snapshot{
 		"pod-a": instanceSnaps,
@@ -157,25 +157,80 @@ func TestAggregate_TokenRateAndSuccessRate(t *testing.T) {
 	if len(got.TokenOutput) == 0 || got.TokenOutput[0].Value != 1 {
 		t.Errorf("expected tokenOutput rate 1, got %+v", got.TokenOutput)
 	}
-	// 成功率：跨 pod 合并 reqSuccess=2 / reqTotal=4 = 50%
-	if len(got.SuccessRate) == 0 || got.SuccessRate[0].Value != 50 {
-		t.Errorf("expected successRate 50, got %+v", got.SuccessRate)
+	// 状态码：200 跨 pod 累加 3+3=6，500 累加 1+1=2
+	if got.StatusCodes["200"][0].Value != 6 {
+		t.Errorf("expected status 200 count 6, got %+v", got.StatusCodes["200"])
+	}
+	if got.StatusCodes["500"][0].Value != 2 {
+		t.Errorf("expected status 500 count 2, got %+v", got.StatusCodes["500"])
 	}
 }
 
-func TestAggregate_SuccessRateSkipsEmptyBucket(t *testing.T) {
+func TestAggregate_StatusCodesSkipEmptyBucket(t *testing.T) {
 	t.Parallel()
 	const bucket int64 = 60
-	// 桶内有快照但无任何请求（reqTotal=0），successRate 不应输出 0% 误导点。
+	// 桶内有快照但无任何请求；没有任何状态码出现过，不应输出空的状态码曲线。
 	byInstance := map[string][]metrics.Snapshot{
 		"pod-a": {
-			{TS: 0, ReqTotal: 0, ReqSuccess: 0},
-			{TS: 30, ReqTotal: 0, ReqSuccess: 0},
+			{TS: 0},
+			{TS: 30},
 		},
 	}
 	got := metricsquery.Aggregate(byInstance, 0, bucket, 60, 0)
-	if len(got.SuccessRate) != 0 {
-		t.Errorf("expected empty successRate for empty bucket, got %+v", got.SuccessRate)
+	if len(got.StatusCodes) != 0 {
+		t.Errorf("expected empty statusCodes for empty bucket, got %+v", got.StatusCodes)
+	}
+}
+
+func TestAggregate_StatusCodesFillMissingBuckets(t *testing.T) {
+	t.Parallel()
+	const bucket int64 = 60
+	// 桶0 出现 200 与 404；桶1 只有 200 的增量。
+	// 404 在桶1 应补 0（保持列对齐、曲线连续），桶2 无快照仍被跳过。
+	byInstance := map[string][]metrics.Snapshot{
+		"pod-a": {
+			{TS: 0, ReqStatus: map[string]float64{"200": 0, "404": 0}},
+			{TS: 30, ReqStatus: map[string]float64{"200": 2, "404": 1}},
+			{TS: 60, ReqStatus: map[string]float64{"200": 2, "404": 1}},
+			{TS: 90, ReqStatus: map[string]float64{"200": 5, "404": 1}},
+		},
+	}
+
+	got := metricsquery.Aggregate(byInstance, 0, bucket, 180, 0)
+
+	ok200 := got.StatusCodes["200"]
+	if len(ok200) != 2 || ok200[0].Time != 0 || ok200[0].Value != 2 || ok200[1].Time != 60 || ok200[1].Value != 3 {
+		t.Errorf("expected status 200 points [2@0 3@60], got %+v", ok200)
+	}
+	notFound := got.StatusCodes["404"]
+	if len(notFound) != 2 || notFound[0].Value != 1 || notFound[1].Value != 0 {
+		t.Errorf("expected status 404 points [1@0 0@60], got %+v", notFound)
+	}
+	if _, ok := got.StatusCodes["500"]; ok {
+		t.Error("expected absent status 500 curve to be omitted")
+	}
+}
+
+func TestAggregate_StatusCodesToleratesLegacySnapshots(t *testing.T) {
+	t.Parallel()
+	const bucket int64 = 60
+	// 旧版快照无 reqStatus 字段（nil map）：从旧快照到新快照的正 delta 计入，反向负 delta 被截断为 0。
+	byInstance := map[string][]metrics.Snapshot{
+		"pod-a": {
+			{TS: 0, ReqStatus: map[string]float64{"200": 5}},
+			{TS: 30},
+		},
+		"pod-b": {
+			{TS: 0},
+			{TS: 30, ReqStatus: map[string]float64{"200": 2}},
+		},
+	}
+
+	got := metricsquery.Aggregate(byInstance, 0, bucket, 60, 0)
+
+	// pod-a 5→0 被 clamp 为 0；pod-b 0→2 计入 2。
+	if len(got.StatusCodes["200"]) != 1 || got.StatusCodes["200"][0].Value != 2 {
+		t.Errorf("expected status 200 count 2 after reset clamp, got %+v", got.StatusCodes["200"])
 	}
 }
 
@@ -206,22 +261,5 @@ func TestAggregate_ThreadsPerPodSkipsLegacySnapshots(t *testing.T) {
 	// goroutines 曲线不受 threads 哨兵逻辑影响：桶0 均值 50/3、桶1 原值 30
 	if len(a.Goroutines) != 2 {
 		t.Errorf("expected 2 goroutines points, got %+v", a.Goroutines)
-	}
-}
-
-func TestAggregate_SuccessRateRoundsRepeatingDecimal(t *testing.T) {
-	t.Parallel()
-	const bucket int64 = 60
-	// 1/3 成功率：round2 必须把 33.333333333333336 收敛为 33.33，
-	// 否则前端拿到 33.33333333333333 这类尾差值直接渲染。
-	byInstance := map[string][]metrics.Snapshot{
-		"pod-a": {
-			{TS: 0, ReqTotal: 0, ReqSuccess: 0},
-			{TS: 30, ReqTotal: 3, ReqSuccess: 1},
-		},
-	}
-	got := metricsquery.Aggregate(byInstance, 0, bucket, 60, 0)
-	if len(got.SuccessRate) == 0 || got.SuccessRate[0].Value != 33.33 {
-		t.Errorf("expected successRate 33.33 (rounded), got %+v", got.SuccessRate)
 	}
 }

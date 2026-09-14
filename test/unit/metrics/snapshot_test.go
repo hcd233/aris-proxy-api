@@ -101,7 +101,7 @@ func TestTokenUsageCounter_AddAndSnapshot(t *testing.T) {
 	}
 }
 
-func TestHTTPCollector_CountsSuccessAndFailure(t *testing.T) {
+func TestHTTPCollector_CountsByStatusCode(t *testing.T) {
 	t.Parallel()
 	registry := prometheus.NewRegistry()
 	collector := metricspkg.NewHTTPCollector(registry)
@@ -111,18 +111,14 @@ func TestHTTPCollector_CountsSuccessAndFailure(t *testing.T) {
 	app.Get("/ok", func(c fiber.Ctx) error { return c.SendStatus(fiber.StatusOK) })
 	app.Get("/bad", func(c fiber.Ctx) error { return c.SendStatus(fiber.StatusInternalServerError) })
 
-	reqOK := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/ok", http.NoBody)
-	respOK, err := app.Test(reqOK, fiber.TestConfig{Timeout: 0})
-	if err != nil {
-		t.Fatalf("request /ok failed: %v", err)
+	for range 2 {
+		reqOK := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/ok", http.NoBody)
+		respOK, err := app.Test(reqOK, fiber.TestConfig{Timeout: 0})
+		if err != nil {
+			t.Fatalf("request /ok failed: %v", err)
+		}
+		respOK.Body.Close()
 	}
-	respOK.Body.Close()
-	reqOK2 := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/ok", http.NoBody)
-	respOK2, err := app.Test(reqOK2, fiber.TestConfig{Timeout: 0})
-	if err != nil {
-		t.Fatalf("request /ok failed: %v", err)
-	}
-	respOK2.Body.Close()
 	reqBad := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/bad", http.NoBody)
 	respBad, err := app.Test(reqBad, fiber.TestConfig{Timeout: 0})
 	if err != nil {
@@ -134,10 +130,10 @@ func TestHTTPCollector_CountsSuccessAndFailure(t *testing.T) {
 	if err != nil {
 		t.Fatalf("BuildSnapshot failed: %v", err)
 	}
-	if snap.ReqSuccess != 2 {
-		t.Errorf("expected reqSuccess 2, got %f", snap.ReqSuccess)
+	if snap.ReqStatus["200"] != 2 {
+		t.Errorf("expected status 200 count 2, got %f", snap.ReqStatus["200"])
 	}
-	if snap.ReqTotal != 3 {
-		t.Errorf("expected reqTotal 3, got %f", snap.ReqTotal)
+	if snap.ReqStatus["500"] != 1 {
+		t.Errorf("expected status 500 count 1, got %f", snap.ReqStatus["500"])
 	}
 }

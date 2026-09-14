@@ -27,8 +27,7 @@ type Snapshot struct {
 	LatCount    float64            `json:"latCount"`             // histogram 累计样本数 → 聚合层求 QPS
 	TokenInput  float64            `json:"tokenInput"`           // counter 累计输入 token → 聚合层求输入速率
 	TokenOutput float64            `json:"tokenOutput"`          // counter 累计输出 token → 聚合层求输出速率
-	ReqTotal    float64            `json:"reqTotal"`             // counter 累计业务请求数 → 聚合层求成功率
-	ReqSuccess  float64            `json:"reqSuccess"`           // counter 累计 200 请求数 → 聚合层求成功率
+	ReqStatus   map[string]float64 `json:"reqStatus,omitempty"`  // status code -> counter 累计业务请求数 → 聚合层求各状态码数量
 }
 
 // SnapshotStore flusher 写入快照所需的存储能力（由 cache.RuntimeMetricsCache 实现）。
@@ -59,7 +58,6 @@ func BuildSnapshot(gatherer prometheus.Gatherer, now time.Time) (*Snapshot, erro
 	}
 
 	requests := byName[constant.MetricFullHTTPRequests]
-	reqSuccess := labeledCounterValue(requests, constant.MetricLabelResult, constant.HTTPResultSuccess)
 	snap := &Snapshot{
 		TS:          now.Unix(),
 		Goroutines:  firstGaugeValue(byName[constant.MetricFullGoGoroutines]),
@@ -69,8 +67,7 @@ func BuildSnapshot(gatherer prometheus.Gatherer, now time.Time) (*Snapshot, erro
 		SSEActive:   labeledGaugeValues(byName[constant.MetricFullSSEActive], constant.MetricLabelProvider),
 		TokenInput:  labeledCounterValue(byName[constant.MetricFullTokenUsage], constant.MetricLabelDirection, constant.TokenUsageDirectionInput),
 		TokenOutput: labeledCounterValue(byName[constant.MetricFullTokenUsage], constant.MetricLabelDirection, constant.TokenUsageDirectionOutput),
-		ReqTotal:    reqSuccess + labeledCounterValue(requests, constant.MetricLabelResult, constant.HTTPResultFailure),
-		ReqSuccess:  reqSuccess,
+		ReqStatus:   labeledCounterValues(requests, constant.MetricLabelStatusCode),
 	}
 	snap.LatBuckets, snap.LatCount = histogramBuckets(byName[constant.MetricFullRequestDuration])
 	return snap, nil
@@ -126,6 +123,25 @@ func labeledCounterValue(f *metricpb.MetricFamily, label, want string) float64 {
 		}
 	}
 	return 0
+}
+
+// labeledCounterValues 按 label 取全部子序列的 counter 累计值；无子序列时返回 nil。
+func labeledCounterValues(f *metricpb.MetricFamily, label string) map[string]float64 {
+	if f == nil || len(f.GetMetric()) == 0 {
+		return nil
+	}
+	out := make(map[string]float64, len(f.GetMetric()))
+	for _, m := range f.GetMetric() {
+		key := ""
+		for _, l := range m.GetLabel() {
+			if l.GetName() == label {
+				key = l.GetValue()
+				break
+			}
+		}
+		out[key] = m.GetCounter().GetValue()
+	}
+	return out
 }
 
 func histogramBuckets(f *metricpb.MetricFamily) (buckets map[string]float64, count float64) {

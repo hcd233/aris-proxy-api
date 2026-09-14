@@ -255,9 +255,9 @@ _Avoid_: shutdown sequence, graceful stop, pod termination
 monitor 面板的 token 速率指标，衡量单位时间内大模型调用的 token 吞吐，输入（input）与输出（output）两条曲线。数据源为每次模型调用收尾（`recordModelCall` seam）的 usage 统计，经 Prometheus counter（`llm_token_usage_total{direction}`）→ Flusher 快照 → 聚合层按桶求正向 delta ÷ 桶宽得 tokens/sec，跨 pod 求和。统计范围覆盖所有模型调用（流式与非流式），与审计 `ModelCallAuditTask`、Token Rate Limiter 口径一致。
 _Avoid_: token rate, tps
 
-**SuccessRate（请求成功率）**:
-monitor 面板的业务成功率指标，即网关返回 HTTP 200 的请求占所有业务请求的比例（%）。数据源为 `HTTPCollector` 中间件在 `c.Next()` 后按状态码计数的 counter（`http_requests_total{result=success|failure}`），与 QPS 图同口径（跳过 health/metrics 探活路径）；聚合层按桶跨 pod 合并 success/total 求百分比，无请求的桶不输出。
-_Avoid_: success ratio, error rate
+**StatusCodeCounts（状态码数量）**:
+monitor 面板的状态码面板，按时间桶展示各 HTTP 状态码的请求数量（折线，每状态码一条线）。数据源为 `HTTPCollector` 中间件在 `c.Next()` 后按响应状态码计数的 counter（`http_requests_total{status_code}`），与 QPS 图同口径（跳过 health/metrics 探活路径）；聚合层按桶对相邻快照各状态码求正向 delta 后跨 pod 求和，输出窗口内出现过的状态码固定成列，无请求的桶补 0。注意：业务错误按项目约定以 HTTP 200 + `{"error":{...}}` 下发，因此本面板不等于「业务错误数量」；429（限流）、413（BodyLimit）、404/405（路由）、502（上游连接失败）与上游透传状态码会如实体现。审计侧的请求成功率（`dashboard.request_rate`）是另一条口径（审计表 `UpstreamStatusCode`），与本面板无关。
+_Avoid_: success rate, error rate
 
 ## Agent Runtime（Agent 运行时）
 
