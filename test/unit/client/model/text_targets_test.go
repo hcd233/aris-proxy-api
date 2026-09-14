@@ -83,3 +83,89 @@ func TestCodexWrite_RootAndProviderBlocks(t *testing.T) {
 		t.Fatalf("expected exactly one aris-proxy provider block, got %d:\n%s", count, s)
 	}
 }
+
+func TestCodexWrite_RepairsNestedRootKeysAndDuplicatedMemories(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.toml")
+	// 回放故障现场：root 键被旧版写进了 [model_providers."deepseek"] 段，[memories] 表头逐次导出累积。
+	// Codex 读取时报 `duplicate key`，整份配置不可用。
+	broken := strings.Join([]string{
+		`notify = ["x"]`,
+		`model_reasoning_effort = "max"`,
+		"",
+		"[features]",
+		"memories = true",
+		"",
+		`[model_providers."deepseek"]`,
+		`name = "DeepSeek"`,
+		`model = "gpt-4o"`,
+		`model_provider = "stale-provider"`,
+		"",
+		"[memories]",
+		"[memories]",
+		"generate_memories = true",
+		`extract_model = "gpt-4o"`,
+		`consolidation_model = "gpt-4o"`,
+		"",
+		`[model_providers."aris-proxy"]`,
+		`name = "Old"`,
+		"",
+	}, "\n")
+	if err := os.WriteFile(path, []byte(broken), 0o600); err != nil { //nolint:gosec // test fixture
+		t.Fatal(err)
+	}
+
+	target := model.CodexTarget{}
+	outputs := make([]string, 0, 3)
+	for range 3 { // 反复导出必须稳定：旧实现每导一次就多一个 [memories] 表头和一个 root 块
+		if err := target.Write(path, "https://aris.example.com", "sk-test", fixtureModels[:1]); err != nil {
+			t.Fatal(err)
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		outputs = append(outputs, string(data))
+	}
+	for i, got := range outputs[1:] {
+		if got != outputs[0] {
+			t.Fatalf("write #%d differs from #1:\n--- #1 ---\n%s\n--- #%d ---\n%s", i+2, outputs[0], i+2, got)
+		}
+	}
+
+	got := outputs[0]
+	if n := strings.Count(got, "[memories]"); n != 1 {
+		t.Fatalf("expected exactly one [memories] table, got %d:\n%s", n, got)
+	}
+	if n := strings.Count(got, `[model_providers."aris-proxy"]`); n != 1 {
+		t.Fatalf("expected exactly one aris-proxy provider block, got %d:\n%s", n, got)
+	}
+	if !strings.Contains(got, `name = "DeepSeek"`) || !strings.Contains(got, "generate_memories = true") {
+		t.Fatalf("unrelated config must be preserved:\n%s", got)
+	}
+	// root 键必须唯一且位于首个表头之前，否则 TOML 会把它们归入上一个表（旧实现正是落进了 provider 段）
+	lines := strings.Split(got, "\n")
+	firstTable := len(lines)
+	for i, line := range lines {
+		if strings.HasPrefix(strings.TrimSpace(line), "[") {
+			firstTable = i
+			break
+		}
+	}
+	for _, key := range []string{"model", "model_provider", "model_context_window"} {
+		n := 0
+		for i, line := range lines {
+			if !strings.HasPrefix(strings.TrimSpace(line), key+" = ") {
+				continue
+			}
+			n++
+			if i > firstTable {
+				t.Fatalf("root key %s must precede the first table header (line %d):\n%s", key, i, got)
+			}
+		}
+		if n != 1 {
+			t.Fatalf("expected exactly one root key %s, got %d:\n%s", key, n, got)
+		}
+	}
+}
