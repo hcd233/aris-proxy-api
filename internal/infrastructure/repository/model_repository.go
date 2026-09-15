@@ -99,15 +99,20 @@ func (r *modelRepository) Create(ctx context.Context, m *aggregate.Model, ownerU
 
 // Update 更新模型（仅更新非零值字段）
 func (r *modelRepository) Update(ctx context.Context, m *aggregate.Model) error {
-	return updateModelTx(r.db.WithContext(ctx), m)
+	_, err := updateModelTx(r.db.WithContext(ctx), m, "")
+	return err
 }
 
 // updateModelTx 更新模型行（仅更新非零值字段），可在事务内复用。
 //
+// expectedModelID 非空时作为乐观锁条件（id 与 model_id 同时匹配才更新）：历史同步路径用它
+// 保证「读到的旧 ID 仍是库里的值」，否则并发改名会让历史被替换到不是当前值的 ID 上。
+// 返回受影响行数，调用方据此判定行是否存在/是否被并发修改。
+//
 // user_id 一并写入：model 归属始终跟随其 endpoint（命令层已校验 owner 一致），
 // 换绑 endpoint 后同步归属，避免出现"endpoint 在 A 名下、model 记在 B 名下"的悬挂状态。
 // GORM 的 Updates(map) 不经过 field serializer，capabilities 需手动序列化为 JSON 字符串。
-func updateModelTx(tx *gorm.DB, m *aggregate.Model) error {
+func updateModelTx(tx *gorm.DB, m *aggregate.Model, expectedModelID string) (int64, error) {
 	capJSON, _ := sonic.Marshal(m.Capabilities()) //nolint:errcheck // []string 序列化不会失败，且值已经聚合校验
 	updates := map[string]any{
 		constant.FieldUserID:               m.UserID(),
@@ -120,10 +125,15 @@ func updateModelTx(tx *gorm.DB, m *aggregate.Model) error {
 		constant.FieldModelMaxOutputTokens: m.MaxOutputTokens(),
 		constant.FieldModelCapabilities:    string(capJSON),
 	}
-	if err := tx.Model(&dbmodel.Model{}).Where(constant.WhereIDEquals, m.AggregateID()).Updates(updates).Error; err != nil {
-		return ierr.Wrap(ierr.ErrDBUpdate, err, "update model")
+	query := tx.Model(&dbmodel.Model{}).Where(constant.WhereIDEquals, m.AggregateID())
+	if expectedModelID != "" {
+		query = query.Where(constant.FieldModelID+" = ?", expectedModelID)
 	}
-	return nil
+	result := query.Updates(updates)
+	if result.Error != nil {
+		return 0, ierr.Wrap(ierr.ErrDBUpdate, result.Error, "update model")
+	}
+	return result.RowsAffected, nil
 }
 
 // Delete 删除模型（软删除；scopeUserID 非 nil 时精确匹配 user_id）
@@ -278,8 +288,14 @@ func (r *modelRepository) UpdateWithHistorySync(ctx context.Context, m *aggregat
 	var counts llmproxy.ModelIDSyncCounts
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		counts = llmproxy.ModelIDSyncCounts{}
-		if err := updateModelTx(tx, m); err != nil {
+		affected, err := updateModelTx(tx, m, oldModelID)
+		if err != nil {
 			return err
+		}
+		if affected != 1 {
+			// 并发改名（model_id 已不是读到的旧值）或模型行已被删除：历史替换的目标不可信，
+			// 必须整体回滚，否则模型本体与历史会再次永久错位且重试无法自愈。
+			return ierr.New(ierr.ErrResourceLocked, constant.ModelUpdateConflictMessage)
 		}
 		return replaceHistoricalModelIDs(tx, m.UserID(), oldModelID, m.ModelID(), &counts)
 	})

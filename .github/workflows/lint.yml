@@ -20,6 +20,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          # docs/diagrams 下的架构图走 Git LFS：关掉 smudge 会拿到指针文件
+          lfs: true
 
       # workflow 语法/表达式静态校验（2026-08-22 CI 拆分曾因 IMAGE_TAG 残留、
       # COPY --from 变量展开等问题连环修复 8 次——CI 变更本身没有 CI 验证）。
@@ -48,6 +51,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          # docs/diagrams 下的架构图走 Git LFS：关掉 smudge 会拿到指针文件
+          lfs: true
 
       - name: Set up Node
         uses: actions/setup-node@v4

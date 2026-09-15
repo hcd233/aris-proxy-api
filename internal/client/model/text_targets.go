@@ -101,10 +101,10 @@ func (CodexTarget) ConfigPath(home string) string {
 var tomlTableHeader = regexp.MustCompile(`^\s*\[{1,2}\s*[A-Za-z0-9_."'-]+(?:\s*\.\s*[A-Za-z0-9_."'-]+)*\s*\]{1,2}\s*(?:#.*)?$`)
 
 // tomlProviderHeader 匹配本工具 provider 表头（裸键或引号键）
-var tomlProviderHeader = regexp.MustCompile(`^\s*\[\s*model_providers\s*\.\s*(?:"?` + regexp.QuoteMeta(constant.ClientModelProviderID) + `"?)\s*\]\s*$`)
+var tomlProviderHeader = regexp.MustCompile(`^\s*\[\s*model_providers\s*\.\s*(?:"?` + regexp.QuoteMeta(constant.ClientModelProviderID) + `"?)\s*\]\s*(?:#.*)?$`)
 
-// tomlForeignProviderHeader 匹配其它 model_providers.* 表头：历史版本曾把 root 层 model 键写进这类表
-var tomlForeignProviderHeader = regexp.MustCompile(`^\s*\[\s*model_providers\s*\.`)
+// tomlProfilesHeader 匹配 [profiles.*] 表头：Codex profile 合法使用 model / model_provider 同名键
+var tomlProfilesHeader = regexp.MustCompile(`^\s*\[\s*profiles\s*\.`)
 
 // tomlMemoriesHeader 匹配 [memories] 表头
 var tomlMemoriesHeader = regexp.MustCompile(`^\s*\[\s*"?memories"?\s*\]\s*(?:#.*)?$`)
@@ -114,6 +114,37 @@ var tomlRootModelKeys = regexp.MustCompile(`^\s*(model|model_provider|model_cont
 
 // tomlMemoryModelKey 匹配 memories 表内 extract_model/consolidation_model 行
 var tomlMemoryModelKey = regexp.MustCompile(`^\s*(?:extract_model|consolidation_model)\s*=`)
+
+// tomlMultiline 跟踪 TOML 三引号多行字符串状态：字符串内部的行不当作配置行处理
+type tomlMultiline struct {
+	delim string
+}
+
+// track 推进状态并返回该行是否属于多行字符串（含起止行）
+func (m *tomlMultiline) track(line string) bool {
+	if m.delim != "" {
+		if strings.Contains(line, m.delim) {
+			m.delim = ""
+		}
+		return true
+	}
+	delim := ""
+	switch {
+	case strings.Contains(line, `"""`):
+		delim = `"""`
+	case strings.Contains(line, `'''`):
+		delim = `'''`
+	}
+	if delim == "" {
+		return false
+	}
+	// 同行闭合（如 a = """text"""）不算开启
+	if strings.Contains(strings.SplitN(line, delim, 2)[1], delim) {
+		return false
+	}
+	m.delim = delim
+	return true
+}
 
 // tomlQuote 字符串值加双引号并转义内部引号
 func tomlQuote(s string) string {
@@ -186,59 +217,68 @@ func (CodexTarget) Write(path, host, apiKey string, models []TargetModel) error 
 // codexCleanResult 清理后的分区内容
 type codexCleanResult struct {
 	head     []string // 首个表头之前的顶层键行（旧 model* 键已剔除）
-	tail     []string // 首个表头起的其余内容，原样保留
+	tail     []string // 首个表头起的其余内容（非 profiles 表内的 root 脏键已剔除）
 	memories []string // [memories] 段内容（表头与 extract/consolidation_model 已剔除）
 }
 
+// append 按当前分区归属追加行：memories 段 → 其余表 → 顶层
+func (r *codexCleanResult) append(line string, inMemories, seenTable bool) {
+	switch {
+	case inMemories:
+		r.memories = append(r.memories, line)
+	case seenTable:
+		r.tail = append(r.tail, line)
+	default:
+		r.head = append(r.head, line)
+	}
+}
+
 // cleanCodexConfig 移除旧同名 provider 段与旧 model 键；重建 [memories] 模型键。
-// 顶层键只在真正的顶层，以及历史版本误写过的 model_providers.* 表内剔除（root 键对 provider 无意义）。
-// 其余表内同名键（如 [profiles.*] 的 model）保留。
+// root 同名键只在顶层与 [profiles.*] 内合法：非 profiles 表内出现即历史版本把 root 块写进了
+// 最后一张表（2026-09-14 之前），必须一并剔除，否则升级后重跑导出仍会留下 TOML duplicate key。
+// 三引号多行字符串内部不参与表头与键判定，避免误删用户配置文本。
 func cleanCodexConfig(lines []string) codexCleanResult {
 	result := codexCleanResult{head: []string{}, tail: []string{}, memories: []string{}}
 
-	inProvider := false
-	inMemories := false
-	seenTable := false
-	dropRootKeys := true
+	var (
+		inProvider   bool
+		inMemories   bool
+		seenTable    bool
+		dropRootKeys = true
+		literal      tomlMultiline
+	)
 	for _, line := range lines {
+		inLiteral := literal.track(line)
+
 		if inProvider {
-			if tomlTableHeader.MatchString(line) {
-				inProvider = false
-			} else {
+			if !tomlTableHeader.MatchString(line) {
+				continue
+			}
+			inProvider = false
+		}
+
+		if !inLiteral {
+			switch {
+			case tomlProviderHeader.MatchString(line):
+				inProvider, seenTable = true, true
+				continue
+			case tomlMemoriesHeader.MatchString(line):
+				// 表头统一由 Write 输出一次，避免每次导出都累积一个重复表头
+				inMemories, dropRootKeys, seenTable = true, false, true
+				continue
+			case tomlTableHeader.MatchString(line):
+				inMemories = false
+				dropRootKeys = !tomlProfilesHeader.MatchString(line)
+				seenTable = true
+			}
+			if inMemories && tomlMemoryModelKey.MatchString(line) {
+				continue
+			}
+			if dropRootKeys && tomlRootModelKeys.MatchString(line) {
 				continue
 			}
 		}
-		switch {
-		case tomlProviderHeader.MatchString(line):
-			inProvider = true
-			seenTable = true
-			continue
-		case tomlMemoriesHeader.MatchString(line):
-			// 表头统一由 Write 输出一次，避免每次导出都累积一个重复表头
-			inMemories = true
-			dropRootKeys = false
-			seenTable = true
-			continue
-		case tomlTableHeader.MatchString(line):
-			inMemories = false
-			dropRootKeys = tomlForeignProviderHeader.MatchString(line)
-			seenTable = true
-		}
-		if inMemories && tomlMemoryModelKey.MatchString(line) {
-			continue
-		}
-		if dropRootKeys && tomlRootModelKeys.MatchString(line) {
-			continue
-		}
-		if inMemories {
-			result.memories = append(result.memories, line)
-			continue
-		}
-		if seenTable {
-			result.tail = append(result.tail, line)
-			continue
-		}
-		result.head = append(result.head, line)
+		result.append(line, inMemories, seenTable)
 	}
 	return result
 }

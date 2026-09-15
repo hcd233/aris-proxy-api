@@ -3,8 +3,8 @@ package metrics_test
 import (
 	"testing"
 
+	"github.com/hcd233/aris-proxy-api/internal/application/metrics/port"
 	metricsquery "github.com/hcd233/aris-proxy-api/internal/application/metrics/query"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/metrics"
 )
 
 func TestAggregate_CrossPodSumRateAndP95(t *testing.T) {
@@ -15,11 +15,11 @@ func TestAggregate_CrossPodSumRateAndP95(t *testing.T) {
 	const outputStart int64 = 0
 
 	// 桶内两份快照：goroutine 10→20、LatCount 0→60、CPU 0→6s、histogram le=0.1 0→60
-	instanceSnaps := []metrics.Snapshot{
+	instanceSnaps := []port.Snapshot{
 		{TS: 0, Goroutines: 10, LatCount: 0, CPUSeconds: 0, LatBuckets: map[string]float64{"0.1": 0}},
 		{TS: 30, Goroutines: 20, LatCount: 60, CPUSeconds: 6, LatBuckets: map[string]float64{"0.1": 60}},
 	}
-	byInstance := map[string][]metrics.Snapshot{
+	byInstance := map[string][]port.Snapshot{
 		"pod-a": instanceSnaps,
 		"pod-b": instanceSnaps,
 	}
@@ -57,7 +57,7 @@ func TestAggregate_InstancesPerPodSkipsEmptyBucket(t *testing.T) {
 
 	// pod-a：桶0（t=0..60）两份快照；桶1（t=60..120）无快照（抖动丢点）；桶2（t=120..180）一份快照。
 	// pod-z：仅桶0 有快照。
-	byInstance := map[string][]metrics.Snapshot{
+	byInstance := map[string][]port.Snapshot{
 		"pod-a": {
 			{TS: 0, Goroutines: 10},
 			{TS: 30, Goroutines: 20},
@@ -95,7 +95,7 @@ func TestAggregate_StaleInstanceSkipped(t *testing.T) {
 
 	// pod-live：最后快照就在 end 附近，视为在线，应输出。
 	// pod-dead：最后快照停在 120s（距 end 超过 2 个桶），视为已下线，应跳过。
-	byInstance := map[string][]metrics.Snapshot{
+	byInstance := map[string][]port.Snapshot{
 		"pod-live": {
 			{TS: 0, Goroutines: 10},
 			{TS: 540, Goroutines: 20},
@@ -122,7 +122,7 @@ func TestAggregate_CounterResetClamped(t *testing.T) {
 	t.Parallel()
 	const bucket int64 = 60
 	// LatCount 100→0（pod 重启），负 delta 应被 clamp 为 0
-	byInstance := map[string][]metrics.Snapshot{
+	byInstance := map[string][]port.Snapshot{
 		"pod-a": {
 			{TS: 0, LatCount: 100},
 			{TS: 30, LatCount: 0},
@@ -138,11 +138,11 @@ func TestAggregate_TokenRateAndStatusCodes(t *testing.T) {
 	t.Parallel()
 	const bucket int64 = 60
 	// 桶内两份快照：token 输入 0→120、输出 0→30；状态码 200 0→3、500 0→1——每 pod 相同，跨 2 pod 聚合。
-	instanceSnaps := []metrics.Snapshot{
+	instanceSnaps := []port.Snapshot{
 		{TS: 0, ReqStatus: map[string]float64{"200": 0, "500": 0}},
 		{TS: 30, TokenInput: 120, TokenOutput: 30, ReqStatus: map[string]float64{"200": 3, "500": 1}},
 	}
-	byInstance := map[string][]metrics.Snapshot{
+	byInstance := map[string][]port.Snapshot{
 		"pod-a": instanceSnaps,
 		"pod-b": instanceSnaps,
 	}
@@ -170,7 +170,7 @@ func TestAggregate_StatusCodesSkipEmptyBucket(t *testing.T) {
 	t.Parallel()
 	const bucket int64 = 60
 	// 桶内有快照但无任何请求；没有任何状态码出现过，不应输出空的状态码曲线。
-	byInstance := map[string][]metrics.Snapshot{
+	byInstance := map[string][]port.Snapshot{
 		"pod-a": {
 			{TS: 0},
 			{TS: 30},
@@ -187,7 +187,7 @@ func TestAggregate_StatusCodesFillMissingBuckets(t *testing.T) {
 	const bucket int64 = 60
 	// 桶0 出现 200 与 404；桶1 只有 200 的增量。
 	// 404 在桶1 应补 0（保持列对齐、曲线连续），桶2 无快照仍被跳过。
-	byInstance := map[string][]metrics.Snapshot{
+	byInstance := map[string][]port.Snapshot{
 		"pod-a": {
 			{TS: 0, ReqStatus: map[string]float64{"200": 0, "404": 0}},
 			{TS: 30, ReqStatus: map[string]float64{"200": 2, "404": 1}},
@@ -215,7 +215,7 @@ func TestAggregate_StatusCodesToleratesLegacySnapshots(t *testing.T) {
 	t.Parallel()
 	const bucket int64 = 60
 	// 旧版快照无 reqStatus 字段（nil map）：从旧快照到新快照的正 delta 计入，反向负 delta 被截断为 0。
-	byInstance := map[string][]metrics.Snapshot{
+	byInstance := map[string][]port.Snapshot{
 		"pod-a": {
 			{TS: 0, ReqStatus: map[string]float64{"200": 5}},
 			{TS: 30},
@@ -240,7 +240,7 @@ func TestAggregate_ThreadsPerPodSkipsLegacySnapshots(t *testing.T) {
 	// 桶0：新快照 Threads 30、旧版快照（无 threads 字段解码为 0）、新快照 Threads 50
 	// → threads 均值 (30+50)/2=40，不得被 0 稀释成 80/3。
 	// 桶1：仅旧版快照 → threads 无有效样本，不输出该点。
-	byInstance := map[string][]metrics.Snapshot{
+	byInstance := map[string][]port.Snapshot{
 		"pod-a": {
 			{TS: 0, Goroutines: 10, Threads: 30},
 			{TS: 15, Goroutines: 20},

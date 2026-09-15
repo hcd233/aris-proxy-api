@@ -98,6 +98,15 @@ func TestUpdateCommand_InstallsLatestRelease(t *testing.T) {
 	if got := strings.TrimSpace(versionOutput); got != "v9.9.9" {
 		t.Fatalf("aris version = %q, want v9.9.9", got)
 	}
+
+	// 安装后的权限位是实现契约（同目录临时文件 0700 + rename），必须固定住
+	info, err := os.Stat(binary)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if perm := info.Mode().Perm(); perm != constant.ArisClientUpdateBinaryMode {
+		t.Fatalf("installed binary mode = %v, want %v", perm, constant.ArisClientUpdateBinaryMode)
+	}
 }
 
 func TestUpdateCommand_KeepsBinaryOnChecksumMismatch(t *testing.T) {

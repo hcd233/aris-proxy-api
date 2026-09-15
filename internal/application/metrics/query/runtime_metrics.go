@@ -19,7 +19,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/application/metrics/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/metrics"
 )
 
 // SnapshotReader 运行时快照读取能力（由 cache.RuntimeMetricsCache 实现）。
@@ -45,8 +44,34 @@ func NewRuntimeMetricsHandler(reader SnapshotReader) port.RuntimeMetricsService 
 	return &runtimeMetricsHandler{reader: reader}
 }
 
+// RangeWindow 单个预设 range 档对应的窗口长度与桶宽。
+//
+// range 档是查询侧口径（属于应用层），故与聚合逻辑同包，不再放在基础设施快照包里。
+//
+//	@author centonhuang
+//	@update 2026-09-15 10:00:00
+type RangeWindow struct {
+	Window time.Duration
+	Bucket time.Duration
+}
+
+var rangeWindows = map[string]RangeWindow{
+	constant.RuntimeMetricsRange15m: {Window: constant.RuntimeMetricsWindow15m, Bucket: constant.RuntimeMetricsBucket15m},
+	constant.RuntimeMetricsRange1h:  {Window: constant.RuntimeMetricsWindow1h, Bucket: constant.RuntimeMetricsBucket1h},
+	constant.RuntimeMetricsRange6h:  {Window: constant.RuntimeMetricsWindow6h, Bucket: constant.RuntimeMetricsBucket6h},
+	constant.RuntimeMetricsRange24h: {Window: constant.RuntimeMetricsWindow24h, Bucket: constant.RuntimeMetricsBucket24h},
+}
+
+// resolveRange 解析预设 range 档，非法时回退到 1h。
+func resolveRange(r string) RangeWindow {
+	if rw, ok := rangeWindows[r]; ok {
+		return rw
+	}
+	return rangeWindows[constant.RuntimeMetricsRange1h]
+}
+
 func (h *runtimeMetricsHandler) RuntimeMetrics(ctx context.Context, rangeKey string, since int64) (dto.RuntimeSeries, int64, error) {
-	rw := metrics.ResolveRange(rangeKey)
+	rw := resolveRange(rangeKey)
 	now := time.Now()
 	end := now.Unix()
 	bucket := int64(rw.Bucket.Seconds())
@@ -71,7 +96,7 @@ func (h *runtimeMetricsHandler) RuntimeMetrics(ctx context.Context, rangeKey str
 		return dto.RuntimeSeries{}, 0, err
 	}
 
-	byInstance := make(map[string][]metrics.Snapshot, len(instances))
+	byInstance := make(map[string][]port.Snapshot, len(instances))
 	for _, inst := range instances {
 		payloads, readErr := h.reader.ReadSnapshots(ctx, inst, alignedStart, end)
 		if readErr != nil {
@@ -91,7 +116,7 @@ func (h *runtimeMetricsHandler) RuntimeMetrics(ctx context.Context, rangeKey str
 // histogram 取相邻快照各 le 的正向 delta 后跨 instance 合并、求 P95；状态码按 code 求正向 delta 后跨 instance 求和。
 // 只返回时间 >= outputStart 的桶。
 //
-//	@param byInstance map[string][]metrics.Snapshot
+//	@param byInstance map[string][]port.Snapshot
 //	@param alignedStart int64 对齐到桶边界的起始 unix 秒
 //	@param bucket int64 桶宽秒
 //	@param end int64 结束 unix 秒
@@ -99,7 +124,7 @@ func (h *runtimeMetricsHandler) RuntimeMetrics(ctx context.Context, rangeKey str
 //	@return dto.RuntimeSeries
 //	@author centonhuang
 //	@update 2026-06-25 10:00:00
-func Aggregate(byInstance map[string][]metrics.Snapshot, alignedStart, bucket, end, outputStart int64) dto.RuntimeSeries {
+func Aggregate(byInstance map[string][]port.Snapshot, alignedStart, bucket, end, outputStart int64) dto.RuntimeSeries {
 	n := int((end-alignedStart)/bucket) + 1
 	if n <= 0 {
 		return emptySeries()
@@ -140,17 +165,17 @@ func newBucketAggs(n int) []bucketAgg {
 	return aggs
 }
 
-func decodeSnapshots(payloads [][]byte) []metrics.Snapshot {
-	return lo.FilterMap(payloads, func(p []byte, _ int) (metrics.Snapshot, bool) {
-		var s metrics.Snapshot
+func decodeSnapshots(payloads [][]byte) []port.Snapshot {
+	return lo.FilterMap(payloads, func(p []byte, _ int) (port.Snapshot, bool) {
+		var s port.Snapshot
 		if err := sonic.Unmarshal(p, &s); err != nil {
-			return metrics.Snapshot{}, false
+			return port.Snapshot{}, false
 		}
 		return s, true
 	})
 }
 
-func accumulateInstance(agg []bucketAgg, snaps []metrics.Snapshot, alignedStart, bucket int64, n int) {
+func accumulateInstance(agg []bucketAgg, snaps []port.Snapshot, alignedStart, bucket int64, n int) {
 	gauges := instanceGauges(snaps, alignedStart, bucket, n)
 	deltas := instanceDeltas(snaps, alignedStart, bucket, n)
 
@@ -175,7 +200,7 @@ type instanceGauge struct {
 
 // instanceGauges 按桶累加单实例的 gauge 原值与计数（用于后续求桶内均值）。
 // threads 单独计数：旧版快照无该字段（解码为 0），仅累计有效样本避免稀释均值。
-func instanceGauges(snaps []metrics.Snapshot, alignedStart, bucket int64, n int) []instanceGauge {
+func instanceGauges(snaps []port.Snapshot, alignedStart, bucket int64, n int) []instanceGauge {
 	gauges := make([]instanceGauge, n)
 	for _, s := range snaps {
 		idx := int((s.TS - alignedStart) / bucket)
@@ -211,7 +236,7 @@ type instanceDelta struct {
 }
 
 // instanceDeltas 按桶累加单实例相邻快照的正向 delta（速率、histogram 与状态码计数），归属到后一个快照所在的桶。
-func instanceDeltas(snaps []metrics.Snapshot, alignedStart, bucket int64, n int) []instanceDelta {
+func instanceDeltas(snaps []port.Snapshot, alignedStart, bucket int64, n int) []instanceDelta {
 	deltas := make([]instanceDelta, n)
 	for i := 1; i < len(snaps); i++ {
 		prev, cur := snaps[i-1], snaps[i]
@@ -310,7 +335,7 @@ func buildSeries(agg []bucketAgg, alignedStart, bucket, outputStart int64) dto.R
 // 保证响应稳定。只输出"最近仍在产出快照"的活跃实例：实例注册表保留 24h，滚动发布遗留的
 // 已下线实例在窗口内仍有历史快照，若照常输出，前端对头部集群总和求和时会把死实例计入，
 // 造成数值虚高；最后一条快照距 end 超过 2 个桶的实例视为已下线，直接不输出。
-func aggregateInstances(byInstance map[string][]metrics.Snapshot, alignedStart, bucket, end, outputStart int64) map[string]dto.RuntimeInstanceSeries {
+func aggregateInstances(byInstance map[string][]port.Snapshot, alignedStart, bucket, end, outputStart int64) map[string]dto.RuntimeInstanceSeries {
 	names := lo.Filter(lo.Keys(byInstance), func(n string, _ int) bool {
 		snaps := byInstance[n]
 		if len(snaps) == 0 {
@@ -339,7 +364,7 @@ func aggregateInstances(byInstance map[string][]metrics.Snapshot, alignedStart, 
 }
 
 // aggregateOneInstance 单实例按桶输出 goroutines/heapMB/cpuPercent/threads 曲线。
-func aggregateOneInstance(snaps []metrics.Snapshot, alignedStart, bucket int64, n int, outputStart int64) dto.RuntimeInstanceSeries {
+func aggregateOneInstance(snaps []port.Snapshot, alignedStart, bucket int64, n int, outputStart int64) dto.RuntimeInstanceSeries {
 	gauges := instanceGauges(snaps, alignedStart, bucket, n)
 	deltas := instanceDeltas(snaps, alignedStart, bucket, n)
 	bucketSeconds := float64(bucket)

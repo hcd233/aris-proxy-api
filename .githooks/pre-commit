@@ -127,17 +127,41 @@ if [ -z "$GO_CHANGES" ]; then
     printf "$INFO No Go file changes in staging area — skipping gofmt, go mod tidy, vet, test, lint\n"
 else
     # --------------------------------------------------------------------------
-    # 2. gofmt — auto-format source files and re-stage changed files
+    # 2. gofmt — 只格式化「完全暂存」的 Go 文件并重新暂存
+    #    与 prettier 段同规则：部分暂存（工作区仍有未暂存改动）的文件必须跳过，
+    #    否则整文件 re-stage 会把未暂存内容一并带进提交
     # --------------------------------------------------------------------------
     printf "$INFO Running gofmt -w ...\n"
-    gofmt -w .
 
-    if ! git diff --quiet; then
-        FORMATTED=$(git diff --name-only)
-        printf "$INFO gofmt reformatted the following files (auto-staging):\n"
-        echo "$FORMATTED" | sed 's/^/       /'
-        echo ""
-        git add $FORMATTED
+    STAGED_GO_FILES=$(git diff --cached --name-only --diff-filter=ACMR -- '*.go')
+    GOFMT_SKIP_NOTE=""
+    set --
+    while IFS= read -r f; do
+        [ -z "$f" ] && continue
+        if ! git diff --quiet -- "$f"; then
+            GOFMT_SKIP_NOTE="$GOFMT_SKIP_NOTE       $f (has unstaged changes — skipped, restage manually)\n"
+        else
+            set -- "$@" "$f"
+        fi
+    done <<EOF
+$STAGED_GO_FILES
+EOF
+
+    if [ "$#" -eq 0 ]; then
+        printf "$INFO No fully-staged Go file to format — skipping gofmt\n"
+    else
+        if ! gofmt -w "$@"; then
+            fail "gofmt failed. Please fix the syntax errors above before committing."
+        fi
+        for f in "$@"; do
+            if ! git diff --quiet -- "$f"; then
+                printf "$INFO gofmt reformatted (auto-staging): %s\n" "$f"
+                git add -- "$f"
+            fi
+        done
+    fi
+    if [ -n "$GOFMT_SKIP_NOTE" ]; then
+        printf "$INFO Skipped partially-staged Go files:\n%b" "$GOFMT_SKIP_NOTE"
     fi
     printf "$PASS gofmt\n"
 

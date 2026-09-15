@@ -187,7 +187,7 @@ var (
 	// 无占位符时 v 会被静默丢弃（v=0 时退化为 WHERE user_id，语义完全错误）。
 	WhereUserIDEquals = "user_id = ?"
 
-	// ── ReplaceHistoricalModelID 条件与块大小 ──
+	// ── replaceHistoricalModelIDs（由 UpdateWithHistorySync 在事务内调用）条件与块大小 ──
 	WhereModelIDEquals = "model_id = ?"
 	WhereAPIKeyIDIn    = "api_key_id IN (?)"
 	// WhereSessionKeyAndModel session 历史同步的圈定条件。LIKE 模式必须按存储字节

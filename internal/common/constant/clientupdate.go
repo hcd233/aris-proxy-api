@@ -25,12 +25,18 @@ const (
 
 	// ArisClientUpdateCheckTimeout 使用中检查（HEAD 取 tag）超时
 	ArisClientUpdateCheckTimeout = 1500 * time.Millisecond
+	// ArisClientUpdateProbeTimeout aris update 解析最新 tag 的超时（显式命令容忍慢网络）
+	ArisClientUpdateProbeTimeout = 30 * time.Second
 	// ArisClientUpdateNoticeWait 命令结束后等待提示的最长时间
 	ArisClientUpdateNoticeWait = 400 * time.Millisecond
 	// ArisClientUpdateDownloadTimeout 下载、校验与替换的整体超时
 	ArisClientUpdateDownloadTimeout = 5 * time.Minute
+	// ArisClientUpdateMaxRedirects 更新源重定向跳数上限（默认 10 跳）
+	ArisClientUpdateMaxRedirects = 10
 	// ArisClientUpdateMaxArchiveBytes 归档下载与解包的体积上限
 	ArisClientUpdateMaxArchiveBytes = 64 << 20
+	// ArisClientLoopbackHost 允许 http 更新的本地主机名（mirror/测试）
+	ArisClientLoopbackHost = "localhost"
 
 	// ArisClientUpdateTempPattern 自替换临时文件模板（与目标二进制同目录）
 	ArisClientUpdateTempPattern = ".aris-update-*"
@@ -58,6 +64,11 @@ const (
 	ArisClientUpdateDownloadingFormat         = "Downloading aris %s..."
 	ArisClientUpdateVersionUnknownMessage     = "Failed to determine the latest aris version."
 	ArisClientUpdateChecksumMessage           = "Checksum verification failed."
+	ArisClientUpdateChecksumFormatMessage     = "Invalid checksum file."
 	ArisClientUpdateArchiveMemberMessage      = "Downloaded archive does not contain the aris binary."
 	ArisClientUpdateUnsupportedPlatformFormat = "Unsupported platform: %s/%s"
+	ArisClientUpdateInsecureSourceFormat      = "Refusing insecure update source: %s"
+	ArisClientUpdateTooManyRedirectsMessage   = "Too many redirects while fetching the release asset."
+	ArisClientUpdateAssetStatusFormat         = "Release asset %s returned status %d."
+	ArisClientUpdateArchiveTooLargeFormat     = "Downloaded release asset exceeds the %d byte limit."
 )

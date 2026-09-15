@@ -20,8 +20,14 @@ import (
 // defer Close，也会被 adapter 在流结束后兜底 Close，两条路径命中同一 wrapper，
 // 必须保证底层 body 与 cancel 只生效一次。
 //
+// 顺序：先 cancel 再 Close。cancel 让上游请求立刻结束，随后 Close 清理连接；
+// 反过来时，若 body 实现落在 net/http transfer.go 的 drain 分支（未读到 EOF 时 Close
+// 会同步读完剩余响应），取消就要等整条上游流读完才生效。
+// 实测（Go 1.25，darwin）：HTTP/1.1 客户端 body 带 earlyCloseFn，未读到 EOF 时 Close
+// 直接 abort 连接而非 drain（微秒级返回），故这里是防御性顺序，不是已观测缺陷的修复。
+//
 //	@author centonhuang
-//	@update 2026-09-09 10:00:00
+//	@update 2026-09-15 10:00:00
 type drainCancelBody struct {
 	io.ReadCloser
 	closeOnce func()

@@ -290,38 +290,42 @@ func TestUpdateWithHistorySync_ModelIDWithJSONEscapedBytes(t *testing.T) {
 
 // TestUpdateWithHistorySync_ModelIDWithLikeWildcards modelId 含 LIKE 通配符（% _）时
 // 预过滤不得放大语义：精确等值替换必须只命中完全相等的元素，不得误伤 gpt-4x / aXb。
+// 每个 oldID 用独立库：乐观锁要求调用方传入的旧值等于库中当前值（同一行不能先后按两个旧值改名）。
 func TestUpdateWithHistorySync_ModelIDWithLikeWildcards(t *testing.T) {
 	t.Parallel()
-	db := newHistorySyncDB(t)
-	key := &dbmodel.ProxyAPIKey{UserID: 1, Name: "key-a", Key: "v"}
-	if err := db.Create(key).Error; err != nil {
-		t.Fatal(err)
-	}
-	sessions := []*dbmodel.Session{
-		{APIKeyName: "key-a", ModelIDs: []string{"100%"}},
-		{APIKeyName: "key-a", ModelIDs: []string{"100X"}},
-		{APIKeyName: "key-a", ModelIDs: []string{"a_b"}},
-		{APIKeyName: "key-a", ModelIDs: []string{"aXb"}},
-	}
-	if err := db.Create(sessions).Error; err != nil {
-		t.Fatal(err)
-	}
-	agg := seedModel(t, db, 1, "old-id")
-	repo := repository.NewModelRepository(db)
-
 	for _, oldID := range []string{"100%", "a_b"} {
-		counts, err := repo.UpdateWithHistorySync(t.Context(), agg, oldID)
-		if err != nil {
-			t.Fatalf("replace %q: %v", oldID, err)
-		}
-		if counts.SessionCount != 1 {
-			t.Fatalf("oldID %q: session count = %d, want exact 1", oldID, counts.SessionCount)
-		}
-	}
-	var remain100X, remainAXb int64
-	db.Model(&dbmodel.Session{}).Where("model_ids LIKE ?", `%100X%`).Count(&remain100X)
-	db.Model(&dbmodel.Session{}).Where("model_ids LIKE ?", `%aXb%`).Count(&remainAXb)
-	if remain100X != 1 || remainAXb != 1 {
-		t.Fatalf("wildcard-adjacent ids must stay, got 100X=%d aXb=%d", remain100X, remainAXb)
+		t.Run(oldID, func(t *testing.T) {
+			t.Parallel()
+			db := newHistorySyncDB(t)
+			key := &dbmodel.ProxyAPIKey{UserID: 1, Name: "key-a", Key: "v"}
+			if err := db.Create(key).Error; err != nil {
+				t.Fatal(err)
+			}
+			sessions := []*dbmodel.Session{
+				{APIKeyName: "key-a", ModelIDs: []string{"100%"}},
+				{APIKeyName: "key-a", ModelIDs: []string{"100X"}},
+				{APIKeyName: "key-a", ModelIDs: []string{"a_b"}},
+				{APIKeyName: "key-a", ModelIDs: []string{"aXb"}},
+			}
+			if err := db.Create(sessions).Error; err != nil {
+				t.Fatal(err)
+			}
+			agg := seedModel(t, db, 1, oldID)
+			repo := repository.NewModelRepository(db)
+
+			counts, err := repo.UpdateWithHistorySync(t.Context(), agg, oldID)
+			if err != nil {
+				t.Fatalf("replace %q: %v", oldID, err)
+			}
+			if counts.SessionCount != 1 {
+				t.Fatalf("oldID %q: session count = %d, want exact 1", oldID, counts.SessionCount)
+			}
+			var remain100X, remainAXb int64
+			db.Model(&dbmodel.Session{}).Where("model_ids LIKE ?", `%100X%`).Count(&remain100X)
+			db.Model(&dbmodel.Session{}).Where("model_ids LIKE ?", `%aXb%`).Count(&remainAXb)
+			if remain100X != 1 || remainAXb != 1 {
+				t.Fatalf("wildcard-adjacent ids must stay, got 100X=%d aXb=%d", remain100X, remainAXb)
+			}
+		})
 	}
 }

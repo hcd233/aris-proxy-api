@@ -208,6 +208,54 @@ func TestUpstreamRequestBodyCloseWithoutReadIsIdempotent(t *testing.T) {
 	}
 }
 
+// TestUpstreamBodyCloseEndsRequestPromptly 锁定 drainCancelBody 的关闭契约（2026-09-15）：
+// 上游发完首帧后挂起时，stream.Close() 必须立刻结束上游请求（取消/断开），
+// 不能阻塞到整条流自然结束——否则 bulkhead 槽位与上游连接一直被占住。
+// 注意：Go 1.25 的 HTTP/1.1 客户端 body 早关走 earlyCloseFn 直接 abort（不 drain），
+// 因此本用例锁的是契约与"不阻塞"，不是 drain 分支的具体缺陷。
+func TestUpstreamBodyCloseEndsRequestPromptly(t *testing.T) {
+	t.Parallel()
+	tracker := inflight.NewTracker()
+	proxy := transport.NewOpenAIProxy(tracker, transport.NewEndpointGuard(nil))
+
+	upstreamCanceled := make(chan struct{})
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.WriteHeader(http.StatusOK)
+		_, _ = fmt.Fprint(w, "data: {\"id\":\"1\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"hi\"}}]}\n\n")
+		if flusher, ok := w.(http.Flusher); ok {
+			flusher.Flush()
+		}
+		// 挂起：只有代理真的取消上游请求，这里才会返回
+		<-r.Context().Done()
+		close(upstreamCanceled)
+	}))
+	t.Cleanup(srv.Close)
+	ep := vo.UpstreamEndpoint{BaseURL: srv.URL, Model: "test-model", APIKey: "test-key"}
+
+	stream, err := proxy.OpenChatCompletionStream(context.Background(), ep, []byte(`{}`))
+	if err != nil {
+		t.Fatalf("OpenChatCompletionStream err = %v", err)
+	}
+
+	closed := make(chan error, 1)
+	go func() { closed <- stream.Close() }()
+	select {
+	case closeErr := <-closed:
+		if closeErr != nil {
+			t.Fatalf("stream.Close() error = %v", closeErr)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("stream.Close() must cancel the upstream request instead of draining the rest of the stream")
+	}
+
+	select {
+	case <-upstreamCanceled:
+	case <-time.After(2 * time.Second):
+		t.Fatal("upstream request context must be canceled by stream.Close()")
+	}
+}
+
 func TestAnthropicProxy_DrainCancelInterruptsStream(t *testing.T) {
 	t.Parallel()
 	tracker := inflight.NewTracker()

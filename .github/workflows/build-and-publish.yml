@@ -41,6 +41,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          # docs/diagrams 下的架构图走 Git LFS：关掉 smudge 会拿到指针文件
+          lfs: true
 
       - name: Compute web hash
         id: web-hash

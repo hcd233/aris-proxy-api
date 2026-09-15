@@ -193,3 +193,166 @@ func TestCodexWrite_RepairsNestedRootKeysAndDuplicatedMemories(t *testing.T) {
 		}
 	}
 }
+
+// 回放：旧版把 root 块写进「最后一张非 provider 表」（这里是 [features]），连导两次后表内有两份
+// 同名键。只清理 model_providers.* 的实现会漏掉这类布局，Codex 依旧报 duplicate key。
+func TestCodexWrite_RepairsRootKeysInForeignTailTable(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.toml")
+	broken := strings.Join([]string{
+		`notify = ["x"]`,
+		"",
+		"[features]",
+		"memories = true",
+		`model = "stale-model"`,
+		`model_provider = "stale-provider"`,
+		"model_context_window = 100000",
+		"",
+		`model = "stale-model"`,
+		`model_provider = "stale-provider"`,
+		"model_context_window = 100000",
+		"",
+		`[model_providers."aris-proxy"]`,
+		`name = "Old"`,
+	}, "\n")
+	if err := os.WriteFile(path, []byte(broken), 0o600); err != nil { //nolint:gosec // test fixture
+		t.Fatal(err)
+	}
+
+	target := model.CodexTarget{}
+	outputs := make([]string, 0, 3)
+	for range 3 {
+		if err := target.Write(path, "https://aris.example.com", "sk-test", fixtureModels[:1]); err != nil {
+			t.Fatal(err)
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		outputs = append(outputs, string(data))
+	}
+	for i, got := range outputs[1:] {
+		if got != outputs[0] {
+			t.Fatalf("write #%d differs from #1:\n--- #1 ---\n%s\n--- #%d ---\n%s", i+2, outputs[0], i+2, got)
+		}
+	}
+
+	got := outputs[0]
+	if strings.Contains(got, "stale-model") || strings.Contains(got, "stale-provider") {
+		t.Fatalf("stale root keys must be dropped from every non-profiles table:\n%s", got)
+	}
+	if !strings.Contains(got, "memories = true") || !strings.Contains(got, `notify = ["x"]`) {
+		t.Fatalf("unrelated config must be preserved:\n%s", got)
+	}
+	if n := strings.Count(got, `[model_providers."aris-proxy"]`); n != 1 {
+		t.Fatalf("expected exactly one aris-proxy provider block, got %d:\n%s", n, got)
+	}
+}
+
+// [profiles.*] 内的 model / model_provider 是 Codex 的合法用法，必须原样保留。
+func TestCodexWrite_KeepsProfileModelKeys(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.toml")
+	existing := strings.Join([]string{
+		`model = "old-model"`,
+		"",
+		"[profiles.work]",
+		`model = "gpt-5"`,
+		`model_provider = "openai"`,
+		"",
+		"[features]",
+		"memories = true",
+	}, "\n")
+	if err := os.WriteFile(path, []byte(existing), 0o600); err != nil { //nolint:gosec // test fixture
+		t.Fatal(err)
+	}
+
+	target := model.CodexTarget{}
+	if err := target.Write(path, "https://aris.example.com", "sk-test", fixtureModels[:1]); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := string(data)
+	for _, want := range []string{`model = "gpt-5"`, `model_provider = "openai"`, "memories = true"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("profile config %q must be preserved:\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, "old-model") {
+		t.Fatalf("stale root model key not cleaned:\n%s", got)
+	}
+}
+
+// 多行字符串里的同形行属于用户文本，不能按配置文件行剔除。
+func TestCodexWrite_KeepsRootLikeKeysInsideMultilineString(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.toml")
+	existing := strings.Join([]string{
+		`model = "old-model"`,
+		"",
+		`[model_providers."deepseek"]`,
+		`name = "DeepSeek"`,
+		`instructions = """`,
+		`model = "keep-me"`,
+		`model_provider = "keep-me-too"`,
+		`"""`,
+	}, "\n")
+	if err := os.WriteFile(path, []byte(existing), 0o600); err != nil { //nolint:gosec // test fixture
+		t.Fatal(err)
+	}
+
+	target := model.CodexTarget{}
+	if err := target.Write(path, "https://aris.example.com", "sk-test", fixtureModels[:1]); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := string(data)
+	for _, want := range []string{`model = "keep-me"`, `model_provider = "keep-me-too"`, `name = "DeepSeek"`} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("multiline string content %q must be preserved:\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, "old-model") {
+		t.Fatalf("stale root model key not cleaned:\n%s", got)
+	}
+}
+
+// 表头带尾注释的旧 provider 段同样要识别并替换，不能重复追加。
+func TestCodexWrite_ReplacesProviderBlockWithTrailingComment(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.toml")
+	existing := strings.Join([]string{
+		`[model_providers."aris-proxy"] # 我加的`,
+		`name = "Old"`,
+		`base_url = "https://old"`,
+	}, "\n")
+	if err := os.WriteFile(path, []byte(existing), 0o600); err != nil { //nolint:gosec // test fixture
+		t.Fatal(err)
+	}
+
+	target := model.CodexTarget{}
+	if err := target.Write(path, "https://aris.example.com", "sk-test", fixtureModels[:1]); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := string(data)
+	if n := strings.Count(got, `[model_providers."aris-proxy"]`); n != 1 {
+		t.Fatalf("expected exactly one aris-proxy provider block, got %d:\n%s", n, got)
+	}
+	if strings.Contains(got, `name = "Old"`) {
+		t.Fatalf("stale provider block not replaced:\n%s", got)
+	}
+}
