@@ -3,11 +3,12 @@ package main
 import (
 	"fmt"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/spf13/cobra"
 )
 
 // version 由 release 构建通过 -ldflags "-X main.version=<tag>" 注入，本地构建默认 dev。
-var version = "dev"
+var version = constant.ArisClientDevVersion
 
 func newVersionCommand() *cobra.Command {
 	return &cobra.Command{
