@@ -40,7 +40,8 @@ func (ClaudeCodeTarget) Write(path, host, apiKey string, models []TargetModel) e
 	if env == nil {
 		env = map[string]any{}
 	}
-	env[constant.ClaudeEnvBaseURL] = host
+	// Claude Code 会在 base URL 后追加 /v1/messages，故用不带 /v1 的 ClaudeCodeBaseURLPrefix
+	env[constant.ClaudeEnvBaseURL] = host + constant.ClaudeCodeBaseURLPrefix
 	env[constant.ClaudeEnvAuthToken] = apiKey
 	for tier, key := range constant.ClaudeTierEnvKeys {
 		m := findBestModelForTier(models, tier)
@@ -147,7 +148,7 @@ func (CodexTarget) Write(path, host, apiKey string, models []TargetModel) error 
 	providerBlock := []string{
 		`[model_providers.` + tomlQuote(constant.ClientModelProviderID) + `]`,
 		`name = ` + tomlQuote(constant.ClientModelLabelArisProxy),
-		`base_url = ` + tomlQuote(host),
+		`base_url = ` + tomlQuote(host+constant.OpenAIProxyPrefix),
 		`wire_api = "responses"`,
 		`experimental_bearer_token = ` + tomlQuote(apiKey),
 	}
