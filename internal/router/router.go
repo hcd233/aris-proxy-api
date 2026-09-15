@@ -73,9 +73,9 @@ func RegisterAPIRouter(humaAPI huma.API, deps APIRouterDependencies) {
 	RegisterCLIAPIRoutes(cliGroup, deps)
 
 	// ── Proxy 分区（前缀不变） ──
-	openaiGroup := huma.NewGroup(humaAPI, "/api/openai/v1")
+	openaiGroup := huma.NewGroup(humaAPI, constant.OpenAIProxyPrefix)
 	initOpenAIRouter(openaiGroup, deps.OpenAIHandler, deps.DB, deps.Cache)
 
-	anthropicGroup := huma.NewGroup(humaAPI, "/api/anthropic/v1")
+	anthropicGroup := huma.NewGroup(humaAPI, constant.AnthropicProxyPrefix)
 	initAnthropicRouter(anthropicGroup, deps.AnthropicHandler, deps.DB, deps.Cache)
 }

@@ -74,15 +74,21 @@ func (OpenCodeTarget) Write(path, host, apiKey string, models []TargetModel) err
 	existing, exists := cfg.Provider[constant.ClientModelProviderID]
 	if !exists {
 		existing = opencodeProvider{
-			Name: constant.ClientModelProviderID,
-			NPM:  constant.ClientModelOpenCodeNPM,
-			Options: &opencodeProviderOptions{
-				BaseURL: host,
-				Headers: map[string]string{constant.HTTPHeaderAuthorization: constant.ClientModelAuthBearer + apiKey},
-			},
+			Name:   constant.ClientModelProviderID,
+			NPM:    constant.ClientModelOpenCodeNPM,
 			Models: map[string]opencodeModel{},
 		}
 	}
+	// baseURL 与 apiKey 由本工具管理，每次导出覆盖：保留旧值会让存量配置永远停在错误地址。
+	// models 保持 merge 语义，保留用户手工添加的模型。
+	if existing.Options == nil {
+		existing.Options = &opencodeProviderOptions{}
+	}
+	if existing.Options.Headers == nil {
+		existing.Options.Headers = map[string]string{}
+	}
+	existing.Options.BaseURL = host + constant.OpenAIProxyPrefix
+	existing.Options.Headers[constant.HTTPHeaderAuthorization] = constant.ClientModelAuthBearer + apiKey
 	if existing.Models == nil {
 		existing.Models = map[string]opencodeModel{}
 	}
@@ -177,14 +183,14 @@ func (PiTarget) Write(path, host, apiKey string, models []TargetModel) error {
 	}
 	provider, _ := providers[constant.ClientModelProviderID].(map[string]any)
 	if provider == nil {
-		provider = map[string]any{
-			constant.ClientModelKeyName:    constant.ClientModelProviderID,
-			constant.ClientModelKeyBaseUrl: host,
-			constant.ClientModelKeyAPIKey:  apiKey,
-			constant.ClientModelKeyAPI:     constant.ClientModelAPIOpenAI,
-		}
+		provider = map[string]any{constant.ClientModelKeyName: constant.ClientModelProviderID}
 		providers[constant.ClientModelProviderID] = provider
 	}
+	// baseUrl 与 apiKey 由本工具管理，每次导出覆盖：保留旧值会让存量配置永远停在错误地址。
+	// models 保持 merge 语义，保留用户手工添加的模型。
+	provider[constant.ClientModelKeyBaseUrl] = host + constant.OpenAIProxyPrefix
+	provider[constant.ClientModelKeyAPIKey] = apiKey
+	provider[constant.ClientModelKeyAPI] = constant.ClientModelAPIOpenAI
 	rawModels, _ := provider[constant.ClientModelKeyModels].([]any)
 	byID := map[string]bool{}
 	for _, rm := range rawModels {

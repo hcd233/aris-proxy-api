@@ -175,6 +175,17 @@ const (
 	WebAPIPrefix = "/api/web/v1"
 	CLIAPIPrefix = "/api/cli/v1"
 
+	// Proxy 分区前缀（2026-09-14 收敛）：LLM 代理路由的对外契约前缀。
+	// 服务端注册与 OpenAI 系 harness（Codex / OpenCode / Pi）写入的 base URL 均从此派生。
+	OpenAIProxyPrefix    = "/api/openai/v1"
+	AnthropicProxyPrefix = "/api/anthropic/v1"
+
+	// ClaudeCodeBaseURLPrefix 写入 Claude Code 的 ANTHROPIC_BASE_URL 前缀。
+	// Claude Code（Anthropic SDK）在 base URL 之后追加 /v1/messages，故这里比网关路由
+	// 前缀 AnthropicProxyPrefix 少一段 /v1——写成 AnthropicProxyPrefix 会请求
+	// /api/anthropic/v1/v1/messages 而 404（2026-09-14 用 Claude Code 2.1.207 实测）。
+	ClaudeCodeBaseURLPrefix = "/api/anthropic"
+
 	// CLIAPIPrefix 下的组内注册路径（服务端 router/cli.go 消费；客户端可见的
 	// 绝对路径常量由 CLIAPIPrefix + RoutePath 派生）。
 	ArisClientIngestRoutePath = "/trace/event"

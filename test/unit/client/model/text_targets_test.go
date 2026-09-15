@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/bytedance/sonic"
+
 	"github.com/hcd233/aris-proxy-api/internal/client/model"
 )
 
@@ -30,6 +32,20 @@ func TestClaudeCodeWrite_EnvAndOneMSuffix(t *testing.T) {
 	// gpt-4o context=128K 不加 [1m]
 	if strings.Contains(s, "gpt-4o[1m]") {
 		t.Fatalf("1M suffix must only apply to >=1M context models:\n%s", s)
+	}
+	// base URL 必须带 Anthropic 协议分区前缀，且不能带 /v1：Claude Code 会在 base 之后
+	// 再追加 /v1/messages，缺前缀会打到不存在的 {host}/v1/messages，多一段则打到
+	// {host}/api/anthropic/v1/v1/messages（均实测 404）。
+	var cfg map[string]any
+	if err := sonic.Unmarshal(data, &cfg); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	env, ok := cfg["env"].(map[string]any)
+	if !ok {
+		t.Fatalf("settings.json missing env block:\n%s", s)
+	}
+	if got := env["ANTHROPIC_BASE_URL"]; got != "https://aris.example.com/api/anthropic" {
+		t.Fatalf("ANTHROPIC_BASE_URL must be host + /api/anthropic (Claude Code appends /v1/messages), got %v", got)
 	}
 }
 
@@ -69,7 +85,15 @@ func TestCodexWrite_RootAndProviderBlocks(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := string(data)
-	for _, want := range []string{`[model_providers."aris-proxy"]`, `wire_api = "responses"`, `experimental_bearer_token`, `model_context_window`} {
+	for _, want := range []string{
+		`[model_providers."aris-proxy"]`,
+		`wire_api = "responses"`,
+		`experimental_bearer_token`,
+		`model_context_window`,
+		// base URL 必须带 OpenAI 协议分区前缀：Codex 会在 base 之后追加 /responses，
+		// 缺前缀会打到不存在的 {host}/responses。
+		`base_url = "https://aris.example.com/api/openai/v1"`,
+	} {
 		if !strings.Contains(s, want) {
 			t.Fatalf("codex config.toml missing %q:\n%s", want, s)
 		}
