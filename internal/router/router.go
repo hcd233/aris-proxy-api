@@ -11,7 +11,7 @@
 //   - Ops:   根路径健康检查/文档/pprof 等             无鉴权（见 RegisterOpsRouter）
 //
 //     @author centonhuang
-//     @update 2026-08-27
+//     @update 2026-09-15
 package router
 
 import (

@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"slices"
 
 	"github.com/charmbracelet/huh"
 	"golang.org/x/term"
 
+	"github.com/hcd233/aris-proxy-api/internal/client/executable"
 	"github.com/hcd233/aris-proxy-api/internal/client/ui"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
@@ -60,7 +60,7 @@ func RunInstall(ctx context.Context, opts InstallOptions) error {
 		return err
 	}
 
-	binPath, err := ExecutablePath()
+	binPath, err := executable.Path()
 	if err != nil {
 		return err
 	}
@@ -140,17 +140,4 @@ func terminalIO(in io.Reader) (io.Reader, io.Writer, func(), error) {
 		return nil, nil, nil, ierr.New(ierr.ErrValidation, constant.ArisClientInitNonInteractiveMessage)
 	}
 	return tty, tty, func() { _ = tty.Close() }, nil //nolint:errcheck // best-effort close
-}
-
-// ExecutablePath 返回当前可执行文件的绝对路径（解析符号链接）
-func ExecutablePath() (string, error) {
-	exe, err := os.Executable()
-	if err != nil {
-		return "", ierr.Wrap(ierr.ErrInternal, err, "resolve executable path")
-	}
-	resolved, err := filepath.EvalSymlinks(exe)
-	if err != nil {
-		return "", ierr.Wrap(ierr.ErrInternal, err, "resolve executable symlinks")
-	}
-	return resolved, nil
 }

@@ -26,7 +26,7 @@
 | 触发范围 | 仅 TTY 交互式的非 hook 命令 | hook 路径（`trace`）每事件调用一次，脚本/CI 可能循环调用，都不能打 GitHub |
 | 「已是最新」判定 | `IsNewer(latest, current)` 数字段比较，不用字符串不等 | 避免 `v0.10.0` 与 `v0.9.9` 误判，也避免把本地 `dev`/预发布构建提示成"降级" |
 | 自更新落盘 | 自身二进制同目录写临时文件（0700）→ `rename` 原子覆盖 | 失败不破坏现有二进制；同目录保证同文件系统 |
-| 二进制定位 | 复用 `trace.ExecutablePath()`（`os.Executable` + `EvalSymlinks`） | 已存在且被 status/hook 安装器使用；解析符号链接正是自替换需要的语义 |
+| 二进制定位 | `client/executable.Path()`（`os.Executable` + `EvalSymlinks`；2026-09-15 从 `trace`/`setup` 的重复实现中抽出） | 解析符号链接正是自替换需要的语义；自更新不应反向依赖 hook 安装包 |
 | sha256 校验 | **保留**（tar.gz + `.sha256` 同源） | 不提供防篡改（同源），但与 `install_aris_client.sh.tmpl` 行为一致，且能拦下截断/损坏产物 |
 | 命令新增 | 新增 `aris update` | 用户明确要求，属 `commands.md`「非用户明确要求不允许新增 cobra 命令」的例外 |
 | 交互确认 | 不做，`aris update` 直接执行 | 是用户显式动作；复用 `ui.RunWithSpinner` 显示进度（非 TTY 自动静默） |
@@ -38,7 +38,7 @@
 | 文件 | 内容 |
 |------|------|
 | `version.go` | `parseVersion`（`vX.Y.Z`，去 `v` 前缀，缺省段补 0，非数字即不可解析）与 `IsNewer(latest, current string) bool`；`ShouldCheck(current string, interactive bool) bool`（`dev`/空/不可解析 → false；`ARIS_NO_UPDATE_CHECK` 为真值 → false；非交互 → false） |
-| `update.go` | `Latest(ctx)`（HEAD 抓 tag）、`Download(ctx)`（tar.gz + `.sha256`）、`extractBinary`（`archive/tar` + `compress/gzip`，按 `constant.ArisClientBinaryFileName` 取成员，限制解压大小）、`replaceSelf`（临时文件 + rename）、`Run(ctx, Options)` |
+| `update.go` | `Latest(ctx)`（HEAD 抓 tag，超时由调用方 ctx 控制）、`downloadAsset`（tar.gz）、`verifyChecksum`（`.sha256` 严格解析）、`extractBinary`（`archive/tar` + `compress/gzip`，按 `constant.ArisClientBinaryFileName` 取成员，限制解压大小）、`replaceSelf`（临时文件 `Sync` + rename + 目录 `Sync`）、`Run(ctx, Options)` |
 | `check.go` | `StartCheck(ctx, CheckOptions) func()`：启动 goroutine 解析 latest，返回的函数等待最多 400ms 并在有新版时打印提示；任何错误全部静默 |
 
 命令壳：
@@ -57,7 +57,7 @@ type Options struct {
 	In         io.Reader // spinner 输入
 	Out        io.Writer // spinner 输出
 	BaseURL    string    // 空 → ARIS_UPDATE_BASE_URL → constant 默认
-	BinaryPath string    // 空 → trace.ExecutablePath()（测试注入，避免覆盖测试二进制）
+	BinaryPath string    // 空 → executable.Path()（测试注入，避免覆盖测试二进制）
 	HTTPClient *http.Client
 }
 func Run(ctx context.Context, opts Options) error
@@ -84,13 +84,13 @@ execute()
   └─ finish()                                  // 最多等 400ms；有新版则 stderr 打印一行
 ```
 
-跳过清单（`cmd/client` 判定，走 `root.Find(os.Args[1:])` 的命令路径）：
+跳过清单（`cmd/client` 判定，走 `root.Find(args)` 的命令路径；`ctx` 与 `args` 均由入口注入，根 context 只在 `main.go` 创建）：
 
 - 命令路径中任一层是 `trace`（hook 每事件调用）/ `update`（自我递归）/ `version`
 - 命中 root 本身（裸 `aris`、`aris --version`、`aris --help`）
 - stderr 非 TTY（脚本、CI、管道）
 - `version` 为 `dev` 或不可解析（本地/预发布构建）
-- `ARIS_NO_UPDATE_CHECK` 为真值（`1/true/yes`）
+- `ARIS_NO_UPDATE_CHECK` 为真值（`1/true/yes/on`，见 `constant.ArisClientEnvValueTrueList`）
 
 提示文案（新建常量，英文，与既有客户端文案一致）：
 
@@ -127,12 +127,25 @@ Run()
 ### 单元测试 `test/unit/client/update/`
 
 - `version_test.go`：`IsNewer` 表驱动（`v0.2.2 > v0.2.1`、相等、`v0.10.0 > v0.9.9`、`dev`、空串、`v1`/`v1.2` 缺省段）；`ShouldCheck` 表驱动（`dev`、空、不可解析、非交互、`ARIS_NO_UPDATE_CHECK=1`、正常）。
-- `update_test.go`（`httptest` 提供 release 资产，`BinaryPath` 指向临时文件，绝不触碰测试二进制）：
+- `run_test.go`（`httptest` 提供 release 资产，`BinaryPath` 指向临时文件，绝不触碰测试二进制）：
   1. 最新 > 当前 → 目标文件内容被替换为新二进制、内容正确；
   2. 最新 == 当前 → 只输出 up to date，且不发下载请求（服务端断言请求数）；
   3. checksum 不匹配 → 返回错误且目标文件保持原内容；
   4. 302 无 tag / 非 2xx → `Latest` 报错；
   5. 损坏 tar.gz → 报错且目标文件不变。
+
+### 2026-09-15 CR 加固（本轮追加）
+
+以下行为在本轮修复中定型，`hardening_test.go` 逐条锁定：
+
+| 加固点 | 行为 | 理由 |
+|--------|------|------|
+| 探测预算 | `Latest` 不再内建超时；使用中检查包 1.5s（`ArisClientUpdateCheckTimeout`），`aris update` 包 30s（`ArisClientUpdateProbeTimeout`） | 显式命令应容忍慢网络：共用 1.5s 会让 DNS+TLS 稍慢的 `aris update` 必然失败 |
+| 更新源 | 必须 https；http 仅放行 loopback（`localhost` / `127.0.0.1` / `::1`） | 明文源等于用 http 下发可执行文件 |
+| 重定向 | 跳数上限 `ArisClientUpdateMaxRedirects`，且每一跳都要通过同一 scheme 校验 | 归档与 `.sha256` 同源下载，静默跟随跨源/降级重定向会一起被换掉 |
+| checksum 文件 | 恰好一行、64 位 hex；带文件名（`sha256sum` 两列）时必须与当前资产名一致 | 与 `install_aris_client.sh.tmpl` 口径一致，避免两套解析分叉 |
+| 下载体积 | 超过 `ArisClientUpdateMaxArchiveBytes` 立即报错，不再静默截断后伪装成"校验失败" | 排障需要区分「产物截断」与「产物被篡改」 |
+| 落盘 | 临时文件 `Sync` → `rename` → best-effort 目录 `Sync`；安装后权限位固定 0700 | 断电后 rename 可能指向未回写文件，用户唯一的二进制会损坏且无回滚点 |
 - `check_test.go`：`StartCheck` 在有新版时向传入 writer 打印提示；无新版/报错时零输出；不阻塞超过等待上限。
 
 ### E2E `test/e2e/clientcmd/update_test.go`
@@ -141,6 +154,8 @@ Run()
 
 1. `aris update` 成功 → 再次执行 `aris version` 输出 `v9.9.9`（验证真实自替换）；
 2. 服务端返回 checksum 不匹配的产物 → `aris update` 非零退出，`aris version` 仍为 `v0.1.0`（验证失败不破坏二进制）。
+
+用例 1 另断言安装后权限位为 `0700`（同目录临时文件 + rename 的实现契约）。
 
 **覆盖边界（已知）**：使用中提示要求 stderr 是 TTY，`exec` 路径下没有 pty，因此 E2E 不覆盖提示打印；提示文案与 TTY 门控由单元测试覆盖。
 

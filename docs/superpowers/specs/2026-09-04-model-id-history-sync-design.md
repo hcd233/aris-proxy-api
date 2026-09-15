@@ -47,7 +47,8 @@
         1. FindByID 取旧 m.ModelID()
         2. 领域 Update（含 modelId 变更）+ repo.Update（既有逻辑不变）
         3. 若 syncHistory && oldModelID != newModelID：
-           repo.ReplaceHistoricalModelID(ctx, m.UserID(), old, new) —— 单事务 3 条 UPDATE
+           repo.UpdateWithHistorySync(ctx, m, old) —— 模型行 + 三表替换同一事务
+           （乐观锁：model_id 必须仍是读到的 old，否则整体回滚，见 §5.4）
         4. 返回 {auditCount, sessionCount, messageCount}
     → 前端 toast 展示影响行数
 ```
@@ -77,8 +78,8 @@ type ModelUpdateRsp struct {
 
 - 调用 `m.Update(...)` 前记录 `oldModelID := m.ModelID()`；更新后取新 model id。
 - 当 `cmd.SyncHistory != nil && *cmd.SyncHistory && oldModelID != newModelID` 时，
-  调用 `repo.ReplaceHistoricalModelID(ctx, m.UserID(), oldModelID, newModelID)`。
-- 替换失败则整体返回错误（模型本体更新不回滚——见 §7 错误处理）。
+  调用 `repo.UpdateWithHistorySync(ctx, m, oldModelID)`（模型本体更新与历史替换同事务）。
+- 任一步失败则整体回滚（模型本体同样不落库，不再出现"模型已改名但历史未同步"的半成品状态——见 §7 错误处理）。
 - 成功后 zap 结构化日志一条：operatorUserID、modelID（uint）、old、new、三表影响行数。
 
 ### 5.4 Repository（`llmproxy.ModelRepository` 接口 + 基础设施实现）
@@ -92,8 +93,12 @@ type ModelIDSyncCounts struct {
     MessageCount int64
 }
 
-ReplaceHistoricalModelID(ctx context.Context, userID uint, oldID, newID string) (ModelIDSyncCounts, error)
+UpdateWithHistorySync(ctx context.Context, m *aggregate.Model, oldModelID string) (ModelIDSyncCounts, error)
 ```
+
+**签名修订（2026-09-08，CR 修复二）**：原 `ReplaceHistoricalModelID(ctx, userID, oldID, newID)` 只做历史替换，模型本体由调用方先单独 `Update`，两步之间存在非原子窗口：替换失败时模型已改名，重试时新旧 ID 相等、同步条件不再触发，历史永久停留旧 ID。现改为仓储内单事务完成「模型行更新 + 三表替换」。
+
+**乐观锁修订（2026-09-15，CR 修复）**：事务内 UPDATE 增加 `WHERE id = ? AND model_id = ?`（期望值 = 调用方读到的旧 ID）并校验 `RowsAffected == 1`，否则返回 `ErrResourceLocked` 整体回滚。原因：`oldModelID` 是事务外读到的，并发改名或模型行被删除时，历史会被替换到错误目标且重试无法自愈。
 
 **实现方式修订（2026-09-04，计划阶段确认）**：不采用 PG 专用的 jsonb 原生 SQL，而是用 GORM 单事务 + Go 内替换实现。
 原因：① e2e 基建为内嵌服务器 + 内存 SQLite（无 jsonb 函数），PG 方言 SQL 无法测试；② 纯 Go 实现跨 sqlite/PG 可移植，单测/集成均可跑。本操作是偶发管理操作，行数处理性能足够。

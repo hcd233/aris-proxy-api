@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/client/setup"
+	"github.com/hcd233/aris-proxy-api/internal/client/executable"
 	"github.com/hcd233/aris-proxy-api/internal/client/status"
 	"github.com/hcd233/aris-proxy-api/internal/client/trace"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
@@ -107,7 +107,7 @@ func TestCollectLocalFiles(t *testing.T) {
 		t.Fatal(err)
 	}
 	// hooks：以当前可执行文件路径注册
-	binPath, err := setup.ExecutablePath()
+	binPath, err := executable.Path()
 	if err != nil {
 		t.Fatal(err)
 	}

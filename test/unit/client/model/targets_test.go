@@ -171,6 +171,53 @@ func TestOpenCodeWrite_OverwritesStaleBaseURL(t *testing.T) {
 	}
 }
 
+// opencode.json 里非本工具管理的顶层键与 provider 子键必须原样保留（此前只留 provider 一个键）。
+func TestOpenCodeWrite_PreservesUnmanagedKeys(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	path := filepath.Join(dir, "opencode.json")
+	existing := `{"$schema":"https://opencode.ai/config.json","theme":"tokyonight","mcp":{"docs":{"type":"local"}},` +
+		`"provider":{"aris-proxy":{"options":{"timeout":30000,"baseURL":"https://old"},"models":{"mine":{"name":"Mine"}}},` +
+		`"anthropic":{"options":{"apiKey":"user-key"}}}}`
+	if err := os.WriteFile(path, []byte(existing), 0o600); err != nil { //nolint:gosec // test fixture
+		t.Fatal(err)
+	}
+
+	target := model.OpenCodeTarget{}
+	if err := target.Write(path, "https://aris.example.com", "sk-test", fixtureModels[:1]); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cfg map[string]any
+	if err := sonic.Unmarshal(data, &cfg); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	if cfg["$schema"] != "https://opencode.ai/config.json" || cfg["theme"] != "tokyonight" {
+		t.Fatalf("top-level keys must be preserved:\n%s", data)
+	}
+	if _, ok := cfg["mcp"].(map[string]any); !ok {
+		t.Fatalf("unmanaged top-level block must be preserved:\n%s", data)
+	}
+	providers := cfg["provider"].(map[string]any)
+	if _, ok := providers["anthropic"].(map[string]any); !ok {
+		t.Fatalf("other providers must be preserved:\n%s", data)
+	}
+	provider := providers["aris-proxy"].(map[string]any)
+	options := provider["options"].(map[string]any)
+	if options["timeout"] != float64(30000) {
+		t.Fatalf("unmanaged provider option must be preserved: %v", options["timeout"])
+	}
+	if options["baseURL"] != "https://aris.example.com/api/openai/v1" {
+		t.Fatalf("managed baseURL must be overwritten: %v", options["baseURL"])
+	}
+	if models := provider["models"].(map[string]any); len(models) != len(fixtureModels[:1])+1 {
+		t.Fatalf("existing models must be merged, got %d:\n%s", len(models), data)
+	}
+}
+
 func TestTargets_IncludesAllAgents(t *testing.T) {
 	t.Parallel()
 	keys := map[string]bool{}

@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/hcd233/aris-proxy-api/internal/client/api"
+	"github.com/hcd233/aris-proxy-api/internal/client/executable"
 	"github.com/hcd233/aris-proxy-api/internal/client/model"
-	"github.com/hcd233/aris-proxy-api/internal/client/setup"
 	"github.com/hcd233/aris-proxy-api/internal/client/trace"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 )
@@ -86,7 +86,7 @@ func collectLocal(paths trace.Paths, report *Report) {
 	report.PendingCount, report.PendingBytes = scanRecordDir(paths.PendingDir())
 	report.RejectedCount, _ = scanRecordDir(paths.RejectedDir())
 	report.RecentErrors = countTodayLogEntries(paths)
-	binPath, err := setup.ExecutablePath()
+	binPath, err := executable.Path()
 	if err != nil {
 		report.HooksMissing = append([]string{}, constant.ArisClientCodexHookEvents...)
 		return

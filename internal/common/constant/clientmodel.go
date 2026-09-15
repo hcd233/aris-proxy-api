@@ -42,6 +42,16 @@ const (
 	ClientModelKeyProviders = "providers"
 	// ClientModelKeyBaseUrl Pi provider 的 baseUrl 字段（Pi 用小写 url，与 OpenCode 的 baseURL 不同）
 	ClientModelKeyBaseUrl = "baseUrl"
+	// ClientModelKeyProvider OpenCode opencode.json 顶层 provider 包裹键
+	ClientModelKeyProvider = "provider"
+	// ClientModelKeyNPM OpenCode provider 的 npm 包字段
+	ClientModelKeyNPM = "npm"
+	// ClientModelKeyOptions OpenCode provider 的 options 块
+	ClientModelKeyOptions = "options"
+	// ClientModelKeyBaseURL OpenCode provider 的 baseURL 字段（大小写与 Pi 的 baseUrl 不同）
+	ClientModelKeyBaseURL = "baseURL"
+	// ClientModelKeyHeaders OpenCode provider 的 headers 块
+	ClientModelKeyHeaders = "headers"
 )
 
 // ClientModelPaths 各 harness 默认配置路径片段

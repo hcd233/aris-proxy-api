@@ -27,9 +27,13 @@ func StartCheck(ctx context.Context, opts CheckOptions) func() {
 	}
 	hc := opts.HTTPClient
 	if hc == nil {
-		hc = &http.Client{Timeout: constant.ArisClientUpdateCheckTimeout}
+		hc = newHTTPClient(constant.ArisClientUpdateCheckTimeout)
 	}
-	base := resolveBaseURL(opts.BaseURL)
+	base, err := resolveBaseURL(opts.BaseURL)
+	if err != nil {
+		// 使用中检查不打扰用户：更新源非法时直接放弃本轮检查
+		return func() {}
+	}
 	checkCtx, cancel := context.WithTimeout(ctx, constant.ArisClientUpdateCheckTimeout)
 
 	result := make(chan string, 1)

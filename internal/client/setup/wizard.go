@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -212,19 +211,6 @@ func ResolveAPIKey(input, existing string) string {
 		return input
 	}
 	return existing
-}
-
-// ExecutablePath 返回当前可执行文件的绝对路径（解析符号链接）
-func ExecutablePath() (string, error) {
-	exe, err := os.Executable()
-	if err != nil {
-		return "", ierr.Wrap(ierr.ErrInternal, err, "resolve executable path")
-	}
-	resolved, err := filepath.EvalSymlinks(exe)
-	if err != nil {
-		return "", ierr.Wrap(ierr.ErrInternal, err, "resolve executable symlinks")
-	}
-	return resolved, nil
 }
 
 func printStep(out io.Writer, step int, title string) {

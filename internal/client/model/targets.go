@@ -13,12 +13,6 @@ import (
 
 // ─── OpenCode ───
 
-// opencodeProviderOptions OpenCode provider options 块
-type opencodeProviderOptions struct {
-	BaseURL string            `json:"baseURL"`
-	Headers map[string]string `json:"headers"`
-}
-
 // opencodeModel OpenCode 单模型配置
 type opencodeModel struct {
 	Name        string          `json:"name"`
@@ -39,17 +33,15 @@ type limitSpec struct {
 	Output  int `json:"output"`
 }
 
-// opencodeConfig opencode.json 顶层结构（仅操作本工具管理的 provider，其余字段保留）
+// opencodeConfig opencode.json 顶层结构：其余字段经 Raw 透传保留，
+// 本工具只覆盖自己管理的 provider 段（与 Pi 的 piConfig 同款做法）。
 type opencodeConfig struct {
-	Provider map[string]opencodeProvider `json:"provider"`
+	Raw map[string]any `json:"-"`
 }
 
-type opencodeProvider struct {
-	Name    string                   `json:"name,omitempty"`
-	NPM     string                   `json:"npm,omitempty"`
-	Options *opencodeProviderOptions `json:"options,omitempty"`
-	Models  map[string]opencodeModel `json:"models"`
-}
+func (c *opencodeConfig) UnmarshalJSON(data []byte) error { return sonicUnmarshal(data, &c.Raw) }
+
+func (c *opencodeConfig) MarshalJSON() ([]byte, error) { return sonicMarshal(c.Raw) }
 
 func defaultCapabilities() []string { return []string{enum.InputModalityText} }
 
@@ -62,35 +54,46 @@ func (OpenCodeTarget) ConfigPath(home string) string {
 	return filepath.Join(home, constant.ClientModelOpenCodePath)
 }
 
-// Write merge 本工具 provider 的 models 到既有配置；已存在 provider 时仅更新 models 键
+// Write merge 本工具 provider 的 models 到既有配置；provider 段只覆盖本工具管理的键
 func (OpenCodeTarget) Write(path, host, apiKey string, models []TargetModel) error {
 	var cfg opencodeConfig
 	if err := readJSONFile(path, &cfg); err != nil {
 		return err
 	}
-	if cfg.Provider == nil {
-		cfg.Provider = map[string]opencodeProvider{}
+	if cfg.Raw == nil {
+		cfg.Raw = map[string]any{}
 	}
-	existing, exists := cfg.Provider[constant.ClientModelProviderID]
-	if !exists {
-		existing = opencodeProvider{
-			Name:   constant.ClientModelProviderID,
-			NPM:    constant.ClientModelOpenCodeNPM,
-			Models: map[string]opencodeModel{},
+	providers, _ := cfg.Raw[constant.ClientModelKeyProvider].(map[string]any)
+	if providers == nil {
+		providers = map[string]any{}
+		cfg.Raw[constant.ClientModelKeyProvider] = providers
+	}
+	provider, _ := providers[constant.ClientModelProviderID].(map[string]any)
+	if provider == nil {
+		provider = map[string]any{
+			constant.ClientModelKeyName: constant.ClientModelProviderID,
+			constant.ClientModelKeyNPM:  constant.ClientModelOpenCodeNPM,
 		}
+		providers[constant.ClientModelProviderID] = provider
 	}
 	// baseURL 与 apiKey 由本工具管理，每次导出覆盖：保留旧值会让存量配置永远停在错误地址。
 	// models 保持 merge 语义，保留用户手工添加的模型。
-	if existing.Options == nil {
-		existing.Options = &opencodeProviderOptions{}
+	options, _ := provider[constant.ClientModelKeyOptions].(map[string]any)
+	if options == nil {
+		options = map[string]any{}
 	}
-	if existing.Options.Headers == nil {
-		existing.Options.Headers = map[string]string{}
+	headers, _ := options[constant.ClientModelKeyHeaders].(map[string]any)
+	if headers == nil {
+		headers = map[string]any{}
 	}
-	existing.Options.BaseURL = host + constant.OpenAIProxyPrefix
-	existing.Options.Headers[constant.HTTPHeaderAuthorization] = constant.ClientModelAuthBearer + apiKey
-	if existing.Models == nil {
-		existing.Models = map[string]opencodeModel{}
+	headers[constant.HTTPHeaderAuthorization] = constant.ClientModelAuthBearer + apiKey
+	options[constant.ClientModelKeyHeaders] = headers
+	options[constant.ClientModelKeyBaseURL] = host + constant.OpenAIProxyPrefix
+	provider[constant.ClientModelKeyOptions] = options
+
+	entries, _ := provider[constant.ClientModelKeyModels].(map[string]any)
+	if entries == nil {
+		entries = map[string]any{}
 	}
 	for _, m := range models {
 		caps := m.Capabilities
@@ -115,9 +118,10 @@ func (OpenCodeTarget) Write(path, host, apiKey string, models []TargetModel) err
 		if slices.Contains(caps, enum.InputModalityImage) {
 			entry.Attachment = true
 		}
-		existing.Models[m.Alias] = entry
+		entries[m.Alias] = entry
 	}
-	cfg.Provider[constant.ClientModelProviderID] = existing
+	provider[constant.ClientModelKeyModels] = entries
+	providers[constant.ClientModelProviderID] = provider
 
 	data, err := sonicMarshal(&cfg)
 	if err != nil {
