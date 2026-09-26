@@ -16,23 +16,31 @@ import { Switch } from "@/components/ui/switch";
 import { ProviderIcon } from "@/components/provider-icon";
 import { ListEmptyState } from "@/components/list-empty-state";
 import { TableSkeleton } from "@/components/table-skeleton";
-import { Pencil, ArrowUp, ArrowDown, ArrowUpDown, Layers } from "lucide-react";
+import { Pencil, ArrowUp, ArrowDown, ArrowUpDown, Layers, Lock } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import type { ModelListSortField, ModelListItem, UpstreamUser } from "@/lib/types";
-import { CapabilityBadges, SpecBadges } from "./shared";
+import {
+  CapabilityBadges,
+  ModelActionsCell,
+  ModelAliasCell,
+  ModelIdCell,
+  SpecBadges,
+  UpstreamModelCell,
+} from "./shared";
 
 /**
  * 端点列：端点名 + 该行模型归属用户的头像。
- * 平铺视图端点退化为属性列；头像用归属用户而非端点 owner，与分组视图的行内口径一致。
+ * 平铺视图端点退化为属性列；头像与回退字母均取归属用户（对齐 shared.tsx 的 OwnerCell），
+ * 端点名只作展示文本与无归属时的回退。
  */
 function EndpointOwnerCell({ name, user }: { name: string; user?: UpstreamUser }) {
   return (
     <div className="flex min-w-0 items-center gap-1.5">
       <Avatar size="sm">
-        {user?.avatar && <AvatarImage src={user.avatar} alt={name} />}
+        {user?.avatar && <AvatarImage src={user.avatar} alt={user.name} />}
         <AvatarFallback className="text-[10px]">
-          {name.charAt(0).toUpperCase() || "?"}
+          {(user?.name || name).charAt(0).toUpperCase() || "?"}
         </AvatarFallback>
       </Avatar>
       <TooltipRoot>
@@ -172,17 +180,20 @@ export function FlatView({
                 <Switch
                   size="sm"
                   checked={m.enabled}
+                  disabled={isDemo}
                   onCheckedChange={() => onToggleEnabled(m)}
                   aria-label={m.enabled ? t("models.enabled") : t("models.disabled")}
                 />
                 <div className="flex items-center gap-1">
+                  {/* demo 只读账户写入口统一锁定（DeleteButton 的 locked 模式） */}
                   <Button
                     variant="ghost"
                     size="icon-sm"
+                    disabled={isDemo}
                     onClick={() => onEditModel(m)}
                     className="text-muted-foreground hover:text-foreground"
                   >
-                    <Pencil className="size-3.5" />
+                    {isDemo ? <Lock className="size-3.5" /> : <Pencil className="size-3.5" />}
                   </Button>
                   <DeleteButton
                     label={t("common.delete")}
@@ -255,53 +266,9 @@ export function FlatView({
         {items.map((m) => (
           <TableRow key={m.id} className="hover:bg-muted/40">
             {/* 停用行只降权内容列，操作列保持可点的视觉 */}
-            <TableCell className={cn(!m.enabled && "opacity-45")}>
-              <div className="flex min-w-0 items-center gap-1.5">
-                <ProviderIcon protocol={m.alias} size={14} className="shrink-0" />
-                <TooltipRoot>
-                  <TooltipTrigger
-                    render={
-                      <span
-                        className={cn(
-                          "max-w-[16ch] cursor-pointer truncate font-medium underline-offset-2 hover:underline",
-                          !m.enabled && "line-through",
-                        )}
-                        onClick={() => onCopyAlias(m.alias)}
-                      >
-                        {m.alias}
-                      </span>
-                    }
-                  />
-                  <TooltipContent side="top" align="start" className="max-w-xs break-all">
-                    {`${t("models.click_to_copy")}: ${m.alias}`}
-                  </TooltipContent>
-                </TooltipRoot>
-              </div>
-            </TableCell>
-            <TableCell className={cn("font-mono text-xs", !m.enabled && "opacity-45")}>
-              {m.modelId && m.modelId !== m.alias ? (
-                <TooltipRoot>
-                  <TooltipTrigger
-                    render={<span className="block max-w-[20ch] truncate">{m.modelId}</span>}
-                  />
-                  <TooltipContent side="top" align="start" className="max-w-xs break-all">
-                    {m.modelId}
-                  </TooltipContent>
-                </TooltipRoot>
-              ) : (
-                <span className="text-muted-foreground">—</span>
-              )}
-            </TableCell>
-            <TableCell className={cn("font-mono text-xs", !m.enabled && "opacity-45")}>
-              <TooltipRoot>
-                <TooltipTrigger
-                  render={<span className="block max-w-[20ch] truncate">{m.upstreamModel}</span>}
-                />
-                <TooltipContent side="top" align="start" className="max-w-xs break-all">
-                  {m.upstreamModel}
-                </TooltipContent>
-              </TooltipRoot>
-            </TableCell>
+            <ModelAliasCell alias={m.alias} enabled={m.enabled} onCopyAlias={onCopyAlias} />
+            <ModelIdCell modelId={m.modelId} alias={m.alias} enabled={m.enabled} />
+            <UpstreamModelCell upstreamModel={m.upstreamModel} enabled={m.enabled} />
             <TableCell className={cn(!m.enabled && "opacity-45")}>
               {m.endpoint ? (
                 <EndpointOwnerCell name={m.endpoint.name} user={m.user} />
@@ -319,6 +286,7 @@ export function FlatView({
               <Switch
                 size="sm"
                 checked={m.enabled}
+                disabled={isDemo}
                 onCheckedChange={() => onToggleEnabled(m)}
                 aria-label={m.enabled ? t("models.enabled") : t("models.disabled")}
               />
@@ -326,25 +294,12 @@ export function FlatView({
             <TableCell className="text-muted-foreground">
               {new Date(m.createdAt).toLocaleDateString()}
             </TableCell>
-            <TableCell className="text-right">
-              <div className="flex items-center justify-end gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => onEditModel(m)}
-                  aria-label={t("common.edit")}
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  <Pencil className="size-3.5" />
-                </Button>
-                <DeleteButton
-                  label={t("common.delete")}
-                  locked={isDemo}
-                  disabled={deletingModelID === m.id}
-                  onClick={() => onDeleteModel(m)}
-                />
-              </div>
-            </TableCell>
+            <ModelActionsCell
+              isDemo={isDemo}
+              deleting={deletingModelID === m.id}
+              onEdit={() => onEditModel(m)}
+              onDelete={() => onDeleteModel(m)}
+            />
           </TableRow>
         ))}
       </TableBody>

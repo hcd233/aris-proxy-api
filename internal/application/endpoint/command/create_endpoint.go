@@ -10,6 +10,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 type createEndpointHandler struct {
@@ -29,6 +30,16 @@ func (h *createEndpointHandler) Handle(ctx context.Context, cmd port.CreateEndpo
 
 	if cmd.OwnerUserID == 0 {
 		return nil, ierr.New(ierr.ErrValidation, "endpoint owner user id is required")
+	}
+
+	// baseURL SSRF 校验放应用层（domain 不做网络 IO）；空值表示该协议未配置，交给聚合根非空规则。
+	for _, raw := range []string{cmd.OpenaiBaseURL, cmd.AnthropicBaseURL} {
+		if raw == "" {
+			continue
+		}
+		if err := util.ValidateEndpointBaseURL(raw); err != nil {
+			return nil, err
+		}
 	}
 
 	ep, err := aggregate.CreateEndpoint(0, cmd.Name, cmd.OpenaiBaseURL, cmd.AnthropicBaseURL, cmd.APIKey, cmd.SupportOpenAIChatCompletion, cmd.SupportOpenAIResponse, cmd.SupportAnthropicMessage)

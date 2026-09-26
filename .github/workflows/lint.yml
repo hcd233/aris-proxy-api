@@ -14,6 +14,10 @@ concurrency:
   group: lint-${{ github.ref }}
   cancel-in-progress: true
 
+# 最小权限：lint/测试只需读仓库
+permissions:
+  contents: read
+
 jobs:
   go-lint:
     runs-on: ubuntu-latest
@@ -24,9 +28,14 @@ jobs:
       # workflow 语法/表达式静态校验（2026-08-22 CI 拆分曾因 IMAGE_TAG 残留、
       # COPY --from 变量展开等问题连环修复 8 次——CI 变更本身没有 CI 验证）。
       # PR 不触发 docker-publish，workflow 错误只能在此处提前拦截。
+      # 固定版本 + SHA256 校验（与 actionlint release 的 checksums.txt 及
+      # GitHub asset digest 双源核对），不裸跟踪 main 执行远程脚本。
       - name: Run actionlint
         run: |
-          bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+          version=1.7.12
+          curl -fsSL -o actionlint.tar.gz "https://github.com/rhysd/actionlint/releases/download/v${version}/actionlint_${version}_linux_amd64.tar.gz"
+          echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  actionlint.tar.gz" | sha256sum -c -
+          tar -xzf actionlint.tar.gz actionlint
           ./actionlint -color
 
       # go:embed all:dist 要求目录存在且非空，lint 无需真实前端产物
@@ -42,6 +51,14 @@ jobs:
         uses: golangci/golangci-lint-action@v8
         with:
           version: v2.12.2
+
+      # 测试门禁：与 Makefile test 目标同参数（go test -count=1）。
+      # 范围 = ./cmd/... ./internal/... + test/unit 全量 + 自装配 e2e
+      #（goroutine_leak；model_id 含自装配的 sync_history 用例，其 BASE_URL/JWT_TOKEN
+      # 用例无 env 时自动 skip）。其余 e2e 依赖外部环境变量或属压测场景；
+      # cross_tenant_reference 有 flaky，暂不进 CI 门禁（见月度 CR 报告）。
+      - name: Run Go tests
+        run: go test -count=1 ./cmd/... ./internal/... ./test/unit/... ./test/e2e/goroutine_leak/... ./test/e2e/model_id/...
 
   web-lint:
     runs-on: ubuntu-latest

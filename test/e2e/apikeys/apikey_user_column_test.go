@@ -18,6 +18,7 @@ import (
 	"github.com/bytedance/sonic"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/test/e2e/e2eguard"
 )
 
 const e2eHTTPTimeout = 30 * time.Second
@@ -30,6 +31,8 @@ func mustE2EEnv(t *testing.T) (baseURL, adminToken, userToken string) {
 	if baseURL == "" || adminToken == "" || userToken == "" {
 		t.Skip("BASE_URL, ADMIN_TOKEN and USER_TOKEN are required for e2e test")
 	}
+	// 本用例会真实增删 API Key，拒绝误打生产
+	e2eguard.GuardLiveTarget(t, baseURL)
 	return strings.TrimRight(baseURL, "/"), adminToken, userToken
 }
 

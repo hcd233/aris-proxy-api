@@ -28,6 +28,10 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
+# 最小权限：默认只读；build job 推镜像所需 packages: write 在 job 级单独声明
+permissions:
+  contents: read
+
 jobs:
   # 步骤一：构建。Go 在 runner 上增量编译（缓存），镜像内只打包二进制；
   # push 完成后后台预热拉取到生产节点，与 publish job 启动并行。

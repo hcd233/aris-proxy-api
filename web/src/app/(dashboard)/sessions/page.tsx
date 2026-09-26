@@ -34,6 +34,7 @@ import { computeRange } from "@/lib/time-range";
 import { DeleteIconButton } from "@/components/delete-button";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { useDeleteConfirm } from "@/hooks/use-delete-confirm";
+import { useRequestSeq } from "@/hooks/use-request-seq";
 import { toast } from "sonner";
 import { ProviderIcon } from "@/components/provider-icon";
 import { DemoAddButton } from "@/components/demo-add-button";
@@ -137,8 +138,11 @@ export default function SessionsPage() {
     silent?: boolean;
   }
 
+  // 竞态守卫：筛选/翻页连点时慢响应不得覆盖新响应
+  const requestSeq = useRequestSeq();
   const fetchSessions = useCallback(
     async (q: SessionsQuery) => {
+      const seq = requestSeq.begin();
       if (!q.silent) setLoading(true);
       try {
         const { startTime, endTime } = computeRange(q.range, q.cs, q.ce);
@@ -152,6 +156,7 @@ export default function SessionsPage() {
           keyword: q.qp.freeText || undefined,
           filter: q.qp.filter,
         });
+        if (!requestSeq.isCurrent(seq)) return;
         setSessions(rsp.sessions ?? []);
         if (rsp.pageInfo) {
           setPageInfo(rsp.pageInfo);
@@ -161,10 +166,10 @@ export default function SessionsPage() {
       } catch {
         // handled silently
       } finally {
-        setLoading(false);
+        if (requestSeq.isCurrent(seq)) setLoading(false);
       }
     },
-    [setPersistedPage, setPersistedPageSize],
+    [setPersistedPage, setPersistedPageSize, requestSeq],
   );
 
   const currentQuery = (): Omit<SessionsQuery, "page" | "pageSize"> => ({

@@ -67,6 +67,12 @@ const (
 	HTTPSchemeHTTP  = "http"
 	HTTPSchemeHTTPS = "https"
 
+	// SSRF 防护主机名黑名单（util.ValidateEndpointBaseURL）：localhost 与云元数据域名。
+	HostnameLocalhost              = "localhost"
+	HostnameLocalhostSuffix        = ".localhost"
+	HostnameMetadataGoogleInternal = "metadata.google.internal"
+	HostnameMetadataGoog           = "metadata.goog"
+
 	// MaxLLMProxyBodyBytes LLM 代理路由请求体大小上限（huma Operation.MaxBodyBytes）。
 	// huma 语义：0 为默认 1MB，-1 为不限制。LLM 请求体可能包含长上下文、多模态
 	// base64 内容（单图即可达数 MB），远超默认 1MB 限制，故代理路由显式放开 huma 层限制。

@@ -222,20 +222,32 @@ func (r *apiKeyRepository) Delete(ctx context.Context, id uint) error {
 	return nil
 }
 
-// LookupOwnerNamesByUserID 查询指定用户的所有 API Key 名称
+// LookupOwnerNamesByUserID 查询指定用户的所有 API Key 名称。
+//
+// userID=0（认证缺失/零值哨兵）显式短路返回空，禁止退化为全表：
+// GORM struct 零值条件下 UserID=0 的过滤会被整体丢弃，且 user_id=0 本身是
+// 无主历史 key 的合法值，等值查询同样不为空——两者都会把「缺失身份」放行成全量。
 func (r *apiKeyRepository) LookupOwnerNamesByUserID(ctx context.Context, userID uint) ([]string, error) {
-	db := r.db.WithContext(ctx)
-	records, err := r.dao.BatchGet(db, &dbmodel.ProxyAPIKey{UserID: userID}, []string{constant.FieldName})
+	if userID == 0 {
+		return []string{}, nil
+	}
+	db := r.db.WithContext(ctx).Where(constant.WhereUserIDEquals, userID)
+	records, err := r.dao.BatchGet(db, &dbmodel.ProxyAPIKey{}, []string{constant.FieldName})
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "lookup api key names by user id")
 	}
 	return lo.Map(records, func(rec *dbmodel.ProxyAPIKey, _ int) string { return rec.Name }), nil
 }
 
-// LookupIDsByUserID 查询指定用户的所有 API Key ID
+// LookupIDsByUserID 查询指定用户的所有 API Key ID。
+//
+// userID=0 的短路语义同 LookupOwnerNamesByUserID：显式返回空，禁止全表。
 func (r *apiKeyRepository) LookupIDsByUserID(ctx context.Context, userID uint) ([]uint, error) {
-	db := r.db.WithContext(ctx)
-	records, err := r.dao.BatchGet(db, &dbmodel.ProxyAPIKey{UserID: userID}, []string{constant.FieldID})
+	if userID == 0 {
+		return []uint{}, nil
+	}
+	db := r.db.WithContext(ctx).Where(constant.WhereUserIDEquals, userID)
+	records, err := r.dao.BatchGet(db, &dbmodel.ProxyAPIKey{}, []string{constant.FieldID})
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "lookup api key ids by user id")
 	}

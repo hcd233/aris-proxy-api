@@ -145,7 +145,7 @@ func (s *auditService) ListAuditOption(ctx context.Context, permission enum.Perm
 	}
 	// user 视角按名下 key 范围过滤选项（admin/demo 全量，demo 的身份脱敏在下方统一处理）
 	if permission == enum.PermissionUser {
-		query.UserID = userID
+		query.UserID = &userID
 	}
 	items, err := s.listAuditOption.Handle(ctx, query)
 	if err != nil {

@@ -4,6 +4,8 @@
 //   - BASE_URL   API 根地址
 //   - API_KEY    代理密钥（OpenAI 协议）
 //   - JWT_TOKEN  管理员 JWT（session/list）
+//   - E2E_MODEL  上游模型名（缺省 gpt-5.5）
+//   - E2E_ALLOW_LIVE=1 允许对生产域名目标执行（缺省拒绝，见 e2eguard）
 //
 // 流程：同一对话连续两轮 chat completions（轮次1消息带随机标记）→
 // 轮次1快照应被轮次2快照实时取代 → 以标记为 keyword 轮询 session/list，
@@ -25,6 +27,8 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
+
+	"github.com/hcd233/aris-proxy-api/test/e2e/e2eguard"
 )
 
 const e2eHTTPTimeout = 90 * time.Second
@@ -57,14 +61,24 @@ func mustE2EEnv(t *testing.T) (baseURL, apiKey, jwtToken string) {
 	if baseURL == "" || apiKey == "" || jwtToken == "" {
 		t.Skip("BASE_URL, API_KEY and JWT_TOKEN are required for e2e test")
 	}
+	// 本用例会发真实 LLM 请求，拒绝误打生产
+	e2eguard.GuardLiveTarget(t, baseURL)
 	return strings.TrimRight(baseURL, "/"), apiKey, jwtToken
+}
+
+// e2eChatModel 目标上游模型名，可用 E2E_MODEL 覆盖（缺省 gpt-5.5）
+func e2eChatModel() string {
+	if m := os.Getenv("E2E_MODEL"); m != "" {
+		return m
+	}
+	return "gpt-5.5"
 }
 
 // postOnce 发送一轮非流式 chat completions 并返回 assistant 回复内容
 func postOnce(t *testing.T, baseURL, apiKey string, messages []chatMessage) string {
 	t.Helper()
 	body, err := sonic.Marshal(map[string]any{
-		"model":      "gpt-5.5",
+		"model":      e2eChatModel(),
 		"messages":   messages,
 		"stream":     false,
 		"max_tokens": 10,

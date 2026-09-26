@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/popover";
 import { Type, Image as ImageIcon, SlidersHorizontal } from "lucide-react";
 import { useT } from "@/lib/i18n";
-import { formatTokens, type ModelForm } from "./shared";
+import { DEFAULT_CONTEXT_LENGTH, DEFAULT_MAX_OUTPUT, formatTokens, type ModelForm } from "./shared";
 
 // 常用 token 预设档位：点击即写入表单，替代上下箭头微调
 const CONTEXT_LENGTH_PRESETS = [256_000, 512_000, 1_000_000];
@@ -184,7 +184,7 @@ export function ModelDialog({
                   min={0}
                   step={1000}
                   inputMode="numeric"
-                  placeholder="256000"
+                  placeholder={String(DEFAULT_CONTEXT_LENGTH)}
                   className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                   value={form.contextLength || ""}
                   onChange={(e) =>
@@ -209,7 +209,7 @@ export function ModelDialog({
                   min={0}
                   step={1000}
                   inputMode="numeric"
-                  placeholder="65536"
+                  placeholder={String(DEFAULT_MAX_OUTPUT)}
                   className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                   value={form.maxOutputTokens || ""}
                   onChange={(e) =>

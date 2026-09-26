@@ -76,9 +76,11 @@ func (h *modelHandler) HandleCreateModel(ctx context.Context, req *dto.CreateMod
 }
 
 func (h *modelHandler) HandleUpdateModel(ctx context.Context, req *dto.UpdateModelReq) (*dto.HTTPResponse[*dto.ModelUpdateRsp], error) {
+	rsp := &dto.ModelUpdateRsp{}
 	scope, err := scopeFor(ctx, util.CtxValuePermission(ctx))
 	if err != nil {
-		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrUnauthorized.BizError())
+		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrUnauthorized.BizError())
+		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
 	counts, err := h.update.Handle(ctx, port.UpdateModelCommand{
@@ -96,13 +98,13 @@ func (h *modelHandler) HandleUpdateModel(ctx context.Context, req *dto.UpdateMod
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[ModelHandler] Update model failed", zap.Error(err))
-		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
+		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
+		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
-	return apiutil.WrapHTTPResponse(&dto.ModelUpdateRsp{
-		AuditCount:   counts.AuditCount,
-		SessionCount: counts.SessionCount,
-		MessageCount: counts.MessageCount,
-	}, nil)
+	rsp.AuditCount = counts.AuditCount
+	rsp.SessionCount = counts.SessionCount
+	rsp.MessageCount = counts.MessageCount
+	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 
 func (h *modelHandler) HandleDeleteModel(ctx context.Context, req *dto.DeleteModelReq) (*dto.HTTPResponse[*dto.EmptyRsp], error) {
@@ -129,7 +131,7 @@ func (h *modelHandler) HandleDeleteModel(ctx context.Context, req *dto.DeleteMod
 func (h *modelHandler) HandleListModels(ctx context.Context, req *dto.ListModelsReq) (*dto.HTTPResponse[*dto.ListModelsRsp], error) {
 	rsp := &dto.ListModelsRsp{}
 	perm := util.CtxValuePermission(ctx)
-	scope, err := scopePtrFor(ctx, perm)
+	scope, err := scopeFor(ctx, perm)
 	if err != nil {
 		logger.WithCtx(ctx).Warn("[ModelHandler] List models rejected", zap.Error(err))
 		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrUnauthorized.BizError())
@@ -158,22 +160,6 @@ func (h *modelHandler) HandleListModels(ctx context.Context, req *dto.ListModels
 	})
 	rsp.PageInfo = pageInfo
 	return apiutil.WrapHTTPResponse(rsp, nil)
-}
-
-// scopePtrFor 平铺模型列表专用 scope：admin → nil（不过滤），非 admin → 自身 ID。
-//
-// 不能沿用 scopeFor：后者用 0 同时表达"admin 全量"与"非 admin 未拿到 userID"，
-// 直接把 0 映射成 nil 会让认证缺失静默退化成全平台可见。故此处对非 admin 的
-// userID==0 显式报错。
-func scopePtrFor(ctx context.Context, perm enum.Permission) (*uint, error) {
-	if perm == enum.PermissionAdmin {
-		return nil, nil
-	}
-	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
-	if userID == 0 {
-		return nil, ierr.New(ierr.ErrUnauthorized, "missing authenticated user id")
-	}
-	return &userID, nil
 }
 
 func toModelListItem(v *port.ListModelView) *dto.ModelListItem {

@@ -14,6 +14,14 @@ GOMAXPROCS ?= $(shell nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo
 LDFLAGS    := -s -w
 # 客户端版本号：release 构建传 tag（如 VERSION=v0.2.0 make build-client-all），本地默认 dev
 VERSION    ?= dev
+# VERSION 字符白名单（字母数字 . _ -）：GITHUB_REF_NAME 等外部输入直拼进 -ldflags 与 recipe
+# shell，含引号/分号/$ 即可注入构建命令。校验取 $(value VERSION) 原文（值内 $(...) 不会被
+# make 展开）做单引号转义后交 shell 数白名单外字符（命令行 / env / makefile 三种来源全覆盖），
+# 出现白名单外字符即报错退出，先于 CLIENT_LDFLAGS 的展开。
+version_invalid := $(shell printf '%s' '$(subst ','\'',$(value VERSION))' | tr -d 'A-Za-z0-9._-' | wc -c | tr -d '[:space:]')
+ifneq ($(version_invalid),0)
+$(error VERSION contains illegal characters; only letters, digits, '.', '_' and '-' are allowed)
+endif
 CLIENT_LDFLAGS := $(LDFLAGS) -X main.version=$(VERSION)
 # -trimpath: 去除编译路径信息（减小体积 + 安全）
 BUILD_FLAGS := -trimpath -p $(GOMAXPROCS)

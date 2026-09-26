@@ -10,6 +10,8 @@ import (
 	"testing"
 
 	"github.com/bytedance/sonic"
+
+	"github.com/hcd233/aris-proxy-api/test/e2e/e2eguard"
 )
 
 // mustTriggerE2EEnv 返回 (baseURL, apiKey, adminToken) 或 t.Skip。
@@ -23,6 +25,8 @@ func mustTriggerE2EEnv(t *testing.T) (baseURL, apiKey, adminToken string) {
 	if baseURL == "" || apiKey == "" || adminToken == "" {
 		t.Skip("BASE_URL, API_KEY and ADMIN_TOKEN are required for trigger e2e test")
 	}
+	// 本用例会真实增删触发词，拒绝误打生产
+	e2eguard.GuardLiveTarget(t, baseURL)
 	return strings.TrimRight(baseURL, "/"), apiKey, adminToken
 }
 

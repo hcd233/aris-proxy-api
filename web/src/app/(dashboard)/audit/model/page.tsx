@@ -20,6 +20,7 @@ import { ScrollText } from "lucide-react";
 import { ProviderIcon } from "@/components/provider-icon";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useRequestSeq } from "@/hooks/use-request-seq";
 import { useI18n } from "@/lib/i18n";
 import { PermissionGuard } from "@/components/permission-guard";
 import {
@@ -117,8 +118,11 @@ export default function AuditPage() {
     qp: FilterBarQueryParams;
   }
 
+  // 竞态守卫：筛选/翻页连点时慢响应不得覆盖新响应
+  const requestSeq = useRequestSeq();
   const fetchLogs = useCallback(
     async (q: AuditLogsQuery) => {
+      const seq = requestSeq.begin();
       setLoading(true);
       try {
         const { startTime, endTime } = computeRange(q.range, q.cs, q.ce);
@@ -132,6 +136,7 @@ export default function AuditPage() {
           endTime,
           filter: q.qp.filter,
         });
+        if (!requestSeq.isCurrent(seq)) return;
         if (rsp.error) {
           showErrorToast(rsp.error, { title: t("common.error") });
           return;
@@ -139,12 +144,13 @@ export default function AuditPage() {
         setLogs(rsp.logs ?? []);
         if (rsp.pageInfo) setPageInfo(rsp.pageInfo);
       } catch (err) {
+        if (!requestSeq.isCurrent(seq)) return;
         showErrorToast(err, { title: t("common.error") });
       } finally {
-        setLoading(false);
+        if (requestSeq.isCurrent(seq)) setLoading(false);
       }
     },
-    [t],
+    [t, requestSeq],
   );
 
   const currentQuery = (): Omit<AuditLogsQuery, "page" | "pageSize"> => ({

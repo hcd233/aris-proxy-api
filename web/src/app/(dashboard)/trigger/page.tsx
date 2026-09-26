@@ -36,6 +36,7 @@ import { toast } from "sonner";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { useOptimisticUpdate } from "@/hooks/use-optimistic-update";
 import { useDeleteConfirm } from "@/hooks/use-delete-confirm";
+import { useRequestSeq } from "@/hooks/use-request-seq";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -138,12 +139,16 @@ export default function TriggerPage() {
   });
   const { queryParams } = filterBar;
 
+  // 竞态守卫：关键词/翻页连点时慢响应不得覆盖新响应
+  const requestSeq = useRequestSeq();
   const fetchItems = useCallback(
     async (page: number, pageSize: number, query?: string) => {
+      const seq = requestSeq.begin();
       setLoading(true);
       try {
         const safeSize = pageSize > 0 ? pageSize : 20;
         const rsp = await api.listTrigger(page, safeSize, query);
+        if (!requestSeq.isCurrent(seq)) return;
         setItems(rsp.trigger ?? []);
         if (rsp.pageInfo) {
           setPageInfo(rsp.pageInfo);
@@ -152,12 +157,13 @@ export default function TriggerPage() {
         }
         setSelected(new Set()); // 翻页/刷新清空选中（对齐 sessions）
       } catch (err) {
+        if (!requestSeq.isCurrent(seq)) return;
         showErrorToast(err, { title: t("trigger.load_error") });
       } finally {
-        setLoading(false);
+        if (requestSeq.isCurrent(seq)) setLoading(false);
       }
     },
-    [setPersistedPage, setPersistedPageSize, t],
+    [setPersistedPage, setPersistedPageSize, t, requestSeq],
   );
 
   /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- 关键词 token 变化回到第 1 页查询；挂载时以持久化关键词发起首次查询 */

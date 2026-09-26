@@ -98,7 +98,7 @@ func doJSON(t *testing.T, method, url, token string, body []byte) (status int, d
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
-	req.Header.Set(constant.HTTPHeaderAuthorization, constant.HTTPAuthBearerPrefix+" "+token)
+	req.Header.Set(constant.HTTPHeaderAuthorization, constant.HTTPAuthBearerPrefix+token)
 	rsp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatalf("%s %s failed: %v", method, url, err)

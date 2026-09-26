@@ -9,6 +9,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 type updateEndpointHandler struct {
@@ -23,6 +24,18 @@ func NewUpdateEndpointHandler(repo llmproxy.EndpointRepository) port.UpdateEndpo
 // Handle 执行更新命令
 func (h *updateEndpointHandler) Handle(ctx context.Context, cmd port.UpdateEndpointCommand) error {
 	log := logger.WithCtx(ctx)
+
+	// baseURL SSRF 校验放应用层且先于仓储查询：既避免非法 URL 触达 repo，
+	// 也避免"URL 非法"与"端点不存在"的报错差异被用来探测端点 ID。
+	// nil/空串表示不改或清空，不产生服务端请求目标，交由聚合根既有规则。
+	for _, raw := range []*string{cmd.OpenaiBaseURL, cmd.AnthropicBaseURL} {
+		if raw == nil || *raw == "" {
+			continue
+		}
+		if err := util.ValidateEndpointBaseURL(*raw); err != nil {
+			return err
+		}
+	}
 
 	ep, err := h.repo.FindByID(ctx, cmd.EndpointID, cmd.ScopeUserID)
 	if err != nil {

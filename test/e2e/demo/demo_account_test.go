@@ -567,7 +567,12 @@ func TestE2E_DemoSessionsWhitelistMaskingRateLimit(t *testing.T) {
 		t.Fatalf("unmarshal audit logs failed: %v", err)
 	}
 	if len(auditLogs.Logs) == 0 {
-		t.Log("no audit logs in environment, masking assertion skipped")
+		// TODO(测试债): 环境无 audit 日志时下面的脱敏断言整体跳过，是假绿面——
+		// demo 视角 userName/userEmail/apiKeyName/endpoint/traceId 脱敏此刻零守护，
+		// “通过”不代表脱敏生效。补齐方式（二选一）：
+		//   1. 无数据时先构造一条 audit 记录（经代理发一次模型调用）再断言；
+		//   2. 把 demo audit 脱敏语义下沉到 test/unit/demo_access_audit 真库单测。
+		t.Log("SKIP(假绿面): no audit logs in environment, demo masking assertion NOT executed")
 	} else {
 		for _, log := range auditLogs.Logs {
 			assertMasked(t, "userName", log.UserName)

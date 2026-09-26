@@ -38,6 +38,7 @@ import { PageHeader } from "@/components/page-header";
 import { ListEmptyState } from "@/components/list-empty-state";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { useDeleteConfirm } from "@/hooks/use-delete-confirm";
+import { useRequestSeq } from "@/hooks/use-request-seq";
 import { FilterBar } from "@/components/filter-bar/filter-bar";
 import { useFilterBar } from "@/components/filter-bar/use-filter-bar";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -72,11 +73,15 @@ export default function APIKeysPage() {
   });
   const { queryParams } = filterBar;
 
+  // 竞态守卫：关键词/筛选连点时慢响应不得覆盖新响应
+  const requestSeq = useRequestSeq();
   const fetchKeys = useCallback(
     async (page: number, pageSize: number, query?: string) => {
+      const seq = requestSeq.begin();
       setLoading(true);
       try {
         const rsp = await api.listAPIKeys(page, pageSize, query);
+        if (!requestSeq.isCurrent(seq)) return;
         setKeys(rsp.keys ?? []);
         if (rsp.pageInfo) {
           setPageInfo(rsp.pageInfo);
@@ -84,12 +89,13 @@ export default function APIKeysPage() {
           setPersistedPageSize(rsp.pageInfo.pageSize);
         }
       } catch (err) {
+        if (!requestSeq.isCurrent(seq)) return;
         showErrorToast(err, { title: t("apikeys.load_error") });
       } finally {
-        setLoading(false);
+        if (requestSeq.isCurrent(seq)) setLoading(false);
       }
     },
-    [t, setPersistedPage, setPersistedPageSize],
+    [t, setPersistedPage, setPersistedPageSize, requestSeq],
   );
 
   /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- 关键词 token 变化回到第 1 页查询；挂载时以持久化关键词发起首次查询 */

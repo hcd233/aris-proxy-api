@@ -26,6 +26,7 @@ import (
 	"github.com/bytedance/sonic"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/test/e2e/e2eguard"
 )
 
 const e2eHTTPTimeout = 30 * time.Second
@@ -59,6 +60,34 @@ type commandRsp struct {
 	Error *bizError `json:"error,omitempty"`
 }
 
+type currentUserRsp struct {
+	User *struct {
+		ID   uint   `json:"id"`
+		Name string `json:"name"`
+	} `json:"user,omitempty"`
+	Error *bizError `json:"error,omitempty"`
+}
+
+// currentUser 动态获取当前 JWT 归属用户（id + name），替代硬编码 ownerUserID=1 / "admin"
+func currentUser(t *testing.T, baseURL, token string) (id uint, name string) {
+	t.Helper()
+	status, data := doJSON(t, http.MethodGet, baseURL+"/api/web/v1/user/current", token, nil)
+	if status != http.StatusOK {
+		t.Fatalf("get current user: status=%d body=%s", status, data)
+	}
+	var rsp currentUserRsp
+	if err := sonic.Unmarshal(data, &rsp); err != nil {
+		t.Fatalf("unmarshal current user rsp: %v", err)
+	}
+	if rsp.Error != nil {
+		t.Fatalf("current user biz error: %+v", rsp.Error)
+	}
+	if rsp.User == nil || rsp.User.ID == 0 || rsp.User.Name == "" {
+		t.Fatalf("current user rsp missing id/name: %s", data)
+	}
+	return rsp.User.ID, rsp.User.Name
+}
+
 func mustE2EEnv(t *testing.T) (baseURL, jwtToken string) {
 	t.Helper()
 	baseURL = os.Getenv("BASE_URL")
@@ -66,6 +95,8 @@ func mustE2EEnv(t *testing.T) (baseURL, jwtToken string) {
 	if baseURL == "" || jwtToken == "" {
 		t.Skip("BASE_URL or JWT_TOKEN not set, skip e2e")
 	}
+	// 本用例会真实增删 endpoint/model 配置，拒绝误打生产
+	e2eguard.GuardLiveTarget(t, baseURL)
 	return baseURL, jwtToken
 }
 
@@ -80,7 +111,7 @@ func doJSON(t *testing.T, method, url, token string, body []byte) (status int, d
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
-	req.Header.Set(constant.HTTPHeaderAuthorization, constant.HTTPAuthBearerPrefix+" "+token)
+	req.Header.Set(constant.HTTPHeaderAuthorization, constant.HTTPAuthBearerPrefix+token)
 	rsp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatalf("%s %s failed: %v", method, url, err)
@@ -102,13 +133,16 @@ func TestUserScope_ConfigLifecycle(t *testing.T) {
 	epName := fmt.Sprintf("e2e-uscope-ep-%d", stamp)
 	alias := fmt.Sprintf("e2e-uscope-m-%d", stamp)
 
+	// 归属用户从当前用户接口动态获取（硬编码 admin ID=1 会在其它环境误挂到别的用户）
+	ownerUserID, ownerName := currentUser(t, baseURL, token)
+
 	adminName := os.Getenv("ADMIN_USERNAME")
 	if adminName == "" {
-		adminName = "admin"
+		adminName = ownerName
 	}
 
 	// 1. admin 代建 endpoint（ownerUserID 指定自身）
-	createBody := fmt.Sprintf(`{"ownerUserID":1,"name":%q,"apiKey":"sk-e2e","openaiBaseURL":"https://o.example.com/v1","supportOpenAIChatCompletion":true}`, epName)
+	createBody := fmt.Sprintf(`{"ownerUserID":%d,"name":%q,"apiKey":"sk-e2e","openaiBaseURL":"https://o.example.com/v1","supportOpenAIChatCompletion":true}`, ownerUserID, epName)
 	status, data := doJSON(t, http.MethodPost, baseURL+"/api/web/v1/endpoint", token, []byte(createBody))
 	if status != http.StatusOK {
 		t.Fatalf("create endpoint: status=%d body=%s", status, data)
@@ -161,8 +195,11 @@ func TestUserScope_ConfigLifecycle(t *testing.T) {
 	if found == nil {
 		t.Fatalf("created endpoint not found under username=%q", adminName)
 	}
-	if found.Endpoint.User == nil || (found.Endpoint.User.Name != adminName && !strings.EqualFold(found.Endpoint.User.Name, adminName)) {
-		t.Logf("warn: endpoint.user.name = %v, expected %q (admin 用户名可能不同)", found.Endpoint.User, adminName)
+	// 响应项携带归属 username 是被测点，必须断言失败而非告警
+	if found.Endpoint.User == nil {
+		t.Errorf("endpoint item must carry owner user, got user=nil (endpointID=%d)", found.Endpoint.ID)
+	} else if !strings.EqualFold(found.Endpoint.User.Name, adminName) {
+		t.Errorf("endpoint.user.name = %q, want %q", found.Endpoint.User.Name, adminName)
 	}
 	endpointID := found.Endpoint.ID
 

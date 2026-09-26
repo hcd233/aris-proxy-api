@@ -3,6 +3,7 @@ package model_repository
 import (
 	"testing"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
@@ -130,6 +131,41 @@ func TestUpdateWithHistorySync(t *testing.T) {
 	db.Model(&dbmodel.Message{}).Where("model_id = ? AND check_sum = ?", "old-id", "m2").Count(&msgOldB)
 	if msgNew != 1 || msgOldB != 1 {
 		t.Fatalf("message isolation broken: new=%d old(B)=%d", msgNew, msgOldB)
+	}
+}
+
+// TestUpdateWithHistorySync_AuditChunkedUpdate 审计替换按 ModelIDSyncINChunkSize
+// 分块循环更新（2026-09-25 CR P1）：命中行数超过一块（>500）时影响行数必须按块
+// 累计且全部命中行都要替换，不得因分块丢尾块或计数只取最后一块。
+func TestUpdateWithHistorySync_AuditChunkedUpdate(t *testing.T) {
+	t.Parallel()
+	db := newHistorySyncDB(t)
+	key := &dbmodel.ProxyAPIKey{UserID: 1, Name: "key-a", Key: "v"}
+	if err := db.Create(key).Error; err != nil {
+		t.Fatal(err)
+	}
+	total := constant.ModelIDSyncINChunkSize + 1
+	audits := make([]*dbmodel.ModelCallAudit, 0, total)
+	for range total {
+		audits = append(audits, &dbmodel.ModelCallAudit{APIKeyID: key.ID, ModelID: "old-id"})
+	}
+	if err := db.Create(audits).Error; err != nil {
+		t.Fatal(err)
+	}
+	agg := seedModel(t, db, 1, "old-id")
+	repo := repository.NewModelRepository(db)
+
+	counts, err := repo.UpdateWithHistorySync(t.Context(), agg, "old-id")
+	if err != nil {
+		t.Fatalf("update with history sync: %v", err)
+	}
+	if counts.AuditCount != int64(total) {
+		t.Fatalf("audit count = %d, want %d (chunk accumulation broken)", counts.AuditCount, total)
+	}
+	var replaced int64
+	db.Model(&dbmodel.ModelCallAudit{}).Where("model_id = ?", "new-id").Count(&replaced)
+	if replaced != int64(total) {
+		t.Fatalf("replaced rows = %d, want %d (chunked update lost rows)", replaced, total)
 	}
 }
 

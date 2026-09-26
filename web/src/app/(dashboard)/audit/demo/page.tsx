@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePersistentState } from "@/hooks/use-persistent-state";
+import { useRequestSeq } from "@/hooks/use-request-seq";
 import { api } from "@/lib/api-client";
 import { showErrorToast } from "@/lib/api-error-handler";
 import type { DemoAccessAuditItem, PageInfo } from "@/lib/types";
@@ -109,8 +110,11 @@ export default function DemoAccessAuditPage() {
     qp: FilterBarQueryParams;
   }
 
+  // 竞态守卫：筛选/翻页连点时慢响应不得覆盖新响应
+  const requestSeq = useRequestSeq();
   const fetchLogs = useCallback(
     async (q: DemoAuditQuery) => {
+      const seq = requestSeq.begin();
       setLoading(true);
       try {
         const { startTime, endTime } = computeRange(q.range, q.cs, q.ce);
@@ -124,6 +128,7 @@ export default function DemoAccessAuditPage() {
           endTime,
           filter: q.qp.filter,
         });
+        if (!requestSeq.isCurrent(seq)) return;
         if (rsp.error) {
           showErrorToast(rsp.error, { title: t("common.error") });
           return;
@@ -135,12 +140,13 @@ export default function DemoAccessAuditPage() {
           setPersistedPageSize(rsp.pageInfo.pageSize);
         }
       } catch (err) {
+        if (!requestSeq.isCurrent(seq)) return;
         showErrorToast(err, { title: t("common.error") });
       } finally {
-        setLoading(false);
+        if (requestSeq.isCurrent(seq)) setLoading(false);
       }
     },
-    [setPersistedPage, setPersistedPageSize, t],
+    [setPersistedPage, setPersistedPageSize, t, requestSeq],
   );
 
   const currentQuery = (): Omit<DemoAuditQuery, "page" | "pageSize"> => ({

@@ -17,6 +17,11 @@
  * TooltipContent（嵌套 tooltip 不可行，边角豁免）视为达标；遇
  * TooltipRoot / TooltipProvider（在 Root 内但不在 Trigger 子树，hover
  * 不触发）或到 AST 顶则报错。中间的原生元素/其他组件正常穿越。
+ *
+ * 已知漏报范围（按「宁漏报不误报」接受，规则刻意不覆盖）：
+ * - `md:truncate` 等响应式/变体前缀类名：token 只做精确命中，不做前缀剥离；
+ * - JSXMemberExpression 组件名（Foo.Bar）：jsxElementName 返回 null，
+ *   该元素不参与 tooltip 判定（沿 parent 链正常穿越）。
  */
 
 const TRUNCATING_CLASSES = new Set(["truncate", "line-clamp-1"]);
@@ -53,6 +58,16 @@ function collectStringLiterals(node, out) {
       return;
     case "ArrayExpression":
       for (const el of node.elements) collectStringLiterals(el, out);
+      return;
+    case "ObjectExpression":
+      // cn({ truncate: cond }) 对象键形式：类名在键上（含简写 { truncate }）；
+      // 计算键/展开元素是动态值不可见，只收集字面量键与值里的字面量
+      for (const prop of node.properties) {
+        if (prop.type !== "Property") continue;
+        if (!prop.computed && prop.key.type === "Identifier") out.push(prop.key.name);
+        else collectStringLiterals(prop.key, out);
+        collectStringLiterals(prop.value, out);
+      }
       return;
     default:
       return; // Identifier / MemberExpression / SpreadElement 等动态值：不可见

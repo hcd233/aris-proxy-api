@@ -9,6 +9,12 @@
 //
 // 断言设计：越权操作必须非 2xx，正向操作 200；并用 upstream 列表直接断言
 // B 的视图里不出现 A 的模型（泄露面）。
+//
+// 串行约束：子测试共享同一 sqlite 内存库（cache=shared）与同一 fixture 数据，
+// 并发写会触发 `database table is locked`（正向用例 -count=5 连挂、单跑通过的
+// 实测问题），必须串行执行；并发回归的守护由 -count=5 验证承担。
+//
+//nolint:paralleltest // 共享 sqlite 内存库，子测试必须串行，原因见上
 package cross_tenant_reference
 
 import (
@@ -18,6 +24,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -66,6 +73,7 @@ type (
 
 // crossTenantFixture 真实装配：生产路由 + JWT + sqlite 仓储 + miniredis
 type crossTenantFixture struct {
+	db     *gorm.DB
 	app    *fiber.App
 	signer jwt.TokenSigner
 	userA  *dbmodel.User
@@ -75,6 +83,10 @@ type crossTenantFixture struct {
 	epB    *dbmodel.Endpoint
 	modelA *dbmodel.Model
 }
+
+// dbSeq 保证每次装配的内存库名唯一：cache=shared 的 sqlite 内存库按名字共享生命周期，
+// -count=N 复跑时若复用同名库会读到上一轮残留数据（bind_id 唯一索引冲突）
+var dbSeq atomic.Uint64
 
 func newCrossTenantFixture(t *testing.T) *crossTenantFixture {
 	t.Helper()
@@ -87,6 +99,7 @@ func newCrossTenantFixture(t *testing.T) *crossTenantFixture {
 	t.Cleanup(func() { _ = rdb.Close() })
 
 	dbName := strings.NewReplacer("/", "_", " ", "_").Replace(t.Name())
+	dbName = fmt.Sprintf("%s-%d", dbName, dbSeq.Add(1))
 	db, err := gorm.Open(sqlite.Open("file:"+dbName+"?mode=memory&cache=shared"),
 		&gorm.Config{Logger: gormlogger.Default.LogMode(gormlogger.Silent)})
 	if err != nil {
@@ -141,7 +154,7 @@ func newCrossTenantFixture(t *testing.T) *crossTenantFixture {
 		ClientHandler:    &stubClientHandler{},
 	})
 	// 种子：两个普通用户 + 一个 admin；A/B 各自名下一个 endpoint；A 名下一个 model
-	f := &crossTenantFixture{app: app, signer: jwt.NewAccessTokenSigner()}
+	f := &crossTenantFixture{db: db, app: app, signer: jwt.NewAccessTokenSigner()}
 	// github_bind_id 参与 (github_bind_id, deleted_at) 唯一索引，零值彼此冲突，须逐个区分
 	// github/google_bind_id 各自参与 (bind_id, deleted_at) 唯一索引，零值彼此冲突，须逐个区分
 	f.userA = &dbmodel.User{Name: "tenant-a", GithubBindID: "gh-a", GoogleBindID: "gg-a", Permission: enum.PermissionUser}
@@ -229,49 +242,69 @@ func bizErrorCode(t *testing.T, data []byte) int64 {
 	return body.Error.Code
 }
 
+// 越权负向断言写死业务错误码，防止「没走到守卫」（如 DB 锁错误、内部错误兜底 10000）被判通过。
+// 取值与 internal/common/ierr/sentinels.go 对齐，重编号时同步更新：
+//   - ErrDataNotExists = 10003：scope 过滤下越权目标不可见，应用层判「not found」
+const (
+	bizCodeDataNotExists int64 = 10003
+)
+
+// requireGuardedReject 断言请求被跨租户守卫拒绝：HTTP 200 + 指定业务码。
+// 任何非守卫错误（DB 错误码 10000、校验错误等）都会在此暴露，杜绝假绿。
+func requireGuardedReject(t *testing.T, status int, data []byte, wantCode int64, what string) {
+	t.Helper()
+	if status != http.StatusOK {
+		t.Fatalf("%s: expect HTTP 200 envelope, got status=%d body=%s", what, status, data)
+	}
+	got := bizErrorCode(t, data)
+	if got != wantCode {
+		t.Fatalf("%s: expect guard biz code %d, got %d body=%s", what, wantCode, got, data)
+	}
+}
+
 // TestCrossTenant_ReferenceGuard 跨租户引用全链路守护：
 // A 不得引用 B 的 endpoint（create/update 换绑/delete），B 的视图不得泄露 A 的模型。
+//
+// 子测试串行执行（不 t.Parallel）：它们共享同一 sqlite 内存库，并发写会触发
+// `database table is locked`，造成 flaky（-count=5 连挂、单跑通过的实测问题）。
 func TestCrossTenant_ReferenceGuard(t *testing.T) {
-	t.Parallel()
 	f := newCrossTenantFixture(t)
 	tokenA := f.tokenFor(t, f.userA.ID)
 	tokenB := f.tokenFor(t, f.userB.ID)
 	tokenAdmin := f.tokenFor(t, f.admin.ID)
-	ctx := context.Background()
-	_ = ctx
 
 	t.Run("create model on foreign endpoint rejected", func(t *testing.T) {
-		t.Parallel()
 		body := fmt.Sprintf(`{"alias":"evil-a","upstreamModel":"up-evil","endpointID":%d,"capabilities":["text"]}`, f.epB.ID)
 		status, data := f.do(t, http.MethodPost, constant.WebAPIPrefix+"/model", tokenA, body)
-		if status != http.StatusOK || bizErrorCode(t, data) == 0 {
-			t.Fatalf("A must not create model on B's endpoint, status=%d body=%s", status, data)
-		}
+		requireGuardedReject(t, status, data, bizCodeDataNotExists, "A must not create model on B's endpoint")
 	})
 
 	t.Run("update model swap to foreign endpoint rejected (C2)", func(t *testing.T) {
-		t.Parallel()
 		body := fmt.Sprintf(`{"endpointID":%d}`, f.epB.ID)
 		status, data := f.do(t, http.MethodPatch, fmt.Sprintf("%s/model?id=%d", constant.WebAPIPrefix, f.modelA.ID), tokenA, body)
-		if status != http.StatusOK || bizErrorCode(t, data) == 0 {
-			t.Fatalf("A must not swap own model onto B's endpoint, status=%d body=%s", status, data)
+		requireGuardedReject(t, status, data, bizCodeDataNotExists, "A must not swap own model onto B's endpoint")
+		// 换绑必须真的没发生：重新读库确认 modelA 仍挂在 epA
+		// （fixture 内存对象不经请求链路更新，读它会得到恒真断言）
+		var row dbmodel.Model
+		if err := f.db.First(&row, f.modelA.ID).Error; err != nil {
+			t.Fatalf("reload model row: %v", err)
 		}
-		// 换绑必须真的没发生：modelA 仍挂在 epA
-		if f.modelA.EndpointID != f.epA.ID {
-			t.Fatalf("model endpointID must be unchanged, got %d", f.modelA.EndpointID)
+		if row.EndpointID != f.epA.ID {
+			t.Fatalf("model endpointID must be unchanged, got %d want %d", row.EndpointID, f.epA.ID)
 		}
 	})
 
 	t.Run("delete foreign endpoint rejected", func(t *testing.T) {
-		t.Parallel()
 		status, data := f.do(t, http.MethodDelete, fmt.Sprintf("%s/endpoint?id=%d", constant.WebAPIPrefix, f.epB.ID), tokenA, "")
-		if status != http.StatusOK || bizErrorCode(t, data) == 0 {
-			t.Fatalf("A must not delete B's endpoint, status=%d body=%s", status, data)
+		requireGuardedReject(t, status, data, bizCodeDataNotExists, "A must not delete B's endpoint")
+		// 删除必须真的没发生：epB 仍存活
+		var row dbmodel.Endpoint
+		if err := f.db.First(&row, f.epB.ID).Error; err != nil {
+			t.Fatalf("endpoint B must survive, reload failed: %v", err)
 		}
 	})
 
 	t.Run("create model on own endpoint allowed", func(t *testing.T) {
-		t.Parallel()
 		body := fmt.Sprintf(`{"alias":"gpt-a2","upstreamModel":"up-a2","endpointID":%d,"capabilities":["text"]}`, f.epA.ID)
 		status, data := f.do(t, http.MethodPost, constant.WebAPIPrefix+"/model", tokenA, body)
 		if status != http.StatusOK || bizErrorCode(t, data) != 0 {
@@ -280,7 +313,6 @@ func TestCrossTenant_ReferenceGuard(t *testing.T) {
 	})
 
 	t.Run("admin can manage any tenant config", func(t *testing.T) {
-		t.Parallel()
 		body := fmt.Sprintf(`{"alias":"gpt-b-admin","upstreamModel":"up-b-admin","endpointID":%d,"capabilities":["text"]}`, f.epB.ID)
 		status, data := f.do(t, http.MethodPost, constant.WebAPIPrefix+"/model", tokenAdmin, body)
 		if status != http.StatusOK || bizErrorCode(t, data) != 0 {
@@ -289,7 +321,6 @@ func TestCrossTenant_ReferenceGuard(t *testing.T) {
 	})
 
 	t.Run("upstream view leaks nothing across tenants", func(t *testing.T) {
-		t.Parallel()
 		// B 的视图：只应有 ep-b 与其模型，不得出现 A 的 gpt-a / gpt-a2
 		status, data := f.do(t, http.MethodGet, constant.WebAPIPrefix+"/upstream/list?page=1&pageSize=50", tokenB, "")
 		if status != http.StatusOK || bizErrorCode(t, data) != 0 {
@@ -312,5 +343,3 @@ func TestCrossTenant_ReferenceGuard(t *testing.T) {
 		}
 	})
 }
-
-var _ = sonic.ConfigDefault // 保持依赖可见（响应体断言仅做子串匹配）
