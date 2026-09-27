@@ -19,11 +19,12 @@
 - 日志用 `logger.WithCtx(ctx)`，消息前缀 `[PascalCaseModule]`。
 - `internal/` 目录下**不得**放 `_test.go`；单测放 `test/unit/<topic>/`，E2E 放 `test/e2e/<topic>/`。
 - 只用标准库 `testing`；禁止 testify / gomock；禁止用 `time.Sleep` 做同步（AST 级 lint 拦截）。
+- **每个 `TestXxx` 函数首行必须是 `t.Parallel()`**（`paralleltest` linter 强制，T1 实测被拦）。含 `t.Run` 子测试时，子测试内也需 `t.Parallel()`。
 - DTO 包禁止导入 `internal/infrastructure/database/model`。
 - **SQL 硬约束**：归属过滤一律用显式占位符。复用既有模板 `fmt.Sprintf(constant.DBConditionInTemplate, constant.FieldAPIKeyID)` → `"api_key_id IN ?"`。禁止 struct 条件（GORM 忽略 `api_key_id = 0` 零值），禁止 `Where("api_key_id", v)` 无占位符写法（静默丢参）。
 - 编辑任何 Go 文件**之前**先跑：`sh ".agents/skills/external/use-modern-go/scripts/run-tool.sh" list --file-path <目标文件>`，输出不得截断。
 - 改 `internal/bootstrap/modules/**` 前加载 `golang-uber-fx` skill。
-- **pre-commit hook 行为**：hook 会 `gofmt -w .` 全仓并 `git add` 已跟踪文件，且跑全量 `go vet` / `go test` / `lint conv` / `lint static`。因此**接口签名变更必须与其全部实现者、调用方、测试 fake 同批提交**，否则中间提交全仓 vet 挂。untracked 新文件 hook 不会自动加，需手动 `git add`。
+- **pre-commit hook 行为**：hook 会 `gofmt -w .` 全仓并 `git add` 已跟踪文件，且跑全量 `go vet` / `go test` / `lint`（`./cmd/lint` 并发跑 conv + static）。因此**接口签名变更必须与其全部实现者、调用方、测试 fake 同批提交**，否则中间提交全仓 vet 挂。untracked 新文件 hook 不会自动加，需手动 `git add`。
 - 工作目录：`.worktrees/session-owner-id`（分支 `bugfix/session-owner-id-2026-09-27`，基线 `5f95ea3a`）。
 
 ## 命令速查
@@ -34,8 +35,7 @@ go test ./test/unit/<topic>/ -run TestXxx -v
 
 # 全量（pre-commit 会跑，提交前自行确认）
 go test ./... && go vet ./... \
-  && go run ./cmd/server lint conv ./... \
-  && go run ./cmd/server lint static ./...
+  && go run ./cmd/lint ./...
 ```
 
 ## File Structure
@@ -1263,8 +1263,7 @@ Expected: 编译通过；`test/e2e/cross_tenant_session/` **全部转绿**；其
 
 ```bash
 go vet ./... \
-  && go run ./cmd/server lint conv ./... \
-  && go run ./cmd/server lint static ./...
+  && go run ./cmd/lint ./...
 ```
 
 常见拦截：`gocritic paramTypeCombine` 要求相邻同类型参数合并；中文注释里 `//` 后必须半角空格；`errors.New` 被 forbidigo 拦（用 `ierr`）。
@@ -1454,8 +1453,7 @@ _Avoid_: owner name, api key identifier
 go build ./... \
   && go test ./... \
   && go vet ./... \
-  && go run ./cmd/server lint conv ./... \
-  && go run ./cmd/server lint static ./...
+  && go run ./cmd/lint ./...
 ```
 
 Expected: 全绿。此时 T2 引入的红灯已由 T8 转绿，后续提交不再需要 `--no-verify`。
