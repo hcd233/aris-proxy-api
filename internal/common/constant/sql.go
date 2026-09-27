@@ -118,10 +118,12 @@ var (
 	UserRepoFieldsBasic = []string{FieldID, FieldName}
 	UserRepoFieldsAuth  = []string{FieldID, FieldName, FieldPermission}
 
-	SessionRepoFieldsList       = []string{FieldID, FieldCreatedAt, FieldUpdatedAt, FieldMessageIDs, FieldToolIDs}
-	SessionRepoFieldsDetail     = []string{FieldID, FieldAPIKeyName, FieldCreatedAt, FieldUpdatedAt, FieldMessageIDs, FieldToolIDs, FieldMetadata, FieldScore, FieldScoredAt}
+	SessionRepoFieldsList = []string{FieldID, FieldCreatedAt, FieldUpdatedAt, FieldMessageIDs, FieldToolIDs}
+	// SessionRepoFieldsDetail / ReadDetail 含 FieldAPIKeyID：归属判定读该列，
+	// 漏列会读出 0 并把合法访问误判为越权（名称列仅用于展示）。
+	SessionRepoFieldsDetail     = []string{FieldID, FieldAPIKeyName, FieldAPIKeyID, FieldCreatedAt, FieldUpdatedAt, FieldMessageIDs, FieldToolIDs, FieldMetadata, FieldScore, FieldScoredAt}
 	SessionRepoFieldsReadList   = []string{FieldID, FieldCreatedAt, FieldUpdatedAt, FieldScore}
-	SessionRepoFieldsReadDetail = []string{FieldID, FieldAPIKeyName, FieldCreatedAt, FieldUpdatedAt, FieldMessageIDs, FieldToolIDs, FieldMetadata, FieldScore, FieldScoredAt}
+	SessionRepoFieldsReadDetail = []string{FieldID, FieldAPIKeyName, FieldAPIKeyID, FieldCreatedAt, FieldUpdatedAt, FieldMessageIDs, FieldToolIDs, FieldMetadata, FieldScore, FieldScoredAt}
 	SessionRepoFieldsDedup      = []string{FieldID, FieldMessageIDs, FieldToolIDs}
 	SessionRepoFieldsSummarize  = []string{FieldID, FieldMessageIDs}
 

@@ -14,8 +14,14 @@ type Session struct {
 	ID uint `json:"id" gorm:"column:id;primary_key;auto_increment;comment:会话ID"`
 	// CreatedAt 重声明以为 sessions 单表挂索引（直接改 BaseModel 会波及全部继承表），
 	// 覆盖终态清理 24h 窗口扫描与会话列表默认排序
-	CreatedAt  time.Time         `json:"created_at" gorm:"column:created_at;index:idx_sessions_created_at;comment:创建时间"`
-	APIKeyName string            `json:"api_key_name" gorm:"column:api_key_name;not null;default:'';comment:API密钥名称"`
+	CreatedAt  time.Time `json:"created_at" gorm:"column:created_at;index:idx_sessions_created_at;comment:创建时间"`
+	APIKeyName string    `json:"api_key_name" gorm:"column:api_key_name;not null;default:'';comment:API密钥名称"`
+	// APIKeyID 归属 API Key ID，权限判定的唯一权威依据。
+	// 0 表示归属未知（2026-07 前后的存量会话），自增主键从 1 起故天然不匹配
+	// 任何真实 Key，此类会话仅 admin 可见。
+	// api_key_name 同时保留，但只用于展示与审计可读性，不参与鉴权——
+	// 该名称在 (user_id, name) 维度唯一、可跨用户重复，按名称判定会越权。
+	APIKeyID   uint              `json:"api_key_id" gorm:"column:api_key_id;not null;default:0;index:idx_sessions_api_key_id;comment:归属 API Key ID"`
 	MessageIDs []uint            `json:"message_ids" gorm:"column:message_ids;not null;comment:消息ID列表;serializer:json"`
 	ToolIDs    []uint            `json:"tool_ids" gorm:"column:tool_ids;not null;comment:工具ID列表;serializer:json"`
 	Questions  []uint            `json:"questions" gorm:"column:questions;comment:用户提问消息ID列表(仅role=user且tool_call_id为空);serializer:json"`
