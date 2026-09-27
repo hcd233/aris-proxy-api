@@ -20,6 +20,7 @@ import { PermissionGuard } from "@/components/permission-guard";
 import { ListEmptyState } from "@/components/list-empty-state";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { useDeleteConfirm } from "@/hooks/use-delete-confirm";
+import { useRequestSeq } from "@/hooks/use-request-seq";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,11 +56,15 @@ export default function SharesPage() {
   // stays pure (react-hooks/purity forbids `Date.now()` inside render).
   const [refreshedAt, setRefreshedAt] = useState<number>(0);
 
+  // 竞态守卫：翻页连点时慢响应不得覆盖新响应
+  const requestSeq = useRequestSeq();
   const fetchShares = useCallback(
     async (page: number, pageSize: number) => {
+      const seq = requestSeq.begin();
       setLoading(true);
       try {
         const rsp = await api.listShares(page, pageSize);
+        if (!requestSeq.isCurrent(seq)) return;
         if (rsp.error) {
           showErrorToast(rsp.error, { title: t("common.error") });
           setShares([]);
@@ -73,12 +78,13 @@ export default function SharesPage() {
         }
         setRefreshedAt(Date.now());
       } catch (err) {
+        if (!requestSeq.isCurrent(seq)) return;
         showErrorToast(err, { title: t("common.error") });
       } finally {
-        setLoading(false);
+        if (requestSeq.isCurrent(seq)) setLoading(false);
       }
     },
-    [setPersistedPage, setPersistedPageSize, t],
+    [setPersistedPage, setPersistedPageSize, t, requestSeq],
   );
 
   /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- Data fetching requires setting state from async effects on mount */

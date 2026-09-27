@@ -24,13 +24,21 @@ import {
 import { DeleteButton } from "@/components/delete-button";
 import { Switch } from "@/components/ui/switch";
 import { ProviderIcon } from "@/components/provider-icon";
-import { Plus, Pencil, ChevronDown, ChevronRight, Info, Copy } from "lucide-react";
+import { Plus, Pencil, ChevronDown, ChevronRight, Info, Copy, Lock } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { copyTextToClipboard } from "@/lib/clipboard";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { UpstreamGroupItem, UpstreamModelItem, UpstreamEndpointItem } from "@/lib/types";
-import { CapabilityBadges, OwnerCell, SpecBadges } from "./shared";
+import {
+  CapabilityBadges,
+  ModelActionsCell,
+  ModelAliasCell,
+  ModelIdCell,
+  OwnerCell,
+  SpecBadges,
+  UpstreamModelCell,
+} from "./shared";
 
 /** 组头的连通详情悬浮层：URL 可完整换行，不占列表列宽 */
 function EndpointDetailPopover({ endpoint }: { endpoint: UpstreamEndpointItem }) {
@@ -89,7 +97,7 @@ function EndpointDetailPopover({ endpoint }: { endpoint: UpstreamEndpointItem })
         <div className="grid grid-cols-1 gap-1.5">
           {field("OpenAI", endpoint.openaiBaseURL)}
           {field("Anthropic", endpoint.anthropicBaseURL)}
-          {field("API Key", endpoint.maskedAPIKey, false)}
+          {field(t("endpoints.api_key"), endpoint.maskedAPIKey, false)}
           {field(
             t("upstream.created_at"),
             endpoint.createdAt ? new Date(endpoint.createdAt).toLocaleDateString() : "",
@@ -217,13 +225,15 @@ export function GroupedView({
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
+                  {/* demo 只读账户写入口统一锁定（DeleteButton 的 locked 模式） */}
                   <Button
                     variant="ghost"
                     size="icon-sm"
+                    disabled={isDemo}
                     onClick={() => onEditEndpoint(ep)}
                     className="text-muted-foreground hover:text-foreground"
                   >
-                    <Pencil className="size-3.5" />
+                    {isDemo ? <Lock className="size-3.5" /> : <Pencil className="size-3.5" />}
                   </Button>
                   <DeleteButton
                     label={t("common.delete")}
@@ -235,9 +245,10 @@ export function GroupedView({
                     size="sm"
                     variant="outline"
                     className="h-7 gap-1 px-2 text-xs"
+                    disabled={isDemo}
                     onClick={() => onAddModel(ep)}
                   >
-                    <Plus className="size-3" />
+                    {isDemo ? <Lock className="size-3" /> : <Plus className="size-3" />}
                     {t("upstream.add_model")}
                   </Button>
                 </div>
@@ -301,7 +312,7 @@ export function GroupedView({
                           <Switch
                             size="sm"
                             checked={m.enabled}
-                            disabled={togglePending}
+                            disabled={togglePending || isDemo}
                             onCheckedChange={() => onToggleEnabled(m)}
                             aria-label={m.enabled ? t("models.enabled") : t("models.disabled")}
                           />
@@ -309,10 +320,15 @@ export function GroupedView({
                             <Button
                               variant="ghost"
                               size="icon-sm"
+                              disabled={isDemo}
                               onClick={() => onEditModel(m, ep)}
                               className="text-muted-foreground hover:text-foreground"
                             >
-                              <Pencil className="size-3.5" />
+                              {isDemo ? (
+                                <Lock className="size-3.5" />
+                              ) : (
+                                <Pencil className="size-3.5" />
+                              )}
                             </Button>
                             <DeleteButton
                               label={t("common.delete")}
@@ -419,11 +435,12 @@ export function GroupedView({
                       <Button
                         variant="ghost"
                         size="icon-sm"
+                        disabled={isDemo}
                         onClick={() => onEditEndpoint(ep)}
                         aria-label={t("common.edit")}
                         className="text-muted-foreground hover:text-foreground"
                       >
-                        <Pencil className="size-3.5" />
+                        {isDemo ? <Lock className="size-3.5" /> : <Pencil className="size-3.5" />}
                       </Button>
                       <DeleteButton
                         label={t("common.delete")}
@@ -435,9 +452,10 @@ export function GroupedView({
                         size="sm"
                         variant="outline"
                         className="h-7 gap-1 px-2 text-xs"
+                        disabled={isDemo}
                         onClick={() => onAddModel(ep)}
                       >
-                        <Plus className="size-3" />
+                        {isDemo ? <Lock className="size-3" /> : <Plus className="size-3" />}
                         {t("upstream.add_model")}
                       </Button>
                     </span>
@@ -457,62 +475,14 @@ export function GroupedView({
                 group.models.map((m) => (
                   <TableRow key={m.id} className="hover:bg-muted/40">
                     {/* 虚线树枝 + 缩进，让归属关系不依赖背景色；停用行只降权内容列，操作列保持可点的视觉 */}
-                    <TableCell
-                      className={cn(
-                        "border-l border-dashed border-border pl-8",
-                        !m.enabled && "opacity-45",
-                      )}
-                    >
-                      <div className="flex min-w-0 items-center gap-1.5">
-                        <ProviderIcon protocol={m.alias} size={14} className="shrink-0" />
-                        <TooltipRoot>
-                          <TooltipTrigger
-                            render={
-                              <span
-                                className={cn(
-                                  "max-w-[16ch] cursor-pointer truncate font-medium underline-offset-2 hover:underline",
-                                  !m.enabled && "line-through",
-                                )}
-                                onClick={() => onCopyAlias(m.alias)}
-                              >
-                                {m.alias}
-                              </span>
-                            }
-                          />
-                          <TooltipContent side="top" align="start" className="max-w-xs break-all">
-                            {`${t("models.click_to_copy")}: ${m.alias}`}
-                          </TooltipContent>
-                        </TooltipRoot>
-                      </div>
-                    </TableCell>
-                    <TableCell className={cn("font-mono text-xs", !m.enabled && "opacity-45")}>
-                      {m.modelId && m.modelId !== m.alias ? (
-                        <TooltipRoot>
-                          <TooltipTrigger
-                            render={
-                              <span className="block max-w-[20ch] truncate">{m.modelId}</span>
-                            }
-                          />
-                          <TooltipContent side="top" align="start" className="max-w-xs break-all">
-                            {m.modelId}
-                          </TooltipContent>
-                        </TooltipRoot>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell className={cn("font-mono text-xs", !m.enabled && "opacity-45")}>
-                      <TooltipRoot>
-                        <TooltipTrigger
-                          render={
-                            <span className="block max-w-[20ch] truncate">{m.upstreamModel}</span>
-                          }
-                        />
-                        <TooltipContent side="top" align="start" className="max-w-xs break-all">
-                          {m.upstreamModel}
-                        </TooltipContent>
-                      </TooltipRoot>
-                    </TableCell>
+                    <ModelAliasCell
+                      alias={m.alias}
+                      enabled={m.enabled}
+                      onCopyAlias={onCopyAlias}
+                      className="border-l border-dashed border-border pl-8"
+                    />
+                    <ModelIdCell modelId={m.modelId} alias={m.alias} enabled={m.enabled} />
+                    <UpstreamModelCell upstreamModel={m.upstreamModel} enabled={m.enabled} />
                     <TableCell className={cn(!m.enabled && "opacity-45")}>
                       <SpecBadges
                         contextLength={m.contextLength}
@@ -526,7 +496,7 @@ export function GroupedView({
                       <Switch
                         size="sm"
                         checked={m.enabled}
-                        disabled={togglePending}
+                        disabled={togglePending || isDemo}
                         onCheckedChange={() => onToggleEnabled(m)}
                         aria-label={m.enabled ? t("models.enabled") : t("models.disabled")}
                       />
@@ -534,25 +504,12 @@ export function GroupedView({
                     <TableCell className="text-muted-foreground">
                       {new Date(m.createdAt).toLocaleDateString()}
                     </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          onClick={() => onEditModel(m, ep)}
-                          aria-label={t("common.edit")}
-                          className="text-muted-foreground hover:text-foreground"
-                        >
-                          <Pencil className="size-3.5" />
-                        </Button>
-                        <DeleteButton
-                          label={t("common.delete")}
-                          locked={isDemo}
-                          disabled={deletingModelID === m.id}
-                          onClick={() => onDeleteModel(m)}
-                        />
-                      </div>
-                    </TableCell>
+                    <ModelActionsCell
+                      isDemo={isDemo}
+                      deleting={deletingModelID === m.id}
+                      onEdit={() => onEditModel(m, ep)}
+                      onDelete={() => onDeleteModel(m)}
+                    />
                   </TableRow>
                 ))}
             </Fragment>

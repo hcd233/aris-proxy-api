@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { useOptimisticUpdate } from "@/hooks/use-optimistic-update";
+import { useRequestSeq } from "@/hooks/use-request-seq";
 import cronstrue from "cronstrue";
 import "cronstrue/locales/zh_CN";
 import { api } from "@/lib/api-client";
@@ -82,11 +83,15 @@ export default function CronPage() {
   });
   const { queryParams } = filterBar;
 
+  // 竞态守卫：关键词/筛选连点时慢响应不得覆盖新响应
+  const requestSeq = useRequestSeq();
   const fetchJobs = useCallback(
     async (page: number, pageSize: number, query: string) => {
+      const seq = requestSeq.begin();
       setLoading(true);
       try {
         const rsp = await api.listCronJobs({ page, pageSize, query: query || undefined });
+        if (!requestSeq.isCurrent(seq)) return;
         if (rsp.error) {
           showErrorToast(rsp.error, { title: t("cron.load_error") });
           return;
@@ -98,12 +103,13 @@ export default function CronPage() {
           setPersistedPageSize(rsp.pageInfo.pageSize);
         }
       } catch (err) {
+        if (!requestSeq.isCurrent(seq)) return;
         showErrorToast(err, { title: t("cron.load_error") });
       } finally {
-        setLoading(false);
+        if (requestSeq.isCurrent(seq)) setLoading(false);
       }
     },
-    [setPersistedPage, setPersistedPageSize, t],
+    [setPersistedPage, setPersistedPageSize, t, requestSeq],
   );
 
   /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- 关键词 token 变化回到第 1 页查询；挂载时以持久化关键词发起首次查询 */

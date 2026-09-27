@@ -38,6 +38,10 @@ func (a *traceAuthorizer) Find(
 	if isAdmin {
 		return item, nil
 	}
+	// 非 admin 且 userID=0（认证缺失）：显式短路拒绝，禁止退化为全量归属
+	if userID == 0 {
+		return nil, ierr.New(ierr.ErrDataNotExists, constant.TraceNotFoundMessage)
+	}
 	owners, err := a.apiKeyRepo.LookupOwnerNamesByUserID(ctx, userID)
 	if err != nil {
 		return nil, err

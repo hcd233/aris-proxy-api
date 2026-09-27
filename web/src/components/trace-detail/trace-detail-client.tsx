@@ -18,6 +18,7 @@ import {
   TooltipContent,
 } from "@/components/ui/tooltip";
 import { PaginationBar } from "@/components/pagination-bar";
+import { useRequestSeq } from "@/hooks/use-request-seq";
 import { DeleteIconButton } from "@/components/delete-button";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { toast } from "sonner";
@@ -288,20 +289,25 @@ export default function TraceDetailClient({ traceId }: { traceId: number }) {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  // 竞态守卫：事件翻页连点时慢响应不得覆盖新响应
+  const requestSeq = useRequestSeq();
   const fetchEvents = useCallback(
     async (id: number, page: number, pageSize: number) => {
+      const seq = requestSeq.begin();
       setEventsLoading(true);
       try {
         const rsp = await api.listTraceEvents(id, page, pageSize);
+        if (!requestSeq.isCurrent(seq)) return;
         setEvents(rsp.events ?? []);
         if (rsp.pageInfo) setEventPageInfo(rsp.pageInfo);
       } catch {
+        if (!requestSeq.isCurrent(seq)) return;
         toast.error(t("trace.load_error"));
       } finally {
-        setEventsLoading(false);
+        if (requestSeq.isCurrent(seq)) setEventsLoading(false);
       }
     },
-    [t],
+    [t, requestSeq],
   );
 
   const fetchDetail = useCallback(async () => {

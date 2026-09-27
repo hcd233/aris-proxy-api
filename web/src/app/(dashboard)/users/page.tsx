@@ -31,6 +31,7 @@ import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { toast } from "sonner";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { useOptimisticUpdate } from "@/hooks/use-optimistic-update";
+import { useRequestSeq } from "@/hooks/use-request-seq";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useI18n } from "@/lib/i18n";
 import { FilterBar } from "@/components/filter-bar/filter-bar";
@@ -133,14 +134,18 @@ export default function UsersPage() {
   });
   const { queryParams } = filterBar;
 
+  // 竞态守卫：关键词/筛选连点时慢响应不得覆盖新响应
+  const requestSeq = useRequestSeq();
   const fetchUsers = useCallback(
     async (page: number, pageSize: number, qp: FilterBarQueryParams) => {
+      const seq = requestSeq.begin();
       setLoading(true);
       try {
         const rsp = await api.listUsers(page, pageSize, {
           query: qp.freeText || undefined,
           permission: qp.params.permission,
         });
+        if (!requestSeq.isCurrent(seq)) return;
         setItems(rsp.items ?? []);
         if (rsp.pageInfo) {
           setPageInfo(rsp.pageInfo);
@@ -148,12 +153,13 @@ export default function UsersPage() {
           setPersistedPageSize(rsp.pageInfo.pageSize);
         }
       } catch (err) {
+        if (!requestSeq.isCurrent(seq)) return;
         showErrorToast(err, { title: t("users.load_error") });
       } finally {
-        setLoading(false);
+        if (requestSeq.isCurrent(seq)) setLoading(false);
       }
     },
-    [setPersistedPage, setPersistedPageSize, t],
+    [setPersistedPage, setPersistedPageSize, t, requestSeq],
   );
 
   /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- token 变化回到第 1 页查询；挂载时以持久化筛选发起首次查询 */

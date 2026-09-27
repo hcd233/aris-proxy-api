@@ -8,9 +8,9 @@ import (
 
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
 	upstreamport "github.com/hcd233/aris-proxy-api/internal/application/upstream/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	commonmodel "github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
@@ -49,17 +49,15 @@ func (h *upstreamHandler) HandleListUpstream(ctx context.Context, req *dto.ListU
 	rsp := &dto.ListUpstreamRsp{}
 
 	perm := util.CtxValuePermission(ctx)
-	var scope *uint
-	if perm != enum.PermissionAdmin {
-		userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
-		if userID == 0 {
-			err := ierr.New(ierr.ErrUnauthorized, "user id is required for non-admin scope")
-			return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrUnauthorized.BizError())
-		}
-		scope = &userID
+	scope, err := scopeFor(ctx, perm)
+	if err != nil {
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrUnauthorized.BizError())
 	}
 	groups, modelTotal, pageInfo, err := h.list.Handle(ctx, upstreamport.ListUpstreamQuery{
-		CommonParam: req.CommonParam,
+		CommonParam: commonmodel.CommonParam{
+			PageParam:  req.PageParam,
+			QueryParam: req.QueryParam,
+		},
 		IsDemo:      perm == enum.PermissionDemo,
 		ScopeUserID: scope,
 		Username:    req.Username,

@@ -27,13 +27,18 @@ import { useDeleteConfirm } from "@/hooks/use-delete-confirm";
 import { FilterBar } from "@/components/filter-bar/filter-bar";
 import { useFilterBar } from "@/components/filter-bar/use-filter-bar";
 import type { FacetDef } from "@/components/filter-bar/types";
-import { Plus, Layers } from "lucide-react";
+import { Plus, Layers, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useT } from "@/lib/i18n";
+import { useI18n } from "@/lib/i18n";
 import { copyTextToClipboard } from "@/lib/clipboard";
 
-import { emptyEndpointForm, emptyModelForm } from "./shared";
+import {
+  DEFAULT_CONTEXT_LENGTH,
+  DEFAULT_MAX_OUTPUT,
+  emptyEndpointForm,
+  emptyModelForm,
+} from "./shared";
 import type { EndpointForm, ModelForm } from "./shared";
 import { EndpointDialog } from "./endpoint-dialog";
 import { ModelDialog } from "./model-dialog";
@@ -48,7 +53,7 @@ const VALID_PAGE_SIZES = [10, 20, 50];
 const USER_FETCH_LIMIT = 500;
 
 export default function UpstreamPage() {
-  const t = useT();
+  const { t, locale } = useI18n();
   const { isDemo, isAdmin } = useAuth();
   const isMobile = useIsMobile();
   const [groups, setGroups] = useState<UpstreamGroupItem[]>([]);
@@ -96,7 +101,18 @@ export default function UpstreamPage() {
     "grouped",
   );
 
-  // 仅 admin 可按归属用户名过滤（后端对普通用户忽略该参数）
+  // 仅 admin 可按归属用户名过滤（后端对普通用户忽略该参数）。
+  // 选项异步加载（与 ensureUserOptions 同源的 api.listUsers，取用户名）：
+  // FilterBar 只从 options 出候选、无自由输入，空 options 会让该维度完全不可用。
+  const loadUsernameOptions = useCallback(async () => {
+    try {
+      const rsp = await api.listUsers(1, USER_FETCH_LIMIT);
+      return (rsp.items ?? []).map((u) => u.name);
+    } catch {
+      return [];
+    }
+  }, []);
+
   const usernameFacet = useMemo<FacetDef[]>(
     () =>
       isAdmin()
@@ -104,14 +120,15 @@ export default function UpstreamPage() {
             {
               key: "username",
               label: t("endpoints.filter_by_username"),
-              options: [],
+              options: loadUsernameOptions,
               target: "param",
               single: true,
             },
           ]
         : [],
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- isAdmin/t 均为稳定引用，仅需挂载时判定
-    [],
+    // locale 必须在依赖里：t 引用已稳定（见 lib/i18n.tsx），翻译文本刷新只能靠 locale 驱动重算
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [locale, loadUsernameOptions],
   );
 
   // 平铺视图独有：状态 / 能力 / 端点三个筛选维度（后端各自有对应参数）
@@ -146,7 +163,9 @@ export default function UpstreamPage() {
       },
       ...usernameFacet,
     ],
-    [groups, usernameFacet, t],
+    // locale 必须在依赖里：t 引用已稳定（见 lib/i18n.tsx），翻译文本刷新只能靠 locale 驱动重算
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [groups, usernameFacet, locale],
   );
 
   // 两个 filterBar 实例：共有维度（关键词/username）在切换时单向同步，
@@ -168,14 +187,14 @@ export default function UpstreamPage() {
   const groupedQueryParams = groupedFilterBar.queryParams;
 
   // 切换视图：带走共有维度（关键词 + username），各自特有维度留在原实例
-  const handleViewChange = (next: string) => {
+  const handleViewChange = (next: "grouped" | "flat") => {
     const from = view === "grouped" ? groupedFilterBar : flatFilterBar;
     const to = next === "grouped" ? groupedFilterBar : flatFilterBar;
     for (const key of [null, "username"]) {
       const token = from.tokens.find((tk) => (key === null ? tk.key === null : tk.key === key));
       if (token) to.addToken(token);
     }
-    setView(next as "grouped" | "flat");
+    setView(next);
   };
 
   // 平铺视图数据（真分页 + SQL 级排序），仅在平铺视图激活时拉取
@@ -229,6 +248,18 @@ export default function UpstreamPage() {
 
   const refresh = (page: number, pageSize?: number) =>
     fetchUpstream(page, pageSize ?? pageInfo.pageSize, groupedQueryParams.freeText || undefined);
+
+  // 删除末页最后一条后按当前页刷新会取回空页：本页行数为 1 且不在第 1 页时回退一页
+  const pageAfterRemoval = (rowsOnPage: number, page: number) =>
+    rowsOnPage <= 1 && page > 1 ? page - 1 : Math.max(1, page);
+
+  // CRUD 成功后统一刷新两条数据链路（分组 + 平铺）：两视图互为镜像，只刷一侧会让
+  // 另一视图显示旧数据。平铺视图未激活时 flat.reload() 不发请求，无额外开销。
+  const refreshAll = (pages?: { grouped?: number; flat?: number }) => {
+    refresh(pages?.grouped ?? pageInfo.page);
+    flat.refresh(pages?.flat ?? flat.page, flat.pageSize);
+    flat.reload();
+  };
 
   const groupByEndpointID = useMemo(() => {
     const map = new Map<number, UpstreamGroupItem>();
@@ -301,7 +332,7 @@ export default function UpstreamPage() {
         toast.success(t("endpoints.created_success"));
       }
       setEndpointDialogOpen(false);
-      refresh(pageInfo.page);
+      refreshAll();
     } catch (err) {
       showErrorToast(err, { title: t("endpoints.save_error") });
     } finally {
@@ -313,7 +344,8 @@ export default function UpstreamPage() {
     onConfirm: async (ep) => {
       await api.deleteEndpoint(ep.id);
       toast.success(t("endpoints.deleted_success"));
-      refresh(pageInfo.page);
+      // 端点是分组视图的行：删除末页最后一条会把当前页刷成空页，需钳制页码
+      refreshAll({ grouped: pageAfterRemoval(groups.length, pageInfo.page) });
     },
     onError: (err) => showErrorToast(err, { title: t("endpoints.delete_error") }),
   });
@@ -351,8 +383,8 @@ export default function UpstreamPage() {
       alias: model.alias,
       modelId: model.modelId ?? "",
       upstreamModel: model.upstreamModel,
-      contextLength: model.contextLength || 256000,
-      maxOutputTokens: model.maxOutputTokens || 65536,
+      contextLength: model.contextLength || DEFAULT_CONTEXT_LENGTH,
+      maxOutputTokens: model.maxOutputTokens || DEFAULT_MAX_OUTPUT,
       supportText: (model.capabilities ?? ["text"]).includes("text"),
       supportImage: (model.capabilities ?? []).includes("image"),
     });
@@ -410,7 +442,7 @@ export default function UpstreamPage() {
         toast.success(t("models.created_success"));
       }
       setModelDialogOpen(false);
-      refresh(pageInfo.page);
+      refreshAll();
     } catch (err) {
       showErrorToast(err, { title: t("models.save_error") });
     } finally {
@@ -428,7 +460,8 @@ export default function UpstreamPage() {
     onConfirm: async ({ model }) => {
       await api.deleteModel(model.id);
       toast.success(t("models.deleted_success"));
-      refresh(pageInfo.page);
+      // 模型是平铺视图的行：删除末页最后一条会把当前页刷成空页，需钳制页码
+      refreshAll({ flat: pageAfterRemoval(flat.items.length, flat.page) });
     },
     onError: (err) => showErrorToast(err, { title: t("models.delete_error") }),
   });
@@ -477,8 +510,8 @@ export default function UpstreamPage() {
       alias: m.alias,
       modelId: m.modelId ?? "",
       upstreamModel: m.upstreamModel,
-      contextLength: m.contextLength || 256000,
-      maxOutputTokens: m.maxOutputTokens || 65536,
+      contextLength: m.contextLength || DEFAULT_CONTEXT_LENGTH,
+      maxOutputTokens: m.maxOutputTokens || DEFAULT_MAX_OUTPUT,
       supportText: (m.capabilities ?? ["text"]).includes("text"),
       supportImage: (m.capabilities ?? []).includes("image"),
     });
@@ -505,8 +538,9 @@ export default function UpstreamPage() {
             actions={
               <div className="flex gap-2">
                 <TraceInstallPopover />
-                <Button onClick={openCreateEndpoint}>
-                  <Plus className="mr-1 size-4" />
+                {/* demo 只读账户写入口统一锁定（DeleteButton 的 locked 模式） */}
+                <Button onClick={openCreateEndpoint} disabled={isDemo()}>
+                  {isDemo() ? <Lock className="mr-1 size-4" /> : <Plus className="mr-1 size-4" />}
                   {t("upstream.create_endpoint")}
                 </Button>
               </div>

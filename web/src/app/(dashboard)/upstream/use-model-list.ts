@@ -77,11 +77,23 @@ export function useModelList(opts: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, freeText, facetSig, page, pageSize, sortField, sort, t, reloadTick]);
 
+  // 筛选签名：关键词 + facet 生效值，变化即「筛选变了」
+  const filterSig = `${freeText}|${facetSig}`;
+  const prevFilterSigRef = useRef(filterSig);
+
   useEffect(() => {
-    // 与上游列表页同一模式：effect 内同步 setState 会触发级联渲染，此处为刻意的数据加载入口
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    const filterChanged = prevFilterSigRef.current !== filterSig;
+    prevFilterSigRef.current = filterSig;
+    // 筛选维度/关键词变化回到第 1 页（对齐分组链路「关键词变化回第 1 页」）：
+    // 挂载时不算变化（保留持久化页码），翻页走 refresh 不受影响。
+    // 页码需重置时本轮先不查（旧页码大概率空页），下一轮 effect 以第 1 页发起，
+    // 避免多跑一次注定被丢弃的请求。effect 内同步 setState 为刻意的数据加载入口。
+    if (filterChanged && page !== 1) {
+      setPage(1);
+      return;
+    }
     load();
-  }, [load]);
+  }, [load, page, setPage, filterSig]);
 
   const toggleSort = useCallback(
     (field: ModelListSortField) => {

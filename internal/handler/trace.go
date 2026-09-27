@@ -6,7 +6,6 @@ import (
 	"context"
 	_ "embed"
 	"io"
-	"net/url"
 	"text/template"
 
 	"github.com/bytedance/sonic"
@@ -104,17 +103,14 @@ func (h *traceHandler) HandleInstallScript(
 ) (*huma.StreamResponse, error) {
 	return &huma.StreamResponse{Body: func(humaCtx huma.Context) {
 		scheme := humaCtx.Header(constant.HTTPHeaderXForwardedProto)
-		if scheme == "" {
-			scheme = constant.HTTPSchemeHTTP
-		}
-		origin := scheme + "://" + humaCtx.Header(constant.HTTPHeaderHost)
+		host := humaCtx.Header(constant.HTTPHeaderHost)
 
-		parsed, err := url.Parse(origin)
-		// 必须同时满足：URL 可解析、scheme 白名单、host 字符白名单（防 shell 注入）。
-		if err != nil || (parsed.Scheme != constant.HTTPSchemeHTTP && parsed.Scheme != constant.HTTPSchemeHTTPS) || !util.IsSafeInstallHost(parsed.Host) {
+		// scheme 严格白名单 + 原始 Host 头校验 + 只嵌入已验证分量（防 shell 注入）。
+		origin, ok := util.SafeInstallOrigin(scheme, host)
+		if !ok {
 			logger.WithCtx(humaCtx.Context()).Warn(
 				"[TraceHandler] Invalid origin for install script",
-				zap.String("origin", origin),
+				zap.String("origin", scheme+"://"+host),
 			)
 			writeInstallScriptError(humaCtx, constant.ArisClientInstallOriginErrorMessage)
 			return

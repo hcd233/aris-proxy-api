@@ -37,6 +37,12 @@ ruleTester.run("truncate-requires-tooltip", rule, {
     { code: "<span className={`${dynamic} text-sm`}>{x}</span>" },
     // 纯变量类名放行（静态不可见）
     { code: "<span className={dynamic}>{x}</span>" },
+    // cn() 对象键形式 + Trigger 包裹
+    {
+      code: "<TooltipTrigger render={<span className={cn({ truncate: cond })}>{x}</span>} />",
+    },
+    // cn() 对象键无截断类
+    { code: "<span className={cn({ 'text-xs': cond, bold: other })}>{x}</span>" },
   ],
   invalid: [
     // 裸 truncate
@@ -64,6 +70,16 @@ ruleTester.run("truncate-requires-tooltip", rule, {
     // 模板字符串 quasis 命中
     {
       code: "<span className={`prefix truncate`}>{x}</span>",
+      errors: [{ messageId: "needsTooltip" }],
+    },
+    // cn() 对象键形式命中
+    {
+      code: "<span className={cn({ truncate: cond })}>{x}</span>",
+      errors: [{ messageId: "needsTooltip" }],
+    },
+    // cn() 对象简写键命中
+    {
+      code: "<span className={cn({ truncate })}>{x}</span>",
       errors: [{ messageId: "needsTooltip" }],
     },
   ],

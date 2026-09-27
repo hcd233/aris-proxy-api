@@ -2,6 +2,8 @@
 //
 //	nil（admin 全量）→ 必须落库执行（不被误短路）
 //	空（非 nil）切片（名下无 Key）→ 必须短路返回空结果，不得退化为全量查询
+//	（空路径的行为断言在 audit_metrics_scope_test.go，本文件只守卫 nil 一侧，
+//	避免同一空切片用例在两处重复）
 //
 // 背景（2026-08-25 越权修复）：空 key 列表曾被 `if len(apiKeyIDs) > 0` 当作
 // "不过滤"退化为全量查询。本测试同时守卫相反方向：admin 的 nil 路径若被守卫
@@ -28,10 +30,10 @@ import (
 	gormlogger "gorm.io/gorm/logger"
 )
 
-// TestQueryMetrics_NilPathExecutesEmptyPathShortCircuits 双向守卫：
-// admin 的 nil 必须打到 SQL（哪怕在 sqlite 上因 PG 语法报错），
-// 无 Key 用户的空切片必须不打 SQL 干净返回。
-func TestQueryMetrics_NilPathExecutesEmptyPathShortCircuits(t *testing.T) {
+// TestQueryMetrics_NilPathReachesSQL 守卫 admin 的 nil 路径：必须打到 SQL
+// （哪怕在 sqlite 上因 PG 语法报错），不得被范围守卫误短路。
+// 空切片短路一侧见 audit_metrics_scope_test.go。
+func TestQueryMetrics_NilPathReachesSQL(t *testing.T) {
 	t.Parallel()
 
 	db, err := gorm.Open(sqlite.Open("file:"+t.Name()+"?mode=memory&cache=shared"), &gorm.Config{Logger: gormlogger.Default.LogMode(gormlogger.Silent)})
@@ -81,11 +83,6 @@ func TestQueryMetrics_NilPathExecutesEmptyPathShortCircuits(t *testing.T) {
 			t.Errorf("%s(nil): expected to reach SQL execution (PG syntax error on sqlite), got nil error — nil path wrongly short-circuited", name)
 		} else if !strings.Contains(err.Error(), "syntax error") {
 			t.Errorf("%s(nil): unexpected error (want PG syntax error proving SQL reached): %v", name, err)
-		}
-
-		// 空（非 nil）切片：必须短路，不打 SQL、干净返回空
-		if err := query([]uint{}); err != nil {
-			t.Errorf("%s(empty): expected short-circuit with nil error, got: %v", name, err)
 		}
 	}
 }

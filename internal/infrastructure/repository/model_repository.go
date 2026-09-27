@@ -327,15 +327,29 @@ func replaceHistoricalModelIDs(tx *gorm.DB, userID uint, oldID, newID string, co
 }
 
 // replaceAuditModelIDs 替换归属 user（含已删 key）的审计记录中的旧 model id。
+//
+// 与 message 路径一致按 ModelIDSyncINChunkSize 分块循环更新（2026-09-25 CR P1）：
+// 单条整批 UPDATE 会一口气改写用户全部命中审计行（活跃用户可达百万级），
+// 语句体量与锁范围不可控；分块后每条 UPDATE 只碰 ≤500 行。分块全部发生在
+// 外层传入的同一事务内，原子性/回滚语义与单条整批时完全一致。
 func replaceAuditModelIDs(tx *gorm.DB, userID uint, oldID, newID string, counts *llmproxy.ModelIDSyncCounts) error {
-	res := tx.Model(&dbmodel.ModelCallAudit{}).
+	var auditIDs []uint
+	if err := tx.Model(&dbmodel.ModelCallAudit{}).
 		Where(constant.WhereModelIDEquals+" AND "+constant.WhereAPIKeyIDIn, oldID,
 			tx.Model(&dbmodel.ProxyAPIKey{}).Select(constant.FieldID).Where(constant.WhereUserIDEquals, userID)).
-		Update(constant.FieldModelID, newID)
-	if res.Error != nil {
-		return ierr.Wrap(ierr.ErrDBUpdate, res.Error, "replace audit model id")
+		Pluck(constant.FieldID, &auditIDs).Error; err != nil {
+		return ierr.Wrap(ierr.ErrDBQuery, err, "pluck audit ids")
 	}
-	counts.AuditCount = res.RowsAffected
+	for _, chunk := range lo.Chunk(auditIDs, constant.ModelIDSyncINChunkSize) {
+		res := tx.Model(&dbmodel.ModelCallAudit{}).
+			Where(constant.WhereModelIDEquals, oldID).
+			Where(constant.DBConditionWhereIDIn, chunk).
+			Update(constant.FieldModelID, newID)
+		if res.Error != nil {
+			return ierr.Wrap(ierr.ErrDBUpdate, res.Error, "replace audit model id")
+		}
+		counts.AuditCount += res.RowsAffected
+	}
 	return nil
 }
 

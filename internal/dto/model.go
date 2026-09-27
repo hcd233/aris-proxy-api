@@ -47,6 +47,7 @@ type UpdateModelReqBody struct {
 //
 // 三项计数为历史同步（syncHistory）的各表影响行数；未同步时全 0。
 type ModelUpdateRsp struct {
+	CommonRsp
 	AuditCount   int64 `json:"auditCount" doc:"审计记录替换行数"`
 	SessionCount int64 `json:"sessionCount" doc:"会话替换行数"`
 	MessageCount int64 `json:"messageCount" doc:"消息替换行数"`

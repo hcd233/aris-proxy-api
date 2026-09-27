@@ -112,6 +112,7 @@ func (h *endpointHandler) HandleDeleteEndpoint(ctx context.Context, req *dto.Del
 }
 
 // scopeFor 多租户隔离 scope 计算：admin 返回 nil（不过滤），其余用户限定自身。
+// handler 层共享（endpoint / model / upstream 统一使用本实现）。
 //
 // 非 admin 且 ctx 缺 userID（==0，认证中间件异常）时返回错误——
 // 0 若被当作"全量视角"哨兵会让请求静默退化为全平台可见。

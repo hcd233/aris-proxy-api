@@ -73,7 +73,8 @@ func JwtMiddleware(db *gorm.DB, cache *redis.Client, accessTokenSvc jwt.TokenSig
 
 		name, permission, err := resolveJWTUser(ctx.Context(), db, cache, userID)
 		if err != nil {
-			lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ErrDBQuery.BizError().Localize(i18n.FromCtx(ctx.Context()))))
+			// 保留业务错误码：userID 缺失/用户不存在均为 unauthorized，仅未知 DB 错误兜底 ErrDBQuery
+			lo.Must0(apiutil.WriteErrorResponse(ctx.BodyWriter(), ierr.ToBizError(err, ierr.ErrDBQuery.BizError()).Localize(i18n.FromCtx(ctx.Context()))))
 			return
 		}
 
@@ -87,6 +88,12 @@ func JwtMiddleware(db *gorm.DB, cache *redis.Client, accessTokenSvc jwt.TokenSig
 func resolveJWTUser(ctx context.Context, db *gorm.DB, cache *redis.Client, userID uint) (string, enum.Permission, error) {
 	var name string
 	var permission enum.Permission
+
+	// fail-closed：userID=0（JWT 解码出零值/缺失身份）不得进入查询——GORM struct
+	// 零值条件下 userDAO.Get 会忽略 ID 过滤命中主键最小的 user#1 并继承其权限。
+	if userID == 0 {
+		return "", "", ierr.New(ierr.ErrUnauthorized, "missing authenticated user id")
+	}
 
 	cacheKey := jwtUserCacheKey(userID)
 	if cached := loadJWTUserCache(ctx, cache, cacheKey); cached != nil {

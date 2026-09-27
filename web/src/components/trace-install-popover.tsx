@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import hljs from "highlight.js/lib/core";
 import bash from "highlight.js/lib/languages/bash";
 import { Check, Copy, Radar } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -40,11 +41,16 @@ export default function TraceInstallPopover() {
     [previewCommand],
   );
 
+  // 复制结果必须按返回值分支：失败不得展示已复制态（与其它 copyTextToClipboard 调用点一致）
   const handleCopy = useCallback(async () => {
-    await copyTextToClipboard(generateInstallCommand(host));
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }, [host]);
+    const ok = await copyTextToClipboard(generateInstallCommand(host));
+    if (ok) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } else {
+      toast.error(t("common.copy_failed"));
+    }
+  }, [host, t]);
 
   return (
     <Popover>

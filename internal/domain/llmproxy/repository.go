@@ -111,7 +111,8 @@ type EndpointProjection struct {
 
 // EndpointReadRepository CQRS 读模型仓储接口
 //
-// userID 语义：网关路径必传真实用户 ID；0 不过滤（仅限 admin 内部用途）。
+// userID 语义：网关路径必传真实用户 ID；0（认证缺失）防御性返回空结果，
+// 绝不退化为全平台可见（与实现侧 ListAliases 等方法的 fail-closed 行为一致）。
 type EndpointReadRepository interface {
 	ListAliases(ctx context.Context, userID uint) ([]*ModelAliasProjection, error)
 	ListEnabledModelDetails(ctx context.Context, userID uint) ([]*ModelDetailProjection, error)

@@ -10,10 +10,16 @@ import (
 
 // ListUpstreamReq 列出 Upstream 分组请求
 //
+// 只嵌 PageParam/QueryParam，不复用 model.CommonParam：其 SortParam（sort/sortField）
+// 在本接口无消费方（分组固定按 endpoint id 升序），前端（web/src/lib/api-client.ts
+// listUpstream）也只传 page/pageSize/query/username——排序参数被静默忽略，
+// 按契约删除而非假装支持（2026-09-25 CR P2）。
+//
 //	@author centonhuang
-//	@update 2026-08-27 10:00:00
+//	@update 2026-09-26 00:00:00
 type ListUpstreamReq struct {
-	model.CommonParam
+	model.PageParam
+	model.QueryParam
 	Username string `query:"username,omitempty" doc:"按归属用户名过滤(仅管理员生效)"`
 }
 

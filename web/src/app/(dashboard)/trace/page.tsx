@@ -33,6 +33,7 @@ import { PageHeader } from "@/components/page-header";
 import { ListEmptyState } from "@/components/list-empty-state";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { useDeleteConfirm } from "@/hooks/use-delete-confirm";
+import { useRequestSeq } from "@/hooks/use-request-seq";
 import { formatDateTime } from "@/lib/utils";
 import { PermissionGuard } from "@/components/permission-guard";
 import { FilterBar } from "@/components/filter-bar/filter-bar";
@@ -66,12 +67,16 @@ export default function TracePage() {
   });
   const { queryParams } = filterBar;
 
+  // 竞态守卫：关键词/翻页连点时慢响应不得覆盖新响应
+  const requestSeq = useRequestSeq();
   const fetchTraces = useCallback(
     async (page: number, pageSize: number, kw: string, silent?: boolean) => {
+      const seq = requestSeq.begin();
       if (!silent) setLoading(true);
       try {
         const safeSize = pageSize > 0 ? pageSize : 20;
         const rsp = await api.listTraces(page, safeSize, kw || undefined);
+        if (!requestSeq.isCurrent(seq)) return;
         setTraces(rsp.traces ?? []);
         if (rsp.pageInfo) {
           setPageInfo(rsp.pageInfo);
@@ -79,12 +84,13 @@ export default function TracePage() {
           setPersistedPageSize(rsp.pageInfo.pageSize);
         }
       } catch (err) {
+        if (!requestSeq.isCurrent(seq)) return;
         showErrorToast(err, { title: t("trace.load_error") });
       } finally {
-        setLoading(false);
+        if (requestSeq.isCurrent(seq)) setLoading(false);
       }
     },
-    [setPersistedPage, setPersistedPageSize, t],
+    [setPersistedPage, setPersistedPageSize, t, requestSeq],
   );
 
   /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- 关键词 token 变化回到第 1 页查询；挂载时以持久化关键词发起首次查询 */

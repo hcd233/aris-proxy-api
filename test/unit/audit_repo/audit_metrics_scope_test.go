@@ -50,16 +50,30 @@ func TestQueryMetrics_EmptyAPIKeyIDsShortCircuitsToEmpty(t *testing.T) {
 	start, end := now.Add(-24*time.Hour), now.Add(24*time.Hour)
 	empty := []uint{}
 
-	if pts, err := repo.QueryModelTrend(ctx, empty, start, end, enum.GranularityHour); err != nil || len(pts) != 0 {
-		t.Errorf("QueryModelTrend(empty) = (%d pts, %v); want (0, nil)", len(pts), err)
+	queries := []struct {
+		name  string
+		query func(ids []uint) (int, error)
+	}{
+		{"QueryModelTrend", func(ids []uint) (int, error) {
+			pts, err := repo.QueryModelTrend(ctx, ids, start, end, enum.GranularityHour)
+			return len(pts), err
+		}},
+		{"QueryRequestRate", func(ids []uint) (int, error) {
+			pts, err := repo.QueryRequestRate(ctx, ids, start, end, enum.GranularityHour)
+			return len(pts), err
+		}},
+		{"QueryTokenThroughput", func(ids []uint) (int, error) {
+			pts, err := repo.QueryTokenThroughput(ctx, ids, start, end, enum.GranularityHour)
+			return len(pts), err
+		}},
+		{"QueryFirstTokenLatency", func(ids []uint) (int, error) {
+			pts, err := repo.QueryFirstTokenLatency(ctx, ids, start, end, enum.GranularityHour)
+			return len(pts), err
+		}},
 	}
-	if pts, err := repo.QueryRequestRate(ctx, empty, start, end, enum.GranularityHour); err != nil || len(pts) != 0 {
-		t.Errorf("QueryRequestRate(empty) = (%d pts, %v); want (0, nil)", len(pts), err)
-	}
-	if pts, err := repo.QueryTokenThroughput(ctx, empty, start, end, enum.GranularityHour); err != nil || len(pts) != 0 {
-		t.Errorf("QueryTokenThroughput(empty) = (%d pts, %v); want (0, nil)", len(pts), err)
-	}
-	if pts, err := repo.QueryFirstTokenLatency(ctx, empty, start, end, enum.GranularityHour); err != nil || len(pts) != 0 {
-		t.Errorf("QueryFirstTokenLatency(empty) = (%d pts, %v); want (0, nil)", len(pts), err)
+	for _, q := range queries {
+		if n, err := q.query(empty); err != nil || n != 0 {
+			t.Errorf("%s(empty) = (%d pts, %v); want (0, nil)", q.name, n, err)
+		}
 	}
 }

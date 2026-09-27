@@ -17,6 +17,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall"
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/samber/lo"
 )
 
 // ─── fake repository ─────────────────────────────────────
@@ -780,9 +781,9 @@ func TestListAuditOption_UserScopeRestricted(t *testing.T) {
 	}
 	h := auditquery.NewListAuditOptionHandler(repo, lookup)
 
-	items, err := h.Handle(context.Background(), auditquery.ListAuditOptionQuery{
+	items, err := h.Handle(t.Context(), auditquery.ListAuditOptionQuery{
 		Field:  constant.AuditFilterFieldUser,
-		UserID: 42,
+		UserID: lo.ToPtr(uint(42)),
 	})
 	if err != nil {
 		t.Fatalf("unexpected err: %v", err)
@@ -811,9 +812,9 @@ func TestListAuditOption_UserWithoutKeysReturnsEmpty(t *testing.T) {
 	}
 	h := auditquery.NewListAuditOptionHandler(repo, lookup)
 
-	items, err := h.Handle(context.Background(), auditquery.ListAuditOptionQuery{
+	items, err := h.Handle(t.Context(), auditquery.ListAuditOptionQuery{
 		Field:  constant.AuditFilterFieldModel,
-		UserID: 42,
+		UserID: lo.ToPtr(uint(42)),
 	})
 	if err != nil {
 		t.Fatalf("unexpected err: %v", err)
@@ -826,7 +827,7 @@ func TestListAuditOption_UserWithoutKeysReturnsEmpty(t *testing.T) {
 	}
 }
 
-// TestListAuditOption_AdminKeepsFullScope admin/demo 视角（UserID=0）不触发
+// TestListAuditOption_AdminKeepsFullScope admin/demo 视角（UserID=nil）不触发
 // lookup，key 范围为 nil（全量）。
 func TestListAuditOption_AdminKeepsFullScope(t *testing.T) {
 	t.Parallel()
@@ -835,7 +836,7 @@ func TestListAuditOption_AdminKeepsFullScope(t *testing.T) {
 	lookup := &fakeAPIKeyIDLookup{}
 	h := auditquery.NewListAuditOptionHandler(repo, lookup)
 
-	if _, err := h.Handle(context.Background(), auditquery.ListAuditOptionQuery{
+	if _, err := h.Handle(t.Context(), auditquery.ListAuditOptionQuery{
 		Field: constant.AuditFilterFieldModel,
 	}); err != nil {
 		t.Fatalf("unexpected err: %v", err)
@@ -845,5 +846,32 @@ func TestListAuditOption_AdminKeepsFullScope(t *testing.T) {
 	}
 	if repo.lastAPIKeyIDs != nil {
 		t.Errorf("lastAPIKeyIDs = %v, want nil (full scope)", repo.lastAPIKeyIDs)
+	}
+}
+
+// TestListAuditOption_ZeroUserReturnsEmpty user 视角 userID=0（认证缺失）必须
+// 显式短路返回空选项，不得退化为 admin 全量视角，也不得触达 lookup/仓储。
+func TestListAuditOption_ZeroUserReturnsEmpty(t *testing.T) {
+	t.Parallel()
+
+	repo := &fakeAuditRepo{}
+	lookup := &fakeAPIKeyIDLookup{}
+	h := auditquery.NewListAuditOptionHandler(repo, lookup)
+
+	items, err := h.Handle(t.Context(), auditquery.ListAuditOptionQuery{
+		Field:  constant.AuditFilterFieldModel,
+		UserID: lo.ToPtr(uint(0)),
+	})
+	if err != nil {
+		t.Fatalf("unexpected err: %v", err)
+	}
+	if len(items) != 0 {
+		t.Errorf("items = %v, want empty for userID=0", items)
+	}
+	if lookup.calls != 0 {
+		t.Errorf("lookup calls = %d, want 0 (short-circuit before lookup)", lookup.calls)
+	}
+	if repo.lastAPIKeyIDs != nil {
+		t.Errorf("lastAPIKeyIDs = %v, want nil (must not fall back to full scope)", repo.lastAPIKeyIDs)
 	}
 }
