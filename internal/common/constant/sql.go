@@ -148,7 +148,12 @@ var (
 	ModelRepoFieldsAlias = []string{FieldAlias}
 
 	ProxyAPIKeyRepoFieldsFull = []string{FieldID, FieldUserID, FieldName, FieldKey, FieldCreatedAt}
-	ProxyAPIKeyRepoFieldsAuth = []string{FieldID, FieldUserID}
+
+	// ProxyAPIKeyRepoFieldsAuth 鉴权路径投影。
+	// FieldName 必须在列表内：APIKeyMiddleware 依赖 apiKey.Name 注入
+	// CtxKeyAPIKeyName，缺列会让 sessions.api_key_name 静默写成空串
+	// （2026-07 起 2623+ 条会话因此对所有普通用户不可见）。
+	ProxyAPIKeyRepoFieldsAuth = []string{FieldID, FieldUserID, FieldName}
 
 	AuditRepoFieldIDQualified        = "model_call_audits.id"
 	AuditRepoFieldCreatedAtQualified = "model_call_audits.created_at"
