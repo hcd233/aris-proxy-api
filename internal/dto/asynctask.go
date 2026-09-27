@@ -16,8 +16,10 @@ import (
 //	@author centonhuang
 //	@update 2026-04-09 10:00:00
 type MessageStoreTask struct {
-	Ctx          context.Context
-	APIKeyName   string
+	Ctx        context.Context
+	APIKeyName string
+	// APIKeyID 归属 API Key ID（鉴权唯一依据；名称仅用于展示）
+	APIKeyID     uint
 	ModelID      string
 	Messages     []*vo.UnifiedMessage // 统一消息格式列表
 	Tools        []*vo.UnifiedTool    // 统一工具格式列表

@@ -92,6 +92,7 @@ func (pm *PoolManager) runMessageStoreTask(task *dto.MessageStoreTask) {
 
 		session := &dbmodel.Session{
 			APIKeyName: task.APIKeyName,
+			APIKeyID:   task.APIKeyID,
 			MessageIDs: messageIDs,
 			Questions:  questions,
 			ModelIDs:   modelIDs,
