@@ -193,6 +193,14 @@ sqlite 内存库连续执行两次，结果一致；空归属行与歧义名行�
 
 `ownerIDs = nil`（admin）→ 不加过滤；`ownerIDs = []`（无 key 用户）→ 恒假空结果；`api_key_id = 0` 的行在任何非 nil 场景下均不可见。
 
+## 实施期补充（spec 原文遗漏或偏差）
+
+1. **trace 父子关联的跨租户校验也按名称**：`internal/application/trace/command/report_trace_event.go` 的 `resolveParentTraceID` 用 `apiKeyName` 比对，同名 Key 会让子 trace 挂到他人父 trace 下。已一并改为按 ID 比对，并补 `TestReportTraceEvent_SubagentSameKeyNameCrossTenantNotLinked`。
+2. **session 元数据缓存需要版本化**：`sessionport.SessionMetaCacheRecord` 新增 `apiKeyId` 后，线上旧缓存反序列化出 0，会把所有会话判成无权访问，且缓存命中路径绕过 DB、不会自愈。已把 `SessionMetaKeyTemplate` 从 `session:meta:%d` bump 为 `session:meta:v2:%d`。
+3. **回填唯一性必须计入已软删 key**：spec 写的是「该 name 在 proxy_api_keys 中唯一对应一个 key」，但若只统计存活 key，则「A 现存同名 key + B 历史已删同名 key」的名称会被误判为唯一，B 的旧会话被划给 A。实现按全表（含软删）计数，且唯一那条必须存活。软删会话本身不回填。
+4. **测试覆盖边界**：会话列表（`SessionSummarySelect`）与导出预览（`PreviewExport`）的 SQL 含 PG 专属语法，sqlite 无法执行，故 E2E 只覆盖元数据/详情/评分/分享/删除 5 条路径；导出的跨租户同名场景下沉到 `test/unit/session_export_repository`（`ListSessionsForExport` 与 `PreviewExport` 共用 `applyExportFilter`）。列表路径的过滤条件与导出同构，但**没有**真实 SQL 执行覆盖。
+5. **死代码删除**：`SessionRepository.Paginate`（按 `owner string` 过滤）无任何调用方，直接删除而非改签名。
+
 ## 已知遗留（本轮不修，记录备查）
 
 1. **软删 key 导致历史会话不可见**：`BatchGet`（`dao/base.go:122`）带 `DBConditionDeletedAtZero`，故 `LookupIDsByUserID` / `LookupOwnerNamesByUserID` 只返回未软删的 key。用户删除 key 后其名下历史会话立即不可见。这是既有行为，改 ID 归属后原样保留，不扩大也不收窄。

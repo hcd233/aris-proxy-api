@@ -101,7 +101,7 @@ _Avoid_: quality score, rating, feedback score
 _Avoid_: share link, public link, shared session
 
 **APIKeyOwner（会话所有者）**:
-Session 所属的 API Key 名称值对象，来自鉴权中间件注入的 context。用于权限校验：用户只能访问其 API Key 名下的会话。
+Session/Trace 的归属，由 `api_key_id` 唯一确定（值对象 `vo.APIKeyOwnerID`），来自鉴权中间件注入的 `CtxKeyAPIKeyID`。用于权限校验：用户只能访问其名下 API Key ID 对应的会话。`api_key_name`（值对象 `vo.APIKeyOwner`）仍保留，但**仅用于展示与审计可读性，不参与鉴权**——名称只在 `(user_id, name)` 维度唯一、可跨用户重复，按名称判定会导致越权。`api_key_id = 0` 表示归属未知（2026-07 前后的存量会话），仅 admin 可见。
 _Avoid_: owner name, api key identifier
 
 ## Model Call Audit（模型调用审计）
