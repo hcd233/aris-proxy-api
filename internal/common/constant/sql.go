@@ -185,6 +185,27 @@ var (
 	// ponytail: 上限写死 200；需要真分页时再引入组内游标
 	UpstreamGroupModelLimit = 200
 
+	// SessionTableName / TraceTableName 归属回填的目标表名（仅供包内常量拼接，
+	// 不得接受外部输入，避免注入面）。
+	SessionTableName = "sessions"
+	TraceTableName   = "traces"
+
+	// APIKeyIDBackfillSQLTemplate 按 api_key_name 幂等回填 api_key_id（%s 为目标表名，
+	// 出现 4 次）。规则「宁漏勿越」：
+	//   - 仅 api_key_id=0、api_key_name 非空、目标行未软删
+	//   - 名称在 proxy_api_keys **全表（含已软删）** 恰好 1 条：历史上若有他人同名
+	//     key（即使已删），该名称下的会话归属无法确定，必须跳过
+	//   - 该唯一记录必须存活（deleted_at=0）
+	// 第二次执行时目标行 api_key_id 已非 0，不再命中，天然幂等。
+	// 相关子查询写法 sqlite 与 PostgreSQL 均支持。
+	APIKeyIDBackfillSQLTemplate = `UPDATE %s SET api_key_id = (
+		SELECT k.id FROM proxy_api_keys k
+		WHERE k.name = %s.api_key_name AND k.deleted_at = 0
+	)
+	WHERE api_key_id = 0 AND api_key_name <> '' AND deleted_at = 0
+	AND (SELECT COUNT(*) FROM proxy_api_keys k WHERE k.name = %s.api_key_name) = 1
+	AND EXISTS (SELECT 1 FROM proxy_api_keys k WHERE k.name = %s.api_key_name AND k.deleted_at = 0)`
+
 	// WhereUserIDEquals user_id 显式等值条件。
 	// 必须用 "user_id = ?" 而非 Where("user_id", v)：GORM 的 Where("col", v) 在
 	// 无占位符时 v 会被静默丢弃（v=0 时退化为 WHERE user_id，语义完全错误）。
