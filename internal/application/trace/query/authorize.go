@@ -42,11 +42,12 @@ func (a *traceAuthorizer) Find(
 	if userID == 0 {
 		return nil, ierr.New(ierr.ErrDataNotExists, constant.TraceNotFoundMessage)
 	}
-	owners, err := a.apiKeyRepo.LookupOwnerNamesByUserID(ctx, userID)
+	ownerIDs, err := a.apiKeyRepo.LookupIDsByUserID(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
-	if !slices.Contains(owners, item.APIKeyName) {
+	// 归属为 0（存量未知）的 trace 对普通用户一律不可见，不得因零值匹配放行
+	if item.APIKeyID == 0 || !slices.Contains(ownerIDs, item.APIKeyID) {
 		return nil, ierr.New(ierr.ErrDataNotExists, constant.TraceNotFoundMessage)
 	}
 	return item, nil

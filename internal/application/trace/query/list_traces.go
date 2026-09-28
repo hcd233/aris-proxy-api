@@ -24,7 +24,7 @@ func NewListTracesHandler(repo trace.TraceRepository, apiKeyRepo apikeydomain.AP
 }
 
 func (h *listTracesHandler) Handle(ctx context.Context, q port.ListTracesQuery) ([]*port.TraceSummaryView, *model.PageInfo, error) {
-	owners, err := resolveOwners(ctx, h.apiKeyRepo, q.UserID, q.IsAdmin)
+	owners, err := resolveOwnerIDs(ctx, h.apiKeyRepo, q.UserID, q.IsAdmin)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -47,9 +47,10 @@ func (h *listTracesHandler) Handle(ctx context.Context, q port.ListTracesQuery) 
 	}), pageInfo, nil
 }
 
-func resolveOwners(ctx context.Context, repo apikeydomain.APIKeyRepository, userID uint, isAdmin bool) ([]string, error) {
+// resolveOwnerIDs 解析请求方名下的归属 API Key ID 列表；admin 返回 nil（不过滤）。
+func resolveOwnerIDs(ctx context.Context, repo apikeydomain.APIKeyRepository, userID uint, isAdmin bool) ([]uint, error) {
 	if isAdmin {
 		return nil, nil
 	}
-	return repo.LookupOwnerNamesByUserID(ctx, userID)
+	return repo.LookupIDsByUserID(ctx, userID)
 }

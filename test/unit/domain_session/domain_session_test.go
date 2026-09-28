@@ -19,6 +19,7 @@ type sessionCase struct {
 	Name            string            `json:"name"`
 	Description     string            `json:"description"`
 	Owner           string            `json:"owner"`
+	OwnerID         uint              `json:"ownerID"`
 	MessageIDs      []uint            `json:"messageIDs"`
 	ToolIDs         []uint            `json:"toolIDs"`
 	Metadata        map[string]string `json:"metadata"`
@@ -27,6 +28,7 @@ type sessionCase struct {
 	SummaryError    string            `json:"summary_error"`
 	Score           *int              `json:"score"`
 	CheckOwner      string            `json:"check_owner"`
+	CheckOwnerID    uint              `json:"check_owner_id"`
 	ExpectOwned     bool              `json:"expect_owned"`
 	ExpectErrorKind string            `json:"expectErrorKind"`
 }
@@ -55,14 +57,15 @@ func findCase(t *testing.T, cases []sessionCase, name string) sessionCase {
 	return sessionCase{}
 }
 
-// TestCreateSession_ValidOwner 用非空 owner 创建 Session 应成功
+// TestCreateSession_ValidOwner 用非零 owner id 创建 Session 应成功
 func TestCreateSession_ValidOwner(t *testing.T) {
 	t.Parallel()
 	cases := loadCases(t)
 	tc := findCase(t, cases, "create_session_valid_owner")
 
 	s, err := aggregate.CreateSession(
-		vo.APIKeyOwner(tc.Owner),
+		vo.APIKeyOwnerID(tc.OwnerID),
+		tc.Owner,
 		tc.MessageIDs,
 		tc.ToolIDs,
 		tc.Metadata,
@@ -74,19 +77,23 @@ func TestCreateSession_ValidOwner(t *testing.T) {
 	if s == nil {
 		t.Fatal("CreateSession() returned nil")
 	}
-	if s.Owner().String() != tc.Owner {
-		t.Errorf("Owner = %q, want %q", s.Owner().String(), tc.Owner)
+	if s.OwnerID().Uint() != tc.OwnerID {
+		t.Errorf("OwnerID = %d, want %d", s.OwnerID().Uint(), tc.OwnerID)
+	}
+	if s.OwnerName() != tc.Owner {
+		t.Errorf("OwnerName = %q, want %q", s.OwnerName(), tc.Owner)
 	}
 }
 
-// TestCreateSession_EmptyOwner 空 owner 应返回校验错误
+// TestCreateSession_EmptyOwner 归属 ID 为 0 应返回校验错误
 func TestCreateSession_EmptyOwner(t *testing.T) {
 	t.Parallel()
 	cases := loadCases(t)
 	tc := findCase(t, cases, "create_session_empty_owner")
 
 	s, err := aggregate.CreateSession(
-		vo.APIKeyOwner(tc.Owner),
+		vo.APIKeyOwnerID(tc.OwnerID),
+		tc.Owner,
 		tc.MessageIDs,
 		tc.ToolIDs,
 		tc.Metadata,
@@ -114,7 +121,8 @@ func TestRestoreSession(t *testing.T) {
 
 	s := aggregate.RestoreSession(
 		tc.ID,
-		vo.APIKeyOwner(tc.Owner),
+		vo.APIKeyOwnerID(tc.OwnerID),
+		tc.Owner,
 		tc.MessageIDs,
 		tc.ToolIDs,
 		tc.Metadata,
@@ -130,8 +138,11 @@ func TestRestoreSession(t *testing.T) {
 	if s.AggregateID() != tc.ID {
 		t.Errorf("AggregateID = %d, want %d", s.AggregateID(), tc.ID)
 	}
-	if s.Owner().String() != tc.Owner {
-		t.Errorf("Owner = %q, want %q", s.Owner().String(), tc.Owner)
+	if s.OwnerID().Uint() != tc.OwnerID {
+		t.Errorf("OwnerID = %d, want %d", s.OwnerID().Uint(), tc.OwnerID)
+	}
+	if s.OwnerName() != tc.Owner {
+		t.Errorf("OwnerName = %q, want %q", s.OwnerName(), tc.Owner)
 	}
 	if s.Score().IsEmpty() && tc.Score != nil {
 		t.Errorf("Score.IsEmpty() = true, want false")
@@ -147,7 +158,7 @@ func TestUpdateScore_Valid(t *testing.T) {
 	cases := loadCases(t)
 	tc := findCase(t, cases, "update_score_valid")
 
-	s, err := aggregate.CreateSession(vo.APIKeyOwner(tc.Owner), nil, nil, nil, time.Now().UTC())
+	s, err := aggregate.CreateSession(vo.APIKeyOwnerID(tc.OwnerID), tc.Owner, nil, nil, nil, time.Now().UTC())
 	if err != nil {
 		t.Fatalf("CreateSession() error: %v", err)
 	}
@@ -166,34 +177,37 @@ func TestUpdateScore_Valid(t *testing.T) {
 	}
 }
 
-// TestIsOwnedBy_Matching 匹配 owner 应返回 true
-func TestIsOwnedBy_Matching(t *testing.T) {
+// TestIsOwnedByID_Matching 匹配 owner id 应返回 true
+func TestIsOwnedByID_Matching(t *testing.T) {
 	t.Parallel()
 	cases := loadCases(t)
 	tc := findCase(t, cases, "is_owned_by_matching")
 
-	s, err := aggregate.CreateSession(vo.APIKeyOwner(tc.Owner), nil, nil, nil, time.Now().UTC())
+	s, err := aggregate.CreateSession(vo.APIKeyOwnerID(tc.OwnerID), tc.Owner, nil, nil, nil, time.Now().UTC())
 	if err != nil {
 		t.Fatalf("CreateSession() error: %v", err)
 	}
 
-	if !s.IsOwnedBy(tc.CheckOwner) {
-		t.Errorf("IsOwnedBy(%q) = false, want true", tc.CheckOwner)
+	if !s.IsOwnedByID(tc.CheckOwnerID) {
+		t.Errorf("IsOwnedByID(%d) = false, want true", tc.CheckOwnerID)
 	}
 }
 
-// TestIsOwnedBy_NonMatching 不匹配 owner 应返回 false
-func TestIsOwnedBy_NonMatching(t *testing.T) {
+// TestIsOwnedByID_NonMatching 不匹配 owner id 应返回 false
+//
+// 注意两个用例的展示名 owner 相同、仅 ID 不同：这正是缺陷 A 的场景
+// （跨用户同名 Key），按 ID 判定必须区分开。
+func TestIsOwnedByID_NonMatching(t *testing.T) {
 	t.Parallel()
 	cases := loadCases(t)
 	tc := findCase(t, cases, "is_owned_by_non_matching")
 
-	s, err := aggregate.CreateSession(vo.APIKeyOwner(tc.Owner), nil, nil, nil, time.Now().UTC())
+	s, err := aggregate.CreateSession(vo.APIKeyOwnerID(tc.OwnerID), tc.Owner, nil, nil, nil, time.Now().UTC())
 	if err != nil {
 		t.Fatalf("CreateSession() error: %v", err)
 	}
 
-	if s.IsOwnedBy(tc.CheckOwner) {
-		t.Errorf("IsOwnedBy(%q) = true, want false", tc.CheckOwner)
+	if s.IsOwnedByID(tc.CheckOwnerID) {
+		t.Errorf("IsOwnedByID(%d) = true, want false", tc.CheckOwnerID)
 	}
 }

@@ -34,6 +34,7 @@ func (u *anthropicUseCase) storeAnthropicMessages(ctx context.Context, req *dto.
 	if err := u.taskSubmitter.SubmitMessageStoreTask(&dto.MessageStoreTask{
 		Ctx:          util.CopyContextValues(ctx),
 		APIKeyName:   util.CtxValueString(ctx, constant.CtxKeyAPIKeyName),
+		APIKeyID:     util.CtxValueUint(ctx, constant.CtxKeyAPIKeyID),
 		ModelID:      modelID,
 		Messages:     unifiedMessages,
 		Tools:        unifiedTools,

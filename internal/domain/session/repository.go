@@ -20,8 +20,6 @@ type SessionRepository interface {
 	Save(ctx context.Context, session *aggregate.Session) error
 	// FindByID 按 ID 查询；未找到返回 (nil, nil)
 	FindByID(ctx context.Context, id uint) (*aggregate.Session, error)
-	// Paginate 按 owner 分页查询（用于 List 接口）
-	Paginate(ctx context.Context, owner string, param PageParam) ([]*aggregate.Session, *model.PageInfo, error)
 	// Delete 软删除（标记 deleted_at）
 	Delete(ctx context.Context, id uint) error
 	// UpdateScore 更新会话人工评分
@@ -78,6 +76,7 @@ type ToolDetailProjection struct {
 type SessionMetaProjection struct {
 	ID         uint
 	APIKeyName string
+	APIKeyID   uint
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
 	Metadata   map[string]string
@@ -91,6 +90,7 @@ type SessionMetaProjection struct {
 type SessionDetailProjection struct {
 	ID         uint
 	APIKeyName string
+	APIKeyID   uint
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
 	Metadata   map[string]string
@@ -107,14 +107,15 @@ type SessionDetailProjection struct {
 //	@author centonhuang
 //	@update 2026-07-03 10:00:00
 //
-// ExportFilter 导出筛选条件。OwnerNames 为 nil 表示不过滤（admin），
-// 非 nil 时按 owner 过滤（空列表返回空结果，名下无 Key 不得越权导出全量会话）。
+// ExportFilter 导出筛选条件。OwnerIDs 为 nil 表示不过滤（admin），
+// 非 nil 时按归属 API Key ID 过滤（空列表返回空结果，名下无 Key 不得越权
+// 导出全量会话）。归属判定用 ID 而非名称：名称可跨用户重复。
 type ExportFilter struct {
-	MinScore   int
-	ModelIDs   []string
-	StartTime  time.Time
-	EndTime    time.Time
-	OwnerNames []string
+	MinScore  int
+	ModelIDs  []string
+	StartTime time.Time
+	EndTime   time.Time
+	OwnerIDs  []uint
 }
 
 // ExportSessionRow 导出会话行（仅含 ID + 关联 IDs + 元数据，不含消息内容）
@@ -148,8 +149,8 @@ type ExportPreview struct {
 type SessionReadRepository interface {
 	// ListAllSessions 分页查询所有 Session 列表投影（admin 用）
 	ListAllSessions(ctx context.Context, param model.CommonParam, startTime, endTime time.Time, keyword string, criteria *filter.FilterCriteria) ([]*SessionSummaryProjection, *model.PageInfo, error)
-	// ListSessionsByOwnerNames 按多个 API Key name 分页查询 Session 列表投影
-	ListSessionsByOwnerNames(ctx context.Context, ownerNames []string, param model.CommonParam, startTime, endTime time.Time, keyword string, criteria *filter.FilterCriteria) ([]*SessionSummaryProjection, *model.PageInfo, error)
+	// ListSessionsByOwnerIDs 按多个归属 API Key ID 分页查询 Session 列表投影
+	ListSessionsByOwnerIDs(ctx context.Context, ownerIDs []uint, param model.CommonParam, startTime, endTime time.Time, keyword string, criteria *filter.FilterCriteria) ([]*SessionSummaryProjection, *model.PageInfo, error)
 	// ListSessionsByIDs 按会话 ID 集合分页查询列表投影（demo 白名单视角 / admin 管理列表）
 	ListSessionsByIDs(ctx context.Context, ids []uint, param model.CommonParam) ([]*SessionSummaryProjection, *model.PageInfo, error)
 	// GetSessionDetail 查询 Session 详情（含 Message/Tool 投影）
@@ -160,12 +161,12 @@ type SessionReadRepository interface {
 	FindMessagesByIDs(ctx context.Context, ids []uint) ([]*MessageDetailProjection, error)
 	// FindToolsByIDs 批量查询工具投影
 	FindToolsByIDs(ctx context.Context, ids []uint) ([]*ToolDetailProjection, error)
-	// ListDistinctScores 查询去重的评分列表。ownerNames 为 nil 表示不过滤（admin/demo 白名单路径），非 nil 时按 owner 过滤（空列表返回空结果，名下无 Key 不得越权查全量）；sessionIDs 非 nil 时按会话 ID 集合过滤（demo 白名单）。
-	ListDistinctScores(ctx context.Context, ownerNames []string, startTime, endTime time.Time, sessionIDs []uint) ([]int, error)
-	// ListDistinctModels 查询去重的模型列表。ownerNames 为 nil 表示不过滤（admin/demo 白名单路径），非 nil 时按 owner 过滤（空列表返回空结果，名下无 Key 不得越权查全量）；sessionIDs 非 nil 时按会话 ID 集合过滤（demo 白名单）。
-	ListDistinctModels(ctx context.Context, ownerNames []string, keyword string, startTime, endTime time.Time, sessionIDs []uint) ([]string, error)
-	// ListMessageCountStats 查询消息数统计（当前时间范围最大消息数 + 各固定桶的会话数）。ownerNames 为 nil 表示不过滤（admin/demo 白名单路径），非 nil 时按 owner 过滤（空列表返回空结果，名下无 Key 不得越权查全量）；sessionIDs 非 nil 时按会话 ID 集合过滤（demo 白名单）。
-	ListMessageCountStats(ctx context.Context, ownerNames []string, startTime, endTime time.Time, sessionIDs []uint) (maxCount int, bucketCounts map[int]int64, err error)
+	// ListDistinctScores 查询去重的评分列表。ownerIDs 为 nil 表示不过滤（admin/demo 白名单路径），非 nil 时按归属 ID 过滤（空列表返回空结果，名下无 Key 不得越权查全量）；sessionIDs 非 nil 时按会话 ID 集合过滤（demo 白名单）。
+	ListDistinctScores(ctx context.Context, ownerIDs []uint, startTime, endTime time.Time, sessionIDs []uint) ([]int, error)
+	// ListDistinctModels 查询去重的模型列表。ownerIDs 为 nil 表示不过滤（admin/demo 白名单路径），非 nil 时按归属 ID 过滤（空列表返回空结果，名下无 Key 不得越权查全量）；sessionIDs 非 nil 时按会话 ID 集合过滤（demo 白名单）。
+	ListDistinctModels(ctx context.Context, ownerIDs []uint, keyword string, startTime, endTime time.Time, sessionIDs []uint) ([]string, error)
+	// ListMessageCountStats 查询消息数统计（当前时间范围最大消息数 + 各固定桶的会话数）。ownerIDs 为 nil 表示不过滤（admin/demo 白名单路径），非 nil 时按归属 ID 过滤（空列表返回空结果，名下无 Key 不得越权查全量）；sessionIDs 非 nil 时按会话 ID 集合过滤（demo 白名单）。
+	ListMessageCountStats(ctx context.Context, ownerIDs []uint, startTime, endTime time.Time, sessionIDs []uint) (maxCount int, bucketCounts map[int]int64, err error)
 	// ListSessionsForExport 按筛选条件查询导出用会话行（不含消息内容，仅 IDs）
 	ListSessionsForExport(ctx context.Context, f ExportFilter) ([]*ExportSessionRow, error)
 	// PreviewExport 按筛选条件统计预览（会话数 + 评分分布 + 模型分布）

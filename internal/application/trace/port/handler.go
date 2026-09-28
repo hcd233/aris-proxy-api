@@ -74,6 +74,7 @@ type ReportTraceEventCommand struct {
 	AgentID         string
 	AgentType       string
 	APIKeyName      string
+	APIKeyID        uint
 	Records         []ReportTraceRecord
 }
 

@@ -28,7 +28,7 @@ func TestReportTraceEvent_BatchPersistsAllRecordsAndDeduplicates(t *testing.T) {
 		{Source: constant.TraceRecordSourceRollout, RecordType: constant.TraceRecordTypeResponseItem, Event: "function_call_output", TurnID: "t1", CallID: "call-1", ClientSequence: 7, DedupKey: "rollout:s1:7", Payload: []byte(`{"type":"response_item","payload":{"type":"function_call_output","call_id":"call-1"}}`)},
 		{Source: constant.TraceRecordSourceRollout, RecordType: constant.TraceRecordTypeEventMsg, Event: "task_complete", TurnID: "t1", ClientSequence: 8, DedupKey: "rollout:s1:8", Payload: []byte(`{"type":"event_msg","payload":{"type":"task_complete","turn_id":"t1"}}`)},
 	}
-	cmd := port.ReportTraceEventCommand{SessionID: "s1", Model: "gpt-4o", CWD: "/work", APIKeyName: "key1", Records: records}
+	cmd := port.ReportTraceEventCommand{SessionID: "s1", Model: "gpt-4o", CWD: "/work", APIKeyName: "key1", APIKeyID: 1, Records: records}
 	if _, err := handler.Handle(ctx, cmd); err != nil {
 		t.Fatalf("first batch failed: %v", err)
 	}
@@ -58,7 +58,7 @@ func TestReportTraceEvent_SessionStartThenStop(t *testing.T) {
 	start := []byte(`{"hook_event_name":"SessionStart","session_id":"s1","model":"gpt-4o","source":"startup","cwd":"/work"}`)
 	if _, err := handler.Handle(ctx, port.ReportTraceEventCommand{
 		SessionID: "s1", Model: "gpt-4o", CWD: "/work",
-		APIKeyName: "key1",
+		APIKeyName: "key1", APIKeyID: 1,
 		Records: []port.ReportTraceRecord{{
 			Source: constant.TraceRecordSourceHook, RecordType: constant.TraceRecordTypeHookEvent,
 			HookEventName: "SessionStart", DedupKey: "hook:s1:start", Payload: start,
@@ -68,7 +68,7 @@ func TestReportTraceEvent_SessionStartThenStop(t *testing.T) {
 	}
 	stop := []byte(`{"hook_event_name":"Stop","session_id":"s1"}`)
 	if _, err := handler.Handle(ctx, port.ReportTraceEventCommand{
-		SessionID: "s1", APIKeyName: "key1",
+		SessionID: "s1", APIKeyName: "key1", APIKeyID: 1,
 		Records: []port.ReportTraceRecord{{
 			Source: constant.TraceRecordSourceHook, RecordType: constant.TraceRecordTypeHookEvent,
 			HookEventName: "Stop", DedupKey: "hook:s1:stop", Payload: stop,
@@ -97,7 +97,7 @@ func TestReportTraceEvent_MissingSessionID(t *testing.T) {
 	t.Parallel()
 	handler := command.NewReportTraceEventHandler(NewFakeRepo())
 	_, err := handler.Handle(context.Background(), port.ReportTraceEventCommand{
-		APIKeyName: "key1",
+		APIKeyName: "key1", APIKeyID: 1,
 		Records: []port.ReportTraceRecord{{
 			Source: constant.TraceRecordSourceHook, RecordType: constant.TraceRecordTypeHookEvent,
 			HookEventName: "SessionStart", DedupKey: "hook:x:1", Payload: []byte(`{"hook_event_name":"SessionStart"}`),
@@ -112,7 +112,7 @@ func TestReportTraceEvent_EmptyRecords(t *testing.T) {
 	t.Parallel()
 	handler := command.NewReportTraceEventHandler(NewFakeRepo())
 	_, err := handler.Handle(context.Background(), port.ReportTraceEventCommand{
-		SessionID: "s1", APIKeyName: "key1",
+		SessionID: "s1", APIKeyName: "key1", APIKeyID: 1,
 	})
 	if err == nil {
 		t.Fatal("expected error for empty records")
@@ -128,7 +128,7 @@ func TestReportTraceEvent_CreatesTraceOnFirstEvent(t *testing.T) {
 	// First event for an unknown session still creates an owned trace.
 	payload := []byte(`{"hook_event_name":"PreToolUse","session_id":"u1","turn_id":"t1"}`)
 	if _, err := handler.Handle(ctx, port.ReportTraceEventCommand{
-		SessionID: "u1", APIKeyName: "key1",
+		SessionID: "u1", APIKeyName: "key1", APIKeyID: 1,
 		Records: []port.ReportTraceRecord{{
 			Source: constant.TraceRecordSourceHook, RecordType: constant.TraceRecordTypeHookEvent,
 			HookEventName: "PreToolUse", TurnID: "t1", DedupKey: "hook:u1:1", Payload: payload,
@@ -215,11 +215,11 @@ func TestListTraces_OwnerIsolation(t *testing.T) {
 	t.Parallel()
 	repo := NewFakeRepo()
 	ctx := context.Background()
-	repo.UpsertBySessionID(ctx, &trace.Trace{SessionID: "s1", APIKeyName: "key1"})
-	repo.UpsertBySessionID(ctx, &trace.Trace{SessionID: "s2", APIKeyName: "key2"})
+	repo.UpsertBySessionID(ctx, &trace.Trace{SessionID: "s1", APIKeyName: "key1", APIKeyID: 1})
+	repo.UpsertBySessionID(ctx, &trace.Trace{SessionID: "s2", APIKeyName: "key2", APIKeyID: 2})
 
-	listHandler := query.NewListTracesHandler(repo, newFakeAPIKeyRepo(map[uint][]string{
-		1: {"key1"},
+	listHandler := query.NewListTracesHandler(repo, newFakeAPIKeyRepo(map[uint][]uint{
+		1: {1},
 	}))
 
 	userViews, _, err := listHandler.Handle(ctx, port.ListTracesQuery{UserID: 1, IsAdmin: false, Page: 1, PageSize: 20})
@@ -246,7 +246,7 @@ func TestReportTraceEvent_SubagentCommandCarriesParentSession(t *testing.T) {
 	ctx := context.Background()
 
 	if _, err := handler.Handle(ctx, port.ReportTraceEventCommand{
-		SessionID: "parent-s1", APIKeyName: "key1",
+		SessionID: "parent-s1", APIKeyName: "key1", APIKeyID: 1,
 		Records: []port.ReportTraceRecord{{
 			Source: constant.TraceRecordSourceHook, RecordType: constant.TraceRecordTypeHookEvent,
 			HookEventName: "SessionStart", DedupKey: "hook:p1:1",
@@ -258,7 +258,7 @@ func TestReportTraceEvent_SubagentCommandCarriesParentSession(t *testing.T) {
 	// 子代理批次：SessionID 为子代理 id，ParentSessionID 指向父
 	if _, err := handler.Handle(ctx, port.ReportTraceEventCommand{
 		SessionID: "child-s1", ParentSessionID: "parent-s1", AgentType: "worker",
-		APIKeyName: "key1",
+		APIKeyName: "key1", APIKeyID: 1,
 		Records: []port.ReportTraceRecord{{
 			Source: constant.TraceRecordSourceRollout, RecordType: constant.TraceRecordTypeEventMsg,
 			Event: "task_complete", TurnID: "t1", DedupKey: "rollout:child-s1:1",
@@ -285,7 +285,7 @@ func TestReportTraceEvent_SubagentChildMetadataAndDone(t *testing.T) {
 	ctx := context.Background()
 
 	if _, err := handler.Handle(ctx, port.ReportTraceEventCommand{
-		SessionID: "parent-s2", APIKeyName: "key1",
+		SessionID: "parent-s2", APIKeyName: "key1", APIKeyID: 1,
 		Records: []port.ReportTraceRecord{{
 			Source: constant.TraceRecordSourceHook, RecordType: constant.TraceRecordTypeHookEvent,
 			HookEventName: "SessionStart", DedupKey: "hook:p2:1",
@@ -296,7 +296,7 @@ func TestReportTraceEvent_SubagentChildMetadataAndDone(t *testing.T) {
 	}
 	if _, err := handler.Handle(ctx, port.ReportTraceEventCommand{
 		SessionID: "child-s2", ParentSessionID: "parent-s2", AgentID: "agent-1", AgentType: "worker",
-		APIKeyName: "key1", Model: "gpt-5", CWD: "/work",
+		APIKeyName: "key1", APIKeyID: 1, Model: "gpt-5", CWD: "/work",
 		Records: []port.ReportTraceRecord{{
 			Source: constant.TraceRecordSourceRollout, RecordType: constant.TraceRecordTypeEventMsg,
 			Event: "task_complete", TurnID: "t1", DedupKey: "rollout:child-s2:1",
@@ -325,7 +325,7 @@ func TestReportTraceEvent_SubagentMissingParentIsTolerant(t *testing.T) {
 	ctx := context.Background()
 
 	if _, err := handler.Handle(ctx, port.ReportTraceEventCommand{
-		SessionID: "orphan-child", ParentSessionID: "no-such-parent", APIKeyName: "key1",
+		SessionID: "orphan-child", ParentSessionID: "no-such-parent", APIKeyName: "key1", APIKeyID: 1,
 		Records: []port.ReportTraceRecord{{
 			Source: constant.TraceRecordSourceRollout, RecordType: constant.TraceRecordTypeEventMsg,
 			Event: "task_complete", DedupKey: "rollout:orphan:1",
@@ -347,7 +347,7 @@ func TestReportTraceEvent_SubagentCrossTenantParentNotLinked(t *testing.T) {
 	ctx := context.Background()
 
 	if _, err := handler.Handle(ctx, port.ReportTraceEventCommand{
-		SessionID: "parent-tenant-a", APIKeyName: "key-a",
+		SessionID: "parent-tenant-a", APIKeyName: "key-a", APIKeyID: 11,
 		Records: []port.ReportTraceRecord{{
 			Source: constant.TraceRecordSourceHook, RecordType: constant.TraceRecordTypeHookEvent,
 			HookEventName: "SessionStart", DedupKey: "hook:pa:1",
@@ -357,7 +357,7 @@ func TestReportTraceEvent_SubagentCrossTenantParentNotLinked(t *testing.T) {
 		t.Fatalf("create parent: %v", err)
 	}
 	if _, err := handler.Handle(ctx, port.ReportTraceEventCommand{
-		SessionID: "child-tenant-b", ParentSessionID: "parent-tenant-a", APIKeyName: "key-b",
+		SessionID: "child-tenant-b", ParentSessionID: "parent-tenant-a", APIKeyName: "key-b", APIKeyID: 12,
 		Records: []port.ReportTraceRecord{{
 			Source: constant.TraceRecordSourceRollout, RecordType: constant.TraceRecordTypeEventMsg,
 			Event: "task_complete", DedupKey: "rollout:cb:1",
@@ -372,5 +372,45 @@ func TestReportTraceEvent_SubagentCrossTenantParentNotLinked(t *testing.T) {
 	}
 	if child.ParentTraceID != 0 {
 		t.Fatalf("cross-tenant child must not link parent, got ParentTraceID=%d", child.ParentTraceID)
+	}
+}
+
+// TestReportTraceEvent_SubagentSameKeyNameCrossTenantNotLinked 跨用户同名 Key 不得串联父子 trace。
+//
+// 原 resolveParentTraceID 按 apiKeyName 比对：两个用户各持名为 "shared-name" 的
+// Key 时名称相等，子 trace 会挂到他人父 trace 下，形成跨租户 trace 树
+// （spec 改造清单遗漏项，2026-09-27 实施期补充）。按 APIKeyID 比对后必须断开。
+func TestReportTraceEvent_SubagentSameKeyNameCrossTenantNotLinked(t *testing.T) {
+	t.Parallel()
+	repo := NewFakeRepo()
+	handler := command.NewReportTraceEventHandler(repo)
+	ctx := context.Background()
+
+	if _, err := handler.Handle(ctx, port.ReportTraceEventCommand{
+		SessionID: "parent-same-name", APIKeyName: "shared-name", APIKeyID: 21,
+		Records: []port.ReportTraceRecord{{
+			Source: constant.TraceRecordSourceHook, RecordType: constant.TraceRecordTypeHookEvent,
+			HookEventName: "SessionStart", DedupKey: "hook:psn:1",
+			Payload: []byte(`{"hook_event_name":"SessionStart","session_id":"parent-same-name"}`),
+		}},
+	}); err != nil {
+		t.Fatalf("create parent: %v", err)
+	}
+	if _, err := handler.Handle(ctx, port.ReportTraceEventCommand{
+		SessionID: "child-same-name", ParentSessionID: "parent-same-name", APIKeyName: "shared-name", APIKeyID: 22,
+		Records: []port.ReportTraceRecord{{
+			Source: constant.TraceRecordSourceRollout, RecordType: constant.TraceRecordTypeEventMsg,
+			Event: "task_complete", DedupKey: "rollout:csn:1",
+			Payload: []byte(`{"type":"event_msg","payload":{"type":"task_complete"}}`),
+		}},
+	}); err != nil {
+		t.Fatalf("report subagent: %v", err)
+	}
+	child, _ := repo.FindBySessionID(ctx, "child-same-name")
+	if child == nil {
+		t.Fatal("child trace missing")
+	}
+	if child.ParentTraceID != 0 {
+		t.Fatalf("same-name cross-tenant child must not link parent, got ParentTraceID=%d", child.ParentTraceID)
 	}
 }

@@ -19,15 +19,15 @@ type fakeSessionReadRepo struct {
 	listDistinctScoresCalled  bool
 	listMessageCountStatsCall int
 	lastSessionIDs            []uint
-	// lastOwnerNames 最近一次 ListDistinct* 调用收到的 owner 范围（nil=admin/demo 全量）
-	lastOwnerNames []string
+	// lastOwnerIDs 最近一次 ListDistinct* 调用收到的归属范围（nil=admin/demo 全量）
+	lastOwnerIDs []uint
 }
 
 func (r *fakeSessionReadRepo) ListAllSessions(ctx context.Context, param model.CommonParam, startTime, endTime time.Time, keyword string, criteria *filter.FilterCriteria) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
 	return nil, nil, nil
 }
 
-func (r *fakeSessionReadRepo) ListSessionsByOwnerNames(ctx context.Context, ownerNames []string, param model.CommonParam, startTime, endTime time.Time, keyword string, criteria *filter.FilterCriteria) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
+func (r *fakeSessionReadRepo) ListSessionsByOwnerIDs(ctx context.Context, ownerIDs []uint, param model.CommonParam, startTime, endTime time.Time, keyword string, criteria *filter.FilterCriteria) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
 	return nil, nil, nil
 }
 
@@ -51,24 +51,24 @@ func (r *fakeSessionReadRepo) FindToolsByIDs(ctx context.Context, ids []uint) ([
 	return nil, nil
 }
 
-func (r *fakeSessionReadRepo) ListDistinctScores(ctx context.Context, ownerNames []string, startTime, endTime time.Time, sessionIDs []uint) ([]int, error) {
+func (r *fakeSessionReadRepo) ListDistinctScores(ctx context.Context, ownerIDs []uint, startTime, endTime time.Time, sessionIDs []uint) ([]int, error) {
 	r.listDistinctScoresCalled = true
 	r.lastSessionIDs = sessionIDs
-	r.lastOwnerNames = ownerNames
+	r.lastOwnerIDs = ownerIDs
 	return []int{1, 3, 5}, nil
 }
 
-func (r *fakeSessionReadRepo) ListDistinctModels(ctx context.Context, ownerNames []string, keyword string, startTime, endTime time.Time, sessionIDs []uint) ([]string, error) {
+func (r *fakeSessionReadRepo) ListDistinctModels(ctx context.Context, ownerIDs []uint, keyword string, startTime, endTime time.Time, sessionIDs []uint) ([]string, error) {
 	r.listDistinctModelsCalled = true
 	r.lastSessionIDs = sessionIDs
-	r.lastOwnerNames = ownerNames
+	r.lastOwnerIDs = ownerIDs
 	return []string{"gpt-4o", "claude-3-5-sonnet"}, nil
 }
 
-func (r *fakeSessionReadRepo) ListMessageCountStats(ctx context.Context, ownerNames []string, startTime, endTime time.Time, sessionIDs []uint) (maxCount int, bucketCounts map[int]int64, err error) {
+func (r *fakeSessionReadRepo) ListMessageCountStats(ctx context.Context, ownerIDs []uint, startTime, endTime time.Time, sessionIDs []uint) (maxCount int, bucketCounts map[int]int64, err error) {
 	r.listMessageCountStatsCall++
 	r.lastSessionIDs = sessionIDs
-	r.lastOwnerNames = ownerNames
+	r.lastOwnerIDs = ownerIDs
 	return 82, map[int]int64{0: 5, 1: 3, 2: 7}, nil
 }
 
@@ -80,12 +80,12 @@ func (r *fakeSessionReadRepo) PreviewExport(ctx context.Context, f session.Expor
 	return nil, nil
 }
 
-type fakeOwnerNameLookup struct {
-	lookupFunc func(ctx context.Context, userID uint) ([]string, error)
+type fakeOwnerIDLookup struct {
+	lookupFunc func(ctx context.Context, userID uint) ([]uint, error)
 	calls      int
 }
 
-func (f *fakeOwnerNameLookup) LookupOwnerNamesByUserID(ctx context.Context, userID uint) ([]string, error) {
+func (f *fakeOwnerIDLookup) LookupIDsByUserID(ctx context.Context, userID uint) ([]uint, error) {
 	f.calls++
 	if f.lookupFunc != nil {
 		return f.lookupFunc(ctx, userID)
@@ -96,7 +96,7 @@ func (f *fakeOwnerNameLookup) LookupOwnerNamesByUserID(ctx context.Context, user
 func TestListSessionOptionHandler_FieldModel(t *testing.T) {
 	t.Parallel()
 	repo := &fakeSessionReadRepo{}
-	handler := query.NewListSessionOptionHandler(repo, &fakeOwnerNameLookup{})
+	handler := query.NewListSessionOptionHandler(repo, &fakeOwnerIDLookup{})
 	items, err := handler.Handle(context.Background(), port.ListSessionOptionQuery{Field: constant.SessionFilterFieldModel, IsAdmin: true})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -107,8 +107,8 @@ func TestListSessionOptionHandler_FieldModel(t *testing.T) {
 	if len(items) != 2 {
 		t.Errorf("expected 2 items, got %d", len(items))
 	}
-	if repo.lastOwnerNames != nil {
-		t.Errorf("admin scope must pass nil ownerNames, got %v", repo.lastOwnerNames)
+	if repo.lastOwnerIDs != nil {
+		t.Errorf("admin scope must pass nil ownerIDs, got %v", repo.lastOwnerIDs)
 	}
 }
 
@@ -117,7 +117,7 @@ func TestListSessionOptionHandler_PassesSessionIDs(t *testing.T) {
 
 	sessionIDs := []uint{1, 3, 5}
 	repo := &fakeSessionReadRepo{}
-	handler := query.NewListSessionOptionHandler(repo, &fakeOwnerNameLookup{})
+	handler := query.NewListSessionOptionHandler(repo, &fakeOwnerIDLookup{})
 	if _, err := handler.Handle(context.Background(), port.ListSessionOptionQuery{
 		Field:      constant.SessionFilterFieldMessageCount,
 		SessionIDs: sessionIDs,
@@ -132,15 +132,15 @@ func TestListSessionOptionHandler_PassesSessionIDs(t *testing.T) {
 			t.Fatalf("session ids[%d] = %d, want %d", i, repo.lastSessionIDs[i], sessionIDs[i])
 		}
 	}
-	if repo.lastOwnerNames != nil {
-		t.Errorf("demo whitelist scope must pass nil ownerNames, got %v", repo.lastOwnerNames)
+	if repo.lastOwnerIDs != nil {
+		t.Errorf("demo whitelist scope must pass nil ownerIDs, got %v", repo.lastOwnerIDs)
 	}
 }
 
 func TestListSessionOptionHandler_FieldScore(t *testing.T) {
 	t.Parallel()
 	repo := &fakeSessionReadRepo{}
-	handler := query.NewListSessionOptionHandler(repo, &fakeOwnerNameLookup{})
+	handler := query.NewListSessionOptionHandler(repo, &fakeOwnerIDLookup{})
 	items, err := handler.Handle(context.Background(), port.ListSessionOptionQuery{Field: constant.FieldScore, IsAdmin: true})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -156,7 +156,7 @@ func TestListSessionOptionHandler_FieldScore(t *testing.T) {
 func TestListSessionOptionHandler_UnknownField(t *testing.T) {
 	t.Parallel()
 	repo := &fakeSessionReadRepo{}
-	handler := query.NewListSessionOptionHandler(repo, &fakeOwnerNameLookup{})
+	handler := query.NewListSessionOptionHandler(repo, &fakeOwnerIDLookup{})
 	items, err := handler.Handle(context.Background(), port.ListSessionOptionQuery{Field: "unknown", IsAdmin: true})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -169,7 +169,7 @@ func TestListSessionOptionHandler_UnknownField(t *testing.T) {
 func TestListSessionOptionHandler_FieldMessageCount(t *testing.T) {
 	t.Parallel()
 	repo := &fakeSessionReadRepo{}
-	handler := query.NewListSessionOptionHandler(repo, &fakeOwnerNameLookup{})
+	handler := query.NewListSessionOptionHandler(repo, &fakeOwnerIDLookup{})
 	items, err := handler.Handle(context.Background(), port.ListSessionOptionQuery{Field: constant.SessionFilterFieldMessageCount, IsAdmin: true})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -189,18 +189,18 @@ func TestListSessionOptionHandler_FieldMessageCount(t *testing.T) {
 }
 
 // TestListSessionOptionHandler_UserScopeRestricted user 视角（非 admin 且非
-// demo 白名单）的选项必须按名下 key owner 过滤（2026-08-26 越权修复回归——
+// demo 白名单）的选项必须按名下 key ID 过滤（2026-08-26 越权修复回归——
 // 此前 user 视角返回全平台维度选项）。
 func TestListSessionOptionHandler_UserScopeRestricted(t *testing.T) {
 	t.Parallel()
 
 	repo := &fakeSessionReadRepo{}
-	lookup := &fakeOwnerNameLookup{
-		lookupFunc: func(ctx context.Context, userID uint) ([]string, error) {
+	lookup := &fakeOwnerIDLookup{
+		lookupFunc: func(ctx context.Context, userID uint) ([]uint, error) {
 			if userID != 42 {
 				t.Errorf("lookup userID = %d, want 42", userID)
 			}
-			return []string{"key-a", "key-b"}, nil
+			return []uint{11, 12}, nil
 		},
 	}
 	handler := query.NewListSessionOptionHandler(repo, lookup)
@@ -215,8 +215,8 @@ func TestListSessionOptionHandler_UserScopeRestricted(t *testing.T) {
 	if lookup.calls != 1 {
 		t.Errorf("lookup calls = %d, want 1", lookup.calls)
 	}
-	if len(repo.lastOwnerNames) != 2 || repo.lastOwnerNames[0] != "key-a" || repo.lastOwnerNames[1] != "key-b" {
-		t.Errorf("lastOwnerNames = %v, want [key-a key-b]", repo.lastOwnerNames)
+	if len(repo.lastOwnerIDs) != 2 || repo.lastOwnerIDs[0] != 11 || repo.lastOwnerIDs[1] != 12 {
+		t.Errorf("lastOwnerIDs = %v, want [11 12]", repo.lastOwnerIDs)
 	}
 }
 
@@ -226,9 +226,9 @@ func TestListSessionOptionHandler_UserWithoutKeysReturnsEmpty(t *testing.T) {
 	t.Parallel()
 
 	repo := &fakeSessionReadRepo{}
-	lookup := &fakeOwnerNameLookup{
-		lookupFunc: func(ctx context.Context, userID uint) ([]string, error) {
-			return []string{}, nil
+	lookup := &fakeOwnerIDLookup{
+		lookupFunc: func(ctx context.Context, userID uint) ([]uint, error) {
+			return []uint{}, nil
 		},
 	}
 	handler := query.NewListSessionOptionHandler(repo, lookup)

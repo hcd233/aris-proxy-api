@@ -156,6 +156,7 @@ func (h *traceHandler) HandleReportTraceEvent(
 		Model:           req.Body.Model,
 		CWD:             req.Body.CWD,
 		APIKeyName:      util.CtxValueString(ctx, constant.CtxKeyAPIKeyName),
+		APIKeyID:        util.CtxValueUint(ctx, constant.CtxKeyAPIKeyID),
 		Records: lo.Map(req.Body.Records, func(
 			record *dto.ReportTraceRecordReq,
 			_ int,

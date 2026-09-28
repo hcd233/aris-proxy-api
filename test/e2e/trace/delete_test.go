@@ -20,7 +20,7 @@ func TestE2E_TraceDeleteFlow(t *testing.T) {
 	t.Parallel()
 
 	repo := tracefake.NewFakeRepo()
-	apiKeyRepo := newE2EAPIKeyRepo(map[uint][]string{7: {"e2e-key"}})
+	apiKeyRepo := newE2EAPIKeyRepo(map[uint][]uint{7: {70}})
 	h := handler.NewTraceHandler(handler.TraceDependencies{
 		Report: command.NewReportTraceEventHandler(repo),
 		Delete: command.NewDeleteTraceHandler(repo, apiKeyRepo),
@@ -28,6 +28,8 @@ func TestE2E_TraceDeleteFlow(t *testing.T) {
 
 	ctx := context.WithValue(context.Background(), constant.CtxKeyUserID, uint(7))
 	ctx = context.WithValue(ctx, constant.CtxKeyAPIKeyName, "e2e-key")
+	// 与 APIKeyMiddleware 生产注入一致：归属按 CtxKeyAPIKeyID 判定
+	ctx = context.WithValue(ctx, constant.CtxKeyAPIKeyID, uint(70))
 
 	body := &dto.ReportTraceEventReqBody{
 		SessionID: "e2e-del",
@@ -78,11 +80,12 @@ func TestE2E_TraceDeleteFlow(t *testing.T) {
 
 // e2eAPIKeyRepo 最小 API Key 仓储，仅供删除流程 owner 查询
 type e2eAPIKeyRepo struct {
-	owners map[uint][]string
+	ownerIDs map[uint][]uint
 }
 
-func newE2EAPIKeyRepo(owners map[uint][]string) *e2eAPIKeyRepo {
-	return &e2eAPIKeyRepo{owners: owners}
+// newE2EAPIKeyRepo ownerIDs 为 userID → 名下 API Key ID 列表（归属按 ID 判定）
+func newE2EAPIKeyRepo(ownerIDs map[uint][]uint) *e2eAPIKeyRepo {
+	return &e2eAPIKeyRepo{ownerIDs: ownerIDs}
 }
 
 func (r *e2eAPIKeyRepo) Save(_ context.Context, _ *aggregate.ProxyAPIKey) error { return nil }
@@ -103,9 +106,9 @@ func (r *e2eAPIKeyRepo) PaginateAll(_ context.Context, _ model.CommonParam) ([]*
 }
 func (r *e2eAPIKeyRepo) CountByUser(_ context.Context, _ uint) (int64, error) { return 0, nil }
 func (r *e2eAPIKeyRepo) Delete(_ context.Context, _ uint) error               { return nil }
-func (r *e2eAPIKeyRepo) LookupOwnerNamesByUserID(_ context.Context, userID uint) ([]string, error) {
-	return r.owners[userID], nil
-}
-func (r *e2eAPIKeyRepo) LookupIDsByUserID(_ context.Context, _ uint) ([]uint, error) {
+func (r *e2eAPIKeyRepo) LookupOwnerNamesByUserID(_ context.Context, _ uint) ([]string, error) {
 	return nil, nil
+}
+func (r *e2eAPIKeyRepo) LookupIDsByUserID(_ context.Context, userID uint) ([]uint, error) {
+	return r.ownerIDs[userID], nil
 }

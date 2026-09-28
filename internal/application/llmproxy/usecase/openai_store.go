@@ -49,6 +49,7 @@ func (u *openAIUseCase) storeOpenAIChatMessages(ctx context.Context, req *dto.Op
 	if err := u.taskSubmitter.SubmitMessageStoreTask(&dto.MessageStoreTask{
 		Ctx:          util.CopyContextValues(ctx),
 		APIKeyName:   util.CtxValueString(ctx, constant.CtxKeyAPIKeyName),
+		APIKeyID:     util.CtxValueUint(ctx, constant.CtxKeyAPIKeyID),
 		ModelID:      modelID,
 		Messages:     unifiedMessages,
 		Tools:        unifiedTools,
@@ -221,6 +222,7 @@ func submitResponseMessageStoreTask(ctx context.Context, submitter TaskSubmitter
 	if err := submitter.SubmitMessageStoreTask(&dto.MessageStoreTask{
 		Ctx:          util.CopyContextValues(ctx),
 		APIKeyName:   util.CtxValueString(ctx, constant.CtxKeyAPIKeyName),
+		APIKeyID:     util.CtxValueUint(ctx, constant.CtxKeyAPIKeyID),
 		ModelID:      modelID,
 		Messages:     messages,
 		Tools:        buildResponseUnifiedTools(req.Body.Tools),

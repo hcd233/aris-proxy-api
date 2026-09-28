@@ -23,6 +23,8 @@ func TestE2E_TraceReportFlow(t *testing.T) {
 
 	ctx := context.WithValue(context.Background(), constant.CtxKeyUserID, uint(7))
 	ctx = context.WithValue(ctx, constant.CtxKeyAPIKeyName, "e2e-key")
+	// 与 APIKeyMiddleware 生产注入一致：归属按 CtxKeyAPIKeyID 判定
+	ctx = context.WithValue(ctx, constant.CtxKeyAPIKeyID, uint(70))
 
 	body := &dto.ReportTraceEventReqBody{
 		SessionID: "e2e-s1",

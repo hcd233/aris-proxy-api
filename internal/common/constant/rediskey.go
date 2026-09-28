@@ -13,7 +13,12 @@ const (
 	SessionSharesKeyTemplate = "session_shares:%d"
 
 	// SessionMetaKeyTemplate 缓存 session 元数据（含 messageIDs/toolIDs，仅内部使用）
-	SessionMetaKeyTemplate = "session:meta:%d"
+	//
+	// 版本后缀 v2（2026-09-27）：payload 新增 apiKeyId 字段承载归属判定。
+	// 不 bump 版本会让上线后命中的旧 payload 反序列化出 apiKeyId=0，
+	// 进而把所有会话判成无权访问；缓存命中绕过 DB 故不会自愈。
+	// 结论：SessionMetaCacheRecord 的字段变更必须同步 bump 此处版本号。
+	SessionMetaKeyTemplate = "session:meta:v2:%d"
 	// MessageKeyTemplate 缓存单条 message 详情（不可变，TTL 内永远有效）
 	MessageKeyTemplate = "message:%d"
 	// ToolKeyTemplate 缓存单条 tool 详情（不可变，TTL 内永远有效）

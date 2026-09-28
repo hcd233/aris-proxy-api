@@ -202,6 +202,7 @@ func submitCaptureStore(ctx context.Context, submitter TaskSubmitter, modelID st
 	if err := submitter.SubmitMessageStoreTask(&dto.MessageStoreTask{
 		Ctx:        util.CopyContextValues(ctx),
 		APIKeyName: util.CtxValueString(ctx, constant.CtxKeyAPIKeyName),
+		APIKeyID:   util.CtxValueUint(ctx, constant.CtxKeyAPIKeyID),
 		ModelID:    modelID,
 		Messages:   messages,
 		Tools:      tools,

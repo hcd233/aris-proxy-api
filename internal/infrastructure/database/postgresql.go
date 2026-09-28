@@ -39,15 +39,15 @@ func CloseDatabase(db *gorm.DB) error {
 
 // AutoMigrate 自动迁移数据库表
 //
-//	return *gorm.DB
-//	author centonhuang
-//	update 2024-09-22 10:04:36
-//	@param ctx
+// 由调用方传入连接，使迁移与其后的数据回填共用同一连接池。
+//
+//	@param ctx context.Context
+//	@param db *gorm.DB
 //	@return error
 //	@author centonhuang
-//	@update 2026-06-15 21:52:16
-func AutoMigrate(ctx context.Context) error {
-	return InitDatabase().WithContext(ctx).AutoMigrate(model.Models...)
+//	@update 2026-09-27 10:00:00
+func AutoMigrate(ctx context.Context, db *gorm.DB) error {
+	return db.WithContext(ctx).AutoMigrate(model.Models...)
 }
 
 // InitDatabase 初始化数据库

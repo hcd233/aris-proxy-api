@@ -118,10 +118,12 @@ var (
 	UserRepoFieldsBasic = []string{FieldID, FieldName}
 	UserRepoFieldsAuth  = []string{FieldID, FieldName, FieldPermission}
 
-	SessionRepoFieldsList       = []string{FieldID, FieldCreatedAt, FieldUpdatedAt, FieldMessageIDs, FieldToolIDs}
-	SessionRepoFieldsDetail     = []string{FieldID, FieldAPIKeyName, FieldCreatedAt, FieldUpdatedAt, FieldMessageIDs, FieldToolIDs, FieldMetadata, FieldScore, FieldScoredAt}
+	SessionRepoFieldsList = []string{FieldID, FieldCreatedAt, FieldUpdatedAt, FieldMessageIDs, FieldToolIDs}
+	// SessionRepoFieldsDetail / ReadDetail 含 FieldAPIKeyID：归属判定读该列，
+	// 漏列会读出 0 并把合法访问误判为越权（名称列仅用于展示）。
+	SessionRepoFieldsDetail     = []string{FieldID, FieldAPIKeyName, FieldAPIKeyID, FieldCreatedAt, FieldUpdatedAt, FieldMessageIDs, FieldToolIDs, FieldMetadata, FieldScore, FieldScoredAt}
 	SessionRepoFieldsReadList   = []string{FieldID, FieldCreatedAt, FieldUpdatedAt, FieldScore}
-	SessionRepoFieldsReadDetail = []string{FieldID, FieldAPIKeyName, FieldCreatedAt, FieldUpdatedAt, FieldMessageIDs, FieldToolIDs, FieldMetadata, FieldScore, FieldScoredAt}
+	SessionRepoFieldsReadDetail = []string{FieldID, FieldAPIKeyName, FieldAPIKeyID, FieldCreatedAt, FieldUpdatedAt, FieldMessageIDs, FieldToolIDs, FieldMetadata, FieldScore, FieldScoredAt}
 	SessionRepoFieldsDedup      = []string{FieldID, FieldMessageIDs, FieldToolIDs}
 	SessionRepoFieldsSummarize  = []string{FieldID, FieldMessageIDs}
 
@@ -148,7 +150,12 @@ var (
 	ModelRepoFieldsAlias = []string{FieldAlias}
 
 	ProxyAPIKeyRepoFieldsFull = []string{FieldID, FieldUserID, FieldName, FieldKey, FieldCreatedAt}
-	ProxyAPIKeyRepoFieldsAuth = []string{FieldID, FieldUserID}
+
+	// ProxyAPIKeyRepoFieldsAuth 鉴权路径投影。
+	// FieldName 必须在列表内：APIKeyMiddleware 依赖 apiKey.Name 注入
+	// CtxKeyAPIKeyName，缺列会让 sessions.api_key_name 静默写成空串
+	// （2026-07 起 2623+ 条会话因此对所有普通用户不可见）。
+	ProxyAPIKeyRepoFieldsAuth = []string{FieldID, FieldUserID, FieldName}
 
 	AuditRepoFieldIDQualified        = "model_call_audits.id"
 	AuditRepoFieldCreatedAtQualified = "model_call_audits.created_at"
@@ -177,6 +184,27 @@ var (
 	// UpstreamGroupModelLimit upstream 分组视图单个分组返回的模型数上限（防御性兜底）。
 	// ponytail: 上限写死 200；需要真分页时再引入组内游标
 	UpstreamGroupModelLimit = 200
+
+	// SessionTableName / TraceTableName 归属回填的目标表名（仅供包内常量拼接，
+	// 不得接受外部输入，避免注入面）。
+	SessionTableName = "sessions"
+	TraceTableName   = "traces"
+
+	// APIKeyIDBackfillSQLTemplate 按 api_key_name 幂等回填 api_key_id（%s 为目标表名，
+	// 出现 4 次）。规则「宁漏勿越」：
+	//   - 仅 api_key_id=0、api_key_name 非空、目标行未软删
+	//   - 名称在 proxy_api_keys **全表（含已软删）** 恰好 1 条：历史上若有他人同名
+	//     key（即使已删），该名称下的会话归属无法确定，必须跳过
+	//   - 该唯一记录必须存活（deleted_at=0）
+	// 第二次执行时目标行 api_key_id 已非 0，不再命中，天然幂等。
+	// 相关子查询写法 sqlite 与 PostgreSQL 均支持。
+	APIKeyIDBackfillSQLTemplate = `UPDATE %s SET api_key_id = (
+		SELECT k.id FROM proxy_api_keys k
+		WHERE k.name = %s.api_key_name AND k.deleted_at = 0
+	)
+	WHERE api_key_id = 0 AND api_key_name <> '' AND deleted_at = 0
+	AND (SELECT COUNT(*) FROM proxy_api_keys k WHERE k.name = %s.api_key_name) = 1
+	AND EXISTS (SELECT 1 FROM proxy_api_keys k WHERE k.name = %s.api_key_name AND k.deleted_at = 0)`
 
 	// WhereUserIDEquals user_id 显式等值条件。
 	// 必须用 "user_id = ?" 而非 Where("user_id", v)：GORM 的 Where("col", v) 在

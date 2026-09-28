@@ -87,13 +87,14 @@ func (h *reportTraceEventHandler) ensureTrace(
 	existing *trace.Trace,
 ) (*trace.Trace, error) {
 	if existing == nil {
-		parentTraceID := resolveParentTraceID(ctx, h.repo, cmd.ParentSessionID, cmd.SessionID, cmd.APIKeyName)
+		parentTraceID := resolveParentTraceID(ctx, h.repo, cmd.ParentSessionID, cmd.SessionID, cmd.APIKeyID)
 		metadata := resolveSubagentAttrs(cmd)
 		return h.repo.UpsertBySessionID(ctx, &trace.Trace{
 			Agent:         agent,
 			SessionID:     cmd.SessionID,
 			ParentTraceID: parentTraceID,
 			APIKeyName:    cmd.APIKeyName,
+			APIKeyID:      cmd.APIKeyID,
 			Model:         cmd.Model,
 			CWD:           cmd.CWD,
 			Metadata:      metadata,
@@ -117,14 +118,19 @@ func (h *reportTraceEventHandler) ensureTrace(
 		SessionID:     cmd.SessionID,
 		ParentTraceID: existing.ParentTraceID,
 		APIKeyName:    existing.APIKeyName,
+		APIKeyID:      existing.APIKeyID,
 		Model:         modelName,
 		CWD:           cwd,
 		Metadata:      existing.Metadata,
 	})
 }
 
-// resolveParentTraceID 按父 session 解析父 trace id；无父、父不存在或租户不一致时返回 0。
-func resolveParentTraceID(ctx context.Context, repo trace.TraceRepository, parentSessionID, sessionID, apiKeyName string) uint {
+// resolveParentTraceID 按父 session 解析父 trace id；无父、父不存在或归属不一致时返回 0。
+//
+// 归属比对用 API Key ID 而非名称：名称可跨用户重复，按名称比对会让子 trace
+// 挂到同名他人的父 trace 下，形成跨租户 trace 树（spec 改造清单遗漏项，
+// 2026-09-27 实施期补充）。
+func resolveParentTraceID(ctx context.Context, repo trace.TraceRepository, parentSessionID, sessionID string, apiKeyID uint) uint {
 	if parentSessionID == "" || parentSessionID == sessionID {
 		return 0
 	}
@@ -132,7 +138,7 @@ func resolveParentTraceID(ctx context.Context, repo trace.TraceRepository, paren
 	if err != nil || parent == nil {
 		return 0
 	}
-	if apiKeyName != "" && parent.APIKeyName != apiKeyName {
+	if apiKeyID != 0 && parent.APIKeyID != apiKeyID {
 		return 0 // 跨租户 session 不应建立父/子关联
 	}
 	return parent.ID

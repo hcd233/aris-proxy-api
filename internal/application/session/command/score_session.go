@@ -2,7 +2,6 @@ package command
 
 import (
 	"context"
-	"slices"
 	"time"
 
 	"go.uber.org/zap"
@@ -40,17 +39,16 @@ func (h *scoreSessionHandler) Handle(ctx context.Context, cmd port.ScoreSessionC
 	}
 
 	if cmd.RequesterPermission != enum.PermissionAdmin {
-		ownerNames, lookupErr := h.apiKeyRepo.LookupOwnerNamesByUserID(ctx, cmd.RequesterID)
+		ownerIDs, lookupErr := h.apiKeyRepo.LookupIDsByUserID(ctx, cmd.RequesterID)
 		if lookupErr != nil {
-			log.Error("[SessionCommand] Score: LookupOwnerNamesByUserID failed",
+			log.Error("[SessionCommand] Score: LookupIDsByUserID failed",
 				zap.Error(lookupErr), zap.Uint("userID", cmd.RequesterID))
 			return nil, lookupErr
 		}
-		owner := sess.Owner()
-		if !slices.Contains(ownerNames, owner.String()) {
+		if !isOwnedByAny(sess, ownerIDs) {
 			log.Warn("[SessionCommand] Score: No permission",
 				zap.Uint("sessionID", cmd.SessionID),
-				zap.String("owner", owner.String()),
+				zap.Uint("ownerID", sess.OwnerID().Uint()),
 				zap.Uint("userID", cmd.RequesterID))
 			return nil, ierr.New(ierr.ErrNoPermission, "no permission to score session")
 		}
@@ -94,17 +92,16 @@ func (h *deleteScoreSessionHandler) Handle(ctx context.Context, cmd port.DeleteS
 	}
 
 	if cmd.RequesterPermission != enum.PermissionAdmin {
-		ownerNames, lookupErr := h.apiKeyRepo.LookupOwnerNamesByUserID(ctx, cmd.RequesterID)
+		ownerIDs, lookupErr := h.apiKeyRepo.LookupIDsByUserID(ctx, cmd.RequesterID)
 		if lookupErr != nil {
-			log.Error("[SessionCommand] DeleteScore: LookupOwnerNamesByUserID failed",
+			log.Error("[SessionCommand] DeleteScore: LookupIDsByUserID failed",
 				zap.Error(lookupErr), zap.Uint("userID", cmd.RequesterID))
 			return lookupErr
 		}
-		owner := sess.Owner()
-		if !slices.Contains(ownerNames, owner.String()) {
+		if !isOwnedByAny(sess, ownerIDs) {
 			log.Warn("[SessionCommand] DeleteScore: No permission",
 				zap.Uint("sessionID", cmd.SessionID),
-				zap.String("owner", owner.String()),
+				zap.Uint("ownerID", sess.OwnerID().Uint()),
 				zap.Uint("userID", cmd.RequesterID))
 			return ierr.New(ierr.ErrNoPermission, "no permission to delete session score")
 		}
