@@ -45,13 +45,17 @@ var sessionFieldConfigs = map[string]filter.FieldConfig{
 	},
 }
 
-type ownerNameLookup interface {
-	LookupOwnerNamesByUserID(ctx context.Context, userID uint) ([]string, error)
+// ownerIDLookup 归属 API Key ID 查询（由 apikey 仓储实现）。
+//
+// 归属判定用 ID 而非名称：名称在 (user_id, name) 维度唯一、可跨用户重复，
+// 按名称判定会让同名 Key 的持有者互相越权。
+type ownerIDLookup interface {
+	LookupIDsByUserID(ctx context.Context, userID uint) ([]uint, error)
 }
 
 type listSessionsByUserHandler struct {
 	readRepo   session.SessionReadRepository
-	apiKeyRepo ownerNameLookup
+	apiKeyRepo ownerIDLookup
 }
 
 func NewListSessionsByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository) sessionport.ListSessionsByUserHandler {
@@ -80,15 +84,15 @@ func (h *listSessionsByUserHandler) Handle(ctx context.Context, q sessionport.Li
 	} else if q.IsDemo {
 		projections, pageInfo, err = h.readRepo.ListSessionsByIDs(ctx, q.SessionIDs, param)
 	} else {
-		ownerNames, lookupErr := h.apiKeyRepo.LookupOwnerNamesByUserID(ctx, q.UserID)
+		ownerIDs, lookupErr := h.apiKeyRepo.LookupIDsByUserID(ctx, q.UserID)
 		if lookupErr != nil {
-			log.Error("[SessionQuery] Failed to lookup owner names", zap.Error(lookupErr), zap.Uint("userID", q.UserID))
+			log.Error("[SessionQuery] Failed to lookup owner ids", zap.Error(lookupErr), zap.Uint("userID", q.UserID))
 			return nil, nil, lookupErr
 		}
-		if len(ownerNames) == 0 {
+		if len(ownerIDs) == 0 {
 			return []*sessionport.SessionSummaryView{}, &model.PageInfo{Page: q.Page, PageSize: q.PageSize, Total: 0}, nil
 		}
-		projections, pageInfo, err = h.readRepo.ListSessionsByOwnerNames(ctx, ownerNames, param, q.StartTime, q.EndTime, q.Keyword, criteria)
+		projections, pageInfo, err = h.readRepo.ListSessionsByOwnerIDs(ctx, ownerIDs, param, q.StartTime, q.EndTime, q.Keyword, criteria)
 	}
 
 	if err != nil {
@@ -182,7 +186,7 @@ func parseSessionFilterCriteria(filterExpr string) (*filter.FilterCriteria, erro
 
 type getSessionByUserHandler struct {
 	readRepo   session.SessionReadRepository
-	apiKeyRepo ownerNameLookup
+	apiKeyRepo ownerIDLookup
 }
 
 func NewGetSessionByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository) sessionport.GetSessionByUserHandler {
@@ -210,16 +214,16 @@ func (h *getSessionByUserHandler) Handle(ctx context.Context, q sessionport.GetS
 	}
 
 	if !q.IsAdmin && !q.SkipOwnershipCheck {
-		ownerNames, lookupErr := h.apiKeyRepo.LookupOwnerNamesByUserID(ctx, q.UserID)
+		ownerIDs, lookupErr := h.apiKeyRepo.LookupIDsByUserID(ctx, q.UserID)
 		if lookupErr != nil {
-			log.Error("[SessionQuery] Failed to lookup owner names", zap.Error(lookupErr), zap.Uint("userID", q.UserID))
+			log.Error("[SessionQuery] Failed to lookup owner ids", zap.Error(lookupErr), zap.Uint("userID", q.UserID))
 			return nil, lookupErr
 		}
-		allowed := slices.Contains(ownerNames, detail.APIKeyName)
-		if !allowed {
+		// 归属为 0（存量未知）对普通用户一律不可见，不得因零值匹配放行
+		if detail.APIKeyID == 0 || !slices.Contains(ownerIDs, detail.APIKeyID) {
 			log.Warn("[SessionQuery] No permission to access session",
 				zap.Uint("sessionID", q.SessionID),
-				zap.String("owner", detail.APIKeyName),
+				zap.Uint("ownerID", detail.APIKeyID),
 				zap.Uint("userID", q.UserID))
 			return nil, ierr.New(ierr.ErrNoPermission, "no permission to access session")
 		}

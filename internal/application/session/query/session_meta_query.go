@@ -33,7 +33,7 @@ func NewGetSessionMetaByUserHandler(readRepo session.SessionReadRepository, apiK
 
 // Handle 流程见 spec §3.3.1：
 //  1. 校验 SessionID
-//  2. 拿 user 的 ownerNames（admin 跳过）
+//  2. 拿 user 名下的归属 API Key ID 列表（admin 跳过）
 //  3. 缓存命中检查
 //  4. SQL 取 session 行（缓存未命中时）
 //  5. 写缓存
@@ -52,14 +52,14 @@ func (h *getSessionMetaByUserHandler) Handle(ctx context.Context, q sessionport.
 		return nil, ierr.New(ierr.ErrDataNotExists, "session not found")
 	}
 
-	var ownerNames []string
+	var ownerIDs []uint
 	if !q.IsAdmin {
-		names, lookupErr := h.apiKeyRepo.LookupOwnerNamesByUserID(ctx, q.UserID)
+		ids, lookupErr := h.apiKeyRepo.LookupIDsByUserID(ctx, q.UserID)
 		if lookupErr != nil {
-			log.Error("[SessionQuery] Failed to lookup owner names", zap.Error(lookupErr), zap.Uint("userID", q.UserID))
+			log.Error("[SessionQuery] Failed to lookup owner ids", zap.Error(lookupErr), zap.Uint("userID", q.UserID))
 			return nil, lookupErr
 		}
-		ownerNames = names
+		ownerIDs = ids
 	}
 
 	record, cacheErr := h.cache.GetSessionMeta(ctx, q.SessionID)
@@ -83,6 +83,7 @@ func (h *getSessionMetaByUserHandler) Handle(ctx context.Context, q sessionport.
 		record = &sessionport.SessionMetaCacheRecord{
 			ID:         projection.ID,
 			APIKeyName: projection.APIKeyName,
+			APIKeyID:   projection.APIKeyID,
 			CreatedAt:  projection.CreatedAt,
 			UpdatedAt:  projection.UpdatedAt,
 			Metadata:   projection.Metadata,
@@ -99,11 +100,11 @@ func (h *getSessionMetaByUserHandler) Handle(ctx context.Context, q sessionport.
 	}
 
 	if !q.IsAdmin {
-		allowed := slices.Contains(ownerNames, record.APIKeyName)
-		if !allowed {
+		// 归属为 0（存量未知）对普通用户一律不可见，不得因零值匹配放行
+		if record.APIKeyID == 0 || !slices.Contains(ownerIDs, record.APIKeyID) {
 			log.Warn("[SessionQuery] No permission to access session",
 				zap.Uint("sessionID", q.SessionID),
-				zap.String("owner", record.APIKeyName),
+				zap.Uint("ownerID", record.APIKeyID),
 				zap.Uint("userID", q.UserID))
 			return nil, ierr.New(ierr.ErrNoPermission, "no permission to access session")
 		}

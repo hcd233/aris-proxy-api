@@ -78,11 +78,11 @@ func (f *FakeRepo) InsertEvent(_ context.Context, e *trace.TraceEvent) (bool, er
 	return true, nil
 }
 
-func (f *FakeRepo) PaginateByOwners(_ context.Context, owners []string, p model.CommonParam) ([]*trace.Trace, *model.PageInfo, error) {
+func (f *FakeRepo) PaginateByOwners(_ context.Context, ownerIDs []uint, p model.CommonParam) ([]*trace.Trace, *model.PageInfo, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	ownerSet := map[string]struct{}{}
-	for _, o := range owners {
+	ownerSet := map[uint]struct{}{}
+	for _, o := range ownerIDs {
 		ownerSet[o] = struct{}{}
 	}
 	var out []*trace.Trace
@@ -94,7 +94,7 @@ func (f *FakeRepo) PaginateByOwners(_ context.Context, owners []string, p model.
 			out = append(out, t)
 			continue
 		}
-		if _, ok := ownerSet[t.APIKeyName]; ok {
+		if _, ok := ownerSet[t.APIKeyID]; ok {
 			out = append(out, t)
 		}
 	}
@@ -158,11 +158,12 @@ func (f *FakeRepo) Delete(_ context.Context, id uint) error {
 
 // fakeAPIKeyRepo 内存版 API Key 仓储，仅实现 owner 查询
 type fakeAPIKeyRepo struct {
-	owners map[uint][]string
+	ownerIDs map[uint][]uint
 }
 
-func newFakeAPIKeyRepo(owners map[uint][]string) *fakeAPIKeyRepo {
-	return &fakeAPIKeyRepo{owners: owners}
+// newFakeAPIKeyRepo 构造 fake：ownerIDs 为 userID → 名下 API Key ID 列表（归属按 ID 判定）
+func newFakeAPIKeyRepo(ownerIDs map[uint][]uint) *fakeAPIKeyRepo {
+	return &fakeAPIKeyRepo{ownerIDs: ownerIDs}
 }
 
 func (f *fakeAPIKeyRepo) Save(_ context.Context, _ *aggregate.ProxyAPIKey) error { return nil }
@@ -183,9 +184,9 @@ func (f *fakeAPIKeyRepo) PaginateAll(_ context.Context, _ model.CommonParam) ([]
 }
 func (f *fakeAPIKeyRepo) CountByUser(_ context.Context, _ uint) (int64, error) { return 0, nil }
 func (f *fakeAPIKeyRepo) Delete(_ context.Context, _ uint) error               { return nil }
-func (f *fakeAPIKeyRepo) LookupOwnerNamesByUserID(_ context.Context, userID uint) ([]string, error) {
-	return f.owners[userID], nil
-}
-func (f *fakeAPIKeyRepo) LookupIDsByUserID(_ context.Context, _ uint) ([]uint, error) {
+func (f *fakeAPIKeyRepo) LookupOwnerNamesByUserID(_ context.Context, _ uint) ([]string, error) {
 	return nil, nil
+}
+func (f *fakeAPIKeyRepo) LookupIDsByUserID(_ context.Context, userID uint) ([]uint, error) {
+	return f.ownerIDs[userID], nil
 }

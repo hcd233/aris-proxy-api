@@ -31,7 +31,7 @@ func NewTraceRepository(db *gorm.DB) trace.TraceRepository {
 
 func toTraceDomain(m *dbmodel.Trace) *trace.Trace {
 	return &trace.Trace{
-		ID: m.ID, Agent: m.Agent, SessionID: m.SessionID, APIKeyName: m.APIKeyName,
+		ID: m.ID, Agent: m.Agent, SessionID: m.SessionID, APIKeyName: m.APIKeyName, APIKeyID: m.APIKeyID,
 		ParentTraceID: m.ParentTraceID, Model: m.Model, CWD: m.CWD,
 		Metadata: m.Metadata, CreatedAt: m.CreatedAt, UpdatedAt: m.UpdatedAt,
 		DeletedAt: m.DeletedAt,
@@ -40,7 +40,7 @@ func toTraceDomain(m *dbmodel.Trace) *trace.Trace {
 
 func toTraceRecord(t *trace.Trace) *dbmodel.Trace {
 	return &dbmodel.Trace{
-		Agent: t.Agent, SessionID: t.SessionID, APIKeyName: t.APIKeyName,
+		Agent: t.Agent, SessionID: t.SessionID, APIKeyName: t.APIKeyName, APIKeyID: t.APIKeyID,
 		ParentTraceID: t.ParentTraceID, Model: t.Model, CWD: t.CWD,
 		Metadata: t.Metadata,
 	}
@@ -54,6 +54,7 @@ func (r *traceRepository) UpsertBySessionID(ctx context.Context, t *trace.Trace)
 		DoUpdates: clause.AssignmentColumns([]string{
 			constant.FieldModel, constant.FieldCWD,
 			constant.FieldUpdatedAt, constant.FieldMetadata, constant.FieldAPIKeyName,
+			constant.FieldAPIKeyID,
 			constant.FieldParentTraceID,
 		}),
 	}).Create(rec).Error
@@ -163,16 +164,16 @@ func (r *traceRepository) InsertEvent(ctx context.Context, e *trace.TraceEvent) 
 	return true, nil
 }
 
-func (r *traceRepository) PaginateByOwners(ctx context.Context, owners []string, param model.CommonParam) ([]*trace.Trace, *model.PageInfo, error) {
-	// owners 为 nil 表示不过滤（admin 路径）；非 nil 且为空（用户名下无 Key）
+func (r *traceRepository) PaginateByOwners(ctx context.Context, ownerIDs []uint, param model.CommonParam) ([]*trace.Trace, *model.PageInfo, error) {
+	// ownerIDs 为 nil 表示不过滤（admin 路径）；非 nil 且为空（用户名下无 Key）
 	// 短路返回空结果，防止越权查全量（与 audit 守卫的入口短路风格统一）
-	if owners != nil && len(owners) == 0 {
+	if ownerIDs != nil && len(ownerIDs) == 0 {
 		return []*trace.Trace{}, &model.PageInfo{Page: param.Page, PageSize: param.PageSize, Total: 0}, nil
 	}
 	db := r.db.WithContext(ctx)
 	q := db.Model(&dbmodel.Trace{}).Where(constant.DBConditionDeletedAtZero)
-	if owners != nil {
-		q = q.Where(fmt.Sprintf(constant.DBConditionInTemplate, constant.FieldAPIKeyName), owners)
+	if ownerIDs != nil {
+		q = q.Where(fmt.Sprintf(constant.DBConditionInTemplate, constant.FieldAPIKeyID), ownerIDs)
 	}
 	if param.Query != "" && len(param.QueryFields) > 0 {
 		like := "%" + param.Query + "%"

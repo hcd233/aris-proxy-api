@@ -15,15 +15,15 @@ func TestFakeRepo_PaginateByOwners_Isolation(t *testing.T) {
 	repo := NewFakeRepo()
 	ctx := context.Background()
 
-	if _, err := repo.UpsertBySessionID(ctx, &trace.Trace{SessionID: "s1", APIKeyName: "key1"}); err != nil {
+	if _, err := repo.UpsertBySessionID(ctx, &trace.Trace{SessionID: "s1", APIKeyName: "key1", APIKeyID: 1}); err != nil {
 		t.Fatalf("upsert s1: %v", err)
 	}
-	if _, err := repo.UpsertBySessionID(ctx, &trace.Trace{SessionID: "s2", APIKeyName: "key2"}); err != nil {
+	if _, err := repo.UpsertBySessionID(ctx, &trace.Trace{SessionID: "s2", APIKeyName: "key2", APIKeyID: 2}); err != nil {
 		t.Fatalf("upsert s2: %v", err)
 	}
 
 	// user1 owns only key1
-	userTraces, _, err := repo.PaginateByOwners(ctx, []string{"key1"}, model.CommonParam{PageParam: model.PageParam{Page: 1, PageSize: 20}})
+	userTraces, _, err := repo.PaginateByOwners(ctx, []uint{1}, model.CommonParam{PageParam: model.PageParam{Page: 1, PageSize: 20}})
 	if err != nil {
 		t.Fatalf("paginate user: %v", err)
 	}
@@ -32,7 +32,7 @@ func TestFakeRepo_PaginateByOwners_Isolation(t *testing.T) {
 	}
 
 	// admin (empty owners) sees all
-	adminTraces, _, err := repo.PaginateByOwners(ctx, []string{}, model.CommonParam{PageParam: model.PageParam{Page: 1, PageSize: 20}})
+	adminTraces, _, err := repo.PaginateByOwners(ctx, []uint{}, model.CommonParam{PageParam: model.PageParam{Page: 1, PageSize: 20}})
 	if err != nil {
 		t.Fatalf("paginate admin: %v", err)
 	}
@@ -46,7 +46,7 @@ func TestFakeRepo_Events(t *testing.T) {
 	repo := NewFakeRepo()
 	ctx := context.Background()
 
-	tr, err := repo.UpsertBySessionID(ctx, &trace.Trace{SessionID: "s1", APIKeyName: "key1"})
+	tr, err := repo.UpsertBySessionID(ctx, &trace.Trace{SessionID: "s1", APIKeyName: "key1", APIKeyID: 1})
 	if err != nil {
 		t.Fatalf("upsert: %v", err)
 	}
@@ -74,7 +74,7 @@ func TestFakeRepo_Events_PreserveRecordIdentity(t *testing.T) {
 	repo := NewFakeRepo()
 	ctx := context.Background()
 
-	tr, err := repo.UpsertBySessionID(ctx, &trace.Trace{SessionID: "s1", APIKeyName: "key1"})
+	tr, err := repo.UpsertBySessionID(ctx, &trace.Trace{SessionID: "s1", APIKeyName: "key1", APIKeyID: 1})
 	if err != nil {
 		t.Fatalf("upsert: %v", err)
 	}
@@ -143,11 +143,11 @@ func TestFakeRepo_PersistsParentTraceID(t *testing.T) {
 	repo := NewFakeRepo()
 	ctx := context.Background()
 
-	parent, err := repo.UpsertBySessionID(ctx, &trace.Trace{SessionID: "parent-s1", APIKeyName: "key1"})
+	parent, err := repo.UpsertBySessionID(ctx, &trace.Trace{SessionID: "parent-s1", APIKeyName: "key1", APIKeyID: 1})
 	if err != nil {
 		t.Fatalf("upsert parent: %v", err)
 	}
-	child, err := repo.UpsertBySessionID(ctx, &trace.Trace{SessionID: "child-s1", APIKeyName: "key1", ParentTraceID: parent.ID})
+	child, err := repo.UpsertBySessionID(ctx, &trace.Trace{SessionID: "child-s1", APIKeyName: "key1", APIKeyID: 1, ParentTraceID: parent.ID})
 	if err != nil {
 		t.Fatalf("upsert child: %v", err)
 	}

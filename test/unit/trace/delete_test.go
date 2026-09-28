@@ -10,10 +10,13 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/trace"
 )
 
+// testKeyIDs 测试用 API Key 名称 → ID 映射（归属按 ID 判定，名称仅展示）
+var testKeyIDs = map[string]uint{"key1": 1, "key2": 2, "key-a": 11, "key-b": 12}
+
 func mustUpsert(t *testing.T, repo *FakeRepo, sessionID, owner string) uint {
 	t.Helper()
 	tr, err := repo.UpsertBySessionID(context.Background(), &trace.Trace{
-		Agent: constant.TraceAgentCodex, SessionID: sessionID, APIKeyName: owner,
+		Agent: constant.TraceAgentCodex, SessionID: sessionID, APIKeyName: owner, APIKeyID: testKeyIDs[owner],
 	})
 	if err != nil {
 		t.Fatalf("upsert %s: %v", sessionID, err)
@@ -25,7 +28,7 @@ func mustUpsert(t *testing.T, repo *FakeRepo, sessionID, owner string) uint {
 func TestDeleteOwnerCanDeleteOwn(t *testing.T) {
 	t.Parallel()
 	repo := NewFakeRepo()
-	keyRepo := newFakeAPIKeyRepo(map[uint][]string{1: {"key-a"}})
+	keyRepo := newFakeAPIKeyRepo(map[uint][]uint{1: {11}})
 	h := command.NewDeleteTraceHandler(repo, keyRepo)
 
 	id := mustUpsert(t, repo, "s-own", "key-a")
@@ -47,7 +50,7 @@ func TestDeleteOwnerCanDeleteOwn(t *testing.T) {
 func TestDeleteOwnerCannotDeleteOthers(t *testing.T) {
 	t.Parallel()
 	repo := NewFakeRepo()
-	keyRepo := newFakeAPIKeyRepo(map[uint][]string{1: {"key-a"}})
+	keyRepo := newFakeAPIKeyRepo(map[uint][]uint{1: {11}})
 	h := command.NewDeleteTraceHandler(repo, keyRepo)
 
 	id := mustUpsert(t, repo, "s-other", "key-b")
@@ -65,7 +68,7 @@ func TestDeleteOwnerCannotDeleteOthers(t *testing.T) {
 func TestDeleteAdminCanDeleteAny(t *testing.T) {
 	t.Parallel()
 	repo := NewFakeRepo()
-	keyRepo := newFakeAPIKeyRepo(map[uint][]string{1: {"key-a"}})
+	keyRepo := newFakeAPIKeyRepo(map[uint][]uint{1: {11}})
 	h := command.NewDeleteTraceHandler(repo, keyRepo)
 
 	id := mustUpsert(t, repo, "s-any", "key-b")
@@ -83,7 +86,7 @@ func TestDeleteAdminCanDeleteAny(t *testing.T) {
 func TestDeleteNotFound(t *testing.T) {
 	t.Parallel()
 	repo := NewFakeRepo()
-	keyRepo := newFakeAPIKeyRepo(map[uint][]string{1: {"key-a"}})
+	keyRepo := newFakeAPIKeyRepo(map[uint][]uint{1: {11}})
 	h := command.NewDeleteTraceHandler(repo, keyRepo)
 
 	result, err := h.Handle(context.Background(), port.DeleteTraceCommand{UserID: 1, IsAdmin: true, IDs: []uint{999}})
@@ -99,7 +102,7 @@ func TestDeleteNotFound(t *testing.T) {
 func TestDeleteBatchMixed(t *testing.T) {
 	t.Parallel()
 	repo := NewFakeRepo()
-	keyRepo := newFakeAPIKeyRepo(map[uint][]string{1: {"key-a"}})
+	keyRepo := newFakeAPIKeyRepo(map[uint][]uint{1: {11}})
 	h := command.NewDeleteTraceHandler(repo, keyRepo)
 
 	okID := mustUpsert(t, repo, "s-ok", "key-a")

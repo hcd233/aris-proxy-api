@@ -2,8 +2,6 @@ package command
 
 import (
 	"context"
-	"slices"
-
 	"go.uber.org/zap"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/session/port"
@@ -28,15 +26,15 @@ func (h *deleteSessionHandler) Handle(ctx context.Context, cmd port.DeleteSessio
 	log := logger.WithCtx(ctx)
 
 	isAdmin := cmd.RequesterPermission == enum.PermissionAdmin
-	var ownerNames []string
+	var ownerIDs []uint
 	if !isAdmin {
-		names, lookupErr := h.apiKeyRepo.LookupOwnerNamesByUserID(ctx, cmd.RequesterID)
+		ids, lookupErr := h.apiKeyRepo.LookupIDsByUserID(ctx, cmd.RequesterID)
 		if lookupErr != nil {
-			log.Error("[SessionCommand] Delete: lookup owner names failed",
+			log.Error("[SessionCommand] Delete: lookup owner ids failed",
 				zap.Error(lookupErr), zap.Uint("userID", cmd.RequesterID))
 			return nil, lookupErr
 		}
-		ownerNames = names
+		ownerIDs = ids
 	}
 
 	result := &port.DeleteSessionResult{}
@@ -53,13 +51,9 @@ func (h *deleteSessionHandler) Handle(ctx context.Context, cmd port.DeleteSessio
 			continue
 		}
 
-		if !isAdmin {
-			owner := sess.Owner()
-			allowed := slices.Contains(ownerNames, owner.String())
-			if !allowed {
-				result.Failures = append(result.Failures, port.DeleteSessionFailedItem{ID: id, Error: constant.SessionDeleteErrorNoPermission})
-				continue
-			}
+		if !isAdmin && !isOwnedByAny(sess, ownerIDs) {
+			result.Failures = append(result.Failures, port.DeleteSessionFailedItem{ID: id, Error: constant.SessionDeleteErrorNoPermission})
+			continue
 		}
 
 		if err := h.repo.Delete(ctx, id); err != nil {
@@ -72,7 +66,7 @@ func (h *deleteSessionHandler) Handle(ctx context.Context, cmd port.DeleteSessio
 		log.Info("[SessionCommand] Session deleted",
 			zap.Uint("sessionID", id),
 			zap.Uint("requesterID", cmd.RequesterID),
-			zap.String("owner", sess.Owner().String()))
+			zap.Uint("ownerID", sess.OwnerID().Uint()))
 	}
 
 	log.Info("[SessionCommand] Delete completed",

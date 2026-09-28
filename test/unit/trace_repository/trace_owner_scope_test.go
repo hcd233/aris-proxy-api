@@ -32,9 +32,9 @@ func TestPaginateByOwners_OwnerScopeSemantics(t *testing.T) {
 	}
 
 	seed := []*dbmodel.Trace{
-		{SessionID: "s-1", APIKeyName: "owner-a", Agent: "codex"},
-		{SessionID: "s-2", APIKeyName: "owner-b", Agent: "codex"},
-		{SessionID: "s-3", APIKeyName: "owner-b", Agent: "claude"},
+		{SessionID: "s-1", APIKeyName: "owner-a", APIKeyID: 1, Agent: "codex"},
+		{SessionID: "s-2", APIKeyName: "owner-b", APIKeyID: 2, Agent: "codex"},
+		{SessionID: "s-3", APIKeyName: "owner-b", APIKeyID: 2, Agent: "claude"},
 	}
 	if err := db.Create(seed).Error; err != nil {
 		t.Fatalf("seed failed: %v", err)
@@ -45,7 +45,7 @@ func TestPaginateByOwners_OwnerScopeSemantics(t *testing.T) {
 	param := model.CommonParam{PageParam: model.PageParam{Page: 1, PageSize: 10}}
 
 	// 空（非 nil）owner 列表：用户名下无 Key，必须返回空
-	traces, pageInfo, err := repo.PaginateByOwners(ctx, []string{}, param)
+	traces, pageInfo, err := repo.PaginateByOwners(ctx, []uint{}, param)
 	if err != nil {
 		t.Fatalf("PaginateByOwners(empty) err: %v", err)
 	}
@@ -54,7 +54,7 @@ func TestPaginateByOwners_OwnerScopeSemantics(t *testing.T) {
 	}
 
 	// 具体 owner：只返回该 owner 名下的
-	traces, pageInfo, err = repo.PaginateByOwners(ctx, []string{"owner-b"}, param)
+	traces, pageInfo, err = repo.PaginateByOwners(ctx, []uint{2}, param)
 	if err != nil {
 		t.Fatalf("PaginateByOwners(owner-b) err: %v", err)
 	}

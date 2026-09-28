@@ -14,7 +14,7 @@ func TestReportTraceEvent_ReturnsPerRecordResults(t *testing.T) {
 	handler := command.NewReportTraceEventHandler(NewFakeRepo())
 	cmd := port.ReportTraceEventCommand{
 		SessionID:  "s1",
-		APIKeyName: "key1",
+		APIKeyName: "key1", APIKeyID: 1,
 		Records: []port.ReportTraceRecord{{
 			Source:        constant.TraceRecordSourceHook,
 			RecordType:    constant.TraceRecordTypeHookEvent,

@@ -13,7 +13,8 @@ type Trace struct {
 	ID            uint
 	Agent         string
 	SessionID     string
-	APIKeyName    string
+	APIKeyName    string // 仅展示与审计可读性，不参与鉴权（名称可跨用户重复）
+	APIKeyID      uint   // 归属 API Key ID：鉴权唯一依据，0 表示归属未知
 	ParentTraceID uint
 	Model         string
 	CWD           string
@@ -50,9 +51,9 @@ type TraceRepository interface {
 	FindByID(ctx context.Context, id uint) (*Trace, error)
 	// InsertEvent 插入一条事件；重复幂等键返回 inserted=false。
 	InsertEvent(ctx context.Context, e *TraceEvent) (inserted bool, err error)
-	// PaginateByOwners 按 owner 名称列表分页。owners 为 nil 时查全部（admin），非 nil 时按 owner 过滤
-	// （空列表返回空结果，名下无 Key 不得越权查全量）。
-	PaginateByOwners(ctx context.Context, owners []string, param model.CommonParam) ([]*Trace, *model.PageInfo, error)
+	// PaginateByOwners 按归属 API Key ID 列表分页。ownerIDs 为 nil 时查全部（admin），
+	// 非 nil 时按归属过滤（空列表返回空结果，名下无 Key 不得越权查全量）。
+	PaginateByOwners(ctx context.Context, ownerIDs []uint, param model.CommonParam) ([]*Trace, *model.PageInfo, error)
 	// CountEvents 统计某 trace 的事件数
 	CountEvents(ctx context.Context, traceID uint) (int64, error)
 	// ListEvents 按 trace_id 分页列出事件（按 id 升序即时间线）

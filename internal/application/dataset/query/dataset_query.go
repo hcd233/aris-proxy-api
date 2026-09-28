@@ -21,13 +21,17 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
-type ownerNameLookup interface {
-	LookupOwnerNamesByUserID(ctx context.Context, userID uint) ([]string, error)
+// ownerIDLookup 归属 API Key ID 查询（由 apikey 仓储实现）。
+//
+// 用 ID 而非名称：名称可跨用户重复，按名称过滤会让同名 Key 的持有者
+// 越权导出他人会话的完整内容（本域是越权影响最高的路径）。
+type ownerIDLookup interface {
+	LookupIDsByUserID(ctx context.Context, userID uint) ([]uint, error)
 }
 
 type previewDatasetHandler struct {
 	readRepo   session.SessionReadRepository
-	apiKeyRepo ownerNameLookup
+	apiKeyRepo ownerIDLookup
 }
 
 // NewPreviewDatasetHandler 构造统计预览处理器
@@ -60,7 +64,7 @@ func (h *previewDatasetHandler) Handle(ctx context.Context, p datasetport.Export
 
 type exportDatasetHandler struct {
 	readRepo   session.SessionReadRepository
-	apiKeyRepo ownerNameLookup
+	apiKeyRepo ownerIDLookup
 }
 
 // NewExportDatasetHandler 构造流式导出处理器
@@ -155,12 +159,12 @@ func (h *exportDatasetHandler) buildFilter(ctx context.Context, p datasetport.Ex
 	}
 
 	if p.Permission != enum.PermissionAdmin {
-		ownerNames, err := h.apiKeyRepo.LookupOwnerNamesByUserID(ctx, p.UserID)
+		ownerIDs, err := h.apiKeyRepo.LookupIDsByUserID(ctx, p.UserID)
 		if err != nil {
-			logger.WithCtx(ctx).Error("[DatasetExport] Failed to lookup owner names", zap.Error(err), zap.Uint("userID", p.UserID))
+			logger.WithCtx(ctx).Error("[DatasetExport] Failed to lookup owner ids", zap.Error(err), zap.Uint("userID", p.UserID))
 			return nil, err
 		}
-		f.OwnerNames = ownerNames
+		f.OwnerIDs = ownerIDs
 	}
 
 	return f, nil
@@ -205,12 +209,12 @@ func (h *previewDatasetHandler) buildFilter(ctx context.Context, p datasetport.E
 	}
 
 	if p.Permission != enum.PermissionAdmin {
-		ownerNames, err := h.apiKeyRepo.LookupOwnerNamesByUserID(ctx, p.UserID)
+		ownerIDs, err := h.apiKeyRepo.LookupIDsByUserID(ctx, p.UserID)
 		if err != nil {
-			logger.WithCtx(ctx).Error("[DatasetPreview] Failed to lookup owner names", zap.Error(err), zap.Uint("userID", p.UserID))
+			logger.WithCtx(ctx).Error("[DatasetPreview] Failed to lookup owner ids", zap.Error(err), zap.Uint("userID", p.UserID))
 			return nil, err
 		}
-		f.OwnerNames = ownerNames
+		f.OwnerIDs = ownerIDs
 	}
 
 	return f, nil
@@ -236,7 +240,7 @@ func buildConversation(
 
 type previewFormatDatasetHandler struct {
 	readRepo   session.SessionReadRepository
-	apiKeyRepo ownerNameLookup
+	apiKeyRepo ownerIDLookup
 }
 
 // NewPreviewFormatDatasetHandler 构造单条会话格式预览处理器
@@ -322,12 +326,12 @@ func (h *previewFormatDatasetHandler) buildFilter(ctx context.Context, p dataset
 	}
 
 	if p.Permission != enum.PermissionAdmin {
-		ownerNames, err := h.apiKeyRepo.LookupOwnerNamesByUserID(ctx, p.UserID)
+		ownerIDs, err := h.apiKeyRepo.LookupIDsByUserID(ctx, p.UserID)
 		if err != nil {
-			logger.WithCtx(ctx).Error("[DatasetFormatPreview] Failed to lookup owner names", zap.Error(err), zap.Uint("userID", p.UserID))
+			logger.WithCtx(ctx).Error("[DatasetFormatPreview] Failed to lookup owner ids", zap.Error(err), zap.Uint("userID", p.UserID))
 			return nil, err
 		}
-		f.OwnerNames = ownerNames
+		f.OwnerIDs = ownerIDs
 	}
 
 	return f, nil

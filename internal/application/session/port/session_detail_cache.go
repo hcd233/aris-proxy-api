@@ -13,8 +13,13 @@ import (
 // MessageIDs/ToolIDs are internal fields used by paginated detail queries and
 // are not exposed directly by API responses.
 type SessionMetaCacheRecord struct {
-	ID         uint              `json:"id"`
-	APIKeyName string            `json:"apiKeyName"`
+	ID         uint   `json:"id"`
+	APIKeyName string `json:"apiKeyName"`
+	// APIKeyID 归属 API Key ID，归属判定的唯一依据。
+	// 新增该字段时必须同步 bump SessionMetaKeyTemplate 的版本号：
+	// 缓存命中路径绕过 DB，旧 payload 反序列化后该字段为 0，
+	// 会把所有会话判成无权访问且不会自愈。
+	APIKeyID   uint              `json:"apiKeyId"`
 	CreatedAt  time.Time         `json:"createdAt"`
 	UpdatedAt  time.Time         `json:"updatedAt"`
 	Metadata   map[string]string `json:"metadata,omitempty"`

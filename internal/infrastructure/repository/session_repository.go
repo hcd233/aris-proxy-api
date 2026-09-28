@@ -52,7 +52,8 @@ func (r *sessionRepository) Save(ctx context.Context, s *aggregate.Session) erro
 
 	if s.AggregateID() == 0 {
 		record := &dbmodel.Session{
-			APIKeyName: s.Owner().String(),
+			APIKeyName: s.OwnerName(),
+			APIKeyID:   s.OwnerID().Uint(),
 			MessageIDs: s.MessageIDs(),
 			ToolIDs:    s.ToolIDs(),
 			Metadata:   s.Metadata(),
@@ -108,36 +109,6 @@ func (r *sessionRepository) FindByID(ctx context.Context, id uint) (*aggregate.S
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "get session by id")
 	}
 	return toSessionAggregate(record), nil
-}
-
-// Paginate 按 owner 分页查询会话列表（对齐原 service.ListSessions 字段/排序）
-//
-//	@receiver r *sessionRepository
-//	@param ctx context.Context
-//	@param owner string
-//	@param param session.PageParam
-//	@return []*aggregate.Session
-//	@return *model.PageInfo
-//	@return error
-//	@author centonhuang
-//	@update 2026-04-22 19:30:00
-func (r *sessionRepository) Paginate(ctx context.Context, owner string, param session.PageParam) ([]*aggregate.Session, *model.PageInfo, error) {
-	db := r.db.WithContext(ctx)
-	records, pageInfo, err := r.dao.Paginate(
-		db,
-		&dbmodel.Session{APIKeyName: owner},
-		constant.SessionRepoFieldsList,
-		&dao.CommonParam{
-			PageParam: dao.PageParam{Page: param.Page, PageSize: param.PageSize},
-			SortParam: dao.SortParam{Sort: enum.SortAsc, SortField: constant.FieldID},
-		},
-	)
-	if err != nil {
-		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "paginate sessions")
-	}
-	return lo.Map(records, func(rec *dbmodel.Session, _ int) *aggregate.Session {
-		return toSessionAggregate(rec)
-	}), pageInfo, nil
 }
 
 // Delete 软删除
@@ -306,7 +277,7 @@ func (r *sessionReadRepository) ListAllSessions(ctx context.Context, param model
 	return out, pageInfo, nil
 }
 
-func (r *sessionReadRepository) ListSessionsByOwnerNames(ctx context.Context, ownerNames []string, param model.CommonParam, startTime, endTime time.Time, keyword string, criteria *filter.FilterCriteria) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
+func (r *sessionReadRepository) ListSessionsByOwnerIDs(ctx context.Context, ownerIDs []uint, param model.CommonParam, startTime, endTime time.Time, keyword string, criteria *filter.FilterCriteria) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
 	db := r.db.WithContext(ctx)
 	if param.Page < 1 {
 		param.Page = 1
@@ -316,7 +287,7 @@ func (r *sessionReadRepository) ListSessionsByOwnerNames(ctx context.Context, ow
 	}
 
 	sql := db.Model(&dbmodel.Session{}).Select(constant.SessionSummarySelect).Where(constant.DBConditionDeletedAtZero)
-	sql = sql.Where(fmt.Sprintf(constant.DBConditionInTemplate, constant.FieldAPIKeyName), ownerNames)
+	sql = sql.Where(fmt.Sprintf(constant.DBConditionInTemplate, constant.FieldAPIKeyID), ownerIDs)
 
 	if !startTime.IsZero() {
 		sql = sql.Where(constant.FieldCreatedAt+" >= ?", startTime)
@@ -447,6 +418,7 @@ func (r *sessionReadRepository) GetSessionDetail(ctx context.Context, id uint) (
 	detail := &session.SessionDetailProjection{
 		ID:         sessionRecord.ID,
 		APIKeyName: sessionRecord.APIKeyName,
+		APIKeyID:   sessionRecord.APIKeyID,
 		CreatedAt:  sessionRecord.CreatedAt,
 		UpdatedAt:  sessionRecord.UpdatedAt,
 		Metadata:   sessionRecord.Metadata,
@@ -512,6 +484,7 @@ func (r *sessionReadRepository) GetSessionMeta(ctx context.Context, id uint) (*s
 	return &session.SessionMetaProjection{
 		ID:         sessionRecord.ID,
 		APIKeyName: sessionRecord.APIKeyName,
+		APIKeyID:   sessionRecord.APIKeyID,
 		CreatedAt:  sessionRecord.CreatedAt,
 		UpdatedAt:  sessionRecord.UpdatedAt,
 		Metadata:   sessionRecord.Metadata,
@@ -563,10 +536,10 @@ func BuildOrderedToolProjections(ids []uint, records []*dbmodel.Tool) []*session
 
 // ListDistinctScores 查询去重的评分列表。
 //
-// ownerNames 为 nil 表示不过滤（admin/demo 白名单路径）；非 nil 且为空（用户名下
+// ownerIDs 为 nil 表示不过滤（admin/demo 白名单路径）；非 nil 且为空（用户名下
 // 无 Key）短路返回空结果，防止越权查全量。sessionIDs 非 nil 时按白名单过滤。
-func (r *sessionReadRepository) ListDistinctScores(ctx context.Context, ownerNames []string, startTime, endTime time.Time, sessionIDs []uint) ([]int, error) {
-	if ownerNames != nil && len(ownerNames) == 0 {
+func (r *sessionReadRepository) ListDistinctScores(ctx context.Context, ownerIDs []uint, startTime, endTime time.Time, sessionIDs []uint) ([]int, error) {
+	if ownerIDs != nil && len(ownerIDs) == 0 {
 		return []int{}, nil
 	}
 	db := r.db.WithContext(ctx)
@@ -576,8 +549,8 @@ func (r *sessionReadRepository) ListDistinctScores(ctx context.Context, ownerNam
 		Select(constant.SessionDistinctScoreSelect).
 		Where(constant.SessionDistinctScoreWhere).
 		Where(constant.DBConditionDeletedAtZero)
-	if ownerNames != nil {
-		query = query.Where(fmt.Sprintf(constant.DBConditionInTemplate, constant.FieldAPIKeyName), ownerNames)
+	if ownerIDs != nil {
+		query = query.Where(fmt.Sprintf(constant.DBConditionInTemplate, constant.FieldAPIKeyID), ownerIDs)
 	}
 	if len(sessionIDs) > 0 {
 		query = query.Where(constant.FieldID+" IN ?", sessionIDs)
@@ -598,10 +571,10 @@ func (r *sessionReadRepository) ListDistinctScores(ctx context.Context, ownerNam
 
 // ListDistinctModels 查询去重的模型列表。
 //
-// ownerNames 为 nil 表示不过滤（admin/demo 白名单路径）；非 nil 且为空（用户名下
+// ownerIDs 为 nil 表示不过滤（admin/demo 白名单路径）；非 nil 且为空（用户名下
 // 无 Key）短路返回空结果，防止越权查全量。sessionIDs 非 nil 时按白名单过滤。
-func (r *sessionReadRepository) ListDistinctModels(ctx context.Context, ownerNames []string, keyword string, startTime, endTime time.Time, sessionIDs []uint) ([]string, error) {
-	if ownerNames != nil && len(ownerNames) == 0 {
+func (r *sessionReadRepository) ListDistinctModels(ctx context.Context, ownerIDs []uint, keyword string, startTime, endTime time.Time, sessionIDs []uint) ([]string, error) {
+	if ownerIDs != nil && len(ownerIDs) == 0 {
 		return []string{}, nil
 	}
 	db := r.db.WithContext(ctx)
@@ -611,8 +584,8 @@ func (r *sessionReadRepository) ListDistinctModels(ctx context.Context, ownerNam
 		Select(constant.SessionDistinctModelSelect).
 		Where(constant.DBConditionDeletedAtZero).
 		Where(constant.SessionDistinctModelWhere)
-	if ownerNames != nil {
-		query = query.Where(fmt.Sprintf(constant.DBConditionInTemplate, constant.FieldAPIKeyName), ownerNames)
+	if ownerIDs != nil {
+		query = query.Where(fmt.Sprintf(constant.DBConditionInTemplate, constant.FieldAPIKeyID), ownerIDs)
 	}
 	if len(sessionIDs) > 0 {
 		query = query.Where(constant.FieldID+" IN ?", sessionIDs)
@@ -638,17 +611,17 @@ func (r *sessionReadRepository) ListDistinctModels(ctx context.Context, ownerNam
 //   - maxCount：当前时间范围内最大的 session 消息数（无会话时为 0）
 //   - bucketCounts：各固定边界桶（0-10 / 11-50 / 51-100 / 101-200 / 201-500 / 501+）的会话数
 //
-// ownerNames 为 nil 表示不过滤（admin/demo 白名单路径）；非 nil 且为空（用户名下
+// ownerIDs 为 nil 表示不过滤（admin/demo 白名单路径）；非 nil 且为空（用户名下
 // 无 Key）短路返回空结果，防止越权查全量。sessionIDs 非 nil 时按白名单过滤。
-func (r *sessionReadRepository) ListMessageCountStats(ctx context.Context, ownerNames []string, startTime, endTime time.Time, sessionIDs []uint) (maxCount int, bucketCounts map[int]int64, err error) {
-	if ownerNames != nil && len(ownerNames) == 0 {
+func (r *sessionReadRepository) ListMessageCountStats(ctx context.Context, ownerIDs []uint, startTime, endTime time.Time, sessionIDs []uint) (maxCount int, bucketCounts map[int]int64, err error) {
+	if ownerIDs != nil && len(ownerIDs) == 0 {
 		return 0, map[int]int64{}, nil
 	}
 	db := r.db.WithContext(ctx)
 
 	ownerFilter := func(q *gorm.DB) *gorm.DB {
-		if ownerNames != nil {
-			q = q.Where(fmt.Sprintf(constant.DBConditionInTemplate, constant.FieldAPIKeyName), ownerNames)
+		if ownerIDs != nil {
+			q = q.Where(fmt.Sprintf(constant.DBConditionInTemplate, constant.FieldAPIKeyID), ownerIDs)
 		}
 		if len(sessionIDs) > 0 {
 			q = q.Where(constant.FieldID+" IN ?", sessionIDs)
@@ -705,7 +678,8 @@ func toSessionAggregate(m *dbmodel.Session) *aggregate.Session {
 	score := vo.RestoreSessionScore(m.Score, m.ScoredAt)
 	return aggregate.RestoreSession(
 		m.ID,
-		vo.APIKeyOwner(m.APIKeyName),
+		vo.APIKeyOwnerID(m.APIKeyID),
+		m.APIKeyName,
 		m.MessageIDs,
 		m.ToolIDs,
 		m.Metadata,
@@ -738,20 +712,20 @@ func applyExportFilter(sql *gorm.DB, f session.ExportFilter) *gorm.DB {
 	if !f.EndTime.IsZero() {
 		sql = sql.Where(constant.FieldCreatedAt+" <= ?", f.EndTime)
 	}
-	// OwnerNames 为 nil 表示不过滤（admin 路径）；非 nil 且为空（用户名下无 Key）
+	// OwnerIDs 为 nil 表示不过滤（admin 路径）；非 nil 且为空（用户名下无 Key）
 	// 由两个导出入口短路返回空结果，此处不会收到非 nil 空列表
-	if f.OwnerNames != nil {
-		sql = sql.Where(fmt.Sprintf(constant.DBConditionInTemplate, constant.FieldAPIKeyName), f.OwnerNames)
+	if f.OwnerIDs != nil {
+		sql = sql.Where(fmt.Sprintf(constant.DBConditionInTemplate, constant.FieldAPIKeyID), f.OwnerIDs)
 	}
 	return sql
 }
 
 // ListSessionsForExport 按筛选条件查询导出用会话行
 func (r *sessionReadRepository) ListSessionsForExport(ctx context.Context, f session.ExportFilter) ([]*session.ExportSessionRow, error) {
-	// OwnerNames 为 nil 表示不过滤（admin 路径）；非 nil 且为空（用户名下无 Key）
+	// OwnerIDs 为 nil 表示不过滤（admin 路径）；非 nil 且为空（用户名下无 Key）
 	// 短路返回空结果，防止空 owner 列表退化为全量导出（越权泄露全平台会话；
 	// 与 audit/trace 守卫的入口短路风格统一）
-	if f.OwnerNames != nil && len(f.OwnerNames) == 0 {
+	if f.OwnerIDs != nil && len(f.OwnerIDs) == 0 {
 		return []*session.ExportSessionRow{}, nil
 	}
 	db := r.db.WithContext(ctx)
@@ -781,9 +755,9 @@ type exportPreviewRow struct {
 }
 
 func (r *sessionReadRepository) PreviewExport(ctx context.Context, f session.ExportFilter) (*session.ExportPreview, error) {
-	// OwnerNames 为 nil 表示不过滤（admin 路径）；非 nil 且为空（用户名下无 Key）
+	// OwnerIDs 为 nil 表示不过滤（admin 路径）；非 nil 且为空（用户名下无 Key）
 	// 短路返回空预览，防止空 owner 列表退化为全量统计（与导出主链路守卫一致）
-	if f.OwnerNames != nil && len(f.OwnerNames) == 0 {
+	if f.OwnerIDs != nil && len(f.OwnerIDs) == 0 {
 		return &session.ExportPreview{}, nil
 	}
 	db := r.db.WithContext(ctx)

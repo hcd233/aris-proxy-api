@@ -26,15 +26,15 @@ type deleteTraceHandler struct {
 func (h *deleteTraceHandler) Handle(ctx context.Context, cmd port.DeleteTraceCommand) (*port.DeleteTraceResult, error) {
 	log := logger.WithCtx(ctx)
 
-	var ownerNames []string
+	var ownerIDs []uint
 	if !cmd.IsAdmin {
-		names, lookupErr := h.apiKeyRepo.LookupOwnerNamesByUserID(ctx, cmd.UserID)
+		ids, lookupErr := h.apiKeyRepo.LookupIDsByUserID(ctx, cmd.UserID)
 		if lookupErr != nil {
-			log.Error("[TraceCommand] Delete: lookup owner names failed",
+			log.Error("[TraceCommand] Delete: lookup owner ids failed",
 				zap.Error(lookupErr), zap.Uint("userID", cmd.UserID))
 			return nil, lookupErr
 		}
-		ownerNames = names
+		ownerIDs = ids
 	}
 
 	result := &port.DeleteTraceResult{}
@@ -51,7 +51,7 @@ func (h *deleteTraceHandler) Handle(ctx context.Context, cmd port.DeleteTraceCom
 			continue
 		}
 
-		if !cmd.IsAdmin && !slices.Contains(ownerNames, t.APIKeyName) {
+		if !cmd.IsAdmin && (t.APIKeyID == 0 || !slices.Contains(ownerIDs, t.APIKeyID)) {
 			result.Failures = append(result.Failures, port.DeleteTraceFailedItem{ID: id, Error: constant.TraceDeleteErrorNoPermission})
 			continue
 		}
@@ -66,7 +66,7 @@ func (h *deleteTraceHandler) Handle(ctx context.Context, cmd port.DeleteTraceCom
 		log.Info("[TraceCommand] Trace deleted",
 			zap.Uint("traceID", id),
 			zap.Uint("requesterID", cmd.UserID),
-			zap.String("owner", t.APIKeyName))
+			zap.Uint("ownerID", t.APIKeyID))
 	}
 
 	log.Info("[TraceCommand] Delete completed",

@@ -14,12 +14,12 @@ func TestTraceQueries_EnforceOwnerIsolation(t *testing.T) {
 	ctx := context.Background()
 	repo := NewFakeRepo()
 	traceRecord, err := repo.UpsertBySessionID(ctx, &domaintrace.Trace{
-		SessionID: "s1", APIKeyName: "key2",
+		SessionID: "s1", APIKeyName: "key2", APIKeyID: 2,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	apiKeys := newFakeAPIKeyRepo(map[uint][]string{1: {"key1"}})
+	apiKeys := newFakeAPIKeyRepo(map[uint][]uint{1: {1}})
 
 	getHandler := query.NewGetTraceHandler(repo, apiKeys)
 	if _, err := getHandler.Handle(ctx, port.GetTraceQuery{

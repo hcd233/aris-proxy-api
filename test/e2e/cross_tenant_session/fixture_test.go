@@ -172,18 +172,19 @@ func (f *crossTenantSessionFixture) seed(t *testing.T) {
 	}
 
 	score := 5
-	// APIKeyID 由 T3 引入后在此补 f.keyA.ID（见计划 T8 Step 7）
 	f.sessionA = &dbmodel.Session{
 		APIKeyName: sharedKeyName,
+		APIKeyID:   f.keyA.ID,
 		MessageIDs: []uint{msg.ID},
 		ToolIDs:    []uint{},
 		Questions:  []uint{msg.ID},
 		ModelIDs:   []string{"gpt-secret"},
 		Score:      &score,
 	}
-	// 空归属会话：api_key_name=''（T3 后 api_key_id 亦为 0），仅 admin 可见
+	// 空归属会话：api_key_name='' 且 api_key_id=0，仅 admin 可见
 	f.sessionOrphan = &dbmodel.Session{
 		APIKeyName: "",
+		APIKeyID:   0,
 		MessageIDs: []uint{msg.ID},
 		ToolIDs:    []uint{},
 		Questions:  []uint{msg.ID},
