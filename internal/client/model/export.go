@@ -175,7 +175,7 @@ func terminalIO(in io.Reader) (io.Reader, io.Writer, func(), error) {
 	}
 	tty, err := os.OpenFile(constant.ArisClientDevTTYPath, os.O_RDWR, 0)
 	if err != nil {
-		return nil, nil, nil, ierr.New(ierr.ErrValidation, constant.ArisClientInitNonInteractiveMessage)
+		return nil, nil, nil, ierr.New(ierr.ErrValidation, constant.ClientModelExportNonInteractiveMessage)
 	}
 	return tty, tty, func() { _ = tty.Close() }, nil //nolint:errcheck // best-effort close
 }

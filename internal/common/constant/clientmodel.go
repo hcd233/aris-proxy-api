@@ -118,6 +118,7 @@ const (
 // ClientModelExportMessages aris model export 交互文案
 const (
 	ClientModelExportNeedInitMessage       = "Not initialized. Run `aris init` first."
+	ClientModelExportNonInteractiveMessage = "aris model export requires an interactive terminal"
 	ClientModelExportFetchingMessage       = "Fetching models from server..."
 	ClientModelExportEmptyModelsMessage    = "No enabled models found on the server."
 	ClientModelExportSelectModelsTitle     = "Select models to export"
@@ -144,8 +145,9 @@ const (
 
 // TraceInstallMessages aris trace install 文案
 const (
-	ArisClientInstallNeedInitMessage = "Not initialized. Run `aris init` first."
-	ArisClientInstallDone            = "✓ Hooks installation complete"
+	ArisClientInstallNeedInitMessage       = "Not initialized. Run `aris init` first."
+	ArisClientInstallNonInteractiveMessage = "aris trace install requires an interactive terminal"
+	ArisClientInstallDone                  = "✓ Hooks installation complete"
 )
 
 // ClientStatusMessages status 面板 Providers 节文案
