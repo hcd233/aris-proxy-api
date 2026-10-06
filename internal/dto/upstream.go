@@ -92,6 +92,7 @@ type UpstreamModelItem struct {
 	ContextLength   int                  `json:"contextLength" doc:"上下文窗口长度（tokens）"`
 	MaxOutputTokens int                  `json:"maxOutputTokens" doc:"最大输出长度（tokens）"`
 	Capabilities    []enum.InputModality `json:"capabilities" doc:"模型能力（输入模态集合）"`
+	Pricing         *PricingDTO          `json:"pricing,omitempty" doc:"定价（未计价缺省）"`
 	CreatedAt       time.Time            `json:"createdAt" doc:"创建时间"`
 	UpdatedAt       time.Time            `json:"updatedAt" doc:"更新时间"`
 }

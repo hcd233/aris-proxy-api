@@ -55,6 +55,11 @@ func (h *modelHandler) HandleCreateModel(ctx context.Context, req *dto.CreateMod
 		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrUnauthorized.BizError())
 	}
 
+	pricing, perr := port.PricingFromDTO(req.Body.Pricing)
+	if perr != nil {
+		return nil, apiutil.NewHumaBizError(ctx, perr, ierr.ErrValidation.BizError())
+	}
+
 	_, err = h.create.Handle(ctx, port.CreateModelCommand{
 		ScopeUserID:     scope,
 		Alias:           req.Body.Alias,
@@ -64,6 +69,7 @@ func (h *modelHandler) HandleCreateModel(ctx context.Context, req *dto.CreateMod
 		ContextLength:   req.Body.ContextLength,
 		MaxOutputTokens: req.Body.MaxOutputTokens,
 		Capabilities:    req.Body.Capabilities,
+		Pricing:         pricing,
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[ModelHandler] Create model failed", zap.Error(err))
@@ -83,7 +89,7 @@ func (h *modelHandler) HandleUpdateModel(ctx context.Context, req *dto.UpdateMod
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
-	counts, err := h.update.Handle(ctx, port.UpdateModelCommand{
+	cmd := port.UpdateModelCommand{
 		ScopeUserID:     scope,
 		ID:              req.ID,
 		Alias:           req.Body.Alias,
@@ -95,7 +101,17 @@ func (h *modelHandler) HandleUpdateModel(ctx context.Context, req *dto.UpdateMod
 		Capabilities:    req.Body.Capabilities,
 		ModelID:         req.Body.ModelID,
 		SyncHistory:     req.Body.SyncHistory,
-	})
+	}
+	if req.Body.Pricing != nil {
+		pricing, perr := port.PricingFromDTO(req.Body.Pricing)
+		if perr != nil {
+			rsp.Error = ierr.ToBizErrorLocalized(ctx, perr, ierr.ErrValidation.BizError())
+			return apiutil.WrapHTTPResponse(rsp, nil)
+		}
+		cmd.Pricing = pricing
+		cmd.PricingSet = true
+	}
+	counts, err := h.update.Handle(ctx, cmd)
 	if err != nil {
 		logger.WithCtx(ctx).Error("[ModelHandler] Update model failed", zap.Error(err))
 		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
@@ -172,6 +188,7 @@ func toModelListItem(v *port.ListModelView) *dto.ModelListItem {
 		ContextLength:   v.ContextLength,
 		MaxOutputTokens: v.MaxOutputTokens,
 		Capabilities:    v.Capabilities,
+		Pricing:         port.PricingToDTO(v.Pricing),
 		CreatedAt:       v.CreatedAt,
 		UpdatedAt:       v.UpdatedAt,
 	}

@@ -106,6 +106,7 @@ func toListModelView(m *llmagg.Model, epsByID map[uint]*llmagg.Endpoint, usersBy
 		ContextLength:   m.ContextLength(),
 		MaxOutputTokens: m.MaxOutputTokens(),
 		Capabilities:    m.Capabilities(),
+		Pricing:         m.Pricing(),
 		CreatedAt:       m.CreatedAt(),
 		UpdatedAt:       m.UpdatedAt(),
 	}

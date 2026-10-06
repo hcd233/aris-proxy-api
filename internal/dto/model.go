@@ -22,6 +22,7 @@ type CreateModelReqBody struct {
 	ContextLength   int                  `json:"contextLength,omitempty" minimum:"0" default:"128000" doc:"上下文窗口长度（tokens）"`
 	MaxOutputTokens int                  `json:"maxOutputTokens,omitempty" minimum:"0" default:"64000" doc:"最大输出长度（tokens）"`
 	Capabilities    []enum.InputModality `json:"capabilities,omitempty" doc:"模型能力（输入模态集合；合法值 text/image；必须包含 text；缺省为 [text]）"`
+	Pricing         *PricingDTO          `json:"pricing,omitempty" doc:"定价（缺省=未计价）"`
 }
 
 // UpdateModelReq 更新 Model 请求
@@ -41,6 +42,7 @@ type UpdateModelReqBody struct {
 	ContextLength   *int                  `json:"contextLength,omitempty" minimum:"0" doc:"上下文窗口长度（tokens）"`
 	MaxOutputTokens *int                  `json:"maxOutputTokens,omitempty" minimum:"0" doc:"最大输出长度（tokens）"`
 	Capabilities    *[]enum.InputModality `json:"capabilities,omitempty" doc:"模型能力（输入模态集合；合法值 text/image；必须包含 text）"`
+	Pricing         *PricingDTO           `json:"pricing,omitempty" doc:"定价（缺省=不修改；currency 与 rules 均置空=清空为未计价）"`
 }
 
 // ModelUpdateRsp 更新 Model 响应
@@ -116,6 +118,7 @@ type ModelListItem struct {
 	ContextLength   int                    `json:"contextLength" doc:"上下文窗口长度（tokens）"`
 	MaxOutputTokens int                    `json:"maxOutputTokens" doc:"最大输出长度（tokens）"`
 	Capabilities    []enum.InputModality   `json:"capabilities" doc:"模型能力（输入模态集合）"`
+	Pricing         *PricingDTO            `json:"pricing,omitempty" doc:"定价（未计价缺省）"`
 	CreatedAt       time.Time              `json:"createdAt" doc:"创建时间"`
 	UpdatedAt       time.Time              `json:"updatedAt" doc:"更新时间"`
 }

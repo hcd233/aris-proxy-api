@@ -198,6 +198,7 @@ func toModelView(m *llmagg.Model, usersByID map[uint]*identityaggregate.User, is
 		ContextLength:   m.ContextLength(),
 		MaxOutputTokens: m.MaxOutputTokens(),
 		Capabilities:    m.Capabilities(),
+		Pricing:         m.Pricing(),
 		CreatedAt:       m.CreatedAt(),
 		UpdatedAt:       m.UpdatedAt(),
 	}
