@@ -160,7 +160,8 @@ func enrichCostDistribution(ctx context.Context, repo CostDistributionRepository
 	return &modelcall.CostDistributionResult{GroupBy: groupBy, Items: trimCostPerCurrency(items, limit)}, nil
 }
 
-// trimCostPerCurrency 每币种保留费用最高的 limit 条（输入需按币种、费用降序排好）
+// trimCostPerCurrency 每币种保留费用最高的 limit 条（输入需按币种、费用降序排好）。
+// ponytail: top-N 在应用层裁剪而非 SQL 窗口函数，升级路径：ROW_NUMBER() OVER (PARTITION BY currency) 下沉仓储。
 func trimCostPerCurrency(items []*modelcall.CostDistributionPoint, limit int) []*modelcall.CostDistributionPoint {
 	if limit <= 0 {
 		limit = constant.CostDistributionDefaultLimit

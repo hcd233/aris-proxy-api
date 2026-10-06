@@ -24,7 +24,8 @@ const GROUP_BY_OPTIONS: CostGroupBy[] = ["model", "api_key", "user"];
 
 /**
  * CostPanel 成本面板：成本合计卡（按币种）+ 费用趋势（文本序列）+ 成本分布（分组切换）。
- * 图表以清单形式呈现（币种 × 时间桶），避免为成本单独立图表组件。
+ * 图表以清单形式呈现（币种 × 时间桶）。
+ * ponytail: 趋势用文本清单而非图表组件，升级路径：复用 charts/ 折线图按币种拆线。
  */
 export function CostPanel({ startTime, endTime }: CostPanelProps) {
   const t = useT();

@@ -25,6 +25,7 @@ export interface PricingEditorProps {
 }
 
 const WEEKDAYS = [1, 2, 3, 4, 5, 6, 7];
+// ponytail: 时区固定两选项（UTC/Asia/Shanghai），升级路径：接 IANA 全量列表选择器
 const TIMEZONE_OPTIONS = ["UTC", "Asia/Shanghai"];
 
 const emptyRule = (): PricingRuleDTO => ({
