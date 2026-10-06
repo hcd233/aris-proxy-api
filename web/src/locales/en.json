@@ -837,12 +837,11 @@
   "upstream.pricing.cacheCreationPrice": "Cache write price",
   "upstream.pricing.cacheReadPrice": "Cache read price",
   "audit.cost.column": "Cost",
-  "audit.cost.summary": "Cost summary",
-  "audit.cost.trend": "Cost trend",
-  "audit.cost.distribution": "Cost distribution",
-  "audit.cost.groupBy.user": "By user",
-  "audit.cost.groupBy.apiKey": "By API key",
-  "audit.cost.groupBy.model": "By model",
   "audit.cost.unpriced": "No priced data",
-  "dashboard.costCard": "Cost (30d)"
+  "dashboard.model_cost": "Model cost ranking",
+  "cost.dim.total": "Total",
+  "cost.dim.input": "Input",
+  "cost.dim.output": "Output",
+  "cost.dim.cacheRead": "Cache read",
+  "cost.dim.cacheWrite": "Cache write"
 }

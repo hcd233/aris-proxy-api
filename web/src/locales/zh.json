@@ -837,12 +837,11 @@
   "upstream.pricing.cacheCreationPrice": "缓存创建单价",
   "upstream.pricing.cacheReadPrice": "缓存读取单价",
   "audit.cost.column": "费用",
-  "audit.cost.summary": "成本合计",
-  "audit.cost.trend": "成本趋势",
-  "audit.cost.distribution": "成本分布",
-  "audit.cost.groupBy.user": "按用户",
-  "audit.cost.groupBy.apiKey": "按 API Key",
-  "audit.cost.groupBy.model": "按模型",
   "audit.cost.unpriced": "暂无计价数据",
-  "dashboard.costCard": "本期成本"
+  "dashboard.model_cost": "模型成本排行",
+  "cost.dim.total": "总成本",
+  "cost.dim.input": "输入",
+  "cost.dim.output": "输出",
+  "cost.dim.cacheRead": "缓存读取",
+  "cost.dim.cacheWrite": "缓存写入"
 }

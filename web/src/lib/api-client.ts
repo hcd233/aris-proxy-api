@@ -2,14 +2,11 @@ import { toast } from "sonner";
 import { translate } from "@/lib/i18n";
 import type {
   AddDemoSessionsReqBody,
-  AuditCostDistributionRsp,
-  AuditCostSummaryRsp,
   AuditOptionListReq,
   AuditOptionListRsp,
   CallbackReqBody,
   CallbackRsp,
   CommonRsp,
-  CostGroupBy,
   CreateAPIKeyReqBody,
   CreateAPIKeyRsp,
   CreateEndpointReqBody,
@@ -60,6 +57,7 @@ import type {
   ListUsersRsp,
   LoginRsp,
   ModelCapability,
+  ModelCostRsp,
   ModelListSortField,
   ModelPricingPrefillRsp,
   ModelTrendRsp,
@@ -665,36 +663,10 @@ class ApiClient {
     return this.request<ListAuditLogsRsp>(`${API_PREFIX}/audit/model/log/list?${sp}`);
   }
 
-  /** 成本合计与趋势（按币种分组） */
-  async getAuditCostSummary(params: {
-    startTime: string;
-    endTime: string;
-    granularity: Granularity;
-  }): Promise<AuditCostSummaryRsp> {
-    const sp = new URLSearchParams({
-      startTime: params.startTime,
-      endTime: params.endTime,
-      granularity: params.granularity,
-    });
-    return this.request<AuditCostSummaryRsp>(`${API_PREFIX}/audit/stats/cost/summary?${sp}`);
-  }
-
-  /** 成本分布（groupBy：user 仅管理员；每币种 top-N） */
-  async getAuditCostDistribution(params: {
-    groupBy: CostGroupBy;
-    startTime: string;
-    endTime: string;
-    limit?: number;
-  }): Promise<AuditCostDistributionRsp> {
-    const sp = new URLSearchParams({
-      groupBy: params.groupBy,
-      startTime: params.startTime,
-      endTime: params.endTime,
-    });
-    if (params.limit) sp.set("limit", String(params.limit));
-    return this.request<AuditCostDistributionRsp>(
-      `${API_PREFIX}/audit/stats/cost/distribution?${sp}`,
-    );
+  /** 模型成本排行（四维拆分 + 总费用，行 = 模型 × 币种） */
+  async fetchModelCost(params: { startTime: string; endTime: string }): Promise<ModelCostRsp> {
+    const sp = new URLSearchParams({ startTime: params.startTime, endTime: params.endTime });
+    return this.request<ModelCostRsp>(`${API_PREFIX}/audit/stats/model/cost?${sp}`);
   }
 
   async listAuditOptions(params: AuditOptionListReq): Promise<AuditOptionListRsp> {

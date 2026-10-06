@@ -24,7 +24,6 @@ import { useRequestSeq } from "@/hooks/use-request-seq";
 import { useI18n } from "@/lib/i18n";
 import { PermissionGuard } from "@/components/permission-guard";
 import { formatCost } from "@/lib/money";
-import { CostPanel } from "../cost-panel";
 import {
   TooltipProvider,
   TooltipRoot,
@@ -188,11 +187,6 @@ export default function AuditPage() {
           <p className="mt-1.5 text-sm text-muted-foreground">{t("audit.model_page_subtitle")}</p>
         </div>
 
-        <CostPanel
-          startTime={computeRange(timeRange, customStart, customEnd).startTime}
-          endTime={computeRange(timeRange, customStart, customEnd).endTime}
-        />
-
         <Card>
           <CardHeader>
             <CardTitle className="font-display">{t("audit.logs_title")}</CardTitle>
@@ -325,6 +319,7 @@ export default function AuditPage() {
                             <span>O: {formatMs(log.streamDurationMs)}</span>
                           )}
                           {cacheInfo && <span>{cacheInfo}</span>}
+                          <span>{formatCost(log.cost, log.pricingCurrency)}</span>
                           <TooltipProvider>
                             <TooltipRoot>
                               <TooltipTrigger
@@ -482,6 +477,7 @@ export default function AuditPage() {
                     <TableHead>{t("audit.filter_status")}</TableHead>
                     <TableHead>{t("audit.tokens")}</TableHead>
                     <TableHead>{t("audit.latency")}</TableHead>
+                    <TableHead>{t("audit.cost.column")}</TableHead>
                     <TableHead>{t("audit.useragent")}</TableHead>
                     <TableHead>{t("audit.copy_traceid")}</TableHead>
                   </TableRow>
@@ -642,6 +638,9 @@ export default function AuditPage() {
                           {log.streamDurationMs > 0 && (
                             <div className="text-xs">O: {formatMs(log.streamDurationMs)}</div>
                           )}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-xs tabular-nums">
+                          {formatCost(log.cost, log.pricingCurrency)}
                         </TableCell>
                         <TableCell>
                           {log.userAgent ? (

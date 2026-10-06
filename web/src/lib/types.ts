@@ -490,36 +490,19 @@ export interface ModelPricingPrefillRsp extends CommonRsp {
   cacheReadPrice?: number;
 }
 
-/** 费用合计行（按币种） */
-export interface AuditCostTotalItem {
+/** 模型成本排行行（展示单位；行 = 模型 × 币种） */
+export interface ModelCostItem {
+  modelId: string;
   currency: string;
-  cost: number;
+  inputCost: number;
+  outputCost: number;
+  cacheCreationCost: number;
+  cacheReadCost: number;
+  totalCost: number;
 }
 
-/** 费用趋势点（时间桶 × 币种） */
-export interface AuditCostSeriesPoint {
-  bucketTime: string;
-  currency: string;
-  cost: number;
-}
-
-export interface AuditCostSummaryRsp extends CommonRsp {
-  totals?: AuditCostTotalItem[];
-  series?: AuditCostSeriesPoint[];
-}
-
-export type CostGroupBy = "user" | "api_key" | "model";
-
-export interface AuditCostDistributionItem {
-  id: string;
-  name: string;
-  currency: string;
-  cost: number;
-}
-
-export interface AuditCostDistributionRsp extends CommonRsp {
-  groupBy?: string;
-  items?: AuditCostDistributionItem[];
+export interface ModelCostRsp extends CommonRsp {
+  data?: ModelCostItem[];
 }
 
 export interface CreateModelReqBody {

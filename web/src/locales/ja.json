@@ -837,12 +837,11 @@
   "upstream.pricing.cacheCreationPrice": "キャッシュ作成単価",
   "upstream.pricing.cacheReadPrice": "キャッシュ読み取り単価",
   "audit.cost.column": "費用",
-  "audit.cost.summary": "コスト合計",
-  "audit.cost.trend": "コスト推移",
-  "audit.cost.distribution": "コスト分布",
-  "audit.cost.groupBy.user": "ユーザー別",
-  "audit.cost.groupBy.apiKey": "API Key 別",
-  "audit.cost.groupBy.model": "モデル別",
   "audit.cost.unpriced": "価格設定済みのデータなし",
-  "dashboard.costCard": "今期コスト"
+  "dashboard.model_cost": "モデルコストランキング",
+  "cost.dim.total": "合計",
+  "cost.dim.input": "入力",
+  "cost.dim.output": "出力",
+  "cost.dim.cacheRead": "キャッシュ読取",
+  "cost.dim.cacheWrite": "キャッシュ書込"
 }
