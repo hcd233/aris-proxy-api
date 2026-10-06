@@ -40,6 +40,7 @@ _Avoid_: upstream, provider, backend
 
 **Model（模型别名）**:
 一条将对外别名（`alias`）映射到上游真实模型名的记录，归属于某个 Endpoint，其用户归属继承该 Endpoint（model.user_id = endpoint.user_id）。唯一性按 `(user_id, alias, endpoint_id)` 判定：不同用户可各自配置同名别名互不干扰。OpenAI / Anthropic `/v1/models` 只返回当前 API Key 所属用户启用的别名；转发解析同样只在用户自己的配置范围内进行。
+`Pricing`（见 ModelPricing）随聚合装配，未配置定价的模型不产生估算费用。
 _Avoid_: model mapping, model route, alias record
 
 **EndpointAlias（端点别名）**:
@@ -65,6 +66,30 @@ _Avoid_: protocol translation, api bridge
 **ModelCapabilities（模型能力）**:
 模型支持的输入模态集合，持久化为 `Model` 表 `capabilities` 列（text 列 + serializer:json，如 `["text","image"]`），成员为已知枚举 `InputModality`（`text` / `image`，后续可扩展更多模态）。集合必须非空且包含 `text`。与 Endpoint 的协议能力（端点支持哪些 LLM 接口协议）是不同概念：前者描述模型能接收的输入模态，后者描述端点能讲什么协议。管理页以两个开关配置、徽标展示；ClientConfigExport 据此生成 OpenCode `modalities.input`（含 `image` 时附 `attachment: true`）与 Pi `input` 数组。存量行默认 `["text"]`。
 _Avoid_: model features, model flags
+
+**ModelPricing（模型定价）**:
+挂在 Model 上的计费配置：币种（CNY/USD，空=未计价）+ 定价规则表。价格单位为「每 1M tokens 的微单位」（1e-6 货币单位，int64 入账，禁浮点）。`currency` 为空 ⇔ 规则为空 ⇔ 未计价（审计 cost 记 NULL）；`currency` 非空且四价全 0 ⇔ 免费模型（审计 cost 记 0）。计价只覆盖 LLM 代理成功调用（失败不计费）。
+_Avoid_: price config, billing config, rate card
+
+**PricingRule（定价规则）**:
+一条「可选时段条件 + 可选上下文区间条件 + 四类单价（输入/输出/缓存创建/缓存读取）」的计价规则，多条组成规则表，**数组顺序 = 匹配优先级（第一命中）**，且必须恰好包含一条无条件默认规则兜底。计价按整段跳档：命中哪条规则，全部 token 按该规则单价计。
+_Avoid_: price tier, rate rule
+
+**TimeWindow（时段窗口）**:
+定价规则的时段条件：`[start, end)` 半开区间（HH:MM），`end < start` 表示跨午夜；`days` 为空=每天、成员 1=周一…7=周日（按调用时刻在窗口时区下的周几判定）；`timezone` 为 IANA 时区名（默认 UTC）。多窗口为 OR 关系。
+_Avoid_: schedule, time slot
+
+**ContextTier（上下文区间）**:
+定价规则的上下文条件：按本次调用的 prompt 总 token（input + cacheCreation + cacheRead）落档，`context_min ≤ promptTokens < context_max`（`context_max=0` 表无上限），**整段跳档**（不做累进分段）——与 Gemini/Claude 官方分档口径一致。
+_Avoid_: context pricing, token bracket
+
+**EstimatedCost（估算费用）**:
+一次模型调用的费用估算（`model_call_audits.cost_micro`，微单位，NULL=未计价），按调用时刻与 prompt 总 token 匹配定价规则后计算：四项分别「单价 × tokens / 1e6 四舍五入」求和。请求时计算并落库（不随改价漂移），同时快照 `pricing_currency`。统计聚合按币种分组，不做汇率换算。
+_Avoid_: cost, billing amount, charge
+
+**PricingPrefill（定价导入辅助）**:
+从 models.dev 公开定价按 `upstream_model` 精确匹配（trim 后、区分大小写）查询 USD 单价，仅用于填充录入表单的默认规则行，**永不自动改价**；未命中/上游不可达一律降级为「未找到，可手填」。
+_Avoid_: price import, auto pricing
 
 **ClientConfigExport（客户端配置导出）**:
 管理后台从模型列表一键生成「让外部 Agentic 客户端接入本网关」的安装脚本的纯前端能力（无后端接口）。当前支持四种目标：OpenCode（在 provider 字典里注册多个模型，patch `~/.config/opencode/opencode.json`）、Claude Code（按 opus/sonnet/haiku 三档别名映射 `ANTHROPIC_DEFAULT_*_MODEL` 环境变量、用 `ANTHROPIC_AUTH_TOKEN` 认证、指向 `/api/anthropic/v1`，patch `~/.claude/settings.json` 的 env 块）、Codex（注册自定义 `model_providers`、设置默认 `model` 与 `model_context_window`，并同步 `[memories]` 的 `extract_model` / `consolidation_model`，patch `~/.codex/config.toml`）与 Pi（生成 provider 和模型数组，patch `~/.pi/agent/models.json`）。Pi 模型使用 `alias` 作为 ID，脚本合并 provider/model、备份 `.bak`，以 `0600` 保存凭证配置并使用同目录临时文件原子替换。生成的 bash 脚本内嵌 Python 做幂等 patch。OpenCode 模型条目含 `modalities` 字段（且图片输入模型附 `attachment: true`），Pi 模型含 `input` 数组，两者均由 **ModelCapabilities** 生成。
