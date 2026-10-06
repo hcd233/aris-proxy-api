@@ -7,6 +7,7 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
+	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/metrics"
 	"github.com/hcd233/aris-proxy-api/internal/util"
@@ -124,6 +125,7 @@ func recordModelCall(ctx context.Context, submitter TaskSubmitter, tokenMetrics 
 		APIProtocol:         out.apiProtocol,
 		FirstTokenLatencyMs: out.firstTokenLatencyMs,
 		StreamDurationMs:    out.streamDurationMs,
+		CreatedAt:           time.Now(),
 	}
 
 	if out.usage != nil {
@@ -144,5 +146,35 @@ func recordModelCall(ctx context.Context, submitter TaskSubmitter, tokenMetrics 
 		task.SetErrorFromResponseStatus(out.responseStatus)
 	}
 
+	PriceModelCall(task, out.model.Pricing())
+
 	_ = submitter.SubmitModelCallAuditTask(task) //nolint:errcheck // best-effort audit submission
+}
+
+// PriceModelCall 为审计任务粘连计费结果：仅成功调用（HTTP 200）且模型已计价时，
+// 按调用时刻与 prompt 总 token 匹配定价规则（第一命中、整段跳档），
+// 计算估算费用（微单位）并快照计价币种。未计价/失败调用保持 CostMicro 为 nil。
+//
+//	@param task *dto.ModelCallAuditTask 审计任务（token 计数已就位）
+//	@param pricing vo.Pricing 模型定价
+//	@author centonhuang
+//	@update 2026-10-05 10:00:00
+func PriceModelCall(task *dto.ModelCallAuditTask, pricing vo.Pricing) {
+	if task.UpstreamStatusCode != http.StatusOK || !pricing.IsPriced() {
+		return
+	}
+	at := task.CreatedAt
+	if at.IsZero() {
+		at = time.Now()
+	}
+	promptTokens := int64(task.InputTokens) + int64(task.CacheCreationInputTokens) + int64(task.CacheReadInputTokens)
+	rule := pricing.Match(at, promptTokens)
+	cost := pricing.ComputeCost(rule,
+		int64(task.InputTokens),
+		int64(task.OutputTokens),
+		int64(task.CacheCreationInputTokens),
+		int64(task.CacheReadInputTokens),
+	)
+	task.CostMicro = &cost
+	task.PricingCurrency = string(pricing.Currency())
 }

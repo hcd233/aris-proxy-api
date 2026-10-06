@@ -145,6 +145,8 @@ const (
 	FieldModelCapabilities                   = "capabilities"
 	FieldModelPricingRules                   = "pricing_rules"
 	FieldModelPricingCurrency                = "pricing_currency"
+	FieldCostMicro                           = "cost_micro"
+	FieldPricingCurrency                     = "pricing_currency"
 
 	// Router tag names
 	TagAnthropic = "Anthropic"

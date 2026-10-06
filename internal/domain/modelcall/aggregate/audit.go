@@ -29,6 +29,8 @@ type ModelCallAudit struct {
 	status           vo.CallStatus
 	userAgent        string
 	traceID          string
+	costMicro        *int64
+	pricingCurrency  enum.Currency
 	createdAt        time.Time
 }
 
@@ -61,6 +63,8 @@ type RecordCallInput struct {
 	Status           vo.CallStatus
 	UserAgent        string
 	TraceID          string
+	CostMicro        *int64
+	PricingCurrency  enum.Currency
 }
 
 // newAudit 构造聚合但不生成事件（由调用方选择 Complete/Fail 事件）
@@ -76,6 +80,8 @@ func newAudit(input RecordCallInput, now time.Time) *ModelCallAudit {
 		status:           input.Status,
 		userAgent:        input.UserAgent,
 		traceID:          input.TraceID,
+		costMicro:        input.CostMicro,
+		pricingCurrency:  input.PricingCurrency,
 		createdAt:        now,
 	}
 }
@@ -109,6 +115,12 @@ func (a *ModelCallAudit) UserAgent() string { return a.userAgent }
 
 // TraceID 返回 Trace ID
 func (a *ModelCallAudit) TraceID() string { return a.traceID }
+
+// GetCostMicro 返回估算费用（微单位）；nil=未计价
+func (a *ModelCallAudit) GetCostMicro() *int64 { return a.costMicro }
+
+// GetPricingCurrency 返回计价币种快照
+func (a *ModelCallAudit) GetPricingCurrency() enum.Currency { return a.pricingCurrency }
 
 // CreatedAt 返回创建时间
 func (a *ModelCallAudit) CreatedAt() time.Time { return a.createdAt }

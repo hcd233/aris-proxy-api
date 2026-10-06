@@ -64,6 +64,8 @@ func (r *auditRepository) Save(ctx context.Context, audit *aggregate.ModelCallAu
 		UpstreamStatusCode:       audit.Status().UpstreamStatusCode(),
 		ErrorMessage:             audit.Status().ErrorMessage(),
 		TraceID:                  audit.TraceID(),
+		CostMicro:                audit.GetCostMicro(),
+		PricingCurrency:          string(audit.GetPricingCurrency()),
 	}
 	if err := r.dao.Create(db, record); err != nil {
 		return ierr.Wrap(ierr.ErrDBCreate, err, "create model call audit")
@@ -324,6 +326,8 @@ func (r *auditRepository) paginate(db *gorm.DB, param model.CommonParam, startTi
 			Status:           vo.NewCallStatus(rec.UpstreamStatusCode, rec.ErrorMessage),
 			UserAgent:        rec.UserAgent,
 			TraceID:          rec.TraceID,
+			CostMicro:        rec.CostMicro,
+			PricingCurrency:  enum.Currency(rec.PricingCurrency),
 			CreatedAt:        rec.CreatedAt,
 		})
 		a.SetID(rec.ID)

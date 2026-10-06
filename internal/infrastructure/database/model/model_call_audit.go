@@ -33,4 +33,6 @@ type ModelCallAudit struct {
 	UpstreamStatusCode       int       `json:"upstream_status_code" gorm:"column:upstream_status_code;not null;default:0;comment:上游HTTP状态码：200成功，>0为上游返回码，-1为连接错误，0为未知错误"`
 	ErrorMessage             string    `json:"error_message" gorm:"column:error_message;not null;default:'';comment:错误信息，成功时为空"`
 	TraceID                  string    `json:"trace_id" gorm:"column:trace_id;not null;default:'';comment:请求追踪ID;index"`
+	CostMicro                *int64    `json:"cost_micro" gorm:"column:cost_micro;comment:估算费用(微单位,NULL=未计价)"`
+	PricingCurrency          string    `json:"pricing_currency" gorm:"column:pricing_currency;not null;default:'';comment:计价币种快照(''/CNY/USD)"`
 }

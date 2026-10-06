@@ -160,7 +160,7 @@ var (
 	AuditRepoFieldIDQualified        = "model_call_audits.id"
 	AuditRepoFieldCreatedAtQualified = "model_call_audits.created_at"
 
-	AuditRepoFields = []string{AuditRepoFieldIDQualified, FieldAPIKeyID, FieldModelID, FieldUpstreamProtocol, FieldAPIProtocol, FieldEndpoint, FieldInputTokens, FieldOutputTokens, FieldCacheCreationInputTokens, FieldCacheReadInputTokens, FieldFirstTokenLatencyMs, FieldStreamDurationMs, FieldUserAgent, FieldUpstreamStatusCode, FieldErrorMessage, FieldTraceID, AuditRepoFieldCreatedAtQualified}
+	AuditRepoFields = []string{AuditRepoFieldIDQualified, FieldAPIKeyID, FieldModelID, FieldUpstreamProtocol, FieldAPIProtocol, FieldEndpoint, FieldInputTokens, FieldOutputTokens, FieldCacheCreationInputTokens, FieldCacheReadInputTokens, FieldFirstTokenLatencyMs, FieldStreamDurationMs, FieldUserAgent, FieldUpstreamStatusCode, FieldErrorMessage, FieldTraceID, FieldCostMicro, FieldPricingCurrency, AuditRepoFieldCreatedAtQualified}
 
 	AuditQueryFields = []string{FieldTraceID, FieldModelID}
 
