@@ -143,6 +143,8 @@ const (
 	FieldModelContextLength                  = "context_length"
 	FieldModelMaxOutputTokens                = "max_output_tokens"
 	FieldModelCapabilities                   = "capabilities"
+	FieldModelPricingRules                   = "pricing_rules"
+	FieldModelPricingCurrency                = "pricing_currency"
 
 	// Router tag names
 	TagAnthropic = "Anthropic"

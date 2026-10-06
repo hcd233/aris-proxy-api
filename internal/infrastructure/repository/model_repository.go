@@ -55,6 +55,9 @@ func toModelAggregate(m *dbmodel.Model) (*aggregate.Model, error) {
 	}
 	model.SetUserID(m.UserID)
 	model.SetModelID(m.ModelID)
+	if err := model.UpdatePricing(pricingFromDB(m.PricingRules, m.PricingCurrency)); err != nil {
+		return nil, err
+	}
 	model.SetTimestamps(m.CreatedAt, m.UpdatedAt)
 	return model, nil
 }
@@ -70,7 +73,51 @@ func toModelDBModel(m *aggregate.Model) *dbmodel.Model {
 		ContextLength:   m.ContextLength(),
 		MaxOutputTokens: m.MaxOutputTokens(),
 		Capabilities:    m.Capabilities(),
+		PricingRules:    pricingToDB(m.Pricing()),
+		PricingCurrency: string(m.Pricing().Currency()),
 	}
+}
+
+// pricingFromDB DB 定价规则（微单位）→ 值对象；库内数据非法时按未计价降级，不阻断读路径。
+func pricingFromDB(rules []dbmodel.ModelPricingRule, currency string) vo.Pricing {
+	if currency == "" {
+		return vo.Pricing{}
+	}
+	vr := lo.Map(rules, func(r dbmodel.ModelPricingRule, _ int) vo.PricingRule {
+		return vo.PricingRule{
+			TimeWindows: lo.Map(r.TimeWindows, func(w dbmodel.ModelTimeWindow, _ int) vo.TimeWindow {
+				return vo.TimeWindow{Days: w.Days, Start: w.Start, End: w.End, Timezone: w.Timezone}
+			}),
+			ContextMin:       r.ContextMin,
+			ContextMax:       r.ContextMax,
+			InputMicro:       r.InputPriceMicro,
+			OutputMicro:      r.OutputPriceMicro,
+			CacheCreateMicro: r.CacheCreationPriceMicro,
+			CacheReadMicro:   r.CacheReadPriceMicro,
+		}
+	})
+	p, err := vo.NewPricing(enum.Currency(currency), vr)
+	if err != nil {
+		return vo.Pricing{}
+	}
+	return p
+}
+
+// pricingToDB 值对象 → DB 定价规则（微单位）。
+func pricingToDB(p vo.Pricing) []dbmodel.ModelPricingRule {
+	return lo.Map(p.Rules(), func(r vo.PricingRule, _ int) dbmodel.ModelPricingRule {
+		return dbmodel.ModelPricingRule{
+			TimeWindows: lo.Map(r.TimeWindows, func(w vo.TimeWindow, _ int) dbmodel.ModelTimeWindow {
+				return dbmodel.ModelTimeWindow{Days: w.Days, Start: w.Start, End: w.End, Timezone: w.Timezone}
+			}),
+			ContextMin:              r.ContextMin,
+			ContextMax:              r.ContextMax,
+			InputPriceMicro:         r.InputMicro,
+			OutputPriceMicro:        r.OutputMicro,
+			CacheCreationPriceMicro: r.CacheCreateMicro,
+			CacheReadPriceMicro:     r.CacheReadMicro,
+		}
+	})
 }
 
 // FindByID 按 ID 查询模型（scopeUserID 非 nil 时精确匹配 user_id）
@@ -113,7 +160,8 @@ func (r *modelRepository) Update(ctx context.Context, m *aggregate.Model) error 
 // 换绑 endpoint 后同步归属，避免出现"endpoint 在 A 名下、model 记在 B 名下"的悬挂状态。
 // GORM 的 Updates(map) 不经过 field serializer，capabilities 需手动序列化为 JSON 字符串。
 func updateModelTx(tx *gorm.DB, m *aggregate.Model, expectedModelID string) (int64, error) {
-	capJSON, _ := sonic.Marshal(m.Capabilities()) //nolint:errcheck // []string 序列化不会失败，且值已经聚合校验
+	capJSON, _ := sonic.Marshal(m.Capabilities())             //nolint:errcheck // []string 序列化不会失败，且值已经聚合校验
+	pricingJSON, _ := sonic.Marshal(pricingToDB(m.Pricing())) //nolint:errcheck // 结构体序列化不会失败，值已经聚合校验
 	updates := map[string]any{
 		constant.FieldUserID:               m.UserID(),
 		constant.FieldModelAlias:           m.Alias().String(),
@@ -124,6 +172,8 @@ func updateModelTx(tx *gorm.DB, m *aggregate.Model, expectedModelID string) (int
 		constant.FieldModelContextLength:   m.ContextLength(),
 		constant.FieldModelMaxOutputTokens: m.MaxOutputTokens(),
 		constant.FieldModelCapabilities:    string(capJSON),
+		constant.FieldModelPricingRules:    string(pricingJSON),
+		constant.FieldModelPricingCurrency: string(m.Pricing().Currency()),
 	}
 	query := tx.Model(&dbmodel.Model{}).Where(constant.WhereIDEquals, m.AggregateID())
 	if expectedModelID != "" {

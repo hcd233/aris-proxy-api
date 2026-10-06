@@ -27,6 +27,7 @@ type Model struct {
 	contextLength   int
 	maxOutputTokens int
 	capabilities    []enum.InputModality
+	pricing         vo.Pricing
 	createdAt       time.Time
 	updatedAt       time.Time
 }
@@ -90,8 +91,18 @@ func (m *Model) MaxOutputTokens() int    { return m.maxOutputTokens }
 func (m *Model) Capabilities() []enum.InputModality {
 	return m.capabilities
 }
+
+// Pricing 模型定价（币种 + 规则表；未计价时 IsPriced 为 false）
+func (m *Model) Pricing() vo.Pricing { return m.pricing }
+
 func (m *Model) CreatedAt() time.Time { return m.createdAt }
 func (m *Model) UpdatedAt() time.Time { return m.updatedAt }
+
+// UpdatePricing 更新模型定价（vo 构造已校验，此处仅替换）
+func (m *Model) UpdatePricing(pricing vo.Pricing) error {
+	m.pricing = pricing
+	return nil
+}
 
 // SetModelID 设置业务模型 ID（仓储恢复用）
 // SetUserID 设置归属用户 ID（repository 从 DB 恢复时使用）

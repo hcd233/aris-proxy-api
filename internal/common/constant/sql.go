@@ -146,7 +146,7 @@ var (
 		FieldSupportOpenAIChatCompletion, FieldSupportOpenAIResponse, FieldSupportAnthropicMessage,
 		FieldCreatedAt, FieldUpdatedAt}
 
-	ModelRepoFieldsFull  = []string{FieldID, FieldUserID, FieldAlias, FieldModelID, FieldModelUpstreamModel, FieldEndpointID, FieldEnabled, FieldModelContextLength, FieldModelMaxOutputTokens, FieldModelCapabilities, FieldCreatedAt, FieldUpdatedAt}
+	ModelRepoFieldsFull  = []string{FieldID, FieldUserID, FieldAlias, FieldModelID, FieldModelUpstreamModel, FieldEndpointID, FieldEnabled, FieldModelContextLength, FieldModelMaxOutputTokens, FieldModelCapabilities, FieldModelPricingRules, FieldModelPricingCurrency, FieldCreatedAt, FieldUpdatedAt}
 	ModelRepoFieldsAlias = []string{FieldAlias}
 
 	ProxyAPIKeyRepoFieldsFull = []string{FieldID, FieldUserID, FieldName, FieldKey, FieldCreatedAt}
