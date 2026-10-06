@@ -2334,3 +2334,18 @@ Expected: 全绿
 - **Spec 覆盖**：定价规则模型（T1/T2）、落库计费（T3）、CRUD+prefill（T4/T5）、成本查询三件套（T6）、tzdata+词汇（T7）、E2E（T8）、前端四块（T9）、验证（T10）——spec 各章节均有对应任务；spec 微调两处已在文首声明。
 - **占位符**：无 TBD/TODO；`rg` 定位点均给出实际命令；Task 9 编辑器给出组件契约与必落实现细节（受控组件按既有表单风格实现）。
 - **类型一致性**：`PriceMicroFromDisplay/PriceDisplayFromMicro`（T4 定义，T6/T9 使用）、`port.PricingQuoteProvider`（T5 内自洽）、`modelcall.Cost*` 与仓储签名（T6 内自洽）、`dto.Cost *float64` 与 `GetCostMicro()`（T3→T6）已核对。
+
+---
+
+## 执行期修正（Task 1 实施中发现的项目硬契约，优先级高于本计划原文）
+
+> 来源：`docs/agents/go-backend.md` 测试/代码契约 + `internal/tool/lintconv` 实际拦截。后续所有任务按此执行。
+
+1. **测试位置**：所有 `*_test.go` 只能放 `test/unit/<topic>/` 或 `test/e2e/<topic>/`（`testing.internal_file` 规则禁止 internal 下测试）。单测用外部测试包（`package <topic>`），只测导出 API。→ Task 3 的 `recorder_cost_test` 改为 `test/unit/model_call_pricing/`，并把计价粘连逻辑提为 usecase 包**导出函数**（如 `PriceModelCall(task *dto.ModelCallAuditTask, pricing vo.Pricing)`）供测试触达；Task 5/6 测试同理落 `test/unit/<topic>/`。
+2. **常量归位**：业务包禁本地 `const` 块（`style.local_const`）——定价常量放 `internal/common/constant/pricing.go`（已建：`PricingMaxPriceMicro`/`PricingTokensPerMillion`/`PricingMinutesPerHour`/`PricingTimeBoundMaxHour`/`PricingTimeBoundMaxMinute`）；后续新增常量同样归位。计划原文中的 `vo.MaxPriceMicro` 一律读作 `constant.PricingMaxPriceMicro`。
+3. **魔法数字**：代码中 ≥30 的数字字面量必须提取常量（`magic.number`），测试目录不受限。
+4. **JSON 统一 sonic**：禁 `encoding/json`、`json.RawMessage`（Task 5 modelsdev 解析改 `sonic.Unmarshal`；灵活字段用具体结构体 + 自定义 `UnmarshalJSON` 或 `sonic.NoCopyRawMessage`）。
+5. **错误统一 ierr**：禁 `fmt.Errorf`/`errors.New`（Task 5 拉取失败改 `ierr.New(sentinel, msg)`，sentinel 从 `internal/common/ierr` 现有集合选）。
+6. **禁 `any`/`interface{}`**（DTO 与生产代码）：测试代码仅限函数内局部临时容器。
+7. **提交前自检**：`go run ./cmd/lint ./...`（`make lint` 等价；仅按包路径过滤跑会漏报，必须 `./...`）+ `go test ./test/... ./internal/...`。
+8. Task 1 已按上述完成：`internal/common/enum/currency.go`、`internal/common/constant/pricing.go`、`internal/domain/llmproxy/vo/pricing.go`、`test/unit/pricing/pricing_test.go`（commit `36c5f3d`）。
