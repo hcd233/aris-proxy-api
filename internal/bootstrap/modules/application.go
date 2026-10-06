@@ -118,6 +118,10 @@ var ApplicationModule = fx.Module(constant.DigNameApplicationModule,
 		auditquery.NewModelUsageHandler,
 		NewModelUsageByUserHandler,
 		auditquery.NewFirstTokenLatencyHandler,
+		NewCostSummaryHandler,
+		NewCostSummaryByUserHandler,
+		NewCostDistributionHandler,
+		NewCostDistributionByUserHandler,
 		NewFirstTokenLatencyByUserHandler,
 		NewListAuditOptionHandler,
 		NewAuditService,
@@ -384,8 +388,32 @@ func NewAuditService(
 	modelUsageByUser auditquery.ModelUsageByUserHandler,
 	firstTokenLatency auditquery.FirstTokenLatencyHandler,
 	firstTokenLatencyByUser auditquery.FirstTokenLatencyByUserHandler,
+	costSummary auditquery.CostSummaryHandler,
+	costSummaryByUser auditquery.CostSummaryByUserHandler,
+	costDistribution auditquery.CostDistributionHandler,
+	costDistributionByUser auditquery.CostDistributionByUserHandler,
 ) auditport.AuditService {
-	return auditquery.NewAuditService(listAll, listByUser, listAuditOption, modelTrend, modelTrendByUser, requestRate, requestRateByUser, tokenThroughput, tokenThroughputByUser, tokenRate, tokenRateByUser, modelUsage, modelUsageByUser, firstTokenLatency, firstTokenLatencyByUser)
+	return auditquery.NewAuditService(listAll, listByUser, listAuditOption, modelTrend, modelTrendByUser, requestRate, requestRateByUser, tokenThroughput, tokenThroughputByUser, tokenRate, tokenRateByUser, modelUsage, modelUsageByUser, firstTokenLatency, firstTokenLatencyByUser, costSummary, costSummaryByUser, costDistribution, costDistributionByUser)
+}
+
+// NewCostSummaryHandler 构造成本合计查询处理器（admin/demo 全量视角）
+func NewCostSummaryHandler(repo modelcall.AuditRepository) auditquery.CostSummaryHandler {
+	return auditquery.NewCostSummaryHandler(repo)
+}
+
+// NewCostSummaryByUserHandler 构造成本合计查询处理器（user 视角）
+func NewCostSummaryByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apikey.APIKeyRepository) auditquery.CostSummaryByUserHandler {
+	return auditquery.NewCostSummaryByUserHandler(repo, apiKeyRepo)
+}
+
+// NewCostDistributionHandler 构造成本分布查询处理器（admin/demo 全量视角）
+func NewCostDistributionHandler(repo modelcall.AuditRepository) auditquery.CostDistributionHandler {
+	return auditquery.NewCostDistributionHandler(repo)
+}
+
+// NewCostDistributionByUserHandler 构造成本分布查询处理器（user 视角）
+func NewCostDistributionByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apikey.APIKeyRepository) auditquery.CostDistributionByUserHandler {
+	return auditquery.NewCostDistributionByUserHandler(repo, apiKeyRepo)
 }
 
 func NewListSessionsByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository) sessionport.ListSessionsByUserHandler {
