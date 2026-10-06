@@ -207,6 +207,15 @@ func (pm *PoolManager) upgradeReasoningContent(tx *gorm.DB, messages []*dbmodel.
 	return nil
 }
 
+// auditNow 审计时间点：优先任务构造时间（计价时点=审计时点）；
+// 触发词拦截/capture 短路等未填 CreatedAt 的任务回退当前时间。
+func auditNow(task *dto.ModelCallAuditTask) time.Time {
+	if task.CreatedAt.IsZero() {
+		return time.Now()
+	}
+	return task.CreatedAt
+}
+
 // SubmitModelCallAuditTask 提交模型调用审计任务到协程池
 //
 // 审计落库统一经 modelcall.AuditRepository 聚合仓储，与审计读路径共用同一 seam，
@@ -232,7 +241,9 @@ func (pm *PoolManager) SubmitModelCallAuditTask(task *dto.ModelCallAuditTask) er
 			Status:           mcvo.NewCallStatus(task.UpstreamStatusCode, task.ErrorMessage),
 			UserAgent:        util.CtxValueString(task.Ctx, constant.CtxKeyClient),
 			TraceID:          util.CtxValueString(task.Ctx, constant.CtxKeyTraceID),
-		}, time.Now())
+			CostMicro:        task.CostMicro,
+			PricingCurrency:  enum.Currency(task.PricingCurrency),
+		}, auditNow(task))
 		if err := pm.auditRepo.Save(task.Ctx, audit); err != nil {
 			l.Error("[StorePool] Failed to store audit record", zap.Error(err))
 			return

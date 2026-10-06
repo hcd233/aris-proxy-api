@@ -23,6 +23,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useRequestSeq } from "@/hooks/use-request-seq";
 import { useI18n } from "@/lib/i18n";
 import { PermissionGuard } from "@/components/permission-guard";
+import { formatCost } from "@/lib/money";
+import { CostPanel } from "../cost-panel";
 import {
   TooltipProvider,
   TooltipRoot,
@@ -185,6 +187,11 @@ export default function AuditPage() {
           </h1>
           <p className="mt-1.5 text-sm text-muted-foreground">{t("audit.model_page_subtitle")}</p>
         </div>
+
+        <CostPanel
+          startTime={computeRange(timeRange, customStart, customEnd).startTime}
+          endTime={computeRange(timeRange, customStart, customEnd).endTime}
+        />
 
         <Card>
           <CardHeader>
@@ -403,6 +410,12 @@ export default function AuditPage() {
                                 <p>
                                   {log.streamDurationMs > 0 ? formatMs(log.streamDurationMs) : "—"}
                                 </p>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">
+                                  {t("audit.cost.column")}
+                                </span>
+                                <p>{formatCost(log.cost, log.pricingCurrency)}</p>
                               </div>
                               <div>
                                 <span className="text-muted-foreground">{t("audit.upstream")}</span>

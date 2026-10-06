@@ -7,6 +7,7 @@ import (
 	"go.uber.org/zap"
 
 	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
+	modelport "github.com/hcd233/aris-proxy-api/internal/application/model/port"
 	upstreamport "github.com/hcd233/aris-proxy-api/internal/application/upstream/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
@@ -118,6 +119,7 @@ func toUpstreamModelItem(v *upstreamport.UpstreamModelView) *dto.UpstreamModelIt
 		ContextLength:   v.ContextLength,
 		MaxOutputTokens: v.MaxOutputTokens,
 		Capabilities:    v.Capabilities,
+		Pricing:         modelport.PricingToDTO(v.Pricing),
 		CreatedAt:       v.CreatedAt,
 		UpdatedAt:       v.UpdatedAt,
 	}

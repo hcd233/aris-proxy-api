@@ -77,3 +77,25 @@ _Avoid_: model name, upstream alias
 **Theme（主题皮肤）**:
 整套视觉皮肤的命名集合，取值 `anthropic`（默认，暖色纸质）| `moonshot`（深空科技，固定深色）。持久化于 `localStorage("theme")`，由根布局内联脚本在 hydration 前反映到 `<html data-theme>`，是所有 per-theme 行为的单一事实来源。与明暗模式正交：moonshot 主题不受 `.dark` class 影响。整页根容器携带 `page-surface` 标记类，moonshot 下背景透明以透出星空；小组件不携带。
 _Avoid_: color scheme, dark mode toggle
+
+## Pricing & Cost（定价与成本）
+
+**PricingEditor（定价规则编辑器）**:
+Model 编辑弹窗内的定价录入区：币种下拉 + 规则行列表（时段窗口组、上下文区间、四价），行可增删与上下移（数组顺序 = 匹配优先级），无条件默认规则行标注「默认」。「从 models.dev 导入」仅填充默认规则行四价，可改后保存。
+_Avoid_: price form, billing editor
+
+**Cost Column（费用列）**:
+审计列表的单次调用估算费用列（`formatCost` 渲染，`—` 表示未计价）。金额 wire 为展示单位浮点 + 币种，微单位只在后端与 DB。
+_Avoid_: price column
+
+**Cost Panel（成本面板）**:
+audit 页的成本视图块：成本合计卡（按币种分行）+ 成本趋势线（按币种拆线）+ 成本分布块（分组切换：用户 / API Key / 模型，用户维度仅管理员）。
+_Avoid_: billing panel, spend dashboard
+
+**Dashboard Cost Card（本期成本卡）**:
+Dashboard 首页的周期成本卡，按币种分行展示，点击跳转 audit 页。
+_Avoid_: spending card
+
+**formatCost（金额格式化）**:
+金额展示统一入口：去尾零、小数位上限 6，规避浮点尾差直出（`0.30000000000000004`）；null/undefined 渲染 `—`。
+_Avoid_: money format

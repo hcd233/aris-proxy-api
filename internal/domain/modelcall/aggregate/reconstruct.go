@@ -22,6 +22,8 @@ type ReconstructAuditInput struct {
 	Status           vo.CallStatus
 	UserAgent        string
 	TraceID          string
+	CostMicro        *int64
+	PricingCurrency  enum.Currency
 	CreatedAt        time.Time
 }
 
@@ -43,6 +45,8 @@ func ReconstructAudit(input ReconstructAuditInput) *ModelCallAudit {
 		status:           input.Status,
 		userAgent:        input.UserAgent,
 		traceID:          input.TraceID,
+		costMicro:        input.CostMicro,
+		pricingCurrency:  input.PricingCurrency,
 		createdAt:        input.CreatedAt,
 	}
 }

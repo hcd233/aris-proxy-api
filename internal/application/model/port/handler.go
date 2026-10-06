@@ -6,6 +6,7 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
+	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 )
 
 // CreateModelCommand 创建 Model 命令
@@ -20,6 +21,7 @@ type CreateModelCommand struct {
 	ContextLength   int
 	MaxOutputTokens int
 	Capabilities    []enum.InputModality
+	Pricing         vo.Pricing
 }
 
 // CreateModelResult 创建命令结果
@@ -46,7 +48,9 @@ type UpdateModelCommand struct {
 	MaxOutputTokens *int
 	Capabilities    *[]enum.InputModality
 	ModelID         *string
-	SyncHistory     *bool // 为 true 且 ModelID 实际变化时，同步替换归属 user 的历史数据
+	SyncHistory     *bool      // 为 true 且 ModelID 实际变化时，同步替换归属 user 的历史数据
+	Pricing         vo.Pricing // 定价（PricingSet 为 true 时生效）
+	PricingSet      bool       // true=本次更新定价
 }
 
 // UpdateModelHandler 更新命令处理器
@@ -65,4 +69,24 @@ type DeleteModelCommand struct {
 // DeleteModelHandler 删除命令处理器
 type DeleteModelHandler interface {
 	Handle(ctx context.Context, cmd DeleteModelCommand) error
+}
+
+// PrefillPricingQuery 定价导入查询
+type PrefillPricingQuery struct {
+	UpstreamModel string
+}
+
+// PrefillPricingResult 定价导入结果（USD/1M tokens；found=false 时其余字段为零值）
+type PrefillPricingResult struct {
+	Found              bool
+	Currency           enum.Currency
+	InputPrice         float64
+	OutputPrice        float64
+	CacheCreationPrice float64
+	CacheReadPrice     float64
+}
+
+// PrefillPricingHandler 定价导入处理器
+type PrefillPricingHandler interface {
+	Handle(ctx context.Context, q PrefillPricingQuery) (*PrefillPricingResult, error)
 }

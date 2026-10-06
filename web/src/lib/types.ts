@@ -426,6 +426,7 @@ export interface UpstreamModelItem {
   contextLength: number;
   maxOutputTokens: number;
   capabilities: ModelCapability[];
+  pricing?: PricingDTO;
   createdAt: string;
   updatedAt: string;
 }
@@ -449,6 +450,78 @@ export interface ListUpstreamRsp extends CommonRsp {
 
 export type ModelCapability = "text" | "image";
 
+// ─── Pricing（模型定价，wire 展示单位：货币单位/1M tokens） ──────────────────
+
+export type PricingCurrency = "" | "CNY" | "USD";
+
+/** 时段窗口：[start,end) 半开区间，end<start 表示跨午夜；days 空=每天（1=周一…7=周日） */
+export interface TimeWindowDTO {
+  days?: number[];
+  start: string;
+  end: string;
+  timezone?: string;
+}
+
+/** 定价规则（数组顺序=匹配优先级；须恰好一条无条件默认规则） */
+export interface PricingRuleDTO {
+  time_windows?: TimeWindowDTO[];
+  /** prompt token 下界（含） */
+  context_min?: number;
+  /** 上界（不含），0/缺省=无上限 */
+  context_max?: number;
+  input_price: number;
+  output_price: number;
+  cache_creation_price: number;
+  cache_read_price: number;
+}
+
+export interface PricingDTO {
+  currency?: PricingCurrency;
+  rules?: PricingRuleDTO[];
+}
+
+/** 定价导入响应（USD/1M tokens；found=false 表示未命中/上游不可达） */
+export interface ModelPricingPrefillRsp extends CommonRsp {
+  found: boolean;
+  currency?: PricingCurrency;
+  inputPrice?: number;
+  outputPrice?: number;
+  cacheCreationPrice?: number;
+  cacheReadPrice?: number;
+}
+
+/** 费用合计行（按币种） */
+export interface AuditCostTotalItem {
+  currency: string;
+  cost: number;
+}
+
+/** 费用趋势点（时间桶 × 币种） */
+export interface AuditCostSeriesPoint {
+  bucketTime: string;
+  currency: string;
+  cost: number;
+}
+
+export interface AuditCostSummaryRsp extends CommonRsp {
+  totals?: AuditCostTotalItem[];
+  series?: AuditCostSeriesPoint[];
+}
+
+export type CostGroupBy = "user" | "api_key" | "model";
+
+export interface AuditCostDistributionItem {
+  id: string;
+  name: string;
+  currency: string;
+  cost: number;
+}
+
+export interface AuditCostDistributionRsp extends CommonRsp {
+  groupBy?: string;
+  items?: AuditCostDistributionItem[];
+}
+
 export interface CreateModelReqBody {
   alias: string;
   modelId?: string;
@@ -457,6 +530,8 @@ export interface CreateModelReqBody {
   contextLength?: number;
   maxOutputTokens?: number;
   capabilities?: ModelCapability[];
+  /** 定价（缺省=未计价） */
+  pricing?: PricingDTO;
 }
 
 export interface UpdateModelReqBody {
@@ -470,6 +545,8 @@ export interface UpdateModelReqBody {
   contextLength?: number;
   maxOutputTokens?: number;
   capabilities?: ModelCapability[];
+  /** 定价（缺省=不修改；currency 与 rules 均置空=清空为未计价） */
+  pricing?: PricingDTO;
 }
 
 /** 更新模型响应：历史同步的各表影响行数（未同步时全 0） */
@@ -498,6 +575,7 @@ export interface ModelListItem {
   contextLength: number;
   maxOutputTokens: number;
   capabilities: ModelCapability[];
+  pricing?: PricingDTO;
   createdAt: string;
   updatedAt: string;
 }
@@ -537,6 +615,9 @@ export interface AuditLogItem {
   apiKeyName: string;
   userName: string;
   userEmail: string;
+  /** 估算费用（展示单位，null/缺省=未计价） */
+  cost?: number | null;
+  pricingCurrency?: PricingCurrency;
 }
 
 export interface ListAuditLogsRsp extends CommonRsp {

@@ -22,28 +22,32 @@ type ModelHandler interface {
 	HandleUpdateModel(ctx context.Context, req *dto.UpdateModelReq) (*dto.HTTPResponse[*dto.ModelUpdateRsp], error)
 	HandleDeleteModel(ctx context.Context, req *dto.DeleteModelReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
 	HandleListModels(ctx context.Context, req *dto.ListModelsReq) (*dto.HTTPResponse[*dto.ListModelsRsp], error)
+	HandlePrefillPricing(ctx context.Context, req *dto.ModelPricingPrefillReq) (*dto.ModelPricingPrefillRsp, error)
 }
 
 type ModelDependencies struct {
-	Create port.CreateModelHandler
-	Update port.UpdateModelHandler
-	Delete port.DeleteModelHandler
-	List   port.ListModelHandler
+	Create  port.CreateModelHandler
+	Update  port.UpdateModelHandler
+	Delete  port.DeleteModelHandler
+	List    port.ListModelHandler
+	Prefill port.PrefillPricingHandler
 }
 
 type modelHandler struct {
-	create port.CreateModelHandler
-	update port.UpdateModelHandler
-	delete port.DeleteModelHandler
-	list   port.ListModelHandler
+	create  port.CreateModelHandler
+	update  port.UpdateModelHandler
+	delete  port.DeleteModelHandler
+	list    port.ListModelHandler
+	prefill port.PrefillPricingHandler
 }
 
 func NewModelHandler(deps ModelDependencies) ModelHandler {
 	return &modelHandler{
-		create: deps.Create,
-		update: deps.Update,
-		delete: deps.Delete,
-		list:   deps.List,
+		create:  deps.Create,
+		update:  deps.Update,
+		delete:  deps.Delete,
+		list:    deps.List,
+		prefill: deps.Prefill,
 	}
 }
 
@@ -55,6 +59,11 @@ func (h *modelHandler) HandleCreateModel(ctx context.Context, req *dto.CreateMod
 		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrUnauthorized.BizError())
 	}
 
+	pricing, perr := port.PricingFromDTO(req.Body.Pricing)
+	if perr != nil {
+		return nil, apiutil.NewHumaBizError(ctx, perr, ierr.ErrValidation.BizError())
+	}
+
 	_, err = h.create.Handle(ctx, port.CreateModelCommand{
 		ScopeUserID:     scope,
 		Alias:           req.Body.Alias,
@@ -64,6 +73,7 @@ func (h *modelHandler) HandleCreateModel(ctx context.Context, req *dto.CreateMod
 		ContextLength:   req.Body.ContextLength,
 		MaxOutputTokens: req.Body.MaxOutputTokens,
 		Capabilities:    req.Body.Capabilities,
+		Pricing:         pricing,
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[ModelHandler] Create model failed", zap.Error(err))
@@ -83,7 +93,7 @@ func (h *modelHandler) HandleUpdateModel(ctx context.Context, req *dto.UpdateMod
 		return apiutil.WrapHTTPResponse(rsp, nil)
 	}
 
-	counts, err := h.update.Handle(ctx, port.UpdateModelCommand{
+	cmd := port.UpdateModelCommand{
 		ScopeUserID:     scope,
 		ID:              req.ID,
 		Alias:           req.Body.Alias,
@@ -95,7 +105,17 @@ func (h *modelHandler) HandleUpdateModel(ctx context.Context, req *dto.UpdateMod
 		Capabilities:    req.Body.Capabilities,
 		ModelID:         req.Body.ModelID,
 		SyncHistory:     req.Body.SyncHistory,
-	})
+	}
+	if req.Body.Pricing != nil {
+		pricing, perr := port.PricingFromDTO(req.Body.Pricing)
+		if perr != nil {
+			rsp.Error = ierr.ToBizErrorLocalized(ctx, perr, ierr.ErrValidation.BizError())
+			return apiutil.WrapHTTPResponse(rsp, nil)
+		}
+		cmd.Pricing = pricing
+		cmd.PricingSet = true
+	}
+	counts, err := h.update.Handle(ctx, cmd)
 	if err != nil {
 		logger.WithCtx(ctx).Error("[ModelHandler] Update model failed", zap.Error(err))
 		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
@@ -172,6 +192,7 @@ func toModelListItem(v *port.ListModelView) *dto.ModelListItem {
 		ContextLength:   v.ContextLength,
 		MaxOutputTokens: v.MaxOutputTokens,
 		Capabilities:    v.Capabilities,
+		Pricing:         port.PricingToDTO(v.Pricing),
 		CreatedAt:       v.CreatedAt,
 		UpdatedAt:       v.UpdatedAt,
 	}
@@ -182,4 +203,28 @@ func toModelListItem(v *port.ListModelView) *dto.ModelListItem {
 		item.Endpoint = &dto.ModelListEndpointItem{ID: v.Endpoint.ID, Name: v.Endpoint.Name}
 	}
 	return item
+}
+
+// HandlePrefillPricing models.dev 定价导入（仅填充表单，未命中/失败降级为 found=false）
+//
+//	@receiver h *modelHandler
+//	@param ctx context.Context
+//	@param req *dto.ModelPricingPrefillReq
+//	@return *dto.ModelPricingPrefillRsp
+//	@return error
+//	@author centonhuang
+//	@update 2026-10-05 10:00:00
+func (h *modelHandler) HandlePrefillPricing(ctx context.Context, req *dto.ModelPricingPrefillReq) (*dto.ModelPricingPrefillRsp, error) {
+	rsp := &dto.ModelPricingPrefillRsp{}
+	res, err := h.prefill.Handle(ctx, port.PrefillPricingQuery{UpstreamModel: req.UpstreamModel})
+	// 未命中/失败统一降级为 found=false（录入不被阻塞），因此只走正向分支
+	if err == nil && res != nil && res.Found {
+		rsp.Found = res.Found
+		rsp.Currency = res.Currency
+		rsp.InputPrice = res.InputPrice
+		rsp.OutputPrice = res.OutputPrice
+		rsp.CacheCreationPrice = res.CacheCreationPrice
+		rsp.CacheReadPrice = res.CacheReadPrice
+	}
+	return rsp, nil
 }

@@ -37,23 +37,25 @@ type ListAuditLogsRsp struct {
 //	@author centonhuang
 //	@update 2026-06-21 10:00:00
 type AuditLogItem struct {
-	ID                       uint      `json:"id" doc:"记录ID"`
-	CreatedAt                time.Time `json:"createdAt" doc:"创建时间"`
-	ModelID                  string    `json:"modelId" doc:"业务模型ID"`
-	UpstreamProtocol         string    `json:"upstreamProtocol" doc:"上游协议"`
-	APIProtocol              string    `json:"apiProtocol" doc:"接口协议"`
-	Endpoint                 string    `json:"endpoint" doc:"调用 Endpoint 名"`
-	InputTokens              int       `json:"inputTokens" doc:"输入token数"`
-	OutputTokens             int       `json:"outputTokens" doc:"输出token数"`
-	CacheCreationInputTokens int       `json:"cacheCreationInputTokens" doc:"缓存写入token数"`
-	CacheReadInputTokens     int       `json:"cacheReadInputTokens" doc:"缓存命中token数"`
-	FirstTokenLatencyMs      int64     `json:"firstTokenLatencyMs" doc:"首token延迟(ms)"`
-	StreamDurationMs         int64     `json:"streamDurationMs" doc:"流式持续时间(ms)"`
-	UserAgent                string    `json:"userAgent" doc:"User-Agent"`
-	UpstreamStatusCode       int       `json:"upstreamStatusCode" doc:"上游状态码"`
-	ErrorMessage             string    `json:"errorMessage" doc:"错误信息"`
-	TraceID                  string    `json:"traceId" doc:"Trace ID"`
-	APIKeyName               string    `json:"apiKeyName" doc:"调用所用 API Key 名称"`
-	UserName                 string    `json:"userName" doc:"调用方用户名"`
-	UserEmail                string    `json:"userEmail" doc:"调用方邮箱"`
+	ID                       uint          `json:"id" doc:"记录ID"`
+	CreatedAt                time.Time     `json:"createdAt" doc:"创建时间"`
+	ModelID                  string        `json:"modelId" doc:"业务模型ID"`
+	UpstreamProtocol         string        `json:"upstreamProtocol" doc:"上游协议"`
+	APIProtocol              string        `json:"apiProtocol" doc:"接口协议"`
+	Endpoint                 string        `json:"endpoint" doc:"调用 Endpoint 名"`
+	InputTokens              int           `json:"inputTokens" doc:"输入token数"`
+	OutputTokens             int           `json:"outputTokens" doc:"输出token数"`
+	CacheCreationInputTokens int           `json:"cacheCreationInputTokens" doc:"缓存写入token数"`
+	CacheReadInputTokens     int           `json:"cacheReadInputTokens" doc:"缓存命中token数"`
+	FirstTokenLatencyMs      int64         `json:"firstTokenLatencyMs" doc:"首token延迟(ms)"`
+	StreamDurationMs         int64         `json:"streamDurationMs" doc:"流式持续时间(ms)"`
+	UserAgent                string        `json:"userAgent" doc:"User-Agent"`
+	UpstreamStatusCode       int           `json:"upstreamStatusCode" doc:"上游状态码"`
+	ErrorMessage             string        `json:"errorMessage" doc:"错误信息"`
+	TraceID                  string        `json:"traceId" doc:"Trace ID"`
+	Cost                     *float64      `json:"cost,omitempty" doc:"估算费用（展示单位，null=未计价）"`
+	PricingCurrency          enum.Currency `json:"pricingCurrency,omitempty" doc:"计价币种"`
+	APIKeyName               string        `json:"apiKeyName" doc:"调用所用 API Key 名称"`
+	UserName                 string        `json:"userName" doc:"调用方用户名"`
+	UserEmail                string        `json:"userEmail" doc:"调用方邮箱"`
 }

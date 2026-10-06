@@ -46,6 +46,28 @@ func initAuditRouter(auditGroup huma.API, auditHandler handler.AuditHandler, cro
 	}, auditHandler.HandleModelTrend)
 
 	huma.Register(auditGroup, huma.Operation{
+		OperationID: "queryCostSummary",
+		Method:      http.MethodGet,
+		Path:        "/stats/cost/summary",
+		Summary:     "QueryCostSummary",
+		Description: "Query estimated cost totals and series grouped by currency. Admin sees all; user sees only their own keys.",
+		Tags:        []string{constant.TagAudit},
+		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("queryCostSummary", enum.PermissionUser, enum.DemoModuleAudit, demoAccessor, auditSubmitter)},
+	}, auditHandler.HandleCostSummary)
+
+	huma.Register(auditGroup, huma.Operation{
+		OperationID: "queryCostDistribution",
+		Method:      http.MethodGet,
+		Path:        "/stats/cost/distribution",
+		Summary:     "QueryCostDistribution",
+		Description: "Query estimated cost distribution by user/api_key/model, per-currency top-N. group_by=user is admin only.",
+		Tags:        []string{constant.TagAudit},
+		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("queryCostDistribution", enum.PermissionUser, enum.DemoModuleAudit, demoAccessor, auditSubmitter)},
+	}, auditHandler.HandleCostDistribution)
+
+	huma.Register(auditGroup, huma.Operation{
 		OperationID: "queryRequestRate",
 		Method:      http.MethodGet,
 		Path:        "/stats/request/rate",

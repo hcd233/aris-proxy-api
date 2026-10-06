@@ -67,6 +67,8 @@ const (
 	ContactName          = "hcd233"
 	ContactEmail         = "lvlvko233@qq.com"
 	ContactURL           = "https://github.com/hcd233"
+	ModelsDevAPIURL      = "https://models.dev/api.json"
+	ModelsDevDocCacheKey = "pricing:modelsdev:doc"
 	LicenseName          = "Apache 2.0"
 	LicenseURL           = "https://www.apache.org/licenses/LICENSE-2.0.html"
 	SecuritySchemeJWT    = "jwtAuth"
@@ -143,6 +145,10 @@ const (
 	FieldModelContextLength                  = "context_length"
 	FieldModelMaxOutputTokens                = "max_output_tokens"
 	FieldModelCapabilities                   = "capabilities"
+	FieldModelPricingRules                   = "pricing_rules"
+	FieldModelPricingCurrency                = "pricing_currency"
+	FieldCostMicro                           = "cost_micro"
+	FieldPricingCurrency                     = "pricing_currency"
 
 	// Router tag names
 	TagAnthropic = "Anthropic"

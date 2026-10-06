@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-import type { UpstreamUser } from "@/lib/types";
+import type { PricingDTO, UpstreamUser } from "@/lib/types";
 
 // 模型表单默认规格：新建表单初值、编辑回填空值兜底、输入框占位共用同一口径
 export const DEFAULT_CONTEXT_LENGTH = 256000;
@@ -284,6 +284,8 @@ export interface ModelForm {
   maxOutputTokens: number;
   supportText: boolean;
   supportImage: boolean;
+  /** 定价（undefined=未计价） */
+  pricing?: PricingDTO;
 }
 
 export const emptyEndpointForm: EndpointForm = {
@@ -304,4 +306,5 @@ export const emptyModelForm: ModelForm = {
   maxOutputTokens: DEFAULT_MAX_OUTPUT,
   supportText: true,
   supportImage: false,
+  pricing: undefined,
 };

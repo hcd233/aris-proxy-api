@@ -24,6 +24,8 @@ type AuditHandler interface {
 	HandleTokenRate(ctx context.Context, req *dto.TokenRateReq) (*dto.HTTPResponse[*dto.TokenRateRsp], error)
 	HandleModelUsage(ctx context.Context, req *dto.ModelUsageReq) (*dto.HTTPResponse[*dto.ModelUsageRsp], error)
 	HandleFirstTokenLatency(ctx context.Context, req *dto.FirstTokenLatencyReq) (*dto.HTTPResponse[*dto.FirstTokenLatencyRsp], error)
+	HandleCostSummary(ctx context.Context, req *dto.AuditCostSummaryReq) (*dto.HTTPResponse[*dto.AuditCostSummaryRsp], error)
+	HandleCostDistribution(ctx context.Context, req *dto.AuditCostDistributionReq) (*dto.HTTPResponse[*dto.AuditCostDistributionRsp], error)
 }
 
 type AuditDependencies struct {
@@ -73,6 +75,8 @@ func (h *auditHandler) HandleListAuditLogs(ctx context.Context, req *dto.ListAud
 			UpstreamStatusCode:       log.UpstreamStatusCode,
 			ErrorMessage:             log.ErrorMessage,
 			TraceID:                  log.TraceID,
+			Cost:                     costDisplayFromMicro(log.CostMicro),
+			PricingCurrency:          log.PricingCurrency,
 			APIKeyName:               log.APIKeyName,
 			UserName:                 log.UserName,
 			UserEmail:                log.UserEmail,
@@ -200,4 +204,64 @@ func (h *auditHandler) HandleFirstTokenLatency(ctx context.Context, req *dto.Fir
 	}
 	rsp.Data = items
 	return apiutil.WrapHTTPResponse(rsp, nil)
+}
+
+// HandleCostSummary 估算费用合计与趋势（按币种分组）
+//
+//	@receiver h *auditHandler
+//	@param ctx context.Context
+//	@param req *dto.AuditCostSummaryReq
+//	@return *dto.HTTPResponse[*dto.AuditCostSummaryRsp]
+//	@return error
+//	@author centonhuang
+//	@update 2026-10-05 10:00:00
+func (h *auditHandler) HandleCostSummary(ctx context.Context, req *dto.AuditCostSummaryReq) (*dto.HTTPResponse[*dto.AuditCostSummaryRsp], error) {
+	rsp := &dto.AuditCostSummaryRsp{}
+	result, err := h.svc.CostSummary(ctx,
+		util.CtxValuePermission(ctx),
+		util.CtxValueUint(ctx, constant.CtxKeyUserID),
+		req.StartTime, req.EndTime, req.Granularity,
+	)
+	if err != nil {
+		logger.WithCtx(ctx).Error("[AuditHandler] Cost summary failed", zap.Error(err))
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
+	}
+	rsp.Totals = result.Totals
+	rsp.Series = result.Series
+	return apiutil.WrapHTTPResponse(rsp, nil)
+}
+
+// HandleCostDistribution 估算费用分布（group_by：user 仅管理员）
+//
+//	@receiver h *auditHandler
+//	@param ctx context.Context
+//	@param req *dto.AuditCostDistributionReq
+//	@return *dto.HTTPResponse[*dto.AuditCostDistributionRsp]
+//	@return error
+//	@author centonhuang
+//	@update 2026-10-05 10:00:00
+func (h *auditHandler) HandleCostDistribution(ctx context.Context, req *dto.AuditCostDistributionReq) (*dto.HTTPResponse[*dto.AuditCostDistributionRsp], error) {
+	rsp := &dto.AuditCostDistributionRsp{GroupBy: req.GroupBy}
+	result, err := h.svc.CostDistribution(ctx,
+		util.CtxValuePermission(ctx),
+		util.CtxValueUint(ctx, constant.CtxKeyUserID),
+		req.GroupBy,
+		req.StartTime, req.EndTime, req.Limit,
+	)
+	if err != nil {
+		logger.WithCtx(ctx).Error("[AuditHandler] Cost distribution failed", zap.Error(err))
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrNoPermission.BizError())
+	}
+	rsp.GroupBy = string(result.GroupBy)
+	rsp.Items = result.Items
+	return apiutil.WrapHTTPResponse(rsp, nil)
+}
+
+// costDisplayFromMicro 微单位费用指针 → 展示单位指针（nil 原样透传=未计价）
+func costDisplayFromMicro(micro *int64) *float64 {
+	if micro == nil {
+		return nil
+	}
+	v := dto.PriceDisplayFromMicro(*micro)
+	return &v
 }

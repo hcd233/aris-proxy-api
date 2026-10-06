@@ -65,6 +65,11 @@ func (h *updateModelHandler) Handle(ctx context.Context, cmd port.UpdateModelCom
 	if uerr := m.Update(aliasPtr, cmd.UpstreamModel, cmd.EndpointID, cmd.Enabled, cmd.ContextLength, cmd.MaxOutputTokens, cmd.Capabilities, cmd.ModelID); uerr != nil {
 		return llmproxy.ModelIDSyncCounts{}, uerr
 	}
+	if cmd.PricingSet {
+		if perr := m.UpdatePricing(cmd.Pricing); perr != nil {
+			return llmproxy.ModelIDSyncCounts{}, perr
+		}
+	}
 
 	// 改名路径（syncHistory 且 modelId 实际变化）：模型更新与历史替换必须走
 	// UpdateWithHistorySync 单事务原子完成。若分两步，替换失败时模型本体已改名，

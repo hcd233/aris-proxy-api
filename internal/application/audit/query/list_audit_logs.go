@@ -69,6 +69,8 @@ type AuditLogView struct {
 	APIKeyName               string
 	UserName                 string
 	UserEmail                string
+	CostMicro                *int64
+	PricingCurrency          enum.Currency
 }
 
 type listAuditLogsParam struct {
@@ -254,6 +256,8 @@ func buildAuditViews(ctx context.Context, repo modelcall.AuditRepository, audits
 			UpstreamStatusCode:       audit.Status().UpstreamStatusCode(),
 			ErrorMessage:             audit.Status().ErrorMessage(),
 			TraceID:                  audit.TraceID(),
+			CostMicro:                audit.GetCostMicro(),
+			PricingCurrency:          audit.GetPricingCurrency(),
 		}
 		if relation, ok := relations[audit.APIKeyID()]; ok {
 			view.APIKeyName = relation.APIKeyName

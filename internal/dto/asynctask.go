@@ -3,6 +3,7 @@ package dto
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/samber/lo"
 
@@ -46,6 +47,9 @@ type ModelCallAuditTask struct {
 	StreamDurationMs         int64
 	UpstreamStatusCode       int
 	ErrorMessage             string
+	CostMicro                *int64
+	PricingCurrency          string
+	CreatedAt                time.Time
 }
 
 // SetTokensFromOpenAIUsage 从 OpenAI Usage 设置 token 计数

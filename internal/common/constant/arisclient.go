@@ -76,7 +76,7 @@ const (
 	ArisClientAPIKeyEnv  = "ARIS_API_KEY"
 	ArisClientDevTTYPath = "/dev/tty"
 
-	ArisClientInitNonInteractiveMessage = "trace init requires an interactive terminal"
+	ArisClientInitNonInteractiveMessage = "aris init requires an interactive terminal"
 	ArisClientInstallOriginErrorMessage = "Failed to determine server origin."
 	ArisClientInstallGenErrorMessage    = "Failed to generate install script."
 	ArisClientInstallScriptTmplName     = "install"

@@ -21,7 +21,8 @@ import {
   PopoverTitle,
   PopoverDescription,
 } from "@/components/ui/popover";
-import { Type, Image as ImageIcon, SlidersHorizontal } from "lucide-react";
+import { Type, Image as ImageIcon, SlidersHorizontal, Coins } from "lucide-react";
+import { PricingEditor } from "./pricing-editor";
 import { useT } from "@/lib/i18n";
 import { DEFAULT_CONTEXT_LENGTH, DEFAULT_MAX_OUTPUT, formatTokens, type ModelForm } from "./shared";
 
@@ -254,6 +255,18 @@ export function ModelDialog({
             </div>
           </div>
         </div>
+        <div className="grid gap-2">
+          <div className="flex items-center gap-2">
+            <Coins className="size-4 text-muted-foreground" />
+            <Label>{t("upstream.pricing.title")}</Label>
+          </div>
+          <PricingEditor
+            value={form.pricing}
+            upstreamModel={form.upstreamModel}
+            onChange={(p) => setForm((f) => ({ ...f, pricing: p }))}
+          />
+        </div>
+
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             {t("common.cancel")}

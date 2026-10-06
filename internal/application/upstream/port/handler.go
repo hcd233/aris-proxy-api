@@ -7,6 +7,7 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
+	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 )
 
 // UpstreamUserView 归属用户只读投影（嵌套展示）
@@ -42,6 +43,7 @@ type UpstreamModelView struct {
 	ContextLength   int
 	MaxOutputTokens int
 	Capabilities    []enum.InputModality
+	Pricing         vo.Pricing
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 }
