@@ -1,5 +1,7 @@
 package constant
 
+import "time"
+
 // 定价与计费常量（定价规则校验、时段窗口解析、费用计算）。
 const (
 	// PricingMaxPriceMicro 单价上限（微单位/1M tokens = 1e6 货币单位/1M tokens），
@@ -13,4 +15,10 @@ const (
 	PricingTimeBoundMaxHour = 23
 	// PricingTimeBoundMaxMinute HH:MM 分钟上限（59）。
 	PricingTimeBoundMaxMinute = 59
+	// PricingModelsDevCacheTTL models.dev 定价文档的 Redis 缓存时长。
+	PricingModelsDevCacheTTL = 24 * time.Hour
+	// PricingModelsDevMaxDocBytes models.dev 定价文档读取上限（防异常大响应）。
+	PricingModelsDevMaxDocBytes = 16 << 20
+	// PricingParseBitSize 价格字符串解析的浮点位宽。
+	PricingParseBitSize = 64
 )

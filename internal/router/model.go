@@ -46,6 +46,21 @@ func initModelRouter(modelGroup huma.API, modelHandler handler.ModelHandler, cac
 	}, modelHandler.HandleListModels)
 
 	huma.Register(modelGroup, huma.Operation{
+		OperationID: "prefillModelPricing",
+		Method:      http.MethodGet,
+		Path:        "/pricing/prefill",
+		Summary:     "PrefillModelPricing",
+		Description: "Fetch public pricing quote from models.dev (form prefill only)",
+		Tags:        []string{constant.TagModel},
+		Security: []map[string][]string{
+			{constant.SecuritySchemeJWT: {}},
+		},
+		Middlewares: huma.Middlewares{
+			middleware.LimitUserPermissionMiddleware("prefillModelPricing", enum.PermissionUser),
+		},
+	}, modelHandler.HandlePrefillPricing)
+
+	huma.Register(modelGroup, huma.Operation{
 		OperationID: "createModel",
 		Method:      http.MethodPost,
 		Path:        "",

@@ -3,6 +3,7 @@ package modules
 import (
 	"github.com/gofiber/fiber/v3"
 	demoauditport "github.com/hcd233/aris-proxy-api/internal/application/demoaccessaudit/port"
+	modelport "github.com/hcd233/aris-proxy-api/internal/application/model/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/inflight"
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall"
@@ -10,6 +11,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/httpclient"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/metrics"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/modelsdev"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/redis/go-redis/v9"
@@ -30,9 +32,21 @@ var InfraModule = fx.Module(constant.DigNameInfraModule,
 		NewMetricsMiddleware,
 		NewRuntimeMetricsCache,
 		NewMetricsFlusher,
+		NewModelsDevClient,
+		NewPricingQuoteProvider,
 	),
 	fx.Invoke(InitHTTPClient),
 )
+
+// NewModelsDevClient 构造 models.dev 公开定价客户端（复用通用 HTTP 客户端与 Redis 缓存）
+func NewModelsDevClient(cache *redis.Client) *modelsdev.Client {
+	return modelsdev.NewClient(httpclient.GetHTTPClient(), cache)
+}
+
+// NewPricingQuoteProvider 绑定公开定价来源端口到 modelsdev 客户端
+func NewPricingQuoteProvider(client *modelsdev.Client) modelport.PricingQuoteProvider {
+	return client
+}
 
 func NewDB() *gorm.DB {
 	return database.InitDatabase()

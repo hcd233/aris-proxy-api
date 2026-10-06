@@ -70,3 +70,23 @@ type DeleteModelCommand struct {
 type DeleteModelHandler interface {
 	Handle(ctx context.Context, cmd DeleteModelCommand) error
 }
+
+// PrefillPricingQuery 定价导入查询
+type PrefillPricingQuery struct {
+	UpstreamModel string
+}
+
+// PrefillPricingResult 定价导入结果（USD/1M tokens；found=false 时其余字段为零值）
+type PrefillPricingResult struct {
+	Found              bool
+	Currency           enum.Currency
+	InputPrice         float64
+	OutputPrice        float64
+	CacheCreationPrice float64
+	CacheReadPrice     float64
+}
+
+// PrefillPricingHandler 定价导入处理器
+type PrefillPricingHandler interface {
+	Handle(ctx context.Context, q PrefillPricingQuery) (*PrefillPricingResult, error)
+}

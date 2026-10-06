@@ -22,28 +22,32 @@ type ModelHandler interface {
 	HandleUpdateModel(ctx context.Context, req *dto.UpdateModelReq) (*dto.HTTPResponse[*dto.ModelUpdateRsp], error)
 	HandleDeleteModel(ctx context.Context, req *dto.DeleteModelReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
 	HandleListModels(ctx context.Context, req *dto.ListModelsReq) (*dto.HTTPResponse[*dto.ListModelsRsp], error)
+	HandlePrefillPricing(ctx context.Context, req *dto.ModelPricingPrefillReq) (*dto.ModelPricingPrefillRsp, error)
 }
 
 type ModelDependencies struct {
-	Create port.CreateModelHandler
-	Update port.UpdateModelHandler
-	Delete port.DeleteModelHandler
-	List   port.ListModelHandler
+	Create  port.CreateModelHandler
+	Update  port.UpdateModelHandler
+	Delete  port.DeleteModelHandler
+	List    port.ListModelHandler
+	Prefill port.PrefillPricingHandler
 }
 
 type modelHandler struct {
-	create port.CreateModelHandler
-	update port.UpdateModelHandler
-	delete port.DeleteModelHandler
-	list   port.ListModelHandler
+	create  port.CreateModelHandler
+	update  port.UpdateModelHandler
+	delete  port.DeleteModelHandler
+	list    port.ListModelHandler
+	prefill port.PrefillPricingHandler
 }
 
 func NewModelHandler(deps ModelDependencies) ModelHandler {
 	return &modelHandler{
-		create: deps.Create,
-		update: deps.Update,
-		delete: deps.Delete,
-		list:   deps.List,
+		create:  deps.Create,
+		update:  deps.Update,
+		delete:  deps.Delete,
+		list:    deps.List,
+		prefill: deps.Prefill,
 	}
 }
 
@@ -199,4 +203,28 @@ func toModelListItem(v *port.ListModelView) *dto.ModelListItem {
 		item.Endpoint = &dto.ModelListEndpointItem{ID: v.Endpoint.ID, Name: v.Endpoint.Name}
 	}
 	return item
+}
+
+// HandlePrefillPricing models.dev 定价导入（仅填充表单，未命中/失败降级为 found=false）
+//
+//	@receiver h *modelHandler
+//	@param ctx context.Context
+//	@param req *dto.ModelPricingPrefillReq
+//	@return *dto.ModelPricingPrefillRsp
+//	@return error
+//	@author centonhuang
+//	@update 2026-10-05 10:00:00
+func (h *modelHandler) HandlePrefillPricing(ctx context.Context, req *dto.ModelPricingPrefillReq) (*dto.ModelPricingPrefillRsp, error) {
+	rsp := &dto.ModelPricingPrefillRsp{}
+	res, err := h.prefill.Handle(ctx, port.PrefillPricingQuery{UpstreamModel: req.UpstreamModel})
+	// 未命中/失败统一降级为 found=false（录入不被阻塞），因此只走正向分支
+	if err == nil && res != nil && res.Found {
+		rsp.Found = res.Found
+		rsp.Currency = res.Currency
+		rsp.InputPrice = res.InputPrice
+		rsp.OutputPrice = res.OutputPrice
+		rsp.CacheCreationPrice = res.CacheCreationPrice
+		rsp.CacheReadPrice = res.CacheReadPrice
+	}
+	return rsp, nil
 }
