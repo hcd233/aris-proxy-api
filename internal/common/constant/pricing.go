@@ -22,3 +22,6 @@ const (
 	// PricingParseBitSize 价格字符串解析的浮点位宽。
 	PricingParseBitSize = 64
 )
+
+// ModelsDevOfficialProviders models.dev 报价去重优先级：官方渠道优先（列表序靠前者胜）。
+var ModelsDevOfficialProviders = []string{"openai", "anthropic", "google", "deepseek", "moonshotai", "zhipuai"}

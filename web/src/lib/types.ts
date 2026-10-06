@@ -480,14 +480,12 @@ export interface PricingDTO {
   rules?: PricingRuleDTO[];
 }
 
-/** 定价导入响应（USD/1M tokens；found=false 表示未命中/上游不可达） */
+/** 定价导入响应（USD/1M tokens；found=false 表示未命中/上游不可达）。
+ * pricing 为完整定价（含上下文区间规则），时段窗口需手填。 */
 export interface ModelPricingPrefillRsp extends CommonRsp {
   found: boolean;
   currency?: PricingCurrency;
-  inputPrice?: number;
-  outputPrice?: number;
-  cacheCreationPrice?: number;
-  cacheReadPrice?: number;
+  pricing?: PricingDTO;
 }
 
 /** 模型成本排行行（展示单位；行 = 模型 × 币种） */

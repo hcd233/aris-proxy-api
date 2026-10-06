@@ -149,7 +149,9 @@ export default function DashboardPage() {
           )}
         </div>
 
-        <ModelCostBarChart />
+        <div className="stagger-rise grid gap-4 lg:grid-cols-2">
+          <ModelCostBarChart />
+        </div>
 
         <div className="stagger-rise grid gap-4 lg:grid-cols-2">
           <ModelTrendChart />

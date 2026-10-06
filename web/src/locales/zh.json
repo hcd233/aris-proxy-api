@@ -843,5 +843,8 @@
   "cost.dim.input": "输入",
   "cost.dim.output": "输出",
   "cost.dim.cacheRead": "缓存读取",
-  "cost.dim.cacheWrite": "缓存写入"
+  "cost.dim.cacheWrite": "缓存写入",
+  "upstream.pricing.opt.timeWindow": "时段限制",
+  "upstream.pricing.opt.context": "上下文区间",
+  "upstream.pricing.prefill.hint": "已导入定价（含上下文区间）；时段窗口无公开数据，请按需手填"
 }

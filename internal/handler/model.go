@@ -22,7 +22,7 @@ type ModelHandler interface {
 	HandleUpdateModel(ctx context.Context, req *dto.UpdateModelReq) (*dto.HTTPResponse[*dto.ModelUpdateRsp], error)
 	HandleDeleteModel(ctx context.Context, req *dto.DeleteModelReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
 	HandleListModels(ctx context.Context, req *dto.ListModelsReq) (*dto.HTTPResponse[*dto.ListModelsRsp], error)
-	HandlePrefillPricing(ctx context.Context, req *dto.ModelPricingPrefillReq) (*dto.ModelPricingPrefillRsp, error)
+	HandlePrefillPricing(ctx context.Context, req *dto.ModelPricingPrefillReq) (*dto.HTTPResponse[*dto.ModelPricingPrefillRsp], error)
 }
 
 type ModelDependencies struct {
@@ -210,21 +210,18 @@ func toModelListItem(v *port.ListModelView) *dto.ModelListItem {
 //	@receiver h *modelHandler
 //	@param ctx context.Context
 //	@param req *dto.ModelPricingPrefillReq
-//	@return *dto.ModelPricingPrefillRsp
+//	@return *dto.HTTPResponse[*dto.ModelPricingPrefillRsp]
 //	@return error
 //	@author centonhuang
-//	@update 2026-10-05 10:00:00
-func (h *modelHandler) HandlePrefillPricing(ctx context.Context, req *dto.ModelPricingPrefillReq) (*dto.ModelPricingPrefillRsp, error) {
+//	@update 2026-10-07 10:00:00
+func (h *modelHandler) HandlePrefillPricing(ctx context.Context, req *dto.ModelPricingPrefillReq) (*dto.HTTPResponse[*dto.ModelPricingPrefillRsp], error) {
 	rsp := &dto.ModelPricingPrefillRsp{}
 	res, err := h.prefill.Handle(ctx, port.PrefillPricingQuery{UpstreamModel: req.UpstreamModel})
 	// 未命中/失败统一降级为 found=false（录入不被阻塞），因此只走正向分支
 	if err == nil && res != nil && res.Found {
-		rsp.Found = res.Found
+		rsp.Found = true
 		rsp.Currency = res.Currency
-		rsp.InputPrice = res.InputPrice
-		rsp.OutputPrice = res.OutputPrice
-		rsp.CacheCreationPrice = res.CacheCreationPrice
-		rsp.CacheReadPrice = res.CacheReadPrice
+		rsp.Pricing = &dto.PricingDTO{Currency: res.Currency, Rules: res.Rules}
 	}
-	return rsp, nil
+	return apiutil.WrapHTTPResponse(rsp, nil)
 }

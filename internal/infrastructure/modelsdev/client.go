@@ -4,7 +4,9 @@ package modelsdev
 import (
 	"context"
 	"io"
+	"maps"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -24,17 +26,36 @@ type Client struct {
 	redis  redis.UniversalClient // nil = 不缓存
 }
 
-// modelsDevEntry models.dev 文档条目（cost 值兼容 string/number 两种形态，故保留原始 JSON）
-type modelsDevEntry struct {
+type modelsDevProvider struct {
+	Models map[string]modelsDevModel `json:"models"`
+}
+
+type modelsDevModel struct {
 	Cost modelsDevCost `json:"cost"`
 }
 
-// modelsDevCost 四类单价的原始 JSON 值
+// modelsDevCost 四类单价（USD/1M tokens）+ 可选上下文分档。
+// 值保留原始 JSON：models.dev 中存在 string/number 两种标量形态。
 type modelsDevCost struct {
 	Input      sonic.NoCopyRawMessage `json:"input"`
 	Output     sonic.NoCopyRawMessage `json:"output"`
 	CacheRead  sonic.NoCopyRawMessage `json:"cache_read"`
 	CacheWrite sonic.NoCopyRawMessage `json:"cache_write"`
+	Tiers      []modelsDevTier        `json:"tiers"`
+}
+
+// modelsDevTier 上下文分档：tier.size 为该档起始 prompt token（含）
+type modelsDevTier struct {
+	Input      sonic.NoCopyRawMessage `json:"input"`
+	Output     sonic.NoCopyRawMessage `json:"output"`
+	CacheRead  sonic.NoCopyRawMessage `json:"cache_read"`
+	CacheWrite sonic.NoCopyRawMessage `json:"cache_write"`
+	Tier       modelsDevTierBound     `json:"tier"`
+}
+
+type modelsDevTierBound struct {
+	Type string `json:"type"`
+	Size int64  `json:"size"`
 }
 
 // NewClient 构造 models.dev 定价客户端
@@ -48,51 +69,104 @@ func NewClient(hc *http.Client, rdb redis.UniversalClient) *Client {
 	return &Client{http: hc, redis: rdb}
 }
 
-// Quote 按模型 ID 精确匹配公开定价
+// Quote 按模型 ID 精确匹配公开定价（跨 provider 收集，官方 provider 优先）
 //
 //	@receiver c *Client
 //	@param ctx context.Context
 //	@param modelID string 上游模型名（精确匹配，区分大小写）
-//	@return port.PricingQuote
+//	@return port.PricingQuote 分档报价（按 ContextMin 升序，首档 0）
 //	@return bool 是否命中
 //	@return error 拉取/解析失败
 //	@author centonhuang
-//	@update 2026-10-05 10:00:00
+//	@update 2026-10-07 10:00:00
 func (c *Client) Quote(ctx context.Context, modelID string) (port.PricingQuote, bool, error) {
 	raw, err := c.doc(ctx)
 	if err != nil {
 		return port.PricingQuote{}, false, err
 	}
-	var doc map[string]modelsDevEntry
+	var doc map[string]modelsDevProvider
 	if err := sonic.Unmarshal(raw, &doc); err != nil {
 		return port.PricingQuote{}, false, ierr.Wrap(ierr.ErrDTOUnmarshal, err, "parse models.dev pricing")
 	}
-	entry, ok := doc[modelID]
+	entry, ok := pickProvider(doc, modelID)
 	if !ok {
 		return port.PricingQuote{}, false, nil
 	}
-	input, err := parseCost(entry.Cost.Input)
+	quote, err := buildQuote(entry.Cost)
 	if err != nil {
 		return port.PricingQuote{}, false, err
 	}
-	output, err := parseCost(entry.Cost.Output)
-	if err != nil {
-		return port.PricingQuote{}, false, err
+	return quote, true, nil
+}
+
+// pickProvider 跨 provider 收集模型命中：官方 provider 优先（列表序靠前者胜），否则 provider 名字典序首个
+func pickProvider(doc map[string]modelsDevProvider, modelID string) (modelsDevModel, bool) {
+	official := modelsDevModel{}
+	officialIdx := len(constant.ModelsDevOfficialProviders)
+	officialOK := false
+	fallback := modelsDevModel{}
+	fallbackName := ""
+	fallbackOK := false
+	for name, provider := range doc {
+		m, ok := provider.Models[modelID]
+		if !ok {
+			continue
+		}
+		if idx := slices.Index(constant.ModelsDevOfficialProviders, name); idx >= 0 {
+			if !officialOK || idx < officialIdx {
+				official, officialIdx, officialOK = m, idx, true
+			}
+			continue
+		}
+		if !fallbackOK || name < fallbackName {
+			fallback, fallbackName, fallbackOK = m, name, true
+		}
 	}
-	cacheCreation, err := parseCost(entry.Cost.CacheWrite)
-	if err != nil {
-		return port.PricingQuote{}, false, err
+	if officialOK {
+		return official, true
 	}
-	cacheRead, err := parseCost(entry.Cost.CacheRead)
-	if err != nil {
-		return port.PricingQuote{}, false, err
+	return fallback, fallbackOK
+}
+
+// buildQuote 平铺四价 + tiers → 分档报价：按档位起点归并（同起点以 tiers 条目为准），
+// 输出按 ContextMin 升序，首档必为 0（平铺价兜底）。
+func buildQuote(cost modelsDevCost) (port.PricingQuote, error) {
+	base := port.PricingTier{}
+	if err := fillTier(&base, cost.Input, cost.Output, cost.CacheWrite, cost.CacheRead); err != nil {
+		return port.PricingQuote{}, err
 	}
-	return port.PricingQuote{
-		Input:         input,
-		Output:        output,
-		CacheCreation: cacheCreation,
-		CacheRead:     cacheRead,
-	}, true, nil
+	byMin := map[int64]port.PricingTier{0: base}
+	for _, t := range cost.Tiers {
+		if t.Tier.Type != constant.ModelsDevTierTypeCtx || t.Tier.Size < 0 {
+			continue
+		}
+		tier := port.PricingTier{ContextMin: t.Tier.Size}
+		if err := fillTier(&tier, t.Input, t.Output, t.CacheWrite, t.CacheRead); err != nil {
+			return port.PricingQuote{}, err
+		}
+		byMin[tier.ContextMin] = tier // 同起点以 tiers 条目为准
+	}
+	out := make([]port.PricingTier, 0, len(byMin))
+	for _, min := range slices.Sorted(maps.Keys(byMin)) {
+		out = append(out, byMin[min])
+	}
+	return port.PricingQuote{Tiers: out}, nil
+}
+
+// fillTier 解析四个价格标量（string/number 兼容）
+func fillTier(t *port.PricingTier, input, output, cacheWrite, cacheRead sonic.NoCopyRawMessage) error {
+	var err error
+	if t.Input, err = parseCost(input); err != nil {
+		return err
+	}
+	if t.Output, err = parseCost(output); err != nil {
+		return err
+	}
+	if t.CacheCreation, err = parseCost(cacheWrite); err != nil {
+		return err
+	}
+	t.CacheRead, err = parseCost(cacheRead)
+	return err
 }
 
 // doc 读取定价文档：Redis 缓存优先，未命中则拉取并回填缓存

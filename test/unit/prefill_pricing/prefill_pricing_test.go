@@ -21,18 +21,42 @@ func (f *fakeQuoteProvider) Quote(_ context.Context, _ string) (port.PricingQuot
 	return f.quote, f.ok, f.err
 }
 
-func TestPrefillPricingFound(t *testing.T) {
+func TestPrefillPricingTiersToRules(t *testing.T) {
 	t.Parallel()
-	h := query.NewPrefillPricingHandler(&fakeQuoteProvider{quote: port.PricingQuote{Input: 3, Output: 15}, ok: true})
-	rsp, err := h.Handle(t.Context(), port.PrefillPricingQuery{UpstreamModel: " gpt-4 "})
-	if err != nil {
-		t.Fatalf("Handle() error = %v", err)
+	h := query.NewPrefillPricingHandler(&fakeQuoteProvider{
+		ok: true,
+		quote: port.PricingQuote{Tiers: []port.PricingTier{
+			{ContextMin: 0, Input: 1.25, Output: 10},
+			{ContextMin: 200000, Input: 2.5, Output: 15},
+		}},
+	})
+	rsp, err := h.Handle(t.Context(), port.PrefillPricingQuery{UpstreamModel: " gemini-2.5-pro "})
+	if err != nil || !rsp.Found {
+		t.Fatalf("found case: %+v err=%v", rsp, err)
 	}
-	if !rsp.Found {
-		t.Fatalf("found case: %+v", rsp)
-	}
-	if rsp.Currency != enum.CurrencyUSD || rsp.InputPrice != 3 || rsp.OutputPrice != 15 {
+	if rsp.Currency != enum.CurrencyUSD || len(rsp.Rules) != 2 {
 		t.Fatalf("result = %+v", rsp)
+	}
+	// 首档 [0, 200000)，末档归为无条件默认规则（0/0）
+	first := rsp.Rules[0]
+	if first.ContextMin != 0 || first.ContextMax != 200000 || first.InputPrice != 1.25 {
+		t.Fatalf("first rule = %+v", first)
+	}
+	last := rsp.Rules[1]
+	if last.ContextMin != 0 || last.ContextMax != 0 || last.InputPrice != 2.5 {
+		t.Fatalf("last rule (default) = %+v", last)
+	}
+}
+
+func TestPrefillPricingSingleTierBecomesDefault(t *testing.T) {
+	t.Parallel()
+	h := query.NewPrefillPricingHandler(&fakeQuoteProvider{
+		ok:    true,
+		quote: port.PricingQuote{Tiers: []port.PricingTier{{ContextMin: 0, Input: 3}}},
+	})
+	rsp, _ := h.Handle(t.Context(), port.PrefillPricingQuery{UpstreamModel: "m"})
+	if !rsp.Found || len(rsp.Rules) != 1 || rsp.Rules[0].InputPrice != 3 {
+		t.Fatalf("single tier = %+v", rsp)
 	}
 }
 

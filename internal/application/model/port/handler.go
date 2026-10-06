@@ -7,6 +7,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
+	"github.com/hcd233/aris-proxy-api/internal/dto"
 )
 
 // CreateModelCommand 创建 Model 命令
@@ -76,14 +77,12 @@ type PrefillPricingQuery struct {
 	UpstreamModel string
 }
 
-// PrefillPricingResult 定价导入结果（USD/1M tokens；found=false 时其余字段为零值）
+// PrefillPricingResult 定价导入结果（USD/1M tokens；found=false 时其余字段为零值）。
+// Rules 为按上下文区间分档的规则数组（升序，末条为无条件默认规则）。
 type PrefillPricingResult struct {
-	Found              bool
-	Currency           enum.Currency
-	InputPrice         float64
-	OutputPrice        float64
-	CacheCreationPrice float64
-	CacheReadPrice     float64
+	Found    bool
+	Currency enum.Currency
+	Rules    []dto.PricingRuleDTO
 }
 
 // PrefillPricingHandler 定价导入处理器

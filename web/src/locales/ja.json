@@ -843,5 +843,8 @@
   "cost.dim.input": "入力",
   "cost.dim.output": "出力",
   "cost.dim.cacheRead": "キャッシュ読取",
-  "cost.dim.cacheWrite": "キャッシュ書込"
+  "cost.dim.cacheWrite": "キャッシュ書込",
+  "upstream.pricing.opt.timeWindow": "時間帯制限",
+  "upstream.pricing.opt.context": "コンテキスト範囲",
+  "upstream.pricing.prefill.hint": "価格を取り込みました（コンテキスト範囲含む）。時間帯は公開データがないため必要に応じて手動入力してください"
 }

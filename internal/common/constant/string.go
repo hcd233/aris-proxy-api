@@ -69,6 +69,8 @@ const (
 	ContactURL           = "https://github.com/hcd233"
 	ModelsDevAPIURL      = "https://models.dev/api.json"
 	ModelsDevDocCacheKey = "pricing:modelsdev:doc"
+	ModelsDevTierTypeCtx = "context"
+
 	LicenseName          = "Apache 2.0"
 	LicenseURL           = "https://www.apache.org/licenses/LICENSE-2.0.html"
 	SecuritySchemeJWT    = "jwtAuth"

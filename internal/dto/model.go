@@ -128,13 +128,11 @@ type ModelPricingPrefillReq struct {
 	UpstreamModel string `query:"upstreamModel" required:"true" maxLength:"200" doc:"上游模型名（与 models.dev 模型 ID 精确匹配）"`
 }
 
-// ModelPricingPrefillRsp 定价导入响应（USD/1M tokens；found=false 表示未命中/上游不可达）
+// ModelPricingPrefillRsp 定价导入响应（USD/1M tokens；found=false 表示未命中/上游不可达）。
+// pricing 为完整定价（按上下文区间分档的规则数组），仅用于填充表单；时段窗口需手填。
 type ModelPricingPrefillRsp struct {
 	CommonRsp
-	Found              bool          `json:"found" doc:"是否命中公开定价"`
-	Currency           enum.Currency `json:"currency,omitempty" doc:"币种（命中时 USD）"`
-	InputPrice         float64       `json:"inputPrice,omitempty" doc:"输入单价"`
-	OutputPrice        float64       `json:"outputPrice,omitempty" doc:"输出单价"`
-	CacheCreationPrice float64       `json:"cacheCreationPrice,omitempty" doc:"缓存创建单价"`
-	CacheReadPrice     float64       `json:"cacheReadPrice,omitempty" doc:"缓存读取单价"`
+	Found    bool          `json:"found" doc:"是否命中公开定价"`
+	Currency enum.Currency `json:"currency,omitempty" doc:"计价币种（命中时 USD）"`
+	Pricing  *PricingDTO   `json:"pricing,omitempty" doc:"导入的定价（含上下文区间规则）"`
 }

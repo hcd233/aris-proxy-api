@@ -843,5 +843,8 @@
   "cost.dim.input": "Input",
   "cost.dim.output": "Output",
   "cost.dim.cacheRead": "Cache read",
-  "cost.dim.cacheWrite": "Cache write"
+  "cost.dim.cacheWrite": "Cache write",
+  "upstream.pricing.opt.timeWindow": "Time window",
+  "upstream.pricing.opt.context": "Context tier",
+  "upstream.pricing.prefill.hint": "Pricing imported (with context tiers). Time windows have no public data — fill in manually if needed"
 }

@@ -6,6 +6,7 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/application/model/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/dto"
 )
 
 // prefillPricingHandler 从公开定价源导入表单初值（仅填充，永不自动改价）
@@ -23,7 +24,9 @@ func NewPrefillPricingHandler(provider port.PricingQuoteProvider) port.PrefillPr
 	return &prefillPricingHandler{provider: provider}
 }
 
-// Handle 按 upstream_model 精确匹配；未命中/拉取失败一律 found=false（录入不被阻塞）
+// Handle 按 upstream_model 精确匹配；未命中/拉取失败一律 found=false（录入不被阻塞）。
+// 报价的上下文分档映射为区间规则：前档 [ContextMin, 下一档 ContextMin)，末档归为无条件默认规则；
+// 时段窗口 models.dev 无数据，不在导入范围（用户手填）。
 //
 //	@receiver h *prefillPricingHandler
 //	@param ctx context.Context
@@ -31,7 +34,7 @@ func NewPrefillPricingHandler(provider port.PricingQuoteProvider) port.PrefillPr
 //	@return *port.PrefillPricingResult
 //	@return error 恒为 nil
 //	@author centonhuang
-//	@update 2026-10-05 10:00:00
+//	@update 2026-10-07 10:00:00
 func (h *prefillPricingHandler) Handle(ctx context.Context, q port.PrefillPricingQuery) (*port.PrefillPricingResult, error) {
 	name := strings.TrimSpace(q.UpstreamModel)
 	if name == "" {
@@ -41,13 +44,35 @@ func (h *prefillPricingHandler) Handle(ctx context.Context, q port.PrefillPricin
 	// 拉取失败/未命中统一降级为未命中（录入不被阻塞），因此只走正向分支
 	if err == nil && ok {
 		return &port.PrefillPricingResult{
-			Found:              true,
-			Currency:           enum.CurrencyUSD,
-			InputPrice:         quote.Input,
-			OutputPrice:        quote.Output,
-			CacheCreationPrice: quote.CacheCreation,
-			CacheReadPrice:     quote.CacheRead,
+			Found:    true,
+			Currency: enum.CurrencyUSD,
+			Rules:    tiersToRules(quote.Tiers),
 		}, nil
 	}
 	return &port.PrefillPricingResult{}, nil
+}
+
+// tiersToRules 分档报价 → 区间规则：前档 [min, 下一档 min)，末档清零区间作为无条件默认规则兜底。
+func tiersToRules(tiers []port.PricingTier) []dto.PricingRuleDTO {
+	rules := make([]dto.PricingRuleDTO, 0, len(tiers))
+	for i, tier := range tiers {
+		rule := dto.PricingRuleDTO{
+			ContextMin:         tier.ContextMin,
+			InputPrice:         tier.Input,
+			OutputPrice:        tier.Output,
+			CacheCreationPrice: tier.CacheCreation,
+			CacheReadPrice:     tier.CacheRead,
+		}
+		if i < len(tiers)-1 {
+			rule.ContextMax = tiers[i+1].ContextMin
+		}
+		rules = append(rules, rule)
+	}
+	if len(rules) > 0 {
+		// 末档（[sizeN, ∞)）归为无条件默认规则，满足「恰一条默认规则」校验：
+		// 前档已覆盖到 sizeN，默认档天然承接 ≥sizeN 的全部命中，语义等价
+		rules[len(rules)-1].ContextMin = 0
+		rules[len(rules)-1].ContextMax = 0
+	}
+	return rules
 }

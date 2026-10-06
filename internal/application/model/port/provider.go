@@ -2,12 +2,18 @@ package port
 
 import "context"
 
-// PricingQuote 公开定价（展示单位：USD/1M tokens）
-type PricingQuote struct {
+// PricingTier 公开定价的一档（USD/1M tokens）：ContextMin 起（含）的 prompt 量适用本档
+type PricingTier struct {
+	ContextMin    int64
 	Input         float64
 	Output        float64
 	CacheCreation float64
 	CacheRead     float64
+}
+
+// PricingQuote 公开定价（USD/1M tokens）：按上下文区间分档，Tiers 按 ContextMin 升序且首档为 0
+type PricingQuote struct {
+	Tiers []PricingTier
 }
 
 // PricingQuoteProvider 公开定价来源（由 infrastructure/modelsdev 实现）
