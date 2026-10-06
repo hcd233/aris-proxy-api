@@ -19,19 +19,23 @@ import (
 type ModelCallAudit struct {
 	aggregate.Base
 
-	apiKeyID         uint
-	modelID          string
-	upstreamProtocol enum.ProtocolType
-	apiProtocol      enum.ProtocolType
-	endpoint         string
-	tokens           vo.TokenBreakdown
-	latency          vo.CallLatency
-	status           vo.CallStatus
-	userAgent        string
-	traceID          string
-	costMicro        *int64
-	pricingCurrency  enum.Currency
-	createdAt        time.Time
+	apiKeyID             uint
+	modelID              string
+	upstreamProtocol     enum.ProtocolType
+	apiProtocol          enum.ProtocolType
+	endpoint             string
+	tokens               vo.TokenBreakdown
+	latency              vo.CallLatency
+	status               vo.CallStatus
+	userAgent            string
+	traceID              string
+	costMicro            *int64
+	inputCostMicro       *int64
+	outputCostMicro      *int64
+	cacheCreateCostMicro *int64
+	cacheReadCostMicro   *int64
+	pricingCurrency      enum.Currency
+	createdAt            time.Time
 }
 
 // RecordCall 构造一条审计聚合（成功/失败由 CallInput.Status 区分，工厂不重复表达）
@@ -53,36 +57,44 @@ func RecordCall(input RecordCallInput, now time.Time) *ModelCallAudit {
 //	@author centonhuang
 //	@update 2026-04-22 17:00:00
 type RecordCallInput struct {
-	APIKeyID         uint
-	ModelID          string
-	UpstreamProtocol enum.ProtocolType
-	APIProtocol      enum.ProtocolType
-	Endpoint         string
-	Tokens           vo.TokenBreakdown
-	Latency          vo.CallLatency
-	Status           vo.CallStatus
-	UserAgent        string
-	TraceID          string
-	CostMicro        *int64
-	PricingCurrency  enum.Currency
+	APIKeyID             uint
+	ModelID              string
+	UpstreamProtocol     enum.ProtocolType
+	APIProtocol          enum.ProtocolType
+	Endpoint             string
+	Tokens               vo.TokenBreakdown
+	Latency              vo.CallLatency
+	Status               vo.CallStatus
+	UserAgent            string
+	TraceID              string
+	CostMicro            *int64
+	InputCostMicro       *int64
+	OutputCostMicro      *int64
+	CacheCreateCostMicro *int64
+	CacheReadCostMicro   *int64
+	PricingCurrency      enum.Currency
 }
 
 // newAudit 构造聚合但不生成事件（由调用方选择 Complete/Fail 事件）
 func newAudit(input RecordCallInput, now time.Time) *ModelCallAudit {
 	return &ModelCallAudit{
-		apiKeyID:         input.APIKeyID,
-		modelID:          input.ModelID,
-		upstreamProtocol: input.UpstreamProtocol,
-		apiProtocol:      input.APIProtocol,
-		endpoint:         input.Endpoint,
-		tokens:           input.Tokens,
-		latency:          input.Latency,
-		status:           input.Status,
-		userAgent:        input.UserAgent,
-		traceID:          input.TraceID,
-		costMicro:        input.CostMicro,
-		pricingCurrency:  input.PricingCurrency,
-		createdAt:        now,
+		apiKeyID:             input.APIKeyID,
+		modelID:              input.ModelID,
+		upstreamProtocol:     input.UpstreamProtocol,
+		apiProtocol:          input.APIProtocol,
+		endpoint:             input.Endpoint,
+		tokens:               input.Tokens,
+		latency:              input.Latency,
+		status:               input.Status,
+		userAgent:            input.UserAgent,
+		traceID:              input.TraceID,
+		costMicro:            input.CostMicro,
+		inputCostMicro:       input.InputCostMicro,
+		outputCostMicro:      input.OutputCostMicro,
+		cacheCreateCostMicro: input.CacheCreateCostMicro,
+		cacheReadCostMicro:   input.CacheReadCostMicro,
+		pricingCurrency:      input.PricingCurrency,
+		createdAt:            now,
 	}
 }
 
@@ -118,6 +130,11 @@ func (a *ModelCallAudit) TraceID() string { return a.traceID }
 
 // GetCostMicro 返回估算费用（微单位）；nil=未计价
 func (a *ModelCallAudit) GetCostMicro() *int64 { return a.costMicro }
+
+// GetCostBreakdownMicro 返回四维费用拆分（微单位指针；nil=无拆分数据）
+func (a *ModelCallAudit) GetCostBreakdownMicro() (input, output, cacheCreate, cacheRead *int64) {
+	return a.inputCostMicro, a.outputCostMicro, a.cacheCreateCostMicro, a.cacheReadCostMicro
+}
 
 // GetPricingCurrency 返回计价币种快照
 func (a *ModelCallAudit) GetPricingCurrency() enum.Currency { return a.pricingCurrency }

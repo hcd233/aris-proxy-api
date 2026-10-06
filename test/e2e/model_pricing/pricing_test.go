@@ -130,20 +130,15 @@ func TestPricing_UnpricedModelHasNullCost(t *testing.T) {
 	}
 }
 
-func TestPricing_CostSummaryAndDistribution(t *testing.T) {
+func TestPricing_ModelCostRanking(t *testing.T) {
 	t.Parallel()
 	env := mustEnv(t, "BASE_URL", "WEB_JWT")
 	now := time.Now().UTC()
 	start := now.Add(-24 * time.Hour).Format(time.RFC3339)
 	end := now.Format(time.RFC3339)
-	summary := getJSON(t, env["BASE_URL"], env["WEB_JWT"],
-		"/api/web/v1/audit/stats/cost/summary?startTime="+start+"&endTime="+end+"&granularity=day")
-	if _, ok := summary["totals"].([]any); !ok {
-		t.Fatalf("summary.totals missing: %v", summary)
-	}
-	dist := getJSON(t, env["BASE_URL"], env["WEB_JWT"],
-		"/api/web/v1/audit/stats/cost/distribution?groupBy=model&startTime="+start+"&endTime="+end+"&limit=10")
-	if dist["groupBy"] != "model" {
-		t.Fatalf("distribution.groupBy = %v", dist["groupBy"])
+	obj := getJSON(t, env["BASE_URL"], env["WEB_JWT"],
+		"/api/web/v1/audit/stats/model/cost?startTime="+start+"&endTime="+end)
+	if _, ok := obj["data"].([]any); !ok {
+		t.Fatalf("model cost data missing: %v", obj)
 	}
 }

@@ -58,18 +58,5 @@ type AuditService interface {
 	TokenRate(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*dto.TokenRateItem, error)
 	ModelUsage(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*dto.ModelUsageItem, error)
 	FirstTokenLatency(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*dto.FirstTokenLatencyItem, error)
-	CostSummary(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) (*CostSummaryView, error)
-	CostDistribution(ctx context.Context, permission enum.Permission, userID uint, groupBy string, startTime, endTime time.Time, limit int) (*CostDistributionView, error)
-}
-
-// CostSummaryView 费用合计与趋势视图（展示单位，按币种分组）
-type CostSummaryView struct {
-	Totals []*dto.AuditCostTotalItem
-	Series []*dto.AuditCostSeriesPoint
-}
-
-// CostDistributionView 费用分布视图（展示单位，每行 = 分组 × 币种）
-type CostDistributionView struct {
-	GroupBy enum.CostGroupBy
-	Items   []*dto.AuditCostDistributionItem
+	ModelCost(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time) ([]*dto.ModelCostItem, error)
 }

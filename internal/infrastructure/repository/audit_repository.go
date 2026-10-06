@@ -48,6 +48,7 @@ func NewAuditRepository(db *gorm.DB) modelcall.AuditRepository {
 //	@update 2026-04-22 17:00:00
 func (r *auditRepository) Save(ctx context.Context, audit *aggregate.ModelCallAudit) error {
 	db := r.db.WithContext(ctx)
+	inputCostMicro, outputCostMicro, cacheCreateCostMicro, cacheReadCostMicro := audit.GetCostBreakdownMicro()
 	record := &dbmodel.ModelCallAudit{
 		APIKeyID:                 audit.APIKeyID(),
 		ModelID:                  audit.ModelID(),
@@ -65,6 +66,10 @@ func (r *auditRepository) Save(ctx context.Context, audit *aggregate.ModelCallAu
 		ErrorMessage:             audit.Status().ErrorMessage(),
 		TraceID:                  audit.TraceID(),
 		CostMicro:                audit.GetCostMicro(),
+		InputCostMicro:           inputCostMicro,
+		OutputCostMicro:          outputCostMicro,
+		CacheCreationCostMicro:   cacheCreateCostMicro,
+		CacheReadCostMicro:       cacheReadCostMicro,
 		PricingCurrency:          string(audit.GetPricingCurrency()),
 	}
 	if err := r.dao.Create(db, record); err != nil {
@@ -241,76 +246,28 @@ func (r *auditRepository) ListDistinctUserAgents(ctx context.Context, apiKeyIDs 
 	return agents, nil
 }
 
-// SumCostByCurrency 时间范围内估算费用合计（按币种分组；仅 cost_micro 非空行）
-func (r *auditRepository) SumCostByCurrency(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time) ([]*modelcall.CostTotal, error) {
+// QueryModelCost 模型成本排行（group by model_id, pricing_currency；仅带四维拆分的行）
+func (r *auditRepository) QueryModelCost(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time) ([]*modelcall.ModelCostPoint, error) {
 	// apiKeyIDs 非 nil 且为空（用户名下无 Key）：短路返回空结果，防止越权查全量；nil 表示不过滤（admin 路径）
 	if apiKeyIDs != nil && len(apiKeyIDs) == 0 {
-		return []*modelcall.CostTotal{}, nil
+		return []*modelcall.ModelCostPoint{}, nil
 	}
 	db := r.db.WithContext(ctx).Model(&dbmodel.ModelCallAudit{}).
 		Where(constant.FieldCreatedAt+" >= ? AND "+constant.FieldCreatedAt+" <= ?", startTime, endTime).
 		Where(constant.DBConditionDeletedAtZero).
-		Where(constant.FieldCostMicro + " IS NOT NULL")
+		Where(constant.FieldInputCostMicro + " IS NOT NULL")
 	if len(apiKeyIDs) > 0 {
 		db = db.Where(constant.FieldAPIKeyID+" IN ?", apiKeyIDs)
 	}
-	var results []*modelcall.CostTotal
-	if err := db.Select(constant.FieldPricingCurrency + " AS currency, SUM(" + constant.FieldCostMicro + ") AS cost_micro").
-		Group(constant.FieldPricingCurrency).
+	var results []*modelcall.ModelCostPoint
+	if err := db.Select(constant.FieldModelID + ", " + constant.FieldPricingCurrency + " AS currency, " +
+		"SUM(" + constant.FieldInputCostMicro + ") AS input_cost_micro, " +
+		"SUM(" + constant.FieldOutputCostMicro + ") AS output_cost_micro, " +
+		"SUM(" + constant.FieldCacheCreationCostMicro + ") AS cache_creation_cost_micro, " +
+		"SUM(" + constant.FieldCacheReadCostMicro + ") AS cache_read_cost_micro").
+		Group(constant.FieldModelID + ", " + constant.FieldPricingCurrency).
 		Scan(&results).Error; err != nil {
-		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "sum cost by currency")
-	}
-	return results, nil
-}
-
-// QueryCostSeries 估算费用趋势（时间桶 × 币种）
-func (r *auditRepository) QueryCostSeries(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.CostPoint, error) {
-	// apiKeyIDs 短路语义同 SumCostByCurrency
-	if apiKeyIDs != nil && len(apiKeyIDs) == 0 {
-		return []*modelcall.CostPoint{}, nil
-	}
-	db := r.db.WithContext(ctx).Model(&dbmodel.ModelCallAudit{}).
-		Where(constant.FieldCreatedAt+" >= ? AND "+constant.FieldCreatedAt+" <= ?", startTime, endTime).
-		Where(constant.DBConditionDeletedAtZero).
-		Where(constant.FieldCostMicro + " IS NOT NULL")
-	if len(apiKeyIDs) > 0 {
-		db = db.Where(constant.FieldAPIKeyID+" IN ?", apiKeyIDs)
-	}
-	timeBucketExpr := dateTruncSQL(granularity)
-	var results []*modelcall.CostPoint
-	if err := db.Select(timeBucketExpr + " AS time, " + constant.FieldPricingCurrency + " AS currency, SUM(" + constant.FieldCostMicro + ") AS cost_micro").
-		Group("time, " + constant.FieldPricingCurrency).
-		Order(timeBucketExpr).
-		Scan(&results).Error; err != nil {
-		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "query cost series")
-	}
-	return results, nil
-}
-
-// QueryCostDistribution 成本分布（group 维度 × 币种，按币种内费用降序）。
-// groupBy=user 时按 api_key_id 分组，用户归并由应用层经 BatchGetRelations 完成。
-func (r *auditRepository) QueryCostDistribution(ctx context.Context, apiKeyIDs []uint, groupBy enum.CostGroupBy, startTime, endTime time.Time) ([]*modelcall.CostDistributionPoint, error) {
-	// apiKeyIDs 短路语义同 SumCostByCurrency
-	if apiKeyIDs != nil && len(apiKeyIDs) == 0 {
-		return []*modelcall.CostDistributionPoint{}, nil
-	}
-	col := constant.FieldAPIKeyID
-	if groupBy == enum.CostGroupByModel {
-		col = constant.FieldModelID
-	}
-	db := r.db.WithContext(ctx).Model(&dbmodel.ModelCallAudit{}).
-		Where(constant.FieldCreatedAt+" >= ? AND "+constant.FieldCreatedAt+" <= ?", startTime, endTime).
-		Where(constant.DBConditionDeletedAtZero).
-		Where(constant.FieldCostMicro + " IS NOT NULL")
-	if len(apiKeyIDs) > 0 {
-		db = db.Where(constant.FieldAPIKeyID+" IN ?", apiKeyIDs)
-	}
-	var results []*modelcall.CostDistributionPoint
-	if err := db.Select("CAST(" + col + " AS TEXT) AS id, " + constant.FieldPricingCurrency + " AS currency, SUM(" + constant.FieldCostMicro + ") AS cost_micro").
-		Group(col + ", " + constant.FieldPricingCurrency).
-		Order(constant.FieldPricingCurrency + ", cost_micro DESC").
-		Scan(&results).Error; err != nil {
-		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "query cost distribution")
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "query model cost")
 	}
 	return results, nil
 }

@@ -1,40 +1,17 @@
 package modelcall
 
-import (
-	"time"
-
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-)
-
-// CostTotal 按币种费用合计（微单位）
-type CostTotal struct {
-	Currency  string
-	CostMicro int64
+// ModelCostPoint 模型成本排行行（微单位；行 = 模型 × 币种）。
+// 仅统计带四维费用拆分的调用（cost_micro 拆分列为 NULL 的存量行不计入）。
+type ModelCostPoint struct {
+	ModelID                string
+	Currency               string
+	InputCostMicro         int64
+	OutputCostMicro        int64
+	CacheCreationCostMicro int64
+	CacheReadCostMicro     int64
 }
 
-// CostPoint 费用趋势点（微单位；时间桶 × 币种）
-type CostPoint struct {
-	Time      time.Time
-	Currency  string
-	CostMicro int64
-}
-
-// CostDistributionPoint 成本分布行（每行 = 分组 × 币种）
-type CostDistributionPoint struct {
-	ID        string
-	Name      string
-	Currency  string
-	CostMicro int64
-}
-
-// CostSummaryResult 成本合计结果（微单位）
-type CostSummaryResult struct {
-	Totals []*CostTotal
-	Series []*CostPoint
-}
-
-// CostDistributionResult 成本分布结果（微单位）
-type CostDistributionResult struct {
-	GroupBy enum.CostGroupBy
-	Items   []*CostDistributionPoint
+// TotalCostMicro 四维合计（微单位）
+func (p *ModelCostPoint) TotalCostMicro() int64 {
+	return p.InputCostMicro + p.OutputCostMicro + p.CacheCreationCostMicro + p.CacheReadCostMicro
 }

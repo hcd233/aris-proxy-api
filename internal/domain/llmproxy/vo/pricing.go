@@ -144,6 +144,40 @@ func (p Pricing) Match(at time.Time, promptTokens int64) PricingRule {
 	return PricingRule{}
 }
 
+// CostBreakdown 费用四维拆分（微单位）：输入/输出/缓存创建/缓存读取。
+type CostBreakdown struct {
+	InputMicro       int64
+	OutputMicro      int64
+	CacheCreateMicro int64
+	CacheReadMicro   int64
+}
+
+// Total 四维合计（微单位）。
+func (b CostBreakdown) Total() int64 {
+	return b.InputMicro + b.OutputMicro + b.CacheCreateMicro + b.CacheReadMicro
+}
+
+// ComputeCostBreakdown 按命中规则计算四维费用拆分（微单位）；
+// 整段跳档由调用方 Match 选档。总费用=四维合计。
+//
+//	@receiver p Pricing
+//	@param rule PricingRule 命中的规则
+//	@param input int64 输入 token
+//	@param output int64 输出 token
+//	@param cacheCreate int64 缓存创建 token
+//	@param cacheRead int64 缓存读取 token
+//	@return CostBreakdown
+//	@author centonhuang
+//	@update 2026-10-07 10:00:00
+func (p Pricing) ComputeCostBreakdown(rule PricingRule, input, output, cacheCreate, cacheRead int64) CostBreakdown {
+	return CostBreakdown{
+		InputMicro:       roundCost(rule.InputMicro, input),
+		OutputMicro:      roundCost(rule.OutputMicro, output),
+		CacheCreateMicro: roundCost(rule.CacheCreateMicro, cacheCreate),
+		CacheReadMicro:   roundCost(rule.CacheReadMicro, cacheRead),
+	}
+}
+
 // ComputeCost 按命中规则计算估算费用（微单位）；整段跳档由调用方 Match 选档。
 //
 //	@receiver p Pricing
@@ -156,10 +190,7 @@ func (p Pricing) Match(at time.Time, promptTokens int64) PricingRule {
 //	@author centonhuang
 //	@update 2026-10-05 10:00:00
 func (p Pricing) ComputeCost(rule PricingRule, input, output, cacheCreate, cacheRead int64) int64 {
-	return roundCost(rule.InputMicro, input) +
-		roundCost(rule.OutputMicro, output) +
-		roundCost(rule.CacheCreateMicro, cacheCreate) +
-		roundCost(rule.CacheReadMicro, cacheRead)
+	return p.ComputeCostBreakdown(rule, input, output, cacheCreate, cacheRead).Total()
 }
 
 // isDefault 是否无条件默认规则（全时段 + 全区间）。

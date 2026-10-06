@@ -48,6 +48,10 @@ type ModelCallAuditTask struct {
 	UpstreamStatusCode       int
 	ErrorMessage             string
 	CostMicro                *int64
+	InputCostMicro           *int64
+	OutputCostMicro          *int64
+	CacheCreateCostMicro     *int64
+	CacheReadCostMicro       *int64
 	PricingCurrency          string
 	CreatedAt                time.Time
 }

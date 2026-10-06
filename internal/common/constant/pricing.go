@@ -21,6 +21,4 @@ const (
 	PricingModelsDevMaxDocBytes = 16 << 20
 	// PricingParseBitSize 价格字符串解析的浮点位宽。
 	PricingParseBitSize = 64
-	// CostDistributionDefaultLimit 成本分布每币种默认返回条数。
-	CostDistributionDefaultLimit = 10
 )

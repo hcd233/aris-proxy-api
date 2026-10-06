@@ -43,8 +43,7 @@ func TestAuditService_DispatchesDemoToFullAll(t *testing.T) {
 		auditquery.NewModelUsageHandler(repo),
 		auditquery.NewModelUsageByUserHandler(repo, &fakeAPIKeyIDLookup{}),
 		auditquery.NewFirstTokenLatencyHandler(repo),
-		auditquery.NewFirstTokenLatencyByUserHandler(repo, &fakeAPIKeyIDLookup{}), nil,
-		nil,
+		auditquery.NewFirstTokenLatencyByUserHandler(repo, &fakeAPIKeyIDLookup{}),
 		nil,
 		nil,
 	)
@@ -106,8 +105,7 @@ func TestAuditService_DemoListLogsMasksIdentityAndConnection(t *testing.T) {
 		auditquery.NewModelUsageHandler(repo),
 		auditquery.NewModelUsageByUserHandler(repo, &fakeAPIKeyIDLookup{}),
 		auditquery.NewFirstTokenLatencyHandler(repo),
-		auditquery.NewFirstTokenLatencyByUserHandler(repo, &fakeAPIKeyIDLookup{}), nil,
-		nil,
+		auditquery.NewFirstTokenLatencyByUserHandler(repo, &fakeAPIKeyIDLookup{}),
 		nil,
 		nil,
 	)
@@ -166,7 +164,6 @@ func TestAuditService_DemoOptionsMaskUserField(t *testing.T) {
 		nil,
 		nil,
 		nil,
-		nil, nil,
 		nil,
 		nil,
 		nil,

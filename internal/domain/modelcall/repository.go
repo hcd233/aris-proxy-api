@@ -37,24 +37,18 @@ type AuditRepository interface {
 	// ListByAPIKeyIDs 按 api_key_id IN (...) 分页查询；apiKeyIDs 为空时返回空结果且不打 SQL
 	ListByAPIKeyIDs(ctx context.Context, apiKeyIDs []uint, param model.CommonParam, startTime, endTime time.Time, criteria *filter.FilterCriteria) ([]*aggregate.ModelCallAudit, *model.PageInfo, error)
 
-	// SumCostByCurrency 时间范围内估算费用合计（按币种分组；仅 cost_micro 非空行）
+	// QueryModelCost 模型成本排行（group by model_id, pricing_currency；仅带四维拆分的行）
 	//
 	//	@receiver r AuditRepository
 	//	@param ctx context.Context
 	//	@param apiKeyIDs []uint nil=不过滤（admin 路径）；空=无 Key（调用方已短路）
 	//	@param startTime time.Time
 	//	@param endTime time.Time
-	//	@return []*CostTotal
+	//	@return []*ModelCostPoint
 	//	@return error
 	//	@author centonhuang
-	//	@update 2026-10-05 10:00:00
-	SumCostByCurrency(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time) ([]*CostTotal, error)
-
-	// QueryCostSeries 估算费用趋势（时间桶 × 币种）
-	QueryCostSeries(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*CostPoint, error)
-
-	// QueryCostDistribution 成本分布（group 维度 × 币种，按币种内费用降序；ID 为分组键字符串）
-	QueryCostDistribution(ctx context.Context, apiKeyIDs []uint, groupBy enum.CostGroupBy, startTime, endTime time.Time) ([]*CostDistributionPoint, error)
+	//	@update 2026-10-07 10:00:00
+	QueryModelCost(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time) ([]*ModelCostPoint, error)
 
 	// BatchGetRelations 批量查询审计列表所需的 API Key/User 展示信息。
 	BatchGetRelations(ctx context.Context, apiKeyIDs []uint) (map[uint]*AuditRelation, error)

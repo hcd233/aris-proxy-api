@@ -231,18 +231,22 @@ func (pm *PoolManager) SubmitModelCallAuditTask(task *dto.ModelCallAuditTask) er
 
 	return pm.storePool.Go(func() {
 		audit := mcaggregate.RecordCall(mcaggregate.RecordCallInput{
-			APIKeyID:         util.CtxValueUint(task.Ctx, constant.CtxKeyAPIKeyID),
-			ModelID:          task.ModelID,
-			UpstreamProtocol: task.UpstreamProtocol,
-			APIProtocol:      task.APIProtocol,
-			Endpoint:         task.Endpoint,
-			Tokens:           mcvo.NewTokenBreakdown(task.InputTokens, task.OutputTokens, task.CacheCreationInputTokens, task.CacheReadInputTokens),
-			Latency:          mcvo.NewCallLatency(time.Duration(task.FirstTokenLatencyMs)*time.Millisecond, time.Duration(task.StreamDurationMs)*time.Millisecond),
-			Status:           mcvo.NewCallStatus(task.UpstreamStatusCode, task.ErrorMessage),
-			UserAgent:        util.CtxValueString(task.Ctx, constant.CtxKeyClient),
-			TraceID:          util.CtxValueString(task.Ctx, constant.CtxKeyTraceID),
-			CostMicro:        task.CostMicro,
-			PricingCurrency:  enum.Currency(task.PricingCurrency),
+			APIKeyID:             util.CtxValueUint(task.Ctx, constant.CtxKeyAPIKeyID),
+			ModelID:              task.ModelID,
+			UpstreamProtocol:     task.UpstreamProtocol,
+			APIProtocol:          task.APIProtocol,
+			Endpoint:             task.Endpoint,
+			Tokens:               mcvo.NewTokenBreakdown(task.InputTokens, task.OutputTokens, task.CacheCreationInputTokens, task.CacheReadInputTokens),
+			Latency:              mcvo.NewCallLatency(time.Duration(task.FirstTokenLatencyMs)*time.Millisecond, time.Duration(task.StreamDurationMs)*time.Millisecond),
+			Status:               mcvo.NewCallStatus(task.UpstreamStatusCode, task.ErrorMessage),
+			UserAgent:            util.CtxValueString(task.Ctx, constant.CtxKeyClient),
+			TraceID:              util.CtxValueString(task.Ctx, constant.CtxKeyTraceID),
+			CostMicro:            task.CostMicro,
+			InputCostMicro:       task.InputCostMicro,
+			OutputCostMicro:      task.OutputCostMicro,
+			CacheCreateCostMicro: task.CacheCreateCostMicro,
+			CacheReadCostMicro:   task.CacheReadCostMicro,
+			PricingCurrency:      enum.Currency(task.PricingCurrency),
 		}, auditNow(task))
 		if err := pm.auditRepo.Save(task.Ctx, audit); err != nil {
 			l.Error("[StorePool] Failed to store audit record", zap.Error(err))

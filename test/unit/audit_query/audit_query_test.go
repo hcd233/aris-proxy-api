@@ -92,15 +92,7 @@ func (f *fakeAuditRepo) QueryFirstTokenLatency(ctx context.Context, apiKeyIDs []
 	return nil, nil
 }
 
-func (f *fakeAuditRepo) SumCostByCurrency(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time) ([]*modelcall.CostTotal, error) {
-	return nil, nil
-}
-
-func (f *fakeAuditRepo) QueryCostSeries(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.CostPoint, error) {
-	return nil, nil
-}
-
-func (f *fakeAuditRepo) QueryCostDistribution(ctx context.Context, apiKeyIDs []uint, groupBy enum.CostGroupBy, startTime, endTime time.Time) ([]*modelcall.CostDistributionPoint, error) {
+func (f *fakeAuditRepo) QueryModelCost(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time) ([]*modelcall.ModelCostPoint, error) {
 	return nil, nil
 }
 
@@ -440,7 +432,6 @@ func TestAuditService_DemoOptionsUseFullQuery(t *testing.T) {
 		nil,
 		nil,
 		nil,
-		nil, nil,
 		nil,
 		nil,
 		nil,
@@ -639,8 +630,7 @@ func TestAuditService_DispatchesByPermission(t *testing.T) {
 		auditquery.NewModelUsageHandler(repo),
 		auditquery.NewModelUsageByUserHandler(repo, &fakeAPIKeyIDLookup{}),
 		auditquery.NewFirstTokenLatencyHandler(repo),
-		auditquery.NewFirstTokenLatencyByUserHandler(repo, &fakeAPIKeyIDLookup{}), nil,
-		nil,
+		auditquery.NewFirstTokenLatencyByUserHandler(repo, &fakeAPIKeyIDLookup{}),
 		nil,
 		nil,
 	)

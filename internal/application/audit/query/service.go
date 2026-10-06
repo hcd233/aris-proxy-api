@@ -32,10 +32,8 @@ type auditService struct {
 	modelUsageByUser        ModelUsageByUserHandler
 	firstTokenLatency       FirstTokenLatencyHandler
 	firstTokenLatencyByUser FirstTokenLatencyByUserHandler
-	costSummary             CostSummaryHandler
-	costSummaryByUser       CostSummaryByUserHandler
-	costDistribution        CostDistributionHandler
-	costDistributionByUser  CostDistributionByUserHandler
+	modelCost               ModelCostHandler
+	modelCostByUser         ModelCostByUserHandler
 }
 
 // NewAuditService 构造权限派发服务。
@@ -55,10 +53,8 @@ func NewAuditService(
 	modelUsageByUser ModelUsageByUserHandler,
 	firstTokenLatency FirstTokenLatencyHandler,
 	firstTokenLatencyByUser FirstTokenLatencyByUserHandler,
-	costSummary CostSummaryHandler,
-	costSummaryByUser CostSummaryByUserHandler,
-	costDistribution CostDistributionHandler,
-	costDistributionByUser CostDistributionByUserHandler,
+	modelCost ModelCostHandler,
+	modelCostByUser ModelCostByUserHandler,
 ) port.AuditService {
 	return &auditService{
 		listAll:                 listAll,
@@ -76,72 +72,21 @@ func NewAuditService(
 		modelUsageByUser:        modelUsageByUser,
 		firstTokenLatency:       firstTokenLatency,
 		firstTokenLatencyByUser: firstTokenLatencyByUser,
-		costSummary:             costSummary,
-		costSummaryByUser:       costSummaryByUser,
-		costDistribution:        costDistribution,
-		costDistributionByUser:  costDistributionByUser,
+		modelCost:               modelCost,
+		modelCostByUser:         modelCostByUser,
 	}
 }
 
-// CostSummary 估算费用合计与趋势：admin/demo 全量视角，user 限定名下 key。
-func (s *auditService) CostSummary(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) (*port.CostSummaryView, error) {
-	var result *modelcall.CostSummaryResult
-	var err error
+// ModelCost 模型成本排行：admin/demo 全量视角，user 限定名下 key。
+func (s *auditService) ModelCost(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time) ([]*dto.ModelCostItem, error) {
 	switch permission {
 	case enum.PermissionAdmin, enum.PermissionDemo:
-		result, err = s.costSummary.Handle(ctx, CostSummaryQuery{StartTime: startTime, EndTime: endTime, Granularity: granularity})
+		return s.modelCost.Handle(ctx, ModelCostQuery{StartTime: startTime, EndTime: endTime})
 	case enum.PermissionUser:
-		result, err = s.costSummaryByUser.Handle(ctx, CostSummaryByUserQuery{UserID: userID, StartTime: startTime, EndTime: endTime, Granularity: granularity})
+		return s.modelCostByUser.Handle(ctx, ModelCostByUserQuery{UserID: userID, StartTime: startTime, EndTime: endTime})
 	default:
 		return nil, ierr.ErrUnauthorized
 	}
-	if err != nil {
-		return nil, err
-	}
-	return &port.CostSummaryView{
-		Totals: lo.Map(result.Totals, func(t *modelcall.CostTotal, _ int) *dto.AuditCostTotalItem {
-			return &dto.AuditCostTotalItem{
-				Currency: enum.Currency(t.Currency),
-				Cost:     dto.PriceDisplayFromMicro(t.CostMicro),
-			}
-		}),
-		Series: lo.Map(result.Series, func(p *modelcall.CostPoint, _ int) *dto.AuditCostSeriesPoint {
-			return &dto.AuditCostSeriesPoint{
-				BucketTime: p.Time.UTC(),
-				Currency:   enum.Currency(p.Currency),
-				Cost:       dto.PriceDisplayFromMicro(p.CostMicro),
-			}
-		}),
-	}, nil
-}
-
-// CostDistribution 估算费用分布：admin/demo 全量视角，user 限定名下 key（user 维度仅 admin）。
-func (s *auditService) CostDistribution(ctx context.Context, permission enum.Permission, userID uint, groupBy string, startTime, endTime time.Time, limit int) (*port.CostDistributionView, error) {
-	group := enum.CostGroupBy(groupBy)
-	var result *modelcall.CostDistributionResult
-	var err error
-	switch permission {
-	case enum.PermissionAdmin, enum.PermissionDemo:
-		result, err = s.costDistribution.Handle(ctx, CostDistributionQuery{GroupBy: group, StartTime: startTime, EndTime: endTime, Limit: limit})
-	case enum.PermissionUser:
-		result, err = s.costDistributionByUser.Handle(ctx, CostDistributionByUserQuery{UserID: userID, GroupBy: group, StartTime: startTime, EndTime: endTime, Limit: limit})
-	default:
-		return nil, ierr.ErrUnauthorized
-	}
-	if err != nil {
-		return nil, err
-	}
-	return &port.CostDistributionView{
-		GroupBy: result.GroupBy,
-		Items: lo.Map(result.Items, func(p *modelcall.CostDistributionPoint, _ int) *dto.AuditCostDistributionItem {
-			return &dto.AuditCostDistributionItem{
-				ID:       p.ID,
-				Name:     p.Name,
-				Currency: enum.Currency(p.Currency),
-				Cost:     dto.PriceDisplayFromMicro(p.CostMicro),
-			}
-		}),
-	}, nil
 }
 
 func (s *auditService) ListLogs(ctx context.Context, permission enum.Permission, userID uint, p port.ListAuditLogsParams) ([]*port.AuditLogView, *model.PageInfo, error) {

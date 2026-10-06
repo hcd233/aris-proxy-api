@@ -43,6 +43,22 @@ func TestPriceModelCall_SuccessPriced(t *testing.T) {
 	if task.PricingCurrency != string(enum.CurrencyUSD) {
 		t.Fatalf("PricingCurrency = %q", task.PricingCurrency)
 	}
+	// 四维拆分：输入 1000×1e6/1e6=1000，输出 500×2e6/1e6=1000，缓存两维 0
+	if task.InputCostMicro == nil || *task.InputCostMicro != 1000 {
+		t.Fatalf("InputCostMicro = %v, want 1000", task.InputCostMicro)
+	}
+	if task.OutputCostMicro == nil || *task.OutputCostMicro != 1000 {
+		t.Fatalf("OutputCostMicro = %v, want 1000", task.OutputCostMicro)
+	}
+	if task.CacheCreateCostMicro == nil || *task.CacheCreateCostMicro != 0 {
+		t.Fatalf("CacheCreateCostMicro = %v, want 0", task.CacheCreateCostMicro)
+	}
+	if task.CacheReadCostMicro == nil || *task.CacheReadCostMicro != 0 {
+		t.Fatalf("CacheReadCostMicro = %v, want 0", task.CacheReadCostMicro)
+	}
+	if *task.CostMicro != *task.InputCostMicro+*task.OutputCostMicro+*task.CacheCreateCostMicro+*task.CacheReadCostMicro {
+		t.Fatalf("CostMicro must equal breakdown sum")
+	}
 }
 
 func TestPriceModelCall_ContextTierJump(t *testing.T) {

@@ -34,5 +34,9 @@ type ModelCallAudit struct {
 	ErrorMessage             string    `json:"error_message" gorm:"column:error_message;not null;default:'';comment:错误信息，成功时为空"`
 	TraceID                  string    `json:"trace_id" gorm:"column:trace_id;not null;default:'';comment:请求追踪ID;index"`
 	CostMicro                *int64    `json:"cost_micro" gorm:"column:cost_micro;comment:估算费用(微单位,NULL=未计价)"`
+	InputCostMicro           *int64    `json:"input_cost_micro" gorm:"column:input_cost_micro;comment:输入费用(微单位,NULL=无拆分)"`
+	OutputCostMicro          *int64    `json:"output_cost_micro" gorm:"column:output_cost_micro;comment:输出费用(微单位,NULL=无拆分)"`
+	CacheCreationCostMicro   *int64    `json:"cache_creation_cost_micro" gorm:"column:cache_creation_cost_micro;comment:缓存创建费用(微单位,NULL=无拆分)"`
+	CacheReadCostMicro       *int64    `json:"cache_read_cost_micro" gorm:"column:cache_read_cost_micro;comment:缓存读取费用(微单位,NULL=无拆分)"`
 	PricingCurrency          string    `json:"pricing_currency" gorm:"column:pricing_currency;not null;default:'';comment:计价币种快照(''/CNY/USD)"`
 }

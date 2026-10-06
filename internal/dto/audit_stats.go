@@ -137,52 +137,25 @@ type ModelUsageItem struct {
 	CacheCreationTokens int    `json:"cacheCreationTokens" doc:"缓存创建 Token 总数"`
 }
 
-// AuditCostSummaryReq 估算费用合计与趋势查询
-type AuditCostSummaryReq struct {
-	StartTime   time.Time        `query:"startTime" required:"true"`
-	EndTime     time.Time        `query:"endTime" required:"true"`
-	Granularity enum.Granularity `query:"granularity" required:"true" enum:"minute,hour,day,week"`
-}
-
-// AuditCostSummaryRsp 估算费用合计与趋势响应（按币种分组）
-type AuditCostSummaryRsp struct {
-	CommonRsp
-	Totals []*AuditCostTotalItem   `json:"totals,omitempty" doc:"费用合计（按币种）"`
-	Series []*AuditCostSeriesPoint `json:"series,omitempty" doc:"费用趋势（时间桶 × 币种）"`
-}
-
-// AuditCostTotalItem 费用合计行（展示单位）
-type AuditCostTotalItem struct {
-	Currency enum.Currency `json:"currency" doc:"币种"`
-	Cost     float64       `json:"cost" doc:"估算费用（展示单位）"`
-}
-
-// AuditCostSeriesPoint 费用趋势点（展示单位）
-type AuditCostSeriesPoint struct {
-	BucketTime time.Time     `json:"bucketTime" doc:"时间桶（RFC3339 UTC）"`
-	Currency   enum.Currency `json:"currency" doc:"币种"`
-	Cost       float64       `json:"cost" doc:"估算费用（展示单位）"`
-}
-
-// AuditCostDistributionReq 估算费用分布查询
-type AuditCostDistributionReq struct {
-	GroupBy   string    `query:"groupBy" required:"true" enum:"user,api_key,model" doc:"分组维度（user 仅管理员）"`
+// ModelCostReq 模型成本排行查询
+type ModelCostReq struct {
 	StartTime time.Time `query:"startTime" required:"true"`
 	EndTime   time.Time `query:"endTime" required:"true"`
-	Limit     int       `query:"limit" minimum:"1" maximum:"100" default:"10" doc:"每币种返回行数"`
 }
 
-// AuditCostDistributionRsp 估算费用分布响应（每行 = 分组 × 币种）
-type AuditCostDistributionRsp struct {
+// ModelCostRsp 模型成本排行响应（行 = 模型 × 币种，按总费用降序）
+type ModelCostRsp struct {
 	CommonRsp
-	GroupBy string                       `json:"groupBy" doc:"分组维度"`
-	Items   []*AuditCostDistributionItem `json:"items,omitempty" doc:"分布行（币种内费用降序）"`
+	Data []*ModelCostItem `json:"data,omitempty" doc:"各模型的成本聚合（四维拆分 + 总费用）"`
 }
 
-// AuditCostDistributionItem 费用分布行（展示单位）
-type AuditCostDistributionItem struct {
-	ID       string        `json:"id" doc:"分组键（用户ID/API Key ID/模型ID）"`
-	Name     string        `json:"name" doc:"展示名"`
-	Currency enum.Currency `json:"currency" doc:"币种"`
-	Cost     float64       `json:"cost" doc:"估算费用（展示单位）"`
+// ModelCostItem 模型成本排行行（展示单位）
+type ModelCostItem struct {
+	ModelID           string  `json:"modelId" doc:"业务模型ID"`
+	Currency          string  `json:"currency" doc:"计价币种"`
+	InputCost         float64 `json:"inputCost" doc:"输入成本"`
+	OutputCost        float64 `json:"outputCost" doc:"输出成本"`
+	CacheCreationCost float64 `json:"cacheCreationCost" doc:"缓存创建成本"`
+	CacheReadCost     float64 `json:"cacheReadCost" doc:"缓存读取成本"`
+	TotalCost         float64 `json:"totalCost" doc:"总成本（四维合计）"`
 }
