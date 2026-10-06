@@ -113,7 +113,9 @@ export function PricingEditor({ value, onChange, upstreamModel }: PricingEditorP
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2">
+      {/* flex-wrap：币种选择 + 导入按钮的 min-content 之和（约 474px）超过弹窗正文宽度时
+          换行；否则会把弹窗 grid 轨道撑宽，定价卡片整体溢出弹窗右边界 */}
+      <div className="flex flex-wrap items-center gap-2">
         <Label className="w-28 shrink-0">{t("upstream.pricing.currency")}</Label>
         <Select
           value={currency}
