@@ -1,83 +1,87 @@
 import { toast } from "sonner";
 import { translate } from "@/lib/i18n";
 import type {
-  CallbackRsp,
-  CallbackReqBody,
-  LoginRsp,
-  RefreshTokenRsp,
-  RefreshTokenReqBody,
-  DemoStatusRsp,
-  DemoLoginRsp,
-  GetDemoConfigRsp,
-  UpdateDemoConfigReqBody,
-  ListDemoSessionsRsp,
   AddDemoSessionsReqBody,
-  GetCurUserRsp,
-  UpdateUserReqBody,
-  ListUsersRsp,
-  ListSessionsRsp,
-  GetSessionRsp,
-  GetSessionMetadataRsp,
-  ListSessionMessagesRsp,
-  ListSessionToolsRsp,
-  ListAPIKeysRsp,
-  CreateAPIKeyRsp,
+  AuditCostDistributionRsp,
+  AuditCostSummaryRsp,
+  AuditOptionListReq,
+  AuditOptionListRsp,
+  CallbackReqBody,
+  CallbackRsp,
+  CommonRsp,
+  CostGroupBy,
   CreateAPIKeyReqBody,
-  ListUpstreamRsp,
-  ListModelsPageRsp,
-  ModelListSortField,
-  ModelCapability,
+  CreateAPIKeyRsp,
   CreateEndpointReqBody,
-  UpdateEndpointReqBody,
   CreateModelReqBody,
-  UpdateModelReqBody,
-  ModelUpdateRsp,
-  OAuth2Provider,
   CreateShareReqBody,
   CreateShareRsp,
+  CreateTriggerReqBody,
+  CronCallAuditOptionListReq,
+  CronCallAuditOptionListRsp,
+  DatasetExportSSEData,
+  DatasetExportSSEError,
+  DatasetExportSSEEvent,
+  DatasetExportSSEStart,
+  DatasetFormatPreviewRsp,
+  DatasetPreviewRsp,
+  DeleteSessionRsp,
+  DeleteTraceRsp,
+  DeleteTriggerRsp,
+  DemoAccessAuditOptionListReq,
+  DemoAccessAuditOptionListRsp,
+  DemoLoginRsp,
+  DemoStatusRsp,
+  FirstTokenLatencyRsp,
+  GetCurUserRsp,
+  GetDemoConfigRsp,
+  GetSessionMetadataRsp,
+  GetSessionRsp,
   GetShareMetadataRsp,
+  GetTraceRsp,
+  Granularity,
+  ListAPIKeysRsp,
+  ListAuditLogsRsp,
+  ListCronCallAuditsRsp,
+  ListCronJobsRsp,
+  ListDemoAccessAuditsRsp,
+  ListDemoSessionsRsp,
+  ListModelsPageRsp,
+  ListSessionMessagesRsp,
+  ListSessionToolsRsp,
+  ListSessionsRsp,
   ListShareMessagesRsp,
   ListShareToolsRsp,
   ListSharesRsp,
-  ListTracesRsp,
-  GetTraceRsp,
   ListTraceEventsRsp,
-  DeleteTraceRsp,
-  CommonRsp,
+  ListTracesRsp,
+  ListTriggerRsp,
+  ListUpstreamRsp,
+  ListUsersRsp,
+  LoginRsp,
+  ModelCapability,
+  ModelListSortField,
+  ModelPricingPrefillRsp,
+  ModelTrendRsp,
+  ModelUpdateRsp,
+  ModelUsageRsp,
+  OAuth2Provider,
+  RefreshTokenReqBody,
+  RefreshTokenRsp,
+  RequestRateRsp,
+  RuntimeMetricsRsp,
   ScoreSessionReqBody,
   ScoreSessionRsp,
-  ListAuditLogsRsp,
-  ModelTrendRsp,
-  RequestRateRsp,
-  TokenThroughputRsp,
-  TokenRateRsp,
-  ModelUsageRsp,
-  FirstTokenLatencyRsp,
-  Granularity,
-  DeleteSessionRsp,
-  AuditOptionListReq,
-  AuditOptionListRsp,
   SessionOptionListReq,
   SessionOptionListRsp,
-  CreateTriggerReqBody,
-  UpdateTriggerReqBody,
-  ListTriggerRsp,
-  DeleteTriggerRsp,
-  ListCronJobsRsp,
+  TokenRateRsp,
+  TokenThroughputRsp,
   UpdateCronJobReqBody,
-  ListCronCallAuditsRsp,
-  CronCallAuditOptionListReq,
-  CronCallAuditOptionListRsp,
-  ListDemoAccessAuditsRsp,
-  DemoAccessAuditOptionListReq,
-  DemoAccessAuditOptionListRsp,
-  RuntimeMetricsRsp,
-  DatasetPreviewRsp,
-  DatasetFormatPreviewRsp,
-  DatasetExportSSEEvent,
-  DatasetExportSSEStart,
-  DatasetExportSSEData,
-  DatasetExportSSEError,
+  UpdateDemoConfigReqBody,
+  UpdateEndpointReqBody,
+  UpdateModelReqBody,
+  UpdateTriggerReqBody,
+  UpdateUserReqBody,
 } from "./types";
 import { BusinessErrorCode, type StructuredError, parseError } from "./api-error-handler";
 
@@ -629,6 +633,13 @@ class ApiClient {
     });
   }
 
+  /** 定价导入：按上游模型名查 models.dev 公开定价（表单填充用，未命中 found=false） */
+  async prefillModelPricing(upstreamModel: string): Promise<ModelPricingPrefillRsp> {
+    return this.request<ModelPricingPrefillRsp>(
+      `${API_PREFIX}/model/pricing/prefill?upstreamModel=${encodeURIComponent(upstreamModel)}`,
+    );
+  }
+
   // ─── Audit (admin / user) ──────────────────────────────────────────────────
 
   async listAuditLogs(params: {
@@ -652,6 +663,38 @@ class ApiClient {
     if (params.endTime) sp.set("endTime", params.endTime);
     if (params.filter) sp.set("filter", params.filter);
     return this.request<ListAuditLogsRsp>(`${API_PREFIX}/audit/model/log/list?${sp}`);
+  }
+
+  /** 成本合计与趋势（按币种分组） */
+  async getAuditCostSummary(params: {
+    startTime: string;
+    endTime: string;
+    granularity: Granularity;
+  }): Promise<AuditCostSummaryRsp> {
+    const sp = new URLSearchParams({
+      startTime: params.startTime,
+      endTime: params.endTime,
+      granularity: params.granularity,
+    });
+    return this.request<AuditCostSummaryRsp>(`${API_PREFIX}/audit/stats/cost/summary?${sp}`);
+  }
+
+  /** 成本分布（groupBy：user 仅管理员；每币种 top-N） */
+  async getAuditCostDistribution(params: {
+    groupBy: CostGroupBy;
+    startTime: string;
+    endTime: string;
+    limit?: number;
+  }): Promise<AuditCostDistributionRsp> {
+    const sp = new URLSearchParams({
+      groupBy: params.groupBy,
+      startTime: params.startTime,
+      endTime: params.endTime,
+    });
+    if (params.limit) sp.set("limit", String(params.limit));
+    return this.request<AuditCostDistributionRsp>(
+      `${API_PREFIX}/audit/stats/cost/distribution?${sp}`,
+    );
   }
 
   async listAuditOptions(params: AuditOptionListReq): Promise<AuditOptionListRsp> {

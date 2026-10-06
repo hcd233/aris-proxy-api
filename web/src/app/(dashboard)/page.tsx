@@ -7,8 +7,10 @@ import { useT } from "@/lib/i18n";
 import { PermissionGuard } from "@/components/permission-guard";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Key, MessageSquare, Server, Cpu } from "lucide-react";
+import { Key, MessageSquare, Server, Cpu, Coins } from "lucide-react";
 import { CountUp } from "@/components/count-up";
+import { formatCost } from "@/lib/money";
+import type { AuditCostTotalItem } from "@/lib/types";
 import { ModelTrendChart } from "@/components/charts/model-trend-chart";
 import { RequestRateChart } from "@/components/charts/request-rate-chart";
 import { TokenVolumeChart } from "@/components/charts/token-volume-chart";
@@ -52,6 +54,66 @@ function StatCard({
         ) : (
           <div className="font-display text-3xl font-semibold tabular-nums text-foreground">
             <CountUp value={value} />
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/** CostSummaryCard 本期成本卡：近 30 天估算费用，按币种分行展示。 */
+function CostSummaryCard() {
+  const t = useT();
+  const [totals, setTotals] = useState<AuditCostTotalItem[] | undefined>(undefined);
+
+  useEffect(() => {
+    let alive = true;
+    const end = new Date();
+    const start = new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
+    void api
+      .getAuditCostSummary({
+        startTime: start.toISOString(),
+        endTime: end.toISOString(),
+        granularity: "day",
+      })
+      .then((rsp) => {
+        if (alive) setTotals(rsp.totals ?? []);
+      })
+      .catch(() => {
+        if (alive) setTotals([]);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <div className="flex items-center gap-2.5">
+          <span className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <Coins className="size-4" />
+          </span>
+          <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            {t("dashboard.costCard")}
+          </span>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-0">
+        {totals === undefined ? (
+          <Skeleton className="h-10 w-20" />
+        ) : totals.length === 0 ? (
+          <div className="text-sm text-muted-foreground">{t("audit.cost.unpriced")}</div>
+        ) : (
+          <div className="space-y-1">
+            {totals.map((item) => (
+              <div key={item.currency} className="flex items-baseline gap-2">
+                <span className="text-xs text-muted-foreground">{item.currency}</span>
+                <span className="font-display text-2xl font-semibold tabular-nums">
+                  {formatCost(item.cost, item.currency)}
+                </span>
+              </div>
+            ))}
           </div>
         )}
       </CardContent>
@@ -147,6 +209,8 @@ export default function DashboardPage() {
             />
           )}
         </div>
+
+        <CostSummaryCard />
 
         <div className="stagger-rise grid gap-4 lg:grid-cols-2">
           <ModelTrendChart />

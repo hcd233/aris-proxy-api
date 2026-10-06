@@ -40,6 +40,7 @@ import {
   emptyModelForm,
 } from "./shared";
 import type { EndpointForm, ModelForm } from "./shared";
+import type { PricingDTO } from "@/lib/types";
 import { EndpointDialog } from "./endpoint-dialog";
 import { ModelDialog } from "./model-dialog";
 import { GroupedView } from "./grouped-view";
@@ -371,6 +372,7 @@ export default function UpstreamPage() {
       contextLength: number;
       maxOutputTokens: number;
       capabilities?: string[];
+      pricing?: PricingDTO;
     },
     ep: UpstreamEndpointItem,
   ) => {
@@ -387,6 +389,7 @@ export default function UpstreamPage() {
       maxOutputTokens: model.maxOutputTokens || DEFAULT_MAX_OUTPUT,
       supportText: (model.capabilities ?? ["text"]).includes("text"),
       supportImage: (model.capabilities ?? []).includes("image"),
+      pricing: model.pricing,
     });
     setModelDialogOpen(true);
   };
@@ -421,6 +424,7 @@ export default function UpstreamPage() {
           contextLength: modelForm.contextLength,
           maxOutputTokens: modelForm.maxOutputTokens,
           capabilities,
+          pricing: modelForm.pricing,
         });
         if (showSyncHistory && syncHistory) {
           toast.success(
@@ -438,6 +442,7 @@ export default function UpstreamPage() {
           contextLength: modelForm.contextLength,
           maxOutputTokens: modelForm.maxOutputTokens,
           capabilities,
+          pricing: modelForm.pricing,
         });
         toast.success(t("models.created_success"));
       }
@@ -514,6 +519,7 @@ export default function UpstreamPage() {
       maxOutputTokens: m.maxOutputTokens || DEFAULT_MAX_OUTPUT,
       supportText: (m.capabilities ?? ["text"]).includes("text"),
       supportImage: (m.capabilities ?? []).includes("image"),
+      pricing: m.pricing,
     });
     setModelDialogOpen(true);
   };
