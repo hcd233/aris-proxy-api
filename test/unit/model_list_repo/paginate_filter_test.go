@@ -126,7 +126,7 @@ func TestPaginateWithFilter_StatusAndCapability(t *testing.T) {
 	}
 
 	// capability 未知值视为不过滤（防前端拼错导致空白页）
-	got, _, err = repo.PaginateWithFilter(ctx, param, llmproxy.ModelListFilter{Capability: "audio"}, scope)
+	got, _, err = repo.PaginateWithFilter(ctx, param, llmproxy.ModelListFilter{Capability: "hologram"}, scope)
 	if err != nil {
 		t.Fatalf("unknown capability: %v", err)
 	}

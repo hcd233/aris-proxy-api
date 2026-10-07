@@ -21,7 +21,7 @@ type CreateModelReqBody struct {
 	EndpointID      uint                 `json:"endpointID" required:"true" minimum:"1" doc:"关联 Endpoint ID"`
 	ContextLength   int                  `json:"contextLength,omitempty" minimum:"0" default:"128000" doc:"上下文窗口长度（tokens）"`
 	MaxOutputTokens int                  `json:"maxOutputTokens,omitempty" minimum:"0" default:"64000" doc:"最大输出长度（tokens）"`
-	Capabilities    []enum.InputModality `json:"capabilities,omitempty" doc:"模型能力（输入模态集合；合法值 text/image；必须包含 text；缺省为 [text]）"`
+	Capabilities    []enum.InputModality `json:"capabilities,omitempty" doc:"模型能力（输入模态集合；合法值 text/image/pdf/video/audio；必须包含 text；缺省为 [text]）"`
 	Pricing         *PricingDTO          `json:"pricing,omitempty" doc:"定价（缺省=未计价）"`
 }
 
@@ -41,7 +41,7 @@ type UpdateModelReqBody struct {
 	Enabled         *bool                 `json:"enabled,omitempty" doc:"是否启用"`
 	ContextLength   *int                  `json:"contextLength,omitempty" minimum:"0" doc:"上下文窗口长度（tokens）"`
 	MaxOutputTokens *int                  `json:"maxOutputTokens,omitempty" minimum:"0" doc:"最大输出长度（tokens）"`
-	Capabilities    *[]enum.InputModality `json:"capabilities,omitempty" doc:"模型能力（输入模态集合；合法值 text/image；必须包含 text）"`
+	Capabilities    *[]enum.InputModality `json:"capabilities,omitempty" doc:"模型能力（输入模态集合；合法值 text/image/pdf/video/audio；必须包含 text）"`
 	Pricing         *PricingDTO           `json:"pricing,omitempty" doc:"定价（缺省=不修改；currency 与 rules 均置空=清空为未计价）"`
 }
 
@@ -76,7 +76,7 @@ type ListModelsReq struct {
 	SortField  string    `query:"sortField" maxLength:"50" doc:"排序列（白名单：alias/context_length/max_output_tokens/created_at/endpoint_id/enabled；非法值回退 created_at）"`
 	Status     string    `query:"status" enum:"enabled,disabled" doc:"启用状态筛选（缺省为全部）"`
 	EndpointID uint      `query:"endpointID" minimum:"1" doc:"按所属端点过滤（0=不过滤）"`
-	Capability string    `query:"capability" enum:"text,image" doc:"按输入模态过滤（缺省为全部）"`
+	Capability string    `query:"capability" enum:"text,image,pdf,video,audio" doc:"按输入模态过滤（缺省为全部）"`
 	Username   string    `query:"username" maxLength:"64" doc:"按归属用户名过滤（仅管理员生效）"`
 }
 
