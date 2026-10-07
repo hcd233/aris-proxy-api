@@ -16,7 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { ProviderIcon } from "@/components/provider-icon";
 import { ListEmptyState } from "@/components/list-empty-state";
 import { TableSkeleton } from "@/components/table-skeleton";
-import { Pencil, ArrowUp, ArrowDown, ArrowUpDown, Layers, Lock } from "lucide-react";
+import { Pencil, ArrowUp, ArrowDown, ArrowUpDown, Coins, Layers, Lock } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import type { ModelListSortField, ModelListItem, UpstreamUser } from "@/lib/types";
@@ -25,6 +25,7 @@ import {
   ModelActionsCell,
   ModelAliasCell,
   ModelIdCell,
+  PricingInline,
   SpecBadges,
   UpstreamModelCell,
 } from "./shared";
@@ -63,6 +64,7 @@ export interface FlatViewProps {
   onSort: (field: ModelListSortField) => void;
   onToggleEnabled: (m: ModelListItem) => void;
   onEditModel: (m: ModelListItem) => void;
+  onPricingModel: (m: ModelListItem) => void;
   onDeleteModel: (m: ModelListItem) => void;
   onCopyAlias: (alias: string) => void;
   deletingModelID?: number;
@@ -118,6 +120,7 @@ export function FlatView({
   onSort,
   onToggleEnabled,
   onEditModel,
+  onPricingModel,
   onDeleteModel,
   onCopyAlias,
   deletingModelID,
@@ -195,6 +198,16 @@ export function FlatView({
                   >
                     {isDemo ? <Lock className="size-3.5" /> : <Pencil className="size-3.5" />}
                   </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    disabled={isDemo}
+                    onClick={() => onPricingModel(m)}
+                    aria-label={t("upstream.pricing.title")}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    {isDemo ? <Lock className="size-3.5" /> : <Coins className="size-3.5" />}
+                  </Button>
                   <DeleteButton
                     label={t("common.delete")}
                     locked={isDemo}
@@ -210,6 +223,7 @@ export function FlatView({
               {m.endpoint && <EndpointOwnerCell name={m.endpoint.name} user={m.user} />}
               <SpecBadges contextLength={m.contextLength} maxOutputTokens={m.maxOutputTokens} />
               <CapabilityBadges capabilities={m.capabilities} />
+              <PricingInline pricing={m.pricing} />
             </div>
           </div>
         ))}
@@ -245,6 +259,7 @@ export function FlatView({
             onSort={onSort}
           />
           <TableHead>{t("upstream.col_capabilities")}</TableHead>
+          <TableHead>{t("upstream.col_pricing")}</TableHead>
           <SortableHead
             label={t("upstream.col_status")}
             field="enabled"
@@ -282,6 +297,9 @@ export function FlatView({
             <TableCell className={cn(!m.enabled && "opacity-45")}>
               <CapabilityBadges capabilities={m.capabilities} />
             </TableCell>
+            <TableCell className={cn(!m.enabled && "opacity-45")}>
+              <PricingInline pricing={m.pricing} />
+            </TableCell>
             <TableCell>
               <Switch
                 size="sm"
@@ -298,6 +316,7 @@ export function FlatView({
               isDemo={isDemo}
               deleting={deletingModelID === m.id}
               onEdit={() => onEditModel(m)}
+              onPricing={() => onPricingModel(m)}
               onDelete={() => onDeleteModel(m)}
             />
           </TableRow>

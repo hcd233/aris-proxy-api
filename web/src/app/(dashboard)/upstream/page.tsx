@@ -39,11 +39,13 @@ import {
   MODEL_CAPABILITIES,
   emptyEndpointForm,
   emptyModelForm,
+  emptyPricing,
 } from "./shared";
 import type { EndpointForm, ModelForm } from "./shared";
 import type { ModelCapability, PricingDTO } from "@/lib/types";
 import { EndpointDialog } from "./endpoint-dialog";
 import { ModelDialog } from "./model-dialog";
+import { PricingDialog } from "./pricing-dialog";
 import { GroupedView } from "./grouped-view";
 import { FlatView } from "./flat-view";
 import { useModelList } from "./use-model-list";
@@ -53,6 +55,14 @@ const DEFAULT_PAGE_SIZE = 10;
 const VALID_PAGE_SIZES = [10, 20, 50];
 // admin 代建下拉的用户列表一次性拉取上限
 const USER_FETCH_LIMIT = 500;
+
+/** 定价弹窗目标：分组行与平铺行都满足的最小形状（导入用上游真名，展开末档用上下文窗口） */
+interface PricingTarget {
+  id: number;
+  alias: string;
+  upstreamModel: string;
+  contextLength: number;
+}
 
 export default function UpstreamPage() {
   const { t, locale } = useI18n();
@@ -96,6 +106,12 @@ export default function UpstreamPage() {
   const trimmedModelId = modelForm.modelId.trim();
   const showSyncHistory =
     editingModel !== null && trimmedModelId !== "" && trimmedModelId !== originalModelId.trim();
+
+  // 定价弹窗状态：定价是模型行的平级操作，只作用于已保存模型（新建弹窗不再含定价）
+  const [pricingDialogOpen, setPricingDialogOpen] = useState(false);
+  const [pricingTarget, setPricingTarget] = useState<PricingTarget | null>(null);
+  const [pricingForm, setPricingForm] = useState<PricingDTO>(emptyPricing);
+  const [savingPricing, setSavingPricing] = useState(false);
 
   // 当前视图：分组（端点为组）/ 平铺（模型为行）
   const [view, setView] = usePersistentState<"grouped" | "flat">(
@@ -390,7 +406,6 @@ export default function UpstreamPage() {
       capabilities: (model.capabilities?.length
         ? [...model.capabilities]
         : ["text"]) as ModelCapability[],
-      pricing: model.pricing ?? { currency: "", rules: [] },
     });
     setModelDialogOpen(true);
   };
@@ -422,7 +437,6 @@ export default function UpstreamPage() {
           contextLength: modelForm.contextLength,
           maxOutputTokens: modelForm.maxOutputTokens,
           capabilities,
-          pricing: modelForm.pricing,
         });
         if (showSyncHistory && syncHistory) {
           toast.success(
@@ -440,7 +454,6 @@ export default function UpstreamPage() {
           contextLength: modelForm.contextLength,
           maxOutputTokens: modelForm.maxOutputTokens,
           capabilities,
-          pricing: modelForm.pricing,
         });
         toast.success(t("models.created_success"));
       }
@@ -491,6 +504,36 @@ export default function UpstreamPage() {
     onError: (err) => showErrorToast(err, { title: t("models.toggle_error") }),
   });
 
+  /* ─── 定价 ──────────────────────────────────────────────────── */
+
+  // 打开定价弹窗：两个视图的行形状不同，这里收窄为导入/展示所需字段
+  const openPricing = (m: PricingTarget & { pricing?: PricingDTO }) => {
+    setPricingTarget({
+      id: m.id,
+      alias: m.alias,
+      upstreamModel: m.upstreamModel,
+      contextLength: m.contextLength,
+    });
+    setPricingForm(m.pricing ?? emptyPricing);
+    setPricingDialogOpen(true);
+  };
+
+  const handleSavePricing = async () => {
+    if (!pricingTarget) return;
+    setSavingPricing(true);
+    try {
+      // 只发 pricing 字段：其余字段缺省=不修改，避免用行内旧快照覆盖并发的规格编辑
+      await api.updateModel(pricingTarget.id, { pricing: pricingForm });
+      toast.success(t("upstream.pricing.saved"));
+      setPricingDialogOpen(false);
+      refreshAll();
+    } catch (err) {
+      showErrorToast(err, { title: t("upstream.pricing.save_error") });
+    } finally {
+      setSavingPricing(false);
+    }
+  };
+
   /* ─── 平铺视图专用操作 ──────────────────────────────────────── */
 
   // 平铺行的开关：没有分组结构可乐观回填，直接改后端后整页重载
@@ -516,7 +559,6 @@ export default function UpstreamPage() {
       contextLength: m.contextLength || DEFAULT_CONTEXT_LENGTH,
       maxOutputTokens: m.maxOutputTokens || DEFAULT_MAX_OUTPUT,
       capabilities: (m.capabilities?.length ? [...m.capabilities] : ["text"]) as ModelCapability[],
-      pricing: m.pricing ?? { currency: "", rules: [] },
     });
     setModelDialogOpen(true);
   };
@@ -600,6 +642,7 @@ export default function UpstreamPage() {
                       onDeleteEndpoint={(ep) => deleteEndpointConfirm.openDelete(ep)}
                       onAddModel={openCreateModel}
                       onEditModel={openEditModel}
+                      onPricingModel={openPricing}
                       onDeleteModel={(m) => deleteModelConfirm.openDelete({ model: m })}
                       onCopyAlias={handleCopyAlias}
                       deletingEndpointID={
@@ -634,6 +677,7 @@ export default function UpstreamPage() {
                     onSort={flat.toggleSort}
                     onToggleEnabled={handleFlatToggle}
                     onEditModel={handleFlatEdit}
+                    onPricingModel={openPricing}
                     onDeleteModel={(m) => deleteModelConfirm.openDelete({ model: m })}
                     onCopyAlias={handleCopyAlias}
                     deletingModelID={
@@ -706,6 +750,20 @@ export default function UpstreamPage() {
             onSyncHistoryChange={setSyncHistory}
             saving={saving}
             onSave={handleSaveModel}
+          />
+
+          {/* 定价弹窗：与「编辑模型配置」平级的独立入口；key 重挂载重置导入提示 */}
+          <PricingDialog
+            key={`${pricingDialogOpen}-${pricingTarget?.id ?? 0}`}
+            open={pricingDialogOpen}
+            onOpenChange={setPricingDialogOpen}
+            alias={pricingTarget?.alias ?? ""}
+            upstreamModel={pricingTarget?.upstreamModel ?? ""}
+            contextLength={pricingTarget?.contextLength ?? 0}
+            value={pricingForm}
+            onChange={setPricingForm}
+            saving={savingPricing}
+            onSave={handleSavePricing}
           />
         </div>
       </TooltipProvider>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -23,14 +23,15 @@ import {
 } from "@/components/ui/popover";
 import {
   AudioLines,
+  Download,
   FileText,
+  Loader2,
   SlidersHorizontal,
   Type,
   Video,
   Image as ImageIcon,
   type LucideIcon,
 } from "lucide-react";
-import { PricingEditor } from "./pricing-editor";
 import { useT } from "@/lib/i18n";
 import { api } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
@@ -49,6 +50,11 @@ const CAPABILITY_CHIPS: { value: ModelCapability; labelKey: string; Icon: Lucide
 // 常用 token 预设档位：点击即写入表单，替代上下箭头微调
 const CONTEXT_LENGTH_PRESETS = [256_000, 512_000, 1_000_000];
 const MAX_OUTPUT_PRESETS = [4_096, 8_192, 16_384, 32_768, 65_536, 131_072];
+
+// text 为必选模态：models.dev 命中结果缺 text 时补上，避免把表单推进保存校验失败的态
+function ensureText(caps: ModelCapability[]): ModelCapability[] {
+  return caps.includes("text") ? caps : [...caps, "text"];
+}
 
 interface TokenPresetPopoverProps {
   label: string;
@@ -121,7 +127,7 @@ export interface ModelDialogProps {
   onSave: () => void;
 }
 
-/** 模型新建/编辑弹窗：无 endpoint 选择器（绑定不可移动） */
+/** 模型新建/编辑弹窗：无 endpoint 选择器（绑定不可移动）；定价已拆分为同级操作，不在此弹窗内 */
 export function ModelDialog({
   open,
   onOpenChange,
@@ -137,66 +143,41 @@ export function ModelDialog({
   onSave,
 }: ModelDialogProps) {
   const t = useT();
-  const [dirty, setDirty] = useState<ReadonlySet<string>>(new Set());
+  const [fetching, setFetching] = useState(false);
   // 提示绑定触发时的模型名：改名后提示自然失效，无需在 effect 里清理状态
   const [autofillHint, setAutofillHint] = useState<{
     kind: "filled" | "miss";
     name: string;
   } | null>(null);
-  const [pricingOpen, setPricingOpen] = useState(false);
-  const dirtyRef = useRef<ReadonlySet<string>>(new Set());
-  const formRef = useRef(form);
-  const lastQueried = useRef("");
 
-  const markDirty = (field: string) => setDirty((d) => new Set(d).add(field));
-
-  // ref 同步放 effect 内（render 期禁止读写 ref）；本地状态由父组件 key 重挂载在每次打开时重置
-  useEffect(() => {
-    dirtyRef.current = dirty;
-    formRef.current = form;
-  });
-
-  // 上游模型名防抖 600ms 自动填充：只填未手改字段；同值短路；旧响应丢弃；零 toast
-  useEffect(() => {
+  /**
+   * 显式触发规格导入：命中即覆盖上下文 / 最大输出 / 模态三件套。
+   * 按钮是用户主动点击，不存在「自动覆盖手填值」的顾虑，故不做 dirty 保护；
+   * 未命中或上游不可达只给内联提示，表单不动（不弹全局错误）。
+   */
+  const fetchSpec = async () => {
     const name = form.upstreamModel.trim();
-    if (!name || name === lastQueried.current) return;
-    let cancelled = false;
-    const timer = setTimeout(async () => {
-      lastQueried.current = name;
-      try {
-        const rsp = await api.prefillModelSpec(name, formRef.current.contextLength || undefined);
-        if (cancelled || formRef.current.upstreamModel.trim() !== name) return; // 竞态守卫
-        if (!rsp.found) {
-          setAutofillHint({ kind: "miss", name });
-          return;
-        }
-        const willFillPricing = !dirtyRef.current.has("pricing") && !!rsp.pricing?.rules?.length;
-        setForm((f) => {
-          const next = { ...f };
-          const d = dirtyRef.current;
-          if (!d.has("contextLength") && rsp.contextLength) next.contextLength = rsp.contextLength;
-          if (!d.has("maxOutputTokens") && rsp.maxOutputTokens)
-            next.maxOutputTokens = rsp.maxOutputTokens;
-          if (!d.has("capabilities") && rsp.capabilities?.length)
-            next.capabilities = rsp.capabilities;
-          if (!d.has("pricing") && rsp.pricing?.rules?.length)
-            next.pricing = { currency: "USD", rules: rsp.pricing.rules };
-          return next;
-        });
-        setAutofillHint({ kind: "filled", name });
-        if (willFillPricing) setPricingOpen(true); // 定价自动回填后展开折叠卡供核对
-      } catch {
-        // 自动触发路径静默降级：接口报错按未命中处理
-        if (!cancelled && formRef.current.upstreamModel.trim() === name) {
-          setAutofillHint({ kind: "miss", name });
-        }
+    if (!name || fetching) return;
+    setFetching(true);
+    try {
+      const rsp = await api.prefillModelSpec(name);
+      if (!rsp.found) {
+        setAutofillHint({ kind: "miss", name });
+        return;
       }
-    }, 600);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [form.upstreamModel, setForm]);
+      setForm((f) => ({
+        ...f,
+        contextLength: rsp.contextLength || f.contextLength,
+        maxOutputTokens: rsp.maxOutputTokens || f.maxOutputTokens,
+        capabilities: rsp.capabilities?.length ? ensureText([...rsp.capabilities]) : f.capabilities,
+      }));
+      setAutofillHint({ kind: "filled", name });
+    } catch {
+      setAutofillHint({ kind: "miss", name });
+    } finally {
+      setFetching(false);
+    }
+  };
 
   const hint =
     autofillHint && autofillHint.name === form.upstreamModel.trim() ? autofillHint.kind : "";
@@ -257,11 +238,30 @@ export function ModelDialog({
               value={form.upstreamModel}
               onChange={(e) => setForm((f) => ({ ...f, upstreamModel: e.target.value }))}
             />
+          </div>
+          {/* 规格导入入口 + 结果提示同一行（按钮产出的是下方规格三件套，故紧邻其上方） */}
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!form.upstreamModel.trim() || fetching}
+              onClick={fetchSpec}
+            >
+              {fetching ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Download className="size-4" />
+              )}
+              {t("models.spec_fetch")}
+            </Button>
             {hint === "filled" && (
-              <p className="text-[11px] text-muted-foreground">{t("models.autofill_filled")}</p>
+              <span className="text-[11px] text-muted-foreground">
+                {t("models.autofill_filled")}
+              </span>
             )}
             {hint === "miss" && (
-              <p className="text-[11px] text-muted-foreground">{t("models.autofill_miss")}</p>
+              <span className="text-[11px] text-muted-foreground">{t("models.autofill_miss")}</span>
             )}
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -277,20 +277,16 @@ export function ModelDialog({
                   placeholder={String(DEFAULT_CONTEXT_LENGTH)}
                   className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                   value={form.contextLength || ""}
-                  onChange={(e) => {
-                    markDirty("contextLength");
-                    setForm((f) => ({ ...f, contextLength: Number(e.target.value) || 0 }));
-                  }}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, contextLength: Number(e.target.value) || 0 }))
+                  }
                 />
                 <TokenPresetPopover
                   label={t("models.context_length_presets")}
                   description={t("models.preset_desc")}
                   value={form.contextLength}
                   presets={CONTEXT_LENGTH_PRESETS}
-                  onSelect={(v) => {
-                    markDirty("contextLength");
-                    setForm((f) => ({ ...f, contextLength: v }));
-                  }}
+                  onSelect={(v) => setForm((f) => ({ ...f, contextLength: v }))}
                 />
               </div>
             </div>
@@ -306,20 +302,16 @@ export function ModelDialog({
                   placeholder={String(DEFAULT_MAX_OUTPUT)}
                   className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                   value={form.maxOutputTokens || ""}
-                  onChange={(e) => {
-                    markDirty("maxOutputTokens");
-                    setForm((f) => ({ ...f, maxOutputTokens: Number(e.target.value) || 0 }));
-                  }}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, maxOutputTokens: Number(e.target.value) || 0 }))
+                  }
                 />
                 <TokenPresetPopover
                   label={t("models.max_output_presets")}
                   description={t("models.preset_desc")}
                   value={form.maxOutputTokens}
                   presets={MAX_OUTPUT_PRESETS}
-                  onSelect={(v) => {
-                    markDirty("maxOutputTokens");
-                    setForm((f) => ({ ...f, maxOutputTokens: v }));
-                  }}
+                  onSelect={(v) => setForm((f) => ({ ...f, maxOutputTokens: v }))}
                 />
               </div>
             </div>
@@ -342,15 +334,14 @@ export function ModelDialog({
                     className={cn(
                       checked && "border-primary/40 bg-primary/10 text-primary hover:bg-primary/15",
                     )}
-                    onClick={() => {
-                      markDirty("capabilities");
+                    onClick={() =>
                       setForm((f) => ({
                         ...f,
                         capabilities: checked
                           ? f.capabilities.filter((c) => c !== value)
                           : [...f.capabilities, value],
-                      }));
-                    }}
+                      }))
+                    }
                   >
                     <Icon className="size-3.5" />
                     {t(labelKey)}
@@ -360,15 +351,6 @@ export function ModelDialog({
             </div>
           </div>
         </div>
-        <PricingEditor
-          value={form.pricing}
-          open={pricingOpen}
-          onOpenChange={setPricingOpen}
-          onChange={(p) => {
-            markDirty("pricing");
-            setForm((f) => ({ ...f, pricing: p }));
-          }}
-        />
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>

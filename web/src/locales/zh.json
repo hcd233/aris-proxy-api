@@ -826,9 +826,6 @@
   "upstream.sort_desc": "降序",
   "upstream.no_models_in_group": "该端点下暂无模型",
   "upstream.pricing.title": "定价",
-  "upstream.pricing.summary_off": "计价关闭",
-  "upstream.pricing.summary_on": "计价开启 · {n} 条规则",
-  "upstream.pricing.summary_default": "默认档",
   "upstream.pricing.enabled": "启用计价",
   "upstream.pricing.unit": "USD / 1M tokens",
   "upstream.pricing.disabled_hint": "未计价模型不产生费用估算；可手动配置或从 models.dev 导入",
@@ -861,5 +858,15 @@
   "cost.dim.cacheRead": "缓存读取",
   "cost.dim.cacheWrite": "缓存写入",
   "upstream.pricing.opt.timeWindow": "时段限制",
-  "upstream.pricing.opt.context": "上下文区间"
+  "upstream.pricing.opt.context": "上下文区间",
+  "models.spec_fetch": "从 models.dev 获取规格",
+  "upstream.col_pricing": "定价",
+  "upstream.pricing.dialog_desc": "配置「{alias}」的计费项单价（USD / 1M tokens）。可手动填写，或从 models.dev 导入后调整。",
+  "upstream.pricing.fetch": "从 models.dev 获取定价",
+  "upstream.pricing.fetch_filled": "已导入 models.dev 定价，可手动调整",
+  "upstream.pricing.fetch_miss": "models.dev 未命中或无定价数据，可手动填写",
+  "upstream.pricing.saved": "定价已保存",
+  "upstream.pricing.save_error": "保存定价失败",
+  "upstream.pricing.cell_tier": "档位",
+  "upstream.pricing.cell_inout": "输入 / 输出"
 }

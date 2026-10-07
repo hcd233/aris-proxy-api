@@ -24,7 +24,7 @@ import {
 import { DeleteButton } from "@/components/delete-button";
 import { Switch } from "@/components/ui/switch";
 import { ProviderIcon } from "@/components/provider-icon";
-import { Plus, Pencil, ChevronDown, ChevronRight, Info, Copy, Lock } from "lucide-react";
+import { Plus, Pencil, ChevronDown, ChevronRight, Coins, Info, Copy, Lock } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { copyTextToClipboard } from "@/lib/clipboard";
 import { toast } from "sonner";
@@ -36,6 +36,7 @@ import {
   ModelAliasCell,
   ModelIdCell,
   OwnerCell,
+  PricingInline,
   SpecBadges,
   UpstreamModelCell,
 } from "./shared";
@@ -140,6 +141,7 @@ export interface GroupedViewProps {
   onDeleteEndpoint: (ep: UpstreamEndpointItem) => void;
   onAddModel: (ep: UpstreamEndpointItem) => void;
   onEditModel: (m: UpstreamModelItem, ep: UpstreamEndpointItem) => void;
+  onPricingModel: (m: UpstreamModelItem) => void;
   onDeleteModel: (m: UpstreamModelItem) => void;
   onCopyAlias: (alias: string) => void;
   deletingEndpointID?: number;
@@ -163,6 +165,7 @@ export function GroupedView({
   onDeleteEndpoint,
   onAddModel,
   onEditModel,
+  onPricingModel,
   onDeleteModel,
   onCopyAlias,
   deletingEndpointID,
@@ -306,6 +309,7 @@ export function GroupedView({
                               maxOutputTokens={m.maxOutputTokens}
                             />
                             <CapabilityBadges capabilities={m.capabilities} />
+                            <PricingInline pricing={m.pricing} />
                           </div>
                         </div>
                         <div className="flex shrink-0 flex-col items-end gap-1.5">
@@ -328,6 +332,20 @@ export function GroupedView({
                                 <Lock className="size-3.5" />
                               ) : (
                                 <Pencil className="size-3.5" />
+                              )}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              disabled={isDemo}
+                              onClick={() => onPricingModel(m)}
+                              aria-label={t("upstream.pricing.title")}
+                              className="text-muted-foreground hover:text-foreground"
+                            >
+                              {isDemo ? (
+                                <Lock className="size-3.5" />
+                              ) : (
+                                <Coins className="size-3.5" />
                               )}
                             </Button>
                             <DeleteButton
@@ -359,6 +377,7 @@ export function GroupedView({
           <TableHead>{t("upstream.col_upstream")}</TableHead>
           <TableHead>{t("upstream.col_spec")}</TableHead>
           <TableHead>{t("upstream.col_capabilities")}</TableHead>
+          <TableHead>{t("upstream.col_pricing")}</TableHead>
           <TableHead>{t("upstream.col_status")}</TableHead>
           <TableHead>{t("upstream.col_created")}</TableHead>
           <TableHead className="text-right">{t("upstream.col_actions")}</TableHead>
@@ -372,7 +391,7 @@ export function GroupedView({
             <Fragment key={ep.id}>
               {/* 组头：白底 + 左侧主色条，与模型行区分层级 */}
               <TableRow className="bg-card hover:bg-card">
-                <TableCell colSpan={8} className="border-l-[3px] border-l-primary pl-3">
+                <TableCell colSpan={9} className="border-l-[3px] border-l-primary pl-3">
                   <div className="flex min-w-0 items-center gap-2.5 py-0.5">
                     <button
                       type="button"
@@ -465,7 +484,7 @@ export function GroupedView({
 
               {open && group.models.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="pl-8 text-xs text-muted-foreground">
+                  <TableCell colSpan={9} className="pl-8 text-xs text-muted-foreground">
                     {t("upstream.no_models_in_group")}
                   </TableCell>
                 </TableRow>
@@ -492,6 +511,9 @@ export function GroupedView({
                     <TableCell className={cn(!m.enabled && "opacity-45")}>
                       <CapabilityBadges capabilities={m.capabilities} />
                     </TableCell>
+                    <TableCell className={cn(!m.enabled && "opacity-45")}>
+                      <PricingInline pricing={m.pricing} />
+                    </TableCell>
                     <TableCell>
                       <Switch
                         size="sm"
@@ -508,6 +530,7 @@ export function GroupedView({
                       isDemo={isDemo}
                       deleting={deletingModelID === m.id}
                       onEdit={() => onEditModel(m, ep)}
+                      onPricing={() => onPricingModel(m)}
                       onDelete={() => onDeleteModel(m)}
                     />
                   </TableRow>

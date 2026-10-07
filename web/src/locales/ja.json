@@ -826,9 +826,6 @@
   "upstream.sort_desc": "降順",
   "upstream.no_models_in_group": "このエンドポイントにモデルはありません",
   "upstream.pricing.title": "価格設定",
-  "upstream.pricing.summary_off": "課金オフ",
-  "upstream.pricing.summary_on": "課金オン · {n} ルール",
-  "upstream.pricing.summary_default": "デフォルト档位",
   "upstream.pricing.enabled": "価格設定を有効化",
   "upstream.pricing.unit": "USD / 1M tokens",
   "upstream.pricing.disabled_hint": "価格未設定のモデルはコスト見積もりを生成しません。手動設定または models.dev からの取り込みが可能です。",
@@ -861,5 +858,15 @@
   "cost.dim.cacheRead": "キャッシュ読取",
   "cost.dim.cacheWrite": "キャッシュ書込",
   "upstream.pricing.opt.timeWindow": "時間帯制限",
-  "upstream.pricing.opt.context": "コンテキスト範囲"
+  "upstream.pricing.opt.context": "コンテキスト範囲",
+  "models.spec_fetch": "models.dev からスペックを取得",
+  "upstream.col_pricing": "料金",
+  "upstream.pricing.dialog_desc": "「{alias}」の課金項目の単価を設定します（USD / 1M tokens）。手動入力、または models.dev から取得して調整できます。",
+  "upstream.pricing.fetch": "models.dev から料金を取得",
+  "upstream.pricing.fetch_filled": "models.dev の料金を取り込みました。必要に応じて調整してください",
+  "upstream.pricing.fetch_miss": "models.dev に見つからないか料金データがありません。手動で入力してください",
+  "upstream.pricing.saved": "料金を保存しました",
+  "upstream.pricing.save_error": "料金の保存に失敗しました",
+  "upstream.pricing.cell_tier": "区分",
+  "upstream.pricing.cell_inout": "入力 / 出力"
 }

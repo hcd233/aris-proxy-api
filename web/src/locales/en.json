@@ -826,9 +826,6 @@
   "upstream.sort_desc": "descending",
   "upstream.no_models_in_group": "No models under this endpoint",
   "upstream.pricing.title": "Pricing",
-  "upstream.pricing.summary_off": "Pricing off",
-  "upstream.pricing.summary_on": "Pricing on · {n} rules",
-  "upstream.pricing.summary_default": "default tier",
   "upstream.pricing.enabled": "Enable pricing",
   "upstream.pricing.unit": "USD / 1M tokens",
   "upstream.pricing.disabled_hint": "Unpriced models produce no cost estimates. Configure manually or import from models.dev.",
@@ -861,5 +858,15 @@
   "cost.dim.cacheRead": "Cache read",
   "cost.dim.cacheWrite": "Cache write",
   "upstream.pricing.opt.timeWindow": "Time window",
-  "upstream.pricing.opt.context": "Context tier"
+  "upstream.pricing.opt.context": "Context tier",
+  "models.spec_fetch": "Fetch spec from models.dev",
+  "upstream.col_pricing": "Pricing",
+  "upstream.pricing.dialog_desc": "Set unit prices for \"{alias}\" (USD / 1M tokens). Fill in manually, or import from models.dev and adjust.",
+  "upstream.pricing.fetch": "Fetch pricing from models.dev",
+  "upstream.pricing.fetch_filled": "Pricing imported from models.dev; adjust as needed",
+  "upstream.pricing.fetch_miss": "No pricing found on models.dev; fill in manually",
+  "upstream.pricing.saved": "Pricing saved",
+  "upstream.pricing.save_error": "Failed to save pricing",
+  "upstream.pricing.cell_tier": "Tier",
+  "upstream.pricing.cell_inout": "Input / Output"
 }

@@ -10,6 +10,7 @@ import {
   ArrowLeftRight,
   ArrowUpFromLine,
   AudioLines,
+  Coins,
   FileText,
   Type,
   Image as ImageIcon,
@@ -19,8 +20,9 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useT } from "@/lib/i18n";
+import { formatCost } from "@/lib/money";
 import { cn } from "@/lib/utils";
-import type { ModelCapability, PricingDTO, UpstreamUser } from "@/lib/types";
+import type { ModelCapability, PricingDTO, PricingRuleDTO, UpstreamUser } from "@/lib/types";
 
 // 模型表单默认规格：新建表单初值、编辑回填空值兜底、输入框占位共用同一口径
 export const DEFAULT_CONTEXT_LENGTH = 256000;
@@ -39,6 +41,13 @@ export function formatTokens(n: number): string {
   }
   return String(n);
 }
+
+// 未计价表单/展示的初值：currency 为空 ⇔ rules 为空 ⇔ 未计价
+export const emptyPricing: PricingDTO = { currency: "", rules: [] };
+
+// 无条件默认规则：既无时段窗口也无上下文区间，是「这个模型多少钱」的代表档
+export const isDefaultRule = (r: PricingRuleDTO): boolean =>
+  (r.time_windows ?? []).length === 0 && !r.context_min && !r.context_max;
 
 // 归属用户展示单元：头像 + 用户名；user 缺省显示占位 —（恒定短占位不加 tooltip）
 export function OwnerCell({ user }: { user?: UpstreamUser }) {
@@ -149,6 +158,57 @@ export function SpecBadges({
 }
 
 /**
+ * 「定价」单元格：已计价显示代表档的输入/输出单价（`$1 / $5`，多档时追加 +N），
+ * 未计价显示占位 —（恒定短占位不加 tooltip）。完整档位表收进 Tooltip：
+ * 列表列只能承担一对数字，分档结构展开看。
+ */
+export function PricingInline({ pricing }: { pricing?: PricingDTO }) {
+  const t = useT();
+  const rules = pricing?.rules ?? [];
+  if (rules.length === 0) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+  const base = rules.find(isDefaultRule) ?? rules[0];
+  const extra = rules.length - 1;
+  // 档位标签：无条件档 → 「默认」，时段档 → 「时段限制」，其余按区间上下界显示
+  const tierLabel = (r: PricingRuleDTO): string => {
+    if (isDefaultRule(r)) return t("upstream.pricing.rule.default");
+    if ((r.time_windows ?? []).length > 0) return t("upstream.pricing.opt.timeWindow");
+    if ((r.context_max ?? 0) > 0) return `≤ ${formatTokens(r.context_max ?? 0)}`;
+    return `≥ ${formatTokens(r.context_min ?? 0)}`;
+  };
+  return (
+    <TooltipRoot>
+      <TooltipTrigger
+        render={
+          <span className="inline-flex cursor-default items-center gap-1 font-mono text-xs tabular-nums">
+            {formatCost(base.input_price, "USD")} / {formatCost(base.output_price, "USD")}
+            {extra > 0 && <span className="text-muted-foreground">+{extra}</span>}
+          </span>
+        }
+      />
+      <TooltipContent side="top" align="start" className="max-w-xs">
+        <div className="space-y-1">
+          <p className="text-[11px] text-muted-foreground">{t("upstream.pricing.unit")}</p>
+          <div className="flex items-center justify-between gap-3 text-[10px] tracking-[0.08em] text-muted-foreground uppercase">
+            <span>{t("upstream.pricing.cell_tier")}</span>
+            <span>{t("upstream.pricing.cell_inout")}</span>
+          </div>
+          {rules.map((r, i) => (
+            <div key={i} className="flex items-center justify-between gap-3">
+              <span className="text-muted-foreground">{tierLabel(r)}</span>
+              <span className="font-mono tabular-nums">
+                {formatCost(r.input_price, "USD")} / {formatCost(r.output_price, "USD")}
+              </span>
+            </div>
+          ))}
+        </div>
+      </TooltipContent>
+    </TooltipRoot>
+  );
+}
+
+/**
  * 模型行共享单元格：分组/平铺两视图的桌面表格行内容一致，抽到这里消除重复。
  * 停用行只降权内容列，操作列保持可点的视觉（与原实现一致）。
  */
@@ -242,16 +302,18 @@ export function UpstreamModelCell({
   );
 }
 
-/** 「操作」列：编辑 + 删除；demo 只读账户写入口统一锁定（DeleteButton 的 locked 模式） */
+/** 「操作」列：编辑模型配置 + 定价配置 + 删除；demo 只读账户写入口统一锁定（DeleteButton 的 locked 模式） */
 export function ModelActionsCell({
   isDemo,
   deleting,
   onEdit,
+  onPricing,
   onDelete,
 }: {
   isDemo: boolean;
   deleting: boolean;
   onEdit: () => void;
+  onPricing: () => void;
   onDelete: () => void;
 }) {
   const t = useT();
@@ -267,6 +329,16 @@ export function ModelActionsCell({
           className="text-muted-foreground hover:text-foreground"
         >
           {isDemo ? <Lock className="size-3.5" /> : <Pencil className="size-3.5" />}
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={onPricing}
+          disabled={isDemo}
+          aria-label={t("upstream.pricing.title")}
+          className="text-muted-foreground hover:text-foreground"
+        >
+          {isDemo ? <Lock className="size-3.5" /> : <Coins className="size-3.5" />}
         </Button>
         <DeleteButton
           label={t("common.delete")}
@@ -297,8 +369,6 @@ export interface ModelForm {
   contextLength: number;
   maxOutputTokens: number;
   capabilities: ModelCapability[];
-  /** 定价（currency="" ⇔ rules 为空 ⇔ 未计价） */
-  pricing: PricingDTO;
 }
 
 export const emptyEndpointForm: EndpointForm = {
@@ -318,5 +388,4 @@ export const emptyModelForm: ModelForm = {
   contextLength: DEFAULT_CONTEXT_LENGTH,
   maxOutputTokens: DEFAULT_MAX_OUTPUT,
   capabilities: ["text"],
-  pricing: { currency: "", rules: [] },
 };

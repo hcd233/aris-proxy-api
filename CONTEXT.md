@@ -88,8 +88,8 @@ _Avoid_: context pricing, token bracket
 _Avoid_: cost, billing amount, charge
 
 **SpecPrefill（模型规格导入）**:
-从 models.dev 公开规格按 `upstream_model` 精确匹配（trim 后、区分大小写）查询模型规格与定价（`GET /model/spec/prefill`，返回上下文/最大输出/输入模态/定价四件套），由模型表单**自动触发**（上游模型名防抖 600ms 调用），只填本次弹窗未手动编辑过的字段（dirty 语义），全程无 toast、仅内联提示，**永不自动改价**；未命中/上游不可达一律降级为「未命中，可手填」。定价部分整体替换规则表（含按上下文分档的规则；models.dev 无时段窗口数据，需手填）。
-_Avoid_: price import, auto pricing
+从 models.dev 公开规格按 `upstream_model` 精确匹配（trim 后、区分大小写）查询模型规格与定价（`GET /model/spec/prefill`，返回上下文/最大输出/输入模态/定价四件套），由**显式按钮**触发且只有一个消费方负责一段：模型弹窗的「从 models.dev 获取规格」填规格三件套（上下文/最大输出/输入模态），定价弹窗的「从 models.dev 获取定价」整体替换规则表（含按上下文分档的规则，models.dev 无时段窗口数据，需手填）。命中即覆盖、未命中或上游不可达只给内联提示（无 toast、不弹全局错误），**永不自动改价**。
+_Avoid_: price import, auto pricing, autofill
 
 **ClientConfigExport（客户端配置导出）**:
 管理后台从模型列表一键生成「让外部 Agentic 客户端接入本网关」的安装脚本的纯前端能力（无后端接口）。当前支持四种目标：OpenCode（在 provider 字典里注册多个模型，patch `~/.config/opencode/opencode.json`）、Claude Code（按 opus/sonnet/haiku 三档别名映射 `ANTHROPIC_DEFAULT_*_MODEL` 环境变量、用 `ANTHROPIC_AUTH_TOKEN` 认证、指向 `/api/anthropic/v1`，patch `~/.claude/settings.json` 的 env 块）、Codex（注册自定义 `model_providers`、设置默认 `model` 与 `model_context_window`，并同步 `[memories]` 的 `extract_model` / `consolidation_model`，patch `~/.codex/config.toml`）与 Pi（生成 provider 和模型数组，patch `~/.pi/agent/models.json`）。Pi 模型使用 `alias` 作为 ID，脚本合并 provider/model、备份 `.bak`，以 `0600` 保存凭证配置并使用同目录临时文件原子替换。生成的 bash 脚本内嵌 Python 做幂等 patch。OpenCode 模型条目含 `modalities` 字段（且图片输入模型附 `attachment: true`），Pi 模型含 `input` 数组，两者均由 **ModelCapabilities** 生成。

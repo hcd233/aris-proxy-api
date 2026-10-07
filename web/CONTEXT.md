@@ -81,12 +81,16 @@ _Avoid_: color scheme, dark mode toggle
 ## Pricing & Cost（定价与成本）
 
 **PricingEditor（定价规则编辑器）**:
-Model 编辑弹窗内的定价折叠卡：默认折叠为一行摘要（「计价关闭」/「计价开启 · {n} 条规则 · 默认档 $x/$y」），展开后为「启用计价」开关（关 = 未计价，币种固定 USD）+ 规则行列表（时段窗口组、上下文区间、四价），行可增删与上下移（数组顺序 = 匹配优先级），无条件默认规则行标注「默认」。models.dev 导入由表单自动填充统一触发（命中后整体替换规则表含上下文分档、自动开计价并展开本卡）；models.dev 无时段窗口数据，需手填。
-_Avoid_: price form, billing editor
+定价弹窗的正文：与「编辑模型配置」平级的「定价」操作打开，保存时 PATCH `model` **只发 `pricing` 字段**（其余字段缺省 = 不修改，不会用行内旧快照覆盖并发的规格编辑）。内容为「启用计价」开关（关 = 未计价，币种固定 USD）+ 规则行列表（时段窗口组、上下文区间、四价），行可增删与上下移（数组顺序 = 匹配优先级），无条件默认规则行标注「默认」。弹窗顶部「从 models.dev 获取定价」按钮命中后整体替换规则表并自动开计价；models.dev 无时段窗口数据，需手填。
+_Avoid_: price form, billing editor, pricing collapse card
 
-**SpecAutoFill（规格自动填充）**:
-Model 编辑弹窗在「上游模型」输入后防抖 600ms 自动调 `model/spec/prefill`，将 models.dev 的上下文/最大输出/输入模态/定价四件套填入表单；只填本次弹窗未手动编辑过的字段（dirty 跟踪，弹窗按 key 重挂载重置），旧响应按当前模型名竞态丢弃；全程无 toast，仅字段下方内联提示（「已从 models.dev 填充」/「models.dev 未命中」，随改名失效）。
-_Avoid_: model import, spec fetch
+**PricingInline（定价列）**:
+Upstream 列表新增的定价列（分组/平铺两视图、桌面与移动端共用同一组件）：已计价显示代表档的输入/输出单价（`$1 / $5`，多档时追加 `+N`），悬停 Tooltip 展开各档位与单价；未计价显示占位 `—`（恒定短占位不加 tooltip）。「代表档」取无条件默认规则，没有时退化为首条规则。
+_Avoid_: price column, cost column (那是审计费用列)
+
+**SpecFetch（规格导入按钮）**:
+模型弹窗「从 models.dev 获取规格」按钮：上游真名为空或请求进行中时禁用，命中即覆盖上下文 / 最大输出 / 输入模态三件套（不碰别名、模型 ID、上游真名），结果提示绑定触发时的上游真名（改名即失效）。命中结果缺 `text` 时补上——text 是保存校验的必选模态。与「从 models.dev 获取定价」是两个独立按钮（分属两个弹窗），触发均为显式点击。
+_Avoid_: autofill, debounce prefill, dirty tracking
 
 **Cost Column（费用列）**:
 审计列表的单次调用估算费用列（`formatCost` 渲染，`—` 表示未计价）。金额 wire 为展示单位浮点 + 币种，微单位只在后端与 DB。
