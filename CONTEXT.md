@@ -64,7 +64,7 @@ _Avoid_: model router, endpoint lookup
 _Avoid_: protocol translation, api bridge
 
 **ModelCapabilities（模型能力）**:
-模型支持的输入模态集合，持久化为 `Model` 表 `capabilities` 列（text 列 + serializer:json，如 `["text","image"]`），成员为已知枚举 `InputModality`（`text` / `image`，后续可扩展更多模态）。集合必须非空且包含 `text`。与 Endpoint 的协议能力（端点支持哪些 LLM 接口协议）是不同概念：前者描述模型能接收的输入模态，后者描述端点能讲什么协议。管理页以两个开关配置、徽标展示；ClientConfigExport 据此生成 OpenCode `modalities.input`（含 `image` 时附 `attachment: true`）与 Pi `input` 数组。存量行默认 `["text"]`。
+模型支持的输入模态集合，持久化为 `Model` 表 `capabilities` 列（text 列 + serializer:json，如 `["text","image"]`），成员为已知枚举 `InputModality`（`text` / `image` / `pdf` / `video` / `audio`，枚举序即规范输出序）。集合必须非空且包含 `text`。与 Endpoint 的协议能力（端点支持哪些 LLM 接口协议）是不同概念：前者描述模型能接收的输入模态，后者描述端点能讲什么协议。管理页以五枚 chips 多选配置（`text` 锁定不可取消）、徽标展示；ClientConfigExport 据此生成 OpenCode `modalities.input`（含 `image` 时附 `attachment: true`）与 Pi `input` 数组。存量行默认 `["text"]`。
 _Avoid_: model features, model flags
 
 **ModelPricing（模型定价）**:
@@ -87,8 +87,8 @@ _Avoid_: context pricing, token bracket
 一次模型调用的费用估算（`model_call_audits.cost_micro`，微单位，NULL=未计价），按调用时刻与 prompt 总 token 匹配定价规则后计算：四项分别「单价 × tokens / 1e6 四舍五入」求和。请求时计算并落库（不随改价漂移），同时快照 `pricing_currency`。统计聚合按币种分组，不做汇率换算。
 _Avoid_: cost, billing amount, charge
 
-**PricingPrefill（定价导入辅助）**:
-从 models.dev 公开定价按 `upstream_model` 精确匹配（trim 后、区分大小写）查询 USD 单价，**整体替换**录入表单的规则表（含按上下文分档的规则；models.dev 无时段窗口数据，需手填），**永不自动改价**；未命中/上游不可达一律降级为「未找到，可手填」。
+**SpecPrefill（模型规格导入）**:
+从 models.dev 公开规格按 `upstream_model` 精确匹配（trim 后、区分大小写）查询模型规格与定价（`GET /model/spec/prefill`，返回上下文/最大输出/输入模态/定价四件套），由模型表单**自动触发**（上游模型名防抖 600ms 调用），只填本次弹窗未手动编辑过的字段（dirty 语义），全程无 toast、仅内联提示，**永不自动改价**；未命中/上游不可达一律降级为「未命中，可手填」。定价部分整体替换规则表（含按上下文分档的规则；models.dev 无时段窗口数据，需手填）。
 _Avoid_: price import, auto pricing
 
 **ClientConfigExport（客户端配置导出）**:

@@ -81,8 +81,12 @@ _Avoid_: color scheme, dark mode toggle
 ## Pricing & Cost（定价与成本）
 
 **PricingEditor（定价规则编辑器）**:
-Model 编辑弹窗内的定价录入区：「启用计价」开关（关 = 未计价，币种固定 USD）+ 规则行列表（时段窗口组、上下文区间、四价），行可增删与上下移（数组顺序 = 匹配优先级），无条件默认规则行标注「默认」。「从 models.dev 导入」在两种状态下都可点，命中后整体替换规则表（含上下文分档）并自动进入已计价；models.dev 无时段窗口数据，需手填。
+Model 编辑弹窗内的定价折叠卡：默认折叠为一行摘要（「计价关闭」/「计价开启 · {n} 条规则 · 默认档 $x/$y」），展开后为「启用计价」开关（关 = 未计价，币种固定 USD）+ 规则行列表（时段窗口组、上下文区间、四价），行可增删与上下移（数组顺序 = 匹配优先级），无条件默认规则行标注「默认」。models.dev 导入由表单自动填充统一触发（命中后整体替换规则表含上下文分档、自动开计价并展开本卡）；models.dev 无时段窗口数据，需手填。
 _Avoid_: price form, billing editor
+
+**SpecAutoFill（规格自动填充）**:
+Model 编辑弹窗在「上游模型」输入后防抖 600ms 自动调 `model/spec/prefill`，将 models.dev 的上下文/最大输出/输入模态/定价四件套填入表单；只填本次弹窗未手动编辑过的字段（dirty 跟踪，弹窗按 key 重挂载重置），旧响应按当前模型名竞态丢弃；全程无 toast，仅字段下方内联提示（「已从 models.dev 填充」/「models.dev 未命中」，随改名失效）。
+_Avoid_: model import, spec fetch
 
 **Cost Column（费用列）**:
 审计列表的单次调用估算费用列（`formatCost` 渲染，`—` 表示未计价）。金额 wire 为展示单位浮点 + 币种，微单位只在后端与 DB。
