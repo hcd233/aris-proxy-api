@@ -68,7 +68,7 @@ _Avoid_: protocol translation, api bridge
 _Avoid_: model features, model flags
 
 **ModelPricing（模型定价）**:
-挂在 Model 上的计费配置：币种（CNY/USD，空=未计价）+ 定价规则表。价格单位为「每 1M tokens 的微单位」（1e-6 货币单位，int64 入账，禁浮点）。`currency` 为空 ⇔ 规则为空 ⇔ 未计价（审计 cost 记 NULL）；`currency` 非空且四价全 0 ⇔ 免费模型（审计 cost 记 0）。计价只覆盖 LLM 代理成功调用（失败不计费）。
+挂在 Model 上的计费配置：币种（固定 USD，空=未计价）+ 定价规则表。价格单位为「每 1M tokens 的微单位」（1e-6 货币单位，int64 入账，禁浮点）。`currency` 为空 ⇔ 规则为空 ⇔ 未计价（审计 cost 记 NULL）；`currency` 非空且四价全 0 ⇔ 免费模型（审计 cost 记 0）。计价只覆盖 LLM 代理成功调用（失败不计费）。
 _Avoid_: price config, billing config, rate card
 
 **PricingRule（定价规则）**:
@@ -88,7 +88,7 @@ _Avoid_: context pricing, token bracket
 _Avoid_: cost, billing amount, charge
 
 **PricingPrefill（定价导入辅助）**:
-从 models.dev 公开定价按 `upstream_model` 精确匹配（trim 后、区分大小写）查询 USD 单价，仅用于填充录入表单的默认规则行，**永不自动改价**；未命中/上游不可达一律降级为「未找到，可手填」。
+从 models.dev 公开定价按 `upstream_model` 精确匹配（trim 后、区分大小写）查询 USD 单价，**整体替换**录入表单的规则表（含按上下文分档的规则；models.dev 无时段窗口数据，需手填），**永不自动改价**；未命中/上游不可达一律降级为「未找到，可手填」。
 _Avoid_: price import, auto pricing
 
 **ClientConfigExport（客户端配置导出）**:
