@@ -15,6 +15,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humafiber"
@@ -22,6 +23,9 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 )
+
+// bigBodyTimeout 大请求体走内存连接读写，全量并行负载下会超过 fiber app.Test 默认 1s 超时（i/o timeout 抖动）
+var bigBodyTimeout = fiber.TestConfig{Timeout: 10 * time.Second}
 
 // bigBody 构造超过 1MB 默认限制的 JSON 请求体。
 func bigBody(size int) string {
@@ -94,7 +98,7 @@ func TestLLMProxyBodyLimit_AllowsOversizedBody(t *testing.T) {
 	// 2MB body，远超默认 1MB 限制。
 	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/body", strings.NewReader(bigBody(2*1024*1024)))
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := app.Test(req)
+	resp, err := app.Test(req, bigBodyTimeout)
 	if err != nil {
 		t.Fatalf("app.Test: %v", err)
 	}
@@ -117,7 +121,7 @@ func TestDefaultBodyLimit_RejectsOversizedBody(t *testing.T) {
 
 	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/body", strings.NewReader(bigBody(2*1024*1024)))
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := app.Test(req)
+	resp, err := app.Test(req, bigBodyTimeout)
 	if err != nil {
 		t.Fatalf("app.Test: %v", err)
 	}
@@ -146,7 +150,7 @@ func TestFiberBodyLimit_AllowsBodyAboveDefault4MB(t *testing.T) {
 	// 5MB body，超过 fiber 默认 4MB（旧实现会 413），修复后应通过。
 	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/body", strings.NewReader(bigBody(5*1024*1024)))
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := app.Test(req)
+	resp, err := app.Test(req, bigBodyTimeout)
 	if err != nil {
 		t.Fatalf("app.Test: %v", err)
 	}

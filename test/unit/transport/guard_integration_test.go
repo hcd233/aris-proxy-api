@@ -86,7 +86,6 @@ func TestGuardIntegration_OpenThenRecover(t *testing.T) { //nolint:paralleltest 
 	ctx := context.Background()
 
 	// 3 次失败（MinRequests=3）→ 熔断打开
-	openAt := time.Now()
 	for i := 0; i < 3; i++ {
 		_, err := proxy.ForwardChatCompletion(ctx, ep, []byte(`{"messages":[]}`))
 		if err == nil {
@@ -101,13 +100,16 @@ func TestGuardIntegration_OpenThenRecover(t *testing.T) { //nolint:paralleltest 
 	if !errors.As(err, &ce) {
 		t.Fatalf("err = %v, want CircuitOpenError", err)
 	}
+	// OpenTimeout 计时锚定到「确认打开」时刻而非失败请求开始前：并行负载下 3 次失败
+	// 请求本身可能耗时数百毫秒，若从失败前计时会在 OpenTimeout 未满时误发半开探测
+	openConfirmedAt := time.Now()
 	if calls.Load() != before {
 		t.Fatalf("open state must not reach upstream: calls %d -> %d", before, calls.Load())
 	}
 
 	// 上游恢复；等待 OpenTimeout 期满后，半开探测应成功并通过 → 恢复
 	healthy.Store(true)
-	waitUntil(t, 2*time.Second, func() bool { return time.Since(openAt) >= 350*time.Millisecond }, "open timeout elapsed")
+	waitUntil(t, 2*time.Second, func() bool { return time.Since(openConfirmedAt) >= 350*time.Millisecond }, "open timeout elapsed")
 	resp, err := proxy.ForwardChatCompletion(ctx, ep, []byte(`{"messages":[]}`))
 	if err != nil {
 		t.Fatalf("after recovery should succeed: %v", err)
