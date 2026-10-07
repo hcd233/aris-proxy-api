@@ -389,7 +389,7 @@ export default function UpstreamPage() {
       maxOutputTokens: model.maxOutputTokens || DEFAULT_MAX_OUTPUT,
       supportText: (model.capabilities ?? ["text"]).includes("text"),
       supportImage: (model.capabilities ?? []).includes("image"),
-      pricing: model.pricing,
+      pricing: model.pricing ?? { currency: "", rules: [] },
     });
     setModelDialogOpen(true);
   };
@@ -519,7 +519,7 @@ export default function UpstreamPage() {
       maxOutputTokens: m.maxOutputTokens || DEFAULT_MAX_OUTPUT,
       supportText: (m.capabilities ?? ["text"]).includes("text"),
       supportImage: (m.capabilities ?? []).includes("image"),
-      pricing: m.pricing,
+      pricing: m.pricing ?? { currency: "", rules: [] },
     });
     setModelDialogOpen(true);
   };

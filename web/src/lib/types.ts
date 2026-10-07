@@ -452,7 +452,7 @@ export type ModelCapability = "text" | "image";
 
 // ─── Pricing（模型定价，wire 展示单位：货币单位/1M tokens） ──────────────────
 
-export type PricingCurrency = "" | "CNY" | "USD";
+export type PricingCurrency = "" | "USD";
 
 /** 时段窗口：[start,end) 半开区间，end<start 表示跨午夜；days 空=每天（1=周一…7=周日） */
 export interface TimeWindowDTO {

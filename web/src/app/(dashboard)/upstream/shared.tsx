@@ -284,8 +284,8 @@ export interface ModelForm {
   maxOutputTokens: number;
   supportText: boolean;
   supportImage: boolean;
-  /** 定价（undefined=未计价） */
-  pricing?: PricingDTO;
+  /** 定价（currency="" ⇔ rules 为空 ⇔ 未计价） */
+  pricing: PricingDTO;
 }
 
 export const emptyEndpointForm: EndpointForm = {
@@ -306,5 +306,5 @@ export const emptyModelForm: ModelForm = {
   maxOutputTokens: DEFAULT_MAX_OUTPUT,
   supportText: true,
   supportImage: false,
-  pricing: undefined,
+  pricing: { currency: "", rules: [] },
 };
