@@ -149,23 +149,14 @@ export default function DashboardPage() {
           )}
         </div>
 
-        <div className="stagger-rise grid gap-4 lg:grid-cols-2">
+        <div className="stagger-rise grid gap-4 lg:grid-cols-2 lg:gap-y-8">
           <ModelCostBarChart />
-        </div>
-
-        <div className="stagger-rise grid gap-4 lg:grid-cols-2">
+          <ModelTokenBarChart />
           <ModelTrendChart />
           <RequestRateChart />
-        </div>
-
-        <div className="stagger-rise grid gap-4 lg:grid-cols-2">
           <TokenVolumeChart />
-          <ModelTokenBarChart />
-        </div>
-
-        <div className="stagger-rise grid gap-4 lg:grid-cols-2">
-          <FirstTokenLatencyChart />
           <TokenRateChart />
+          <FirstTokenLatencyChart />
         </div>
       </div>
     </PermissionGuard>
