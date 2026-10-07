@@ -18,14 +18,14 @@ func TestModelUpdatePricing(t *testing.T) {
 	if m.Pricing().IsPriced() {
 		t.Fatalf("new model should be unpriced")
 	}
-	p, err := vo.NewPricing(enum.CurrencyCNY, []vo.PricingRule{{InputMicro: 1_000_000}})
+	p, err := vo.NewPricing(enum.CurrencyUSD, []vo.PricingRule{{InputMicro: 1_000_000}})
 	if err != nil {
 		t.Fatalf("NewPricing() error = %v", err)
 	}
 	if err := m.UpdatePricing(p); err != nil {
 		t.Fatalf("UpdatePricing() error = %v", err)
 	}
-	if got := m.Pricing().Currency(); got != enum.CurrencyCNY {
+	if got := m.Pricing().Currency(); got != enum.CurrencyUSD {
 		t.Fatalf("Currency() = %v", got)
 	}
 	// 清空定价（未计价）

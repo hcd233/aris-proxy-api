@@ -7,10 +7,10 @@ import (
 )
 
 // PricingDTO 模型定价（wire 展示单位：货币单位每 1M tokens）。
-// currency=="" ⇔ 未计价；非空时 rules 须恰好含一条无条件默认规则
+// currency=="" ⇔ 未计价；currency=="USD" 时 rules 须恰好含一条无条件默认规则
 // （time_windows 空 + context_min=0 + context_max=0），数组顺序=匹配优先级。
 type PricingDTO struct {
-	Currency enum.Currency    `json:"currency,omitempty" enum:",CNY,USD" doc:"计价币种；空=未计价"`
+	Currency enum.Currency    `json:"currency,omitempty" enum:",USD" doc:"计价币种；空=未计价，USD=已计价"`
 	Rules    []PricingRuleDTO `json:"rules,omitempty" doc:"定价规则（数组顺序=匹配优先级）"`
 }
 

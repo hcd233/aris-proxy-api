@@ -1,7 +1,7 @@
 // Package model_pricing 模型计费 E2E。
 //
-// 前置：目标环境已配置带定价的模型别名 MODEL_ALIAS（如 currency=CNY、
-// input=1 元/1M、output=2 元/1M）与未计价别名 MODEL_ALIAS_UNPRICED；
+// 前置：目标环境已配置带定价的模型别名 MODEL_ALIAS（currency=USD、
+// input=1/1M、output=2/1M）与未计价别名 MODEL_ALIAS_UNPRICED；
 // WEB_JWT 提供 web 管理视角（缺省跳过成本断言）。默认离线 skip，不打生产。
 package model_pricing
 

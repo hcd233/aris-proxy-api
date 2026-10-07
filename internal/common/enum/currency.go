@@ -1,11 +1,10 @@
 package enum
 
-// Currency 计价币种；空值表示未计价。
+// Currency 计价币种；空值表示未计价。当前仅支持 USD。
 type Currency string
 
 const (
 	CurrencyNone Currency = ""
-	CurrencyCNY  Currency = "CNY"
 	CurrencyUSD  Currency = "USD"
 )
 
@@ -14,10 +13,10 @@ const (
 //	@receiver c Currency
 //	@return bool
 //	@author centonhuang
-//	@update 2026-10-05 10:00:00
+//	@update 2026-10-07 10:00:00
 func (c Currency) Valid() bool {
 	switch c {
-	case CurrencyNone, CurrencyCNY, CurrencyUSD:
+	case CurrencyNone, CurrencyUSD:
 		return true
 	default:
 		return false
