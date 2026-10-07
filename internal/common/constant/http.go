@@ -80,9 +80,10 @@ const (
 	// 防止无限 body + 全量内存缓冲导致的内存 DoS。
 	MaxLLMProxyBodyBytes int64 = -1
 
-	// MaxHTTPBodyBytes fiber 层全局请求体上限（BodyLimit）。
-	// fiber 默认 4MB（BodyLimit<=0 回落默认），超过即 413；
+	// MaxHTTPBodyBytes fiber 层全局请求体上限（BodyLimit）默认值，HTTP_BODY_LIMIT 环境变量可覆盖。
+	// 超限 413 发生在 fasthttp 读请求阶段，不经过路由组中间件（应用日志不可见）；
 	// 管理路由仍受 huma 默认 1MB 限制，此处仅兜底 LLM 代理路由放开后的大 body。
+	// 生产覆盖为 48MB，需低于 openresty client_max_body_size（50m）。
 	MaxHTTPBodyBytes int = 16 * 1024 * 1024
 
 	MIMETypeOctetStream = "application/octet-stream"

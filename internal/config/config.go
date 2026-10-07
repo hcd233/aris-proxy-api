@@ -235,6 +235,10 @@ var (
 	//	@update 2026-08-12 10:00:00
 	HTTPClientTimeout time.Duration
 
+	// HTTPBodyLimit int fiber 层全局请求体上限（BodyLimit，字节），HTTP_BODY_LIMIT 环境变量可覆盖
+	//	@update 2026-10-07 14:00:00
+	HTTPBodyLimit int
+
 	// GatewaySharedPoolFallback bool 网关模型解析共享池回退开关
 	//
 	// 开启后：用户名下解析不到 alias 时，回退查共享池（user_id=0 的存量/共享配置）。
@@ -281,6 +285,7 @@ func InitEnvironment() {
 	config.SetDefault("read.timeout", 10*time.Second)
 	config.SetDefault("write.timeout", 5*time.Minute)
 	config.SetDefault("http.client.timeout", constant.HTTPClientTimeout)
+	config.SetDefault("http.body.limit", constant.MaxHTTPBodyBytes)
 
 	config.SetDefault("log.level", "info")
 	config.SetDefault("log.dir", "./logs")
@@ -323,6 +328,7 @@ func InitEnvironment() {
 	WriteTimeout = config.GetDuration("write.timeout")
 
 	HTTPClientTimeout = config.GetDuration("http.client.timeout")
+	HTTPBodyLimit = config.GetInt("http.body.limit")
 
 	LogLevel = config.GetString("log.level")
 	LogDirPath = config.GetString("log.dir")
