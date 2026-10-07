@@ -96,7 +96,7 @@ export function ModelCostBarChart() {
 
   const headCell = (field: SortField, label: string, right = true) => (
     <th
-      className={`cursor-pointer py-2 font-medium hover:text-foreground ${right ? "text-right" : "text-left"}`}
+      className={`cursor-pointer py-2 pr-4 font-medium hover:text-foreground ${right ? "text-right" : "text-left"}`}
       onClick={() => handleSort(field)}
     >
       {label}
@@ -106,7 +106,7 @@ export function ModelCostBarChart() {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
+      <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
         <CardTitle className="font-display">{t("dashboard.model_cost")}</CardTitle>
         <TimeRangePicker
           value={timeRange}
@@ -140,7 +140,7 @@ export function ModelCostBarChart() {
           <div className="h-64 overflow-y-auto">
             <table className="w-full text-sm tabular-nums">
               <thead>
-                <tr className="border-b border-border text-muted-foreground">
+                <tr className="whitespace-nowrap border-b border-border text-muted-foreground">
                   <th className="w-8 py-2 pl-6 text-left font-medium">{t("model_chart.rank")}</th>
                   <th className="py-2 text-left font-medium">{t("model_chart.model")}</th>
                   {headCell("totalCost", t("cost.dim.total"))}

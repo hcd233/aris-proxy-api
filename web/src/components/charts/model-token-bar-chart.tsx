@@ -215,7 +215,7 @@ export function ModelTokenBarChart() {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
+      <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
         <CardTitle className="font-display">{t("dashboard.model_usage")}</CardTitle>
         <TimeRangePicker
           value={timeRange}
@@ -245,11 +245,11 @@ export function ModelTokenBarChart() {
           <div className="h-64 overflow-y-auto">
             <table className="w-full text-sm tabular-nums">
               <thead>
-                <tr className="border-b border-border text-muted-foreground">
+                <tr className="whitespace-nowrap border-b border-border text-muted-foreground">
                   <th className="w-8 py-2 pl-6 text-left font-medium">{t("model_chart.rank")}</th>
                   <th className="py-2 text-left font-medium">{t("model_chart.model")}</th>
                   <th
-                    className="cursor-pointer py-2 text-right font-medium hover:text-foreground"
+                    className="cursor-pointer py-2 pr-4 text-right font-medium hover:text-foreground"
                     onClick={() => handleSort("total")}
                   >
                     {t("charts.total")}

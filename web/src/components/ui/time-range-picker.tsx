@@ -182,7 +182,7 @@ export function TimeRangePicker({
           type="button"
           onClick={() => handlePresetClick(key)}
           className={cn(
-            "inline-flex h-8 items-center justify-center rounded-md px-3 text-xs font-medium transition-colors",
+            "inline-flex h-8 items-center justify-center whitespace-nowrap rounded-md px-3 text-xs font-medium transition-colors",
             value === key
               ? "bg-background text-foreground shadow-sm"
               : "text-muted-foreground hover:text-foreground",
@@ -199,7 +199,7 @@ export function TimeRangePicker({
               type="button"
               onClick={handleCustomClick}
               className={cn(
-                "inline-flex h-8 items-center justify-center gap-1.5 rounded-md px-3 text-xs font-medium transition-colors",
+                "inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-3 text-xs font-medium transition-colors",
                 value === "custom"
                   ? "bg-background text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground",
