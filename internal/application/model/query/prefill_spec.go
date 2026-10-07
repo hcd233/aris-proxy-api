@@ -9,48 +9,51 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 )
 
-// prefillPricingHandler 从公开定价源导入表单初值（仅填充，永不自动改价）
-type prefillPricingHandler struct {
+// prefillSpecHandler 从公开规格源导入表单初值（仅填充，永不自动改价）
+type prefillSpecHandler struct {
 	provider port.ModelSpecProvider
 }
 
-// NewPrefillPricingHandler 构造定价导入查询处理器
+// NewPrefillSpecHandler 构造模型规格导入查询处理器
 //
-//	@param provider port.ModelSpecProvider 公开定价来源
-//	@return port.PrefillPricingHandler
+//	@param provider port.ModelSpecProvider 公开规格来源
+//	@return port.PrefillSpecHandler
 //	@author centonhuang
-//	@update 2026-10-05 10:00:00
-func NewPrefillPricingHandler(provider port.ModelSpecProvider) port.PrefillPricingHandler {
-	return &prefillPricingHandler{provider: provider}
+//	@update 2026-10-07 18:00:00
+func NewPrefillSpecHandler(provider port.ModelSpecProvider) port.PrefillSpecHandler {
+	return &prefillSpecHandler{provider: provider}
 }
 
 // Handle 按 upstream_model 精确匹配；未命中/拉取失败一律 found=false（录入不被阻塞）。
-// 报价的上下文分档映射为区间规则：前档 [ContextMin, 下一档 ContextMin)，末档上界取
-// ContextLength（模型最大上下文），其后补一条同价无条件默认规则兜底；
-// 时段窗口 models.dev 无数据，不在导入范围（用户手填）。
+// 规格三件套（上下文/最大输出/输入模态）原样透传；报价的上下文分档映射为区间规则：
+// 前档 [ContextMin, 下一档 ContextMin)，末档上界取 ContextLength（模型最大上下文），
+// 其后补一条同价无条件默认规则兜底；时段窗口 models.dev 无数据，不在导入范围（用户手填）。
 //
-//	@receiver h *prefillPricingHandler
+//	@receiver h *prefillSpecHandler
 //	@param ctx context.Context
-//	@param q port.PrefillPricingQuery
-//	@return *port.PrefillPricingResult
+//	@param q port.PrefillSpecQuery
+//	@return *port.PrefillSpecResult
 //	@return error 恒为 nil
 //	@author centonhuang
-//	@update 2026-10-07 10:00:00
-func (h *prefillPricingHandler) Handle(ctx context.Context, q port.PrefillPricingQuery) (*port.PrefillPricingResult, error) {
+//	@update 2026-10-07 18:00:00
+func (h *prefillSpecHandler) Handle(ctx context.Context, q port.PrefillSpecQuery) (*port.PrefillSpecResult, error) {
 	name := strings.TrimSpace(q.UpstreamModel)
 	if name == "" {
-		return &port.PrefillPricingResult{}, nil
+		return &port.PrefillSpecResult{}, nil
 	}
 	spec, ok, err := h.provider.Describe(ctx, name)
 	// 拉取失败/未命中统一降级为未命中（录入不被阻塞），因此只走正向分支
 	if err == nil && ok {
-		return &port.PrefillPricingResult{
-			Found:    true,
-			Currency: enum.CurrencyUSD,
-			Rules:    tiersToRules(spec.Quote.Tiers, q.ContextLength),
+		return &port.PrefillSpecResult{
+			Found:           true,
+			ContextLength:   spec.ContextLength,
+			MaxOutputTokens: spec.MaxOutputTokens,
+			InputModalities: spec.InputModalities,
+			Currency:        enum.CurrencyUSD,
+			Rules:           tiersToRules(spec.Quote.Tiers, q.ContextLength),
 		}, nil
 	}
-	return &port.PrefillPricingResult{}, nil
+	return &port.PrefillSpecResult{}, nil
 }
 
 // tiersToRules 分档报价 → 区间规则：前档 [min, 下一档 min)；多档且 ContextLength 大于末档

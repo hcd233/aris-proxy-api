@@ -123,17 +123,19 @@ type ModelListItem struct {
 	UpdatedAt       time.Time              `json:"updatedAt" doc:"更新时间"`
 }
 
-// ModelPricingPrefillReq 定价导入请求（表单填充用）
-type ModelPricingPrefillReq struct {
+// ModelSpecPrefillReq 模型规格导入请求（表单自动填充用）
+type ModelSpecPrefillReq struct {
 	UpstreamModel string `query:"upstreamModel" required:"true" maxLength:"200" doc:"上游模型名（与 models.dev 模型 ID 精确匹配）"`
-	ContextLength int64  `query:"contextLength,omitempty" doc:"模型最大上下文长度（tokens）；大于末档起点时末档上界取该值"`
+	ContextLength int64  `query:"contextLength,omitempty" minimum:"0" doc:"模型最大上下文长度（tokens）；大于末档起点时末档上界取该值"`
 }
 
-// ModelPricingPrefillRsp 定价导入响应（USD/1M tokens；found=false 表示未命中/上游不可达）。
-// pricing 为完整定价（按上下文区间分档的规则数组），仅用于填充表单；时段窗口需手填。
-type ModelPricingPrefillRsp struct {
+// ModelSpecPrefillRsp 模型规格导入响应（found=false 表示未命中/上游不可达，其余字段零值）。
+// 仅用于填充表单，永不自动改价；pricing 为完整定价（按上下文区间分档的规则数组），币种恒 USD。
+type ModelSpecPrefillRsp struct {
 	CommonRsp
-	Found    bool          `json:"found" doc:"是否命中公开定价"`
-	Currency enum.Currency `json:"currency,omitempty" doc:"计价币种（命中时 USD）"`
-	Pricing  *PricingDTO   `json:"pricing,omitempty" doc:"导入的定价（含上下文区间规则）"`
+	Found           bool                 `json:"found" doc:"是否命中 models.dev"`
+	ContextLength   int64                `json:"contextLength,omitempty" minimum:"0" doc:"上下文窗口长度（tokens）"`
+	MaxOutputTokens int64                `json:"maxOutputTokens,omitempty" minimum:"0" doc:"最大输出长度（tokens）"`
+	Capabilities    []enum.InputModality `json:"capabilities,omitempty" doc:"输入模态集合（枚举序）"`
+	Pricing         *PricingDTO          `json:"pricing,omitempty" doc:"导入的定价（含上下文区间规则）"`
 }

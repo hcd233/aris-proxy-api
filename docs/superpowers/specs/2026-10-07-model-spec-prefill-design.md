@@ -83,8 +83,8 @@ Describe(ctx context.Context, modelID string) (ModelSpec, bool, error)
 ```json
 {
   "found": true,
-  "context_length": 200000,
-  "max_output_tokens": 64000,
+  "contextLength": 200000,
+  "maxOutputTokens": 64000,
   "capabilities": ["text", "image", "pdf"],
   "pricing": { "currency": "USD", "rules": [ {"time_windows": [], "context_min": 0, "context_max": 200000, "input_price": 1, "output_price": 5, "cache_creation_price": 1.25, "cache_read_price": 0.1} ] }
 }

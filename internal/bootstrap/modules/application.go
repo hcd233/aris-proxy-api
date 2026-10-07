@@ -82,7 +82,7 @@ var ApplicationModule = fx.Module(constant.DigNameApplicationModule,
 		NewUpdateModelHandler,
 		NewDeleteModelHandler,
 		NewListModelHandler,
-		NewPrefillPricingHandler,
+		NewPrefillSpecHandler,
 		NewListUpstreamHandler,
 		NewRefreshTokensHandler,
 		NewUpdateProfileHandler,
@@ -247,9 +247,9 @@ func NewListModelHandler(endpointRepo llmproxy.EndpointRepository, modelRepo llm
 	return modelquery.NewListModelHandler(modelRepo, endpointRepo, userRepo)
 }
 
-// NewPrefillPricingHandler 构造定价导入查询处理器
-func NewPrefillPricingHandler(provider modelport.ModelSpecProvider) modelport.PrefillPricingHandler {
-	return modelquery.NewPrefillPricingHandler(provider)
+// NewPrefillSpecHandler 构造模型规格导入查询处理器
+func NewPrefillSpecHandler(provider modelport.ModelSpecProvider) modelport.PrefillSpecHandler {
+	return modelquery.NewPrefillSpecHandler(provider)
 }
 
 func NewListUpstreamHandler(endpointRepo llmproxy.EndpointRepository, modelRepo llmproxy.ModelRepository, userRepo identity.UserRepository) upstreamport.ListUpstreamHandler {
