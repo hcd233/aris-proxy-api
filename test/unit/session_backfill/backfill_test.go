@@ -43,6 +43,12 @@ func newBackfillDB(t *testing.T) *gorm.DB {
 	if err != nil {
 		t.Fatalf("open sqlite: %v", err)
 	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		t.Fatalf("sql db: %v", err)
+	}
+	// cache=private 的内存库按连接隔离：限单连接保证读写共库
+	sqlDB.SetMaxOpenConns(1)
 	if err := db.AutoMigrate(&dbmodel.ProxyAPIKey{}, &dbmodel.Session{}, &dbmodel.Trace{}); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}

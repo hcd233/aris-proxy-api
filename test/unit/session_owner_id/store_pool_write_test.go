@@ -33,6 +33,12 @@ func TestStorePoolPersistsAPIKeyID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open sqlite: %v", err)
 	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		t.Fatalf("sql db: %v", err)
+	}
+	// cache=private 的内存库按连接隔离：限单连接让异步写入与读取共库，否则多连接下读到空表（抖动）
+	sqlDB.SetMaxOpenConns(1)
 	if err := db.AutoMigrate(&dbmodel.Session{}, &dbmodel.Message{}, &dbmodel.Tool{}); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
