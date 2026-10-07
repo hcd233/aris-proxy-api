@@ -59,7 +59,7 @@ import type {
   ModelCapability,
   ModelCostRsp,
   ModelListSortField,
-  ModelPricingPrefillRsp,
+  ModelSpecPrefillRsp,
   ModelTrendRsp,
   ModelUpdateRsp,
   ModelUsageRsp,
@@ -631,15 +631,15 @@ class ApiClient {
     });
   }
 
-  /** 定价导入：按上游模型名查 models.dev 公开定价（表单填充用，未命中 found=false） */
-  async prefillModelPricing(
+  /** 模型规格导入：按上游模型名查 models.dev（自动填充用，未命中 found=false） */
+  async prefillModelSpec(
     upstreamModel: string,
     contextLength?: number,
-  ): Promise<ModelPricingPrefillRsp> {
+  ): Promise<ModelSpecPrefillRsp> {
     const cl =
       contextLength && contextLength > 0 ? `&contextLength=${Math.floor(contextLength)}` : "";
-    return this.request<ModelPricingPrefillRsp>(
-      `${API_PREFIX}/model/pricing/prefill?upstreamModel=${encodeURIComponent(upstreamModel)}${cl}`,
+    return this.request<ModelSpecPrefillRsp>(
+      `${API_PREFIX}/model/spec/prefill?upstreamModel=${encodeURIComponent(upstreamModel)}${cl}`,
     );
   }
 

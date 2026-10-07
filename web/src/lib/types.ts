@@ -448,7 +448,7 @@ export interface ListUpstreamRsp extends CommonRsp {
 
 // ─── Model ─────────────────────────────────────────────────────────────────────
 
-export type ModelCapability = "text" | "image";
+export type ModelCapability = "text" | "image" | "pdf" | "video" | "audio";
 
 // ─── Pricing（模型定价，wire 展示单位：货币单位/1M tokens） ──────────────────
 
@@ -480,11 +480,13 @@ export interface PricingDTO {
   rules?: PricingRuleDTO[];
 }
 
-/** 定价导入响应（USD/1M tokens；found=false 表示未命中/上游不可达）。
- * pricing 为完整定价（含上下文区间规则），时段窗口需手填。 */
-export interface ModelPricingPrefillRsp extends CommonRsp {
+/** 模型规格导入响应（found=false 表示未命中/上游不可达，其余字段零值）。
+ * 仅用于填充表单，永不自动改价；pricing 为完整定价（含上下文区间规则），币种恒 USD。 */
+export interface ModelSpecPrefillRsp extends CommonRsp {
   found: boolean;
-  currency?: PricingCurrency;
+  contextLength?: number;
+  maxOutputTokens?: number;
+  capabilities?: ModelCapability[];
   pricing?: PricingDTO;
 }
 

@@ -36,11 +36,12 @@ import { copyTextToClipboard } from "@/lib/clipboard";
 import {
   DEFAULT_CONTEXT_LENGTH,
   DEFAULT_MAX_OUTPUT,
+  MODEL_CAPABILITIES,
   emptyEndpointForm,
   emptyModelForm,
 } from "./shared";
 import type { EndpointForm, ModelForm } from "./shared";
-import type { PricingDTO } from "@/lib/types";
+import type { ModelCapability, PricingDTO } from "@/lib/types";
 import { EndpointDialog } from "./endpoint-dialog";
 import { ModelDialog } from "./model-dialog";
 import { GroupedView } from "./grouped-view";
@@ -147,9 +148,8 @@ export default function UpstreamPage() {
       {
         key: "capability",
         label: t("upstream.filter_capability"),
-        options: ["text", "image"],
-        formatValue: (v) =>
-          v === "image" ? t("models.capability_image") : t("models.capability_text"),
+        options: ["text", "image", "pdf", "video", "audio"],
+        formatValue: (v) => t(`models.capability_${v}`),
         target: "param",
         single: true,
       },
@@ -387,8 +387,9 @@ export default function UpstreamPage() {
       upstreamModel: model.upstreamModel,
       contextLength: model.contextLength || DEFAULT_CONTEXT_LENGTH,
       maxOutputTokens: model.maxOutputTokens || DEFAULT_MAX_OUTPUT,
-      supportText: (model.capabilities ?? ["text"]).includes("text"),
-      supportImage: (model.capabilities ?? []).includes("image"),
+      capabilities: (model.capabilities?.length
+        ? [...model.capabilities]
+        : ["text"]) as ModelCapability[],
       pricing: model.pricing ?? { currency: "", rules: [] },
     });
     setModelDialogOpen(true);
@@ -405,14 +406,11 @@ export default function UpstreamPage() {
       toast.error(t("models.fields_required"));
       return;
     }
-    if (!modelForm.supportText) {
+    if (!modelForm.capabilities.includes("text")) {
       toast.error(t("models.capabilities_require_text"));
       return;
     }
-    const capabilities = [
-      ...(modelForm.supportText ? (["text"] as const) : []),
-      ...(modelForm.supportImage ? (["image"] as const) : []),
-    ];
+    const capabilities = MODEL_CAPABILITIES.filter((c) => modelForm.capabilities.includes(c));
     setSaving(true);
     try {
       if (editingModel) {
@@ -517,8 +515,7 @@ export default function UpstreamPage() {
       upstreamModel: m.upstreamModel,
       contextLength: m.contextLength || DEFAULT_CONTEXT_LENGTH,
       maxOutputTokens: m.maxOutputTokens || DEFAULT_MAX_OUTPUT,
-      supportText: (m.capabilities ?? ["text"]).includes("text"),
-      supportImage: (m.capabilities ?? []).includes("image"),
+      capabilities: (m.capabilities?.length ? [...m.capabilities] : ["text"]) as ModelCapability[],
       pricing: m.pricing ?? { currency: "", rules: [] },
     });
     setModelDialogOpen(true);
@@ -694,7 +691,9 @@ export default function UpstreamPage() {
             onSave={handleSaveEndpoint}
           />
 
+          {/* key 重挂载：每次打开弹窗重置 ModelDialog 本地状态（dirty/提示/折叠） */}
           <ModelDialog
+            key={`${modelDialogOpen}-${editingModel?.id ?? 0}`}
             open={modelDialogOpen}
             onOpenChange={setModelDialogOpen}
             editing={editingModel !== null}

@@ -9,14 +9,18 @@ import { ProviderIcon } from "@/components/provider-icon";
 import {
   ArrowLeftRight,
   ArrowUpFromLine,
+  AudioLines,
+  FileText,
   Type,
   Image as ImageIcon,
   Lock,
   Pencil,
+  Video,
+  type LucideIcon,
 } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-import type { PricingDTO, UpstreamUser } from "@/lib/types";
+import type { ModelCapability, PricingDTO, UpstreamUser } from "@/lib/types";
 
 // 模型表单默认规格：新建表单初值、编辑回填空值兜底、输入框占位共用同一口径
 export const DEFAULT_CONTEXT_LENGTH = 256000;
@@ -63,27 +67,37 @@ export function OwnerCell({ user }: { user?: UpstreamUser }) {
   );
 }
 
-// 能力徽标：按模型输入模态渲染图标（text / image），未知模态回退为 Type 图标
+// 输入模态全集（枚举序，与后端 enum.InputModalities 一致）
+export const MODEL_CAPABILITIES: ModelCapability[] = ["text", "image", "pdf", "video", "audio"];
+
+const CAPABILITY_ICONS: Record<string, LucideIcon> = {
+  text: Type,
+  image: ImageIcon,
+  pdf: FileText,
+  video: Video,
+  audio: AudioLines,
+};
+
+// 能力徽标：按模型输入模态渲染图标，未知模态回退为 Type 图标
 export function CapabilityBadges({ capabilities }: { capabilities?: string[] }) {
   const caps = capabilities && capabilities.length > 0 ? capabilities : ["text"];
   return (
     <div className="flex items-center gap-1.5">
-      {caps.map((cap) => (
-        <TooltipRoot key={cap}>
-          <TooltipTrigger
-            render={
-              <span className="inline-flex items-center gap-1 rounded-md bg-secondary px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-secondary-foreground">
-                {cap === "image" ? (
-                  <ImageIcon className="size-3 text-muted-foreground" />
-                ) : (
-                  <Type className="size-3 text-muted-foreground" />
-                )}
-              </span>
-            }
-          />
-          <TooltipContent side="top">{cap}</TooltipContent>
-        </TooltipRoot>
-      ))}
+      {caps.map((cap) => {
+        const Icon = CAPABILITY_ICONS[cap] ?? Type;
+        return (
+          <TooltipRoot key={cap}>
+            <TooltipTrigger
+              render={
+                <span className="inline-flex items-center gap-1 rounded-md bg-secondary px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-secondary-foreground">
+                  <Icon className="size-3 text-muted-foreground" />
+                </span>
+              }
+            />
+            <TooltipContent side="top">{cap}</TooltipContent>
+          </TooltipRoot>
+        );
+      })}
     </div>
   );
 }
@@ -282,8 +296,7 @@ export interface ModelForm {
   upstreamModel: string;
   contextLength: number;
   maxOutputTokens: number;
-  supportText: boolean;
-  supportImage: boolean;
+  capabilities: ModelCapability[];
   /** 定价（currency="" ⇔ rules 为空 ⇔ 未计价） */
   pricing: PricingDTO;
 }
@@ -304,7 +317,6 @@ export const emptyModelForm: ModelForm = {
   upstreamModel: "",
   contextLength: DEFAULT_CONTEXT_LENGTH,
   maxOutputTokens: DEFAULT_MAX_OUTPUT,
-  supportText: true,
-  supportImage: false,
+  capabilities: ["text"],
   pricing: { currency: "", rules: [] },
 };
