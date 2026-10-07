@@ -1,11 +1,13 @@
-// Package modelsdev models.dev 公开定价客户端的单元测试
+// Package modelsdev models.dev 公开模型规格客户端的单元测试
 package modelsdev
 
 import (
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"testing"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/modelsdev"
 )
 
@@ -29,13 +31,14 @@ const docNested = `{
   "abacus": {"models": {"gemini-2.5-pro": {"cost": {"input": 9, "output": 9}}, "other": {"cost": {"input": 1}}}}
 }`
 
-func TestQuoteNestedStructureOfficialProviderWins(t *testing.T) {
+func TestDescribeNestedStructureOfficialProviderWins(t *testing.T) {
 	t.Parallel()
 	c := newTestClient(t, docNested)
-	q, ok, err := c.Quote(t.Context(), "gemini-2.5-pro")
+	spec, ok, err := c.Describe(t.Context(), "gemini-2.5-pro")
 	if err != nil || !ok {
-		t.Fatalf("quote: ok=%v err=%v", ok, err)
+		t.Fatalf("describe: ok=%v err=%v", ok, err)
 	}
+	q := spec.Quote
 	// 官方 google 命中（nano-gpt/abacus 同名被跳过），分档 0 + 200000
 	if len(q.Tiers) != 2 {
 		t.Fatalf("tiers = %+v", q.Tiers)
@@ -48,31 +51,32 @@ func TestQuoteNestedStructureOfficialProviderWins(t *testing.T) {
 	}
 }
 
-func TestQuoteFallbackToNonOfficial(t *testing.T) {
+func TestDescribeFallbackToNonOfficial(t *testing.T) {
 	t.Parallel()
 	c := newTestClient(t, docNested)
-	q, ok, err := c.Quote(t.Context(), "other")
+	spec, ok, err := c.Describe(t.Context(), "other")
 	if err != nil || !ok {
-		t.Fatalf("quote: ok=%v err=%v", ok, err)
+		t.Fatalf("describe: ok=%v err=%v", ok, err)
 	}
-	if len(q.Tiers) != 1 || q.Tiers[0].Input != 1 {
-		t.Fatalf("tiers = %+v", q.Tiers)
+	if len(spec.Quote.Tiers) != 1 || spec.Quote.Tiers[0].Input != 1 {
+		t.Fatalf("tiers = %+v", spec.Quote.Tiers)
 	}
-	if _, ok, _ := c.Quote(t.Context(), "missing"); ok {
+	if _, ok, _ := c.Describe(t.Context(), "missing"); ok {
 		t.Fatal("unknown model must miss")
 	}
 }
 
-func TestQuoteTiersSortedAndDedup(t *testing.T) {
+func TestDescribeTiersSortedAndDedup(t *testing.T) {
 	t.Parallel()
 	c := newTestClient(t, `{"p": {"models": {"m": {"cost": {"input": 2.5, "tiers": [
 		{"input": 6.25, "tier": {"type": "context", "size": 128000}},
 		{"input": 5, "tier": {"type": "context", "size": 32000}},
 		{"input": 3, "tier": {"type": "context", "size": 0}}]}}}}}`)
-	q, ok, err := c.Quote(t.Context(), "m")
+	spec, ok, err := c.Describe(t.Context(), "m")
 	if err != nil || !ok {
-		t.Fatalf("quote: ok=%v err=%v", ok, err)
+		t.Fatalf("describe: ok=%v err=%v", ok, err)
 	}
+	q := spec.Quote
 	// size=0 档覆盖平铺价；升序去重后 0 / 32000 / 128000
 	if len(q.Tiers) != 3 {
 		t.Fatalf("tiers = %+v", q.Tiers)
@@ -85,7 +89,7 @@ func TestQuoteTiersSortedAndDedup(t *testing.T) {
 	}
 }
 
-func TestQuoteFetchErrorSurfaces(t *testing.T) {
+func TestDescribeFetchErrorSurfaces(t *testing.T) {
 	t.Parallel()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -93,7 +97,42 @@ func TestQuoteFetchErrorSurfaces(t *testing.T) {
 	t.Cleanup(srv.Close)
 	c := modelsdev.NewClient(srv.Client(), nil)
 	c.Source = srv.URL
-	if _, ok, err := c.Quote(t.Context(), "x"); ok || err == nil {
+	if _, ok, err := c.Describe(t.Context(), "x"); ok || err == nil {
 		t.Fatalf("fetch failure must return err and ok=false, got ok=%v err=%v", ok, err)
+	}
+}
+
+func TestDescribeLimitAndModalities(t *testing.T) {
+	t.Parallel()
+	c := newTestClient(t, `{"anthropic":{"models":{"claude-sonnet-4-5":{
+		"limit":{"context":200000,"output":64000},
+		"modalities":{"input":["text","image","pdf","hologram"],"output":["text"]},
+		"cost":{"input":1,"output":5}}}}}`)
+	spec, ok, err := c.Describe(t.Context(), "claude-sonnet-4-5")
+	if err != nil || !ok {
+		t.Fatalf("describe: ok=%v err=%v", ok, err)
+	}
+	if spec.ContextLength != 200000 || spec.MaxOutputTokens != 64000 {
+		t.Fatalf("limit = %+v", spec)
+	}
+	// 未知模态 hologram 静默丢弃；输出按枚举序 text/image/pdf
+	want := []enum.InputModality{enum.InputModalityText, enum.InputModalityImage, enum.InputModalityPDF}
+	if !slices.Equal(spec.InputModalities, want) {
+		t.Fatalf("modalities = %v", spec.InputModalities)
+	}
+	if spec.Quote.Tiers[0].Input != 1 {
+		t.Fatalf("quote lost: %+v", spec.Quote)
+	}
+}
+
+func TestDescribeMissingLimitAndModalities(t *testing.T) {
+	t.Parallel()
+	c := newTestClient(t, `{"openai":{"models":{"m":{"cost":{"input":3}}}}}`)
+	spec, ok, err := c.Describe(t.Context(), "m")
+	if err != nil || !ok {
+		t.Fatalf("describe: ok=%v err=%v", ok, err)
+	}
+	if spec.ContextLength != 0 || spec.MaxOutputTokens != 0 || len(spec.InputModalities) != 0 {
+		t.Fatalf("missing fields must be zero: %+v", spec)
 	}
 }

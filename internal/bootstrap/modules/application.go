@@ -248,7 +248,7 @@ func NewListModelHandler(endpointRepo llmproxy.EndpointRepository, modelRepo llm
 }
 
 // NewPrefillPricingHandler 构造定价导入查询处理器
-func NewPrefillPricingHandler(provider modelport.PricingQuoteProvider) modelport.PrefillPricingHandler {
+func NewPrefillPricingHandler(provider modelport.ModelSpecProvider) modelport.PrefillPricingHandler {
 	return modelquery.NewPrefillPricingHandler(provider)
 }
 

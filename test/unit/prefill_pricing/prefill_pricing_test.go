@@ -17,8 +17,8 @@ type fakeQuoteProvider struct {
 	err   error
 }
 
-func (f *fakeQuoteProvider) Quote(_ context.Context, _ string) (port.PricingQuote, bool, error) {
-	return f.quote, f.ok, f.err
+func (f *fakeQuoteProvider) Describe(_ context.Context, _ string) (port.ModelSpec, bool, error) {
+	return port.ModelSpec{Quote: f.quote}, f.ok, f.err
 }
 
 func TestPrefillPricingTiersDefaultWhenNoContextLength(t *testing.T) {

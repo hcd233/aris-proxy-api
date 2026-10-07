@@ -15,11 +15,12 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/application/model/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 )
 
-// Client models.dev 定价查询：拉取公开文档（Redis 缓存 24h），按模型 ID 精确匹配。
-// 实现 port.PricingQuoteProvider。
+// Client models.dev 公开规格查询：拉取公开文档（Redis 缓存 24h），按模型 ID 精确匹配。
+// 实现 port.ModelSpecProvider。
 type Client struct {
 	Source string // 数据源地址；空 = constant.ModelsDevAPIURL（测试可注入）
 	http   *http.Client
@@ -31,7 +32,20 @@ type modelsDevProvider struct {
 }
 
 type modelsDevModel struct {
-	Cost modelsDevCost `json:"cost"`
+	Cost       modelsDevCost       `json:"cost"`
+	Limit      modelsDevLimit      `json:"limit"`
+	Modalities modelsDevModalities `json:"modalities"`
+}
+
+// modelsDevLimit 模型规格上限（tokens）
+type modelsDevLimit struct {
+	Context int64 `json:"context"`
+	Output  int64 `json:"output"`
+}
+
+// modelsDevModalities 模态集合（仅 input 对本项目有消费方）
+type modelsDevModalities struct {
+	Input []string `json:"input"`
 }
 
 // modelsDevCost 四类单价（USD/1M tokens）+ 可选上下文分档。
@@ -69,34 +83,49 @@ func NewClient(hc *http.Client, rdb redis.UniversalClient) *Client {
 	return &Client{http: hc, redis: rdb}
 }
 
-// Quote 按模型 ID 精确匹配公开定价（跨 provider 收集，官方 provider 优先）
+// Describe 按模型 ID 精确匹配公开规格 + 定价（跨 provider 收集，官方 provider 优先）
 //
 //	@receiver c *Client
 //	@param ctx context.Context
 //	@param modelID string 上游模型名（精确匹配，区分大小写）
-//	@return port.PricingQuote 分档报价（按 ContextMin 升序，首档 0）
+//	@return port.ModelSpec 规格 + 分档报价（Tiers 按 ContextMin 升序，首档 0）
 //	@return bool 是否命中
 //	@return error 拉取/解析失败
 //	@author centonhuang
-//	@update 2026-10-07 10:00:00
-func (c *Client) Quote(ctx context.Context, modelID string) (port.PricingQuote, bool, error) {
+//	@update 2026-10-07 16:00:00
+func (c *Client) Describe(ctx context.Context, modelID string) (port.ModelSpec, bool, error) {
 	raw, err := c.doc(ctx)
 	if err != nil {
-		return port.PricingQuote{}, false, err
+		return port.ModelSpec{}, false, err
 	}
 	var doc map[string]modelsDevProvider
 	if err := sonic.Unmarshal(raw, &doc); err != nil {
-		return port.PricingQuote{}, false, ierr.Wrap(ierr.ErrDTOUnmarshal, err, "parse models.dev pricing")
+		return port.ModelSpec{}, false, ierr.Wrap(ierr.ErrDTOUnmarshal, err, "parse models.dev pricing")
 	}
 	entry, ok := pickProvider(doc, modelID)
 	if !ok {
-		return port.PricingQuote{}, false, nil
+		return port.ModelSpec{}, false, nil
 	}
-	quote, err := buildQuote(entry.Cost)
-	if err != nil {
-		return port.PricingQuote{}, false, err
+	spec := port.ModelSpec{
+		ContextLength:   entry.Limit.Context,
+		MaxOutputTokens: entry.Limit.Output,
+		InputModalities: mapModalities(entry.Modalities.Input),
 	}
-	return quote, true, nil
+	if spec.Quote, err = buildQuote(entry.Cost); err != nil {
+		return port.ModelSpec{}, false, err
+	}
+	return spec, true, nil
+}
+
+// mapModalities 把 models.dev 输入模态映射为枚举值：未知值静默丢弃，输出按枚举序
+func mapModalities(input []string) []enum.InputModality {
+	out := make([]enum.InputModality, 0, len(input))
+	for _, m := range enum.InputModalities {
+		if slices.Contains(input, m) {
+			out = append(out, m)
+		}
+	}
+	return out
 }
 
 // pickProvider 跨 provider 收集模型命中：官方 provider 优先（列表序靠前者胜），否则 provider 名字典序首个

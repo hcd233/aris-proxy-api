@@ -33,18 +33,18 @@ var InfraModule = fx.Module(constant.DigNameInfraModule,
 		NewRuntimeMetricsCache,
 		NewMetricsFlusher,
 		NewModelsDevClient,
-		NewPricingQuoteProvider,
+		NewModelSpecProvider,
 	),
 	fx.Invoke(InitHTTPClient),
 )
 
-// NewModelsDevClient 构造 models.dev 公开定价客户端（复用通用 HTTP 客户端与 Redis 缓存）
+// NewModelsDevClient 构造 models.dev 公开规格客户端（复用通用 HTTP 客户端与 Redis 缓存）
 func NewModelsDevClient(cache *redis.Client) *modelsdev.Client {
 	return modelsdev.NewClient(httpclient.GetHTTPClient(), cache)
 }
 
-// NewPricingQuoteProvider 绑定公开定价来源端口到 modelsdev 客户端
-func NewPricingQuoteProvider(client *modelsdev.Client) modelport.PricingQuoteProvider {
+// NewModelSpecProvider 绑定公开模型规格来源端口到 modelsdev 客户端
+func NewModelSpecProvider(client *modelsdev.Client) modelport.ModelSpecProvider {
 	return client
 }
 

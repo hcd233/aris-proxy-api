@@ -11,16 +11,16 @@ import (
 
 // prefillPricingHandler 从公开定价源导入表单初值（仅填充，永不自动改价）
 type prefillPricingHandler struct {
-	provider port.PricingQuoteProvider
+	provider port.ModelSpecProvider
 }
 
 // NewPrefillPricingHandler 构造定价导入查询处理器
 //
-//	@param provider port.PricingQuoteProvider 公开定价来源
+//	@param provider port.ModelSpecProvider 公开定价来源
 //	@return port.PrefillPricingHandler
 //	@author centonhuang
 //	@update 2026-10-05 10:00:00
-func NewPrefillPricingHandler(provider port.PricingQuoteProvider) port.PrefillPricingHandler {
+func NewPrefillPricingHandler(provider port.ModelSpecProvider) port.PrefillPricingHandler {
 	return &prefillPricingHandler{provider: provider}
 }
 
@@ -41,13 +41,13 @@ func (h *prefillPricingHandler) Handle(ctx context.Context, q port.PrefillPricin
 	if name == "" {
 		return &port.PrefillPricingResult{}, nil
 	}
-	quote, ok, err := h.provider.Quote(ctx, name)
+	spec, ok, err := h.provider.Describe(ctx, name)
 	// 拉取失败/未命中统一降级为未命中（录入不被阻塞），因此只走正向分支
 	if err == nil && ok {
 		return &port.PrefillPricingResult{
 			Found:    true,
 			Currency: enum.CurrencyUSD,
-			Rules:    tiersToRules(quote.Tiers, q.ContextLength),
+			Rules:    tiersToRules(spec.Quote.Tiers, q.ContextLength),
 		}, nil
 	}
 	return &port.PrefillPricingResult{}, nil
