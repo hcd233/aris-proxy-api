@@ -632,9 +632,14 @@ class ApiClient {
   }
 
   /** 定价导入：按上游模型名查 models.dev 公开定价（表单填充用，未命中 found=false） */
-  async prefillModelPricing(upstreamModel: string): Promise<ModelPricingPrefillRsp> {
+  async prefillModelPricing(
+    upstreamModel: string,
+    contextLength?: number,
+  ): Promise<ModelPricingPrefillRsp> {
+    const cl =
+      contextLength && contextLength > 0 ? `&contextLength=${Math.floor(contextLength)}` : "";
     return this.request<ModelPricingPrefillRsp>(
-      `${API_PREFIX}/model/pricing/prefill?upstreamModel=${encodeURIComponent(upstreamModel)}`,
+      `${API_PREFIX}/model/pricing/prefill?upstreamModel=${encodeURIComponent(upstreamModel)}${cl}`,
     );
   }
 

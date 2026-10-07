@@ -216,7 +216,7 @@ func toModelListItem(v *port.ListModelView) *dto.ModelListItem {
 //	@update 2026-10-07 10:00:00
 func (h *modelHandler) HandlePrefillPricing(ctx context.Context, req *dto.ModelPricingPrefillReq) (*dto.HTTPResponse[*dto.ModelPricingPrefillRsp], error) {
 	rsp := &dto.ModelPricingPrefillRsp{}
-	res, err := h.prefill.Handle(ctx, port.PrefillPricingQuery{UpstreamModel: req.UpstreamModel})
+	res, err := h.prefill.Handle(ctx, port.PrefillPricingQuery{UpstreamModel: req.UpstreamModel, ContextLength: req.ContextLength})
 	// 未命中/失败统一降级为 found=false（录入不被阻塞），因此只走正向分支
 	if err == nil && res != nil && res.Found {
 		rsp.Found = true

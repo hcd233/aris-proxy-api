@@ -75,6 +75,8 @@ type DeleteModelHandler interface {
 // PrefillPricingQuery 定价导入查询
 type PrefillPricingQuery struct {
 	UpstreamModel string
+	// ContextLength 模型最大上下文长度（tokens）；>0 且大于末档起点时末档上界取该值
+	ContextLength int64
 }
 
 // PrefillPricingResult 定价导入结果（USD/1M tokens；found=false 时其余字段为零值）。

@@ -126,6 +126,7 @@ type ModelListItem struct {
 // ModelPricingPrefillReq 定价导入请求（表单填充用）
 type ModelPricingPrefillReq struct {
 	UpstreamModel string `query:"upstreamModel" required:"true" maxLength:"200" doc:"上游模型名（与 models.dev 模型 ID 精确匹配）"`
+	ContextLength int64  `query:"contextLength,omitempty" doc:"模型最大上下文长度（tokens）；大于末档起点时末档上界取该值"`
 }
 
 // ModelPricingPrefillRsp 定价导入响应（USD/1M tokens；found=false 表示未命中/上游不可达）。

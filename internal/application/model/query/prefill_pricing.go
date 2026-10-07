@@ -25,7 +25,8 @@ func NewPrefillPricingHandler(provider port.PricingQuoteProvider) port.PrefillPr
 }
 
 // Handle 按 upstream_model 精确匹配；未命中/拉取失败一律 found=false（录入不被阻塞）。
-// 报价的上下文分档映射为区间规则：前档 [ContextMin, 下一档 ContextMin)，末档归为无条件默认规则；
+// 报价的上下文分档映射为区间规则：前档 [ContextMin, 下一档 ContextMin)，末档上界取
+// ContextLength（模型最大上下文），其后补一条同价无条件默认规则兜底；
 // 时段窗口 models.dev 无数据，不在导入范围（用户手填）。
 //
 //	@receiver h *prefillPricingHandler
@@ -46,15 +47,18 @@ func (h *prefillPricingHandler) Handle(ctx context.Context, q port.PrefillPricin
 		return &port.PrefillPricingResult{
 			Found:    true,
 			Currency: enum.CurrencyUSD,
-			Rules:    tiersToRules(quote.Tiers),
+			Rules:    tiersToRules(quote.Tiers, q.ContextLength),
 		}, nil
 	}
 	return &port.PrefillPricingResult{}, nil
 }
 
-// tiersToRules 分档报价 → 区间规则：前档 [min, 下一档 min)，末档清零区间作为无条件默认规则兜底。
-func tiersToRules(tiers []port.PricingTier) []dto.PricingRuleDTO {
-	rules := make([]dto.PricingRuleDTO, 0, len(tiers))
+// tiersToRules 分档报价 → 区间规则：前档 [min, 下一档 min)；多档且 ContextLength 大于末档
+// 起点时，末档区间为 [末档 min, ContextLength)，其后追加价格相同的无条件默认规则兜底
+// （满足「恰一条默认规则」校验，承接 ≥ContextLength 的理论命中，计费语义与末档一致）；
+// 单档或 ContextLength 不足时，末档清零区间归为无条件默认规则（原行为）。
+func tiersToRules(tiers []port.PricingTier, contextLength int64) []dto.PricingRuleDTO {
+	rules := make([]dto.PricingRuleDTO, 0, len(tiers)+1)
 	for i, tier := range tiers {
 		rule := dto.PricingRuleDTO{
 			ContextMin:         tier.ContextMin,
@@ -68,11 +72,19 @@ func tiersToRules(tiers []port.PricingTier) []dto.PricingRuleDTO {
 		}
 		rules = append(rules, rule)
 	}
-	if len(rules) > 0 {
-		// 末档（[sizeN, ∞)）归为无条件默认规则，满足「恰一条默认规则」校验：
-		// 前档已覆盖到 sizeN，默认档天然承接 ≥sizeN 的全部命中，语义等价
-		rules[len(rules)-1].ContextMin = 0
-		rules[len(rules)-1].ContextMax = 0
+	if len(rules) == 0 {
+		return rules
 	}
+	last := &rules[len(rules)-1]
+	if len(tiers) > 1 && contextLength > last.ContextMin {
+		last.ContextMax = contextLength
+		fallback := *last
+		fallback.ContextMin = 0
+		fallback.ContextMax = 0
+		rules = append(rules, fallback)
+		return rules
+	}
+	last.ContextMin = 0
+	last.ContextMax = 0
 	return rules
 }

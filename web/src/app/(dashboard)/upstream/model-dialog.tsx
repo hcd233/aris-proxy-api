@@ -263,6 +263,7 @@ export function ModelDialog({
           <PricingEditor
             value={form.pricing}
             upstreamModel={form.upstreamModel}
+            contextLength={form.contextLength}
             onChange={(p) => setForm((f) => ({ ...f, pricing: p }))}
           />
         </div>

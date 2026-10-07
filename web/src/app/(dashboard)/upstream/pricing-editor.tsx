@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,12 +18,15 @@ import { toast } from "sonner";
 import { useT } from "@/lib/i18n";
 import { api } from "@/lib/api-client";
 import type { PricingDTO, PricingRuleDTO, TimeWindowDTO } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 export interface PricingEditorProps {
   value?: PricingDTO;
   onChange: (p: PricingDTO) => void;
   /** 用于导入的上游模型名（表单 upstreamModel 字段） */
   upstreamModel: string;
+  /** 模型最大上下文长度（tokens）；导入时作为末档区间上界 */
+  contextLength?: number;
 }
 
 const WEEKDAYS = [1, 2, 3, 4, 5, 6, 7];
@@ -62,10 +66,17 @@ function priceOrZero(v: string): number {
  * PricingEditor 定价规则编辑器。
  * - 「启用计价」开关（关 = 未计价，币种固定 USD，由规则表推导）；关时规则区隐藏
  * - 每条规则两个默认关闭的选项：「时段限制」勾选后编辑时段窗口；「上下文区间」勾选后编辑 min/max
+ * - 时段窗口星期选择：days 空=每天（7 键全亮 + 「每天」徽标）；显式选满 7 天归一化回空数组；
+ *   最后一天禁点（取消会静默翻回「每天」，与直觉相反）
  * - 行操作：增、删、上移/下移（数组顺序 = 匹配优先级）；无条件默认规则行标注「默认」
  * - 「从 models.dev 导入」两种状态下都可点，命中后整体替换规则表并自动进入已计价（含上下文区间规则；时段窗口无数据需手填）
  */
-export function PricingEditor({ value, onChange, upstreamModel }: PricingEditorProps) {
+export function PricingEditor({
+  value,
+  onChange,
+  upstreamModel,
+  contextLength,
+}: PricingEditorProps) {
   const t = useT();
   const [importing, setImporting] = useState(false);
   const rules = value?.rules ?? [];
@@ -97,7 +108,7 @@ export function PricingEditor({ value, onChange, upstreamModel }: PricingEditorP
     }
     setImporting(true);
     try {
-      const rsp = await api.prefillModelPricing(upstreamModel.trim());
+      const rsp = await api.prefillModelPricing(upstreamModel.trim(), contextLength);
       const imported = rsp.pricing?.rules ?? [];
       if (!rsp.found || imported.length === 0) {
         toast.error(t("upstream.pricing.prefill.miss"));
@@ -216,34 +227,53 @@ export function PricingEditor({ value, onChange, upstreamModel }: PricingEditorP
               {timeEnabled(rule) &&
                 (rule.time_windows ?? []).map((w, wi) => (
                   <div key={wi} className="flex flex-wrap items-center gap-1.5">
-                    <div className="flex gap-1">
+                    <div
+                      className="flex gap-1"
+                      role="group"
+                      aria-label={t("upstream.pricing.window.days")}
+                    >
                       {WEEKDAYS.map((d) => {
-                        const active = (w.days ?? []).length === 0 || (w.days ?? []).includes(d);
+                        const cur = w.days ?? [];
+                        // 空=每天：7 键全亮；点选后进入显式选择模式
+                        const active = cur.length === 0 || cur.includes(d);
+                        // 最后一天禁点：取消会静默翻回「每天」，与「仅剩一天」直觉相反
+                        const lastDay = cur.length === 1 && cur.includes(d);
                         return (
                           <Button
                             key={d}
                             type="button"
-                            size="sm"
-                            variant={active ? "default" : "outline"}
-                            className="h-7 w-7 p-0"
+                            size="xs"
+                            variant="outline"
+                            // min-w-0 抵消 size xs 内置 min-w-14；w-9 固定宽保证跨语言不位移
+                            className={cn(
+                              "w-9 min-w-0 p-0",
+                              active
+                                ? "border-primary/40 bg-primary/10 text-primary hover:bg-primary/15"
+                                : "text-muted-foreground",
+                            )}
+                            aria-pressed={active}
+                            disabled={lastDay}
                             onClick={() => {
-                              const cur = w.days ?? [];
-                              // 空=每天；点选后进入显式选择模式
                               const base = cur.length === 0 ? WEEKDAYS : cur;
-                              const nextDays = base.includes(d)
+                              let nextDays = base.includes(d)
                                 ? base.filter((x) => x !== d)
                                 : [...base, d].sort((a, b) => a - b);
+                              // 显式选满 7 天与「每天」后端语义等价，归一化回空数组
+                              if (nextDays.length === WEEKDAYS.length) nextDays = [];
                               const windows = (rule.time_windows ?? []).map((x, xi) =>
                                 xi === wi ? { ...x, days: nextDays } : x,
                               );
                               patchRule(idx, { time_windows: windows });
                             }}
                           >
-                            {d}
+                            {t(`upstream.pricing.window.day.${d}`)}
                           </Button>
                         );
                       })}
                     </div>
+                    {(w.days ?? []).length === 0 && (
+                      <Badge variant="secondary">{t("upstream.pricing.window.everyday")}</Badge>
+                    )}
                     <Input
                       className="w-24"
                       value={w.start}
