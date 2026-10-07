@@ -56,12 +56,11 @@ const VALID_PAGE_SIZES = [10, 20, 50];
 // admin 代建下拉的用户列表一次性拉取上限
 const USER_FETCH_LIMIT = 500;
 
-/** 定价弹窗目标：分组行与平铺行都满足的最小形状（导入用上游真名，展开末档用上下文窗口） */
+/** 定价弹窗目标：分组行与平铺行都满足的最小形状（导入用上游真名） */
 interface PricingTarget {
   id: number;
   alias: string;
   upstreamModel: string;
-  contextLength: number;
 }
 
 export default function UpstreamPage() {
@@ -512,7 +511,6 @@ export default function UpstreamPage() {
       id: m.id,
       alias: m.alias,
       upstreamModel: m.upstreamModel,
-      contextLength: m.contextLength,
     });
     setPricingForm(m.pricing ?? emptyPricing);
     setPricingDialogOpen(true);
@@ -759,7 +757,6 @@ export default function UpstreamPage() {
             onOpenChange={setPricingDialogOpen}
             alias={pricingTarget?.alias ?? ""}
             upstreamModel={pricingTarget?.upstreamModel ?? ""}
-            contextLength={pricingTarget?.contextLength ?? 0}
             value={pricingForm}
             onChange={setPricingForm}
             saving={savingPricing}

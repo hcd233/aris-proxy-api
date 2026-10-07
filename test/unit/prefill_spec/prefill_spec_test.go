@@ -48,38 +48,36 @@ func TestPrefillSpecTiersDefaultWhenNoContextLength(t *testing.T) {
 	}
 }
 
-func TestPrefillSpecLastTierBoundedByContextLength(t *testing.T) {
+func TestPrefillSpecLastTierBoundedBySpecContextLength(t *testing.T) {
 	t.Parallel()
-	// gpt-6.1-sol 实测档位：首档平铺价 + tier size=272000；模型上下文 1000000
+	// gpt-6-astra 实测档位（openai 源）：平铺价 10/50/12.5/1 + tier size=272000（20/75/25/2），
+	// limit.context=1050000。末档上界取 spec 自己的 ContextLength，区间平铺 [0, contextLength)。
 	h := query.NewPrefillSpecHandler(&fakeSpecProvider{
 		ok: true,
-		spec: port.ModelSpec{Quote: port.PricingQuote{Tiers: []port.PricingTier{
-			{ContextMin: 0, Input: 2, Output: 10, CacheCreation: 2.5, CacheRead: 0.1},
-			{ContextMin: 272000, Input: 4, Output: 15, CacheCreation: 5, CacheRead: 0.2},
-		}}},
+		spec: port.ModelSpec{
+			ContextLength: 1050000,
+			Quote: port.PricingQuote{Tiers: []port.PricingTier{
+				{ContextMin: 0, Input: 10, Output: 50, CacheCreation: 12.5, CacheRead: 1},
+				{ContextMin: 272000, Input: 20, Output: 75, CacheCreation: 25, CacheRead: 2},
+			}},
+		},
 	})
-	rsp, err := h.Handle(t.Context(), port.PrefillSpecQuery{
-		UpstreamModel: "gpt-6.1-sol",
-		ContextLength: 1000000,
-	})
+	rsp, err := h.Handle(t.Context(), port.PrefillSpecQuery{UpstreamModel: "gpt-6-astra"})
 	if err != nil || !rsp.Found {
 		t.Fatalf("found case: %+v err=%v", rsp, err)
 	}
-	// 末档展开为 [272000, 1000000)，其后追加同价无条件默认规则兜底
-	if len(rsp.Rules) != 3 {
+	// 回归：仅两段（不再追加同价兜底默认规则），末档上界=1050000 而非表单旧值
+	if len(rsp.Rules) != 2 {
 		t.Fatalf("rules = %+v", rsp.Rules)
 	}
-	mid := rsp.Rules[1]
-	if mid.ContextMin != 272000 || mid.ContextMax != 1000000 || mid.InputPrice != 4 || mid.OutputPrice != 15 {
-		t.Fatalf("mid rule = %+v", mid)
+	first := rsp.Rules[0]
+	if first.ContextMin != 0 || first.ContextMax != 272000 || first.InputPrice != 10 {
+		t.Fatalf("first rule = %+v", first)
 	}
-	fallback := rsp.Rules[2]
-	if fallback.ContextMin != 0 || fallback.ContextMax != 0 {
-		t.Fatalf("fallback must be unconditional default: %+v", fallback)
-	}
-	if fallback.InputPrice != mid.InputPrice || fallback.OutputPrice != mid.OutputPrice ||
-		fallback.CacheCreationPrice != mid.CacheCreationPrice || fallback.CacheReadPrice != mid.CacheReadPrice {
-		t.Fatalf("fallback price must equal last tier: %+v vs %+v", fallback, mid)
+	last := rsp.Rules[1]
+	if last.ContextMin != 272000 || last.ContextMax != 1050000 || last.InputPrice != 20 ||
+		last.OutputPrice != 75 || last.CacheCreationPrice != 25 || last.CacheReadPrice != 2 {
+		t.Fatalf("last rule = %+v", last)
 	}
 }
 
@@ -89,10 +87,13 @@ func TestPrefillSpecContextLengthNotBeyondLastTier(t *testing.T) {
 		{ContextMin: 0, Input: 2, Output: 10},
 		{ContextMin: 272000, Input: 4, Output: 15},
 	}}
-	// ContextLength 等于末档起点 / 小于末档起点 / 为 0：末档均退化为无条件默认规则（不展开）
+	// spec.ContextLength 等于末档起点 / 小于末档起点 / 为 0：末档均退化为无条件默认规则（不展开）
 	for _, cl := range []int64{272000, 200000, 0} {
-		h := query.NewPrefillSpecHandler(&fakeSpecProvider{ok: true, spec: port.ModelSpec{Quote: quote}})
-		rsp, err := h.Handle(t.Context(), port.PrefillSpecQuery{UpstreamModel: "m", ContextLength: cl})
+		h := query.NewPrefillSpecHandler(&fakeSpecProvider{
+			ok:   true,
+			spec: port.ModelSpec{ContextLength: cl, Quote: quote},
+		})
+		rsp, err := h.Handle(t.Context(), port.PrefillSpecQuery{UpstreamModel: "m"})
 		if err != nil || !rsp.Found || len(rsp.Rules) != 2 {
 			t.Fatalf("contextLength=%d: %+v err=%v", cl, rsp, err)
 		}
@@ -113,8 +114,15 @@ func TestPrefillSpecSingleTierBecomesDefault(t *testing.T) {
 	if !rsp.Found || len(rsp.Rules) != 1 || rsp.Rules[0].InputPrice != 3 {
 		t.Fatalf("single tier = %+v", rsp)
 	}
-	// 单档即使传入 ContextLength 也不展开（全区间同价，一条默认规则即完整）
-	rsp2, _ := h.Handle(t.Context(), port.PrefillSpecQuery{UpstreamModel: "m", ContextLength: 1000000})
+	// 单档即使 spec.ContextLength 有值也不展开（全区间同价，一条默认规则即完整）
+	h2 := query.NewPrefillSpecHandler(&fakeSpecProvider{
+		ok: true,
+		spec: port.ModelSpec{
+			ContextLength: 1000000,
+			Quote:         port.PricingQuote{Tiers: []port.PricingTier{{ContextMin: 0, Input: 3}}},
+		},
+	})
+	rsp2, _ := h2.Handle(t.Context(), port.PrefillSpecQuery{UpstreamModel: "m"})
 	if !rsp2.Found || len(rsp2.Rules) != 1 || rsp2.Rules[0].InputPrice != 3 {
 		t.Fatalf("single tier with contextLength = %+v", rsp2)
 	}

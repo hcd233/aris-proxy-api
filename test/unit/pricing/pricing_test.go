@@ -36,8 +36,11 @@ func TestNewPricingValidation(t *testing.T) {
 		{"已废弃币种CNY", enum.Currency("CNY"), []vo.PricingRule{defaultRule}, true},
 		{"单条默认规则", enum.CurrencyUSD, []vo.PricingRule{defaultRule}, false},
 		{"两条无条件规则", enum.CurrencyUSD, []vo.PricingRule{defaultRule, defaultRule}, true},
-		{"缺默认规则两条条件", enum.CurrencyUSD, []vo.PricingRule{{ContextMax: 200_000, InputMicro: 1}, {ContextMin: 200_000, InputMicro: 2}}, true},
-		{"缺默认规则仅条件", enum.CurrencyUSD, []vo.PricingRule{{ContextMax: 200_000, InputMicro: 1}}, true},
+		{"无默认规则区间连续无界末档", enum.CurrencyUSD, []vo.PricingRule{{ContextMax: 200_000, InputMicro: 1}, {ContextMin: 200_000, InputMicro: 2}}, false},
+		{"无默认规则区间连续有界末档", enum.CurrencyUSD, []vo.PricingRule{{ContextMax: 200_000, InputMicro: 1}}, false},
+		{"无默认规则区间断档", enum.CurrencyUSD, []vo.PricingRule{{ContextMax: 100_000, InputMicro: 1}, {ContextMin: 200_000, ContextMax: 300_000, InputMicro: 2}}, true},
+		{"无默认规则区间不从零起", enum.CurrencyUSD, []vo.PricingRule{{ContextMin: 100_000, ContextMax: 200_000, InputMicro: 1}}, true},
+		{"无默认规则纯时段规则", enum.CurrencyUSD, []vo.PricingRule{{TimeWindows: []vo.TimeWindow{{Start: "09:00", End: "10:00"}}, InputMicro: 1}}, true},
 		{"负价", enum.CurrencyUSD, []vo.PricingRule{{InputMicro: -1}}, true},
 		{"超上限", enum.CurrencyUSD, []vo.PricingRule{{InputMicro: constant.PricingMaxPriceMicro + 1}}, true},
 		{"区间非法", enum.CurrencyUSD, []vo.PricingRule{{ContextMin: 10, ContextMax: 10, InputMicro: 1}, defaultRule}, true},
@@ -68,6 +71,25 @@ func TestPricingMatchFirstHitAndDefault(t *testing.T) {
 	}
 	if got := p.Match(time.Now(), 500_000).InputMicro; got != 3_000_000 {
 		t.Fatalf("fallback InputMicro = %d", got)
+	}
+}
+
+func TestPricingMatchBeyondTopBandClampsToTopTier(t *testing.T) {
+	t.Parallel()
+	// 无默认规则：区间 [0,272000)∪[272000,1050000) 平铺模型上下文，
+	// 超出末档上界的理论命中回落末档价（末档延伸语义），不按零价计费
+	p := mustPricing(t, []vo.PricingRule{
+		{ContextMax: 272_000, InputMicro: 10_000_000, OutputMicro: 50_000_000},
+		{ContextMin: 272_000, ContextMax: 1_050_000, InputMicro: 20_000_000, OutputMicro: 75_000_000},
+	})
+	if got := p.Match(time.Now(), 100_000).InputMicro; got != 10_000_000 {
+		t.Fatalf("low band InputMicro = %d", got)
+	}
+	if got := p.Match(time.Now(), 500_000).InputMicro; got != 20_000_000 {
+		t.Fatalf("top band InputMicro = %d", got)
+	}
+	if got := p.Match(time.Now(), 1_200_000).InputMicro; got != 20_000_000 {
+		t.Fatalf("beyond top band must clamp to top tier, got %d", got)
 	}
 }
 

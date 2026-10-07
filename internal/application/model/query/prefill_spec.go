@@ -26,8 +26,9 @@ func NewPrefillSpecHandler(provider port.ModelSpecProvider) port.PrefillSpecHand
 
 // Handle 按 upstream_model 精确匹配；未命中/拉取失败一律 found=false（录入不被阻塞）。
 // 规格三件套（上下文/最大输出/输入模态）原样透传；报价的上下文分档映射为区间规则：
-// 前档 [ContextMin, 下一档 ContextMin)，末档上界取 ContextLength（模型最大上下文），
-// 其后补一条同价无条件默认规则兜底；时段窗口 models.dev 无数据，不在导入范围（用户手填）。
+// 前档 [ContextMin, 下一档 ContextMin)，多档时末档上界取 spec.ContextLength（模型最大上下文），
+// 区间平铺 [0, ContextLength) 不再追加兜底默认规则（超出末档上界由计价回落末档价）；
+// 时段窗口 models.dev 无数据，不在导入范围（用户手填）。
 //
 //	@receiver h *prefillSpecHandler
 //	@param ctx context.Context
@@ -50,18 +51,17 @@ func (h *prefillSpecHandler) Handle(ctx context.Context, q port.PrefillSpecQuery
 			MaxOutputTokens: spec.MaxOutputTokens,
 			InputModalities: spec.InputModalities,
 			Currency:        enum.CurrencyUSD,
-			Rules:           tiersToRules(spec.Quote.Tiers, q.ContextLength),
+			Rules:           tiersToRules(spec.Quote.Tiers, spec.ContextLength),
 		}, nil
 	}
 	return &port.PrefillSpecResult{}, nil
 }
 
 // tiersToRules 分档报价 → 区间规则：前档 [min, 下一档 min)；多档且 ContextLength 大于末档
-// 起点时，末档区间为 [末档 min, ContextLength)，其后追加价格相同的无条件默认规则兜底
-// （满足「恰一条默认规则」校验，承接 ≥ContextLength 的理论命中，计费语义与末档一致）；
-// 单档或 ContextLength 不足时，末档清零区间归为无条件默认规则（原行为）。
+// 起点时，末档区间为 [末档 min, ContextLength)，区间平铺 [0, ContextLength)；
+// 单档或 ContextLength 不足时，末档清零区间归为无条件默认规则。
 func tiersToRules(tiers []port.PricingTier, contextLength int64) []dto.PricingRuleDTO {
-	rules := make([]dto.PricingRuleDTO, 0, len(tiers)+1)
+	rules := make([]dto.PricingRuleDTO, 0, len(tiers))
 	for i, tier := range tiers {
 		rule := dto.PricingRuleDTO{
 			ContextMin:         tier.ContextMin,
@@ -81,10 +81,6 @@ func tiersToRules(tiers []port.PricingTier, contextLength int64) []dto.PricingRu
 	last := &rules[len(rules)-1]
 	if len(tiers) > 1 && contextLength > last.ContextMin {
 		last.ContextMax = contextLength
-		fallback := *last
-		fallback.ContextMin = 0
-		fallback.ContextMax = 0
-		rules = append(rules, fallback)
 		return rules
 	}
 	last.ContextMin = 0

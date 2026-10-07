@@ -48,12 +48,22 @@ func TestPricingFromDTO(t *testing.T) {
 	if _, err := port.PricingFromDTO(&dto.PricingDTO{Rules: []dto.PricingRuleDTO{{InputPrice: 1}}}); err == nil {
 		t.Fatal("missing currency should be rejected")
 	}
-	// 非法：缺默认规则
+	// 合法：无默认规则但区间从 0 连续覆盖（末档可有界，超出回落末档价）
 	if _, err := port.PricingFromDTO(&dto.PricingDTO{
 		Currency: enum.CurrencyUSD,
 		Rules:    []dto.PricingRuleDTO{{ContextMax: 200000, InputPrice: 1}},
+	}); err != nil {
+		t.Fatalf("contiguous bands without default should be accepted: %v", err)
+	}
+	// 非法：无默认规则且区间断档
+	if _, err := port.PricingFromDTO(&dto.PricingDTO{
+		Currency: enum.CurrencyUSD,
+		Rules: []dto.PricingRuleDTO{
+			{ContextMax: 100000, InputPrice: 1},
+			{ContextMin: 200000, ContextMax: 300000, InputPrice: 2},
+		},
 	}); err == nil {
-		t.Fatal("missing default rule should be rejected")
+		t.Fatal("gapped bands without default should be rejected")
 	}
 	// 未计价（显式清空）
 	p2, err := port.PricingFromDTO(&dto.PricingDTO{Currency: enum.CurrencyNone, Rules: []dto.PricingRuleDTO{}})

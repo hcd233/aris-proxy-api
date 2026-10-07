@@ -75,12 +75,11 @@ type DeleteModelHandler interface {
 // PrefillSpecQuery 模型规格导入查询
 type PrefillSpecQuery struct {
 	UpstreamModel string
-	// ContextLength 模型最大上下文长度（tokens）；>0 且大于末档起点时末档上界取该值
-	ContextLength int64
 }
 
 // PrefillSpecResult 模型规格导入结果（found=false 时其余字段为零值；币种恒 USD）。
-// Rules 为按上下文区间分档的定价规则数组（升序，末条为无条件默认规则）。
+// Rules 为按上下文区间分档的定价规则数组（升序，区间平铺 [0, ContextLength)；
+// 单档或无上下文数据时为一条无条件默认规则）。
 type PrefillSpecResult struct {
 	Found           bool
 	ContextLength   int64

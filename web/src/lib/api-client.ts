@@ -632,14 +632,9 @@ class ApiClient {
   }
 
   /** 模型规格导入：按上游模型名查 models.dev（自动填充用，未命中 found=false） */
-  async prefillModelSpec(
-    upstreamModel: string,
-    contextLength?: number,
-  ): Promise<ModelSpecPrefillRsp> {
-    const cl =
-      contextLength && contextLength > 0 ? `&contextLength=${Math.floor(contextLength)}` : "";
+  async prefillModelSpec(upstreamModel: string): Promise<ModelSpecPrefillRsp> {
     return this.request<ModelSpecPrefillRsp>(
-      `${API_PREFIX}/model/spec/prefill?upstreamModel=${encodeURIComponent(upstreamModel)}${cl}`,
+      `${API_PREFIX}/model/spec/prefill?upstreamModel=${encodeURIComponent(upstreamModel)}`,
     );
   }
 

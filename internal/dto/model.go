@@ -126,7 +126,6 @@ type ModelListItem struct {
 // ModelSpecPrefillReq 模型规格导入请求（表单自动填充用）
 type ModelSpecPrefillReq struct {
 	UpstreamModel string `query:"upstreamModel" required:"true" maxLength:"200" doc:"上游模型名（与 models.dev 模型 ID 精确匹配）"`
-	ContextLength int64  `query:"contextLength,omitempty" minimum:"0" doc:"模型最大上下文长度（tokens）；大于末档起点时末档上界取该值"`
 }
 
 // ModelSpecPrefillRsp 模型规格导入响应（found=false 表示未命中/上游不可达，其余字段零值）。

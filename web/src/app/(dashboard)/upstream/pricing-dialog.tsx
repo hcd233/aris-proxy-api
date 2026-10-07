@@ -23,8 +23,6 @@ export interface PricingDialogProps {
   alias: string;
   /** 目标模型上游真名：models.dev 导入的查询键 */
   upstreamModel: string;
-  /** 目标模型上下文窗口：导入时用于展开末档区间上界 */
-  contextLength: number;
   value: PricingDTO;
   onChange: (p: PricingDTO) => void;
   saving: boolean;
@@ -43,7 +41,6 @@ export function PricingDialog({
   onOpenChange,
   alias,
   upstreamModel,
-  contextLength,
   value,
   onChange,
   saving,
@@ -58,7 +55,7 @@ export function PricingDialog({
     if (!name || importing) return;
     setImporting(true);
     try {
-      const rsp = await api.prefillModelSpec(name, contextLength);
+      const rsp = await api.prefillModelSpec(name);
       const rules = rsp.pricing?.rules ?? [];
       if (!rsp.found || rules.length === 0) {
         setImportHint("miss");

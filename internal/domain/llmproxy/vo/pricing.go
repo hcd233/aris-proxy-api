@@ -1,10 +1,13 @@
 package vo
 
 import (
+	"cmp"
 	"slices"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/samber/lo"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
@@ -33,7 +36,8 @@ type PricingRule struct {
 }
 
 // Pricing 模型定价：币种 + 规则表（顺序=匹配优先级）。
-// currency=="" ⇔ rules 为空 ⇔ 未计价；非空时恰含一条无条件默认规则兜底。
+// currency=="" ⇔ rules 为空 ⇔ 未计价；非空时任意 prompt 有价可依：
+// 要么恰含一条无条件默认规则，要么无时段规则的上下文区间从 0 连续覆盖（末档可有界）。
 type Pricing struct {
 	currency enum.Currency
 	rules    []PricingRule
@@ -90,8 +94,13 @@ func NewPricing(currency enum.Currency, rules []PricingRule) (Pricing, error) {
 		}
 		norms = append(norms, normRule{raw: r, windows: windows})
 	}
-	if defaults != 1 {
-		return Pricing{}, ierr.New(ierr.ErrValidation, "pricing rules must contain exactly one unconditional default rule")
+	if defaults > 1 {
+		return Pricing{}, ierr.New(ierr.ErrValidation, "pricing rules must contain at most one unconditional default rule")
+	}
+	if defaults == 0 {
+		if err := validateContiguousBands(rules); err != nil {
+			return Pricing{}, err
+		}
 	}
 	return Pricing{currency: currency, rules: slices.Clone(rules), norms: norms}, nil
 }
@@ -127,7 +136,8 @@ func (p Pricing) Rules() []PricingRule {
 }
 
 // Match 按顺序返回第一条「时段命中 ∧ 区间命中」的规则；
-// 条件规则全不中时返回无条件默认规则（构造校验保证存在）。
+// 全不中时回落最高档（无时段规则中 ContextMin 最大者，末档延伸语义），
+// 计费永不落空为零价；未计价（规则为空）返回零值规则。
 //
 //	@receiver p Pricing
 //	@param at time.Time 调用时刻
@@ -141,7 +151,24 @@ func (p Pricing) Match(at time.Time, promptTokens int64) PricingRule {
 			return n.raw
 		}
 	}
-	return PricingRule{}
+	return p.topBand()
+}
+
+// topBand 无时段规则中 ContextMin 最大者（超出末档上界时兜底计价）；不存在返回零值规则。
+func (p Pricing) topBand() PricingRule {
+	var (
+		top   PricingRule
+		found bool
+	)
+	for _, r := range p.rules {
+		if len(r.TimeWindows) != 0 {
+			continue
+		}
+		if !found || r.ContextMin > top.ContextMin {
+			top, found = r, true
+		}
+	}
+	return top
 }
 
 // CostBreakdown 费用四维拆分（微单位）：输入/输出/缓存创建/缓存读取。
@@ -247,6 +274,29 @@ func validateRule(r PricingRule) error {
 	}
 	if r.ContextMax != 0 && r.ContextMax <= r.ContextMin {
 		return ierr.New(ierr.ErrValidation, "context max must be 0 or greater than context min")
+	}
+	return nil
+}
+
+// validateContiguousBands 无默认规则时校验无时段规则的上下文区间从 0 连续覆盖（末档可有界）：
+// 区间内直接命中，超出末档上界的理论命中由 Match 回落末档价兜底，永不按零价计费。
+func validateContiguousBands(rules []PricingRule) error {
+	bands := lo.Filter(rules, func(r PricingRule, _ int) bool {
+		return len(r.TimeWindows) == 0
+	})
+	if len(bands) == 0 {
+		return ierr.New(ierr.ErrValidation, "pricing rules must contain at least one unconditional context band")
+	}
+	slices.SortFunc(bands, func(a, b PricingRule) int {
+		return cmp.Compare(a.ContextMin, b.ContextMin)
+	})
+	if bands[0].ContextMin != 0 {
+		return ierr.New(ierr.ErrValidation, "pricing context bands must start at zero")
+	}
+	for i := 1; i < len(bands); i++ {
+		if bands[i].ContextMin != bands[i-1].ContextMax {
+			return ierr.New(ierr.ErrValidation, "pricing context bands must be contiguous")
+		}
 	}
 	return nil
 }

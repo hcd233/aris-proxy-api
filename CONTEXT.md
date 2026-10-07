@@ -72,7 +72,7 @@ _Avoid_: model features, model flags
 _Avoid_: price config, billing config, rate card
 
 **PricingRule（定价规则）**:
-一条「可选时段条件 + 可选上下文区间条件 + 四类单价（输入/输出/缓存创建/缓存读取）」的计价规则，多条组成规则表，**数组顺序 = 匹配优先级（第一命中）**，且必须恰好包含一条无条件默认规则兜底。计价按整段跳档：命中哪条规则，全部 token 按该规则单价计。
+一条「可选时段条件 + 可选上下文区间条件 + 四类单价（输入/输出/缓存创建/缓存读取）」的计价规则，多条组成规则表，**数组顺序 = 匹配优先级（第一命中）**，且任意 prompt 有价可依：要么恰含一条无条件默认规则，要么无时段规则的上下文区间从 0 连续覆盖（末档可有界，上界=模型上下文）。计价按整段跳档：命中哪条规则，全部 token 按该规则单价计。
 _Avoid_: price tier, rate rule
 
 **TimeWindow（时段窗口）**:
@@ -80,7 +80,7 @@ _Avoid_: price tier, rate rule
 _Avoid_: schedule, time slot
 
 **ContextTier（上下文区间）**:
-定价规则的上下文条件：按本次调用的 prompt 总 token（input + cacheCreation + cacheRead）落档，`context_min ≤ promptTokens < context_max`（`context_max=0` 表无上限），**整段跳档**（不做累进分段）——与 Gemini/Claude 官方分档口径一致。
+定价规则的上下文条件：按本次调用的 prompt 总 token（input + cacheCreation + cacheRead）落档，`context_min ≤ promptTokens < context_max`（`context_max=0` 表无上限），**整段跳档**（不做累进分段）——与 Gemini/Claude 官方分档口径一致。全不命中时回落最高档（末档延伸语义，与 models.dev「该档起及以上」同口径），计费永不落空为零价。
 _Avoid_: context pricing, token bracket
 
 **EstimatedCost（估算费用）**:
@@ -88,7 +88,7 @@ _Avoid_: context pricing, token bracket
 _Avoid_: cost, billing amount, charge
 
 **SpecPrefill（模型规格导入）**:
-从 models.dev 公开规格按 `upstream_model` 精确匹配（trim 后、区分大小写）查询模型规格与定价（`GET /model/spec/prefill`，返回上下文/最大输出/输入模态/定价四件套），由**显式按钮**触发且只有一个消费方负责一段：模型弹窗的「从 models.dev 获取规格」填规格三件套（上下文/最大输出/输入模态），定价弹窗的「从 models.dev 获取定价」整体替换规则表（含按上下文分档的规则，models.dev 无时段窗口数据，需手填）。命中即覆盖、未命中或上游不可达只给内联提示（无 toast、不弹全局错误），**永不自动改价**。
+从 models.dev 公开规格按 `upstream_model` 精确匹配（trim 后、区分大小写）查询模型规格与定价（`GET /model/spec/prefill`，返回上下文/最大输出/输入模态/定价四件套），由**显式按钮**触发且只有一个消费方负责一段：模型弹窗的「从 models.dev 获取规格」填规格三件套（上下文/最大输出/输入模态），定价弹窗的「从 models.dev 获取定价」整体替换规则表（导入的上下文分档区间平铺 `[0, models.dev 上下文)`，末档上界取规格自身的 contextLength，不追加默认规则；models.dev 无时段窗口数据，需手填）。命中即覆盖、未命中或上游不可达只给内联提示（无 toast、不弹全局错误），**永不自动改价**。
 _Avoid_: price import, auto pricing, autofill
 
 **ClientConfigExport（客户端配置导出）**:
