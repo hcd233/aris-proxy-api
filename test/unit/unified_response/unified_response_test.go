@@ -271,7 +271,7 @@ func TestFromResponseAPI_StringInput(t *testing.T) {
 }
 
 // TestResponseUsage_AuditTokens verifies token accounting uses the Response
-// API usage block (including cached-input tokens).
+// API usage block: cached-input tokens are split out of input_tokens (net input).
 func TestResponseUsage_AuditTokens(t *testing.T) {
 	t.Parallel()
 	tc := findCase(t, loadCases(t), "reasoning_then_message")
@@ -279,8 +279,9 @@ func TestResponseUsage_AuditTokens(t *testing.T) {
 
 	task := &dto.ModelCallAuditTask{}
 	task.SetTokensFromResponseUsage(rsp)
-	if task.InputTokens != 5 {
-		t.Errorf("InputTokens = %d, want 5", task.InputTokens)
+	// usage: input_tokens=5（含 cached_tokens=1）→ 净输入 4
+	if task.InputTokens != 4 {
+		t.Errorf("InputTokens = %d, want 4", task.InputTokens)
 	}
 	if task.OutputTokens != 3 {
 		t.Errorf("OutputTokens = %d, want 3", task.OutputTokens)

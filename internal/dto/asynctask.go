@@ -56,12 +56,16 @@ type ModelCallAuditTask struct {
 	CreatedAt                time.Time
 }
 
-// SetTokensFromOpenAIUsage 从 OpenAI Usage 设置 token 计数
+// SetTokensFromOpenAIUsage 从 OpenAI Usage 设置 token 计数。
+//
+// OpenAI 语义下 prompt_tokens 为含 cached_tokens 的输入总量（cached 是它的子集），
+// 而审计与计费按「输入/输出/缓存创建/缓存读取」互斥四维口径，
+// 故 InputTokens 落净输入（prompt_tokens − cached）。
 //
 //	@receiver t *ModelCallAuditTask
 //	@param usage *OpenAICompletionUsage
 //	@author centonhuang
-//	@update 2026-06-16 23:30:00
+//	@update 2026-10-08 10:00:00
 func (t *ModelCallAuditTask) SetTokensFromOpenAIUsage(usage *OpenAICompletionUsage) {
 	if usage == nil {
 		return
@@ -74,14 +78,19 @@ func (t *ModelCallAuditTask) SetTokensFromOpenAIUsage(usage *OpenAICompletionUsa
 	case usage.PromptTokensDetails != nil && usage.PromptTokensDetails.CachedTokens != nil && *usage.PromptTokensDetails.CachedTokens > 0:
 		t.CacheReadInputTokens = *usage.PromptTokensDetails.CachedTokens
 	}
+	t.InputTokens = max(t.InputTokens-t.CacheReadInputTokens, 0)
 }
 
-// SetTokensFromAnthropicUsage 从 Anthropic Message Usage 设置 token 计数
+// SetTokensFromAnthropicUsage 从 Anthropic Message Usage 设置 token 计数。
+//
+// Anthropic 官方语义 input_tokens 不含缓存两维，四维天然互斥、无需归一化；
+// DeepSeek 风格 usage（prompt_cache_hit_tokens 与 prompt_cache_miss_tokens 成对出现、
+// input_tokens 含命中部分）才需落净输入。
 //
 //	@receiver t *ModelCallAuditTask
 //	@param msg *AnthropicMessage
 //	@author centonhuang
-//	@update 2026-06-16 23:30:00
+//	@update 2026-10-08 10:00:00
 func (t *ModelCallAuditTask) SetTokensFromAnthropicUsage(msg *AnthropicMessage) {
 	if msg == nil || msg.Usage == nil {
 		return
@@ -92,17 +101,22 @@ func (t *ModelCallAuditTask) SetTokensFromAnthropicUsage(msg *AnthropicMessage) 
 	switch {
 	case msg.Usage.PromptCacheHitTokens != nil && *msg.Usage.PromptCacheHitTokens > 0:
 		t.CacheReadInputTokens = *msg.Usage.PromptCacheHitTokens
+		if msg.Usage.PromptCacheMissTokens != nil {
+			t.InputTokens = max(t.InputTokens-t.CacheReadInputTokens, 0)
+		}
 	case msg.Usage.CacheReadInputTokens != nil && *msg.Usage.CacheReadInputTokens > 0:
 		t.CacheReadInputTokens = *msg.Usage.CacheReadInputTokens
 	}
 }
 
-// SetTokensFromResponseUsage 从 Response API 响应设置 token 计数
+// SetTokensFromResponseUsage 从 Response API 响应设置 token 计数。
+//
+// 同 OpenAI Chat：input_tokens 含 cached_tokens，InputTokens 落净输入。
 //
 //	@receiver t *ModelCallAuditTask
 //	@param rsp *OpenAICreateResponseRsp
 //	@author centonhuang
-//	@update 2026-06-16 23:30:00
+//	@update 2026-10-08 10:00:00
 func (t *ModelCallAuditTask) SetTokensFromResponseUsage(rsp *OpenAICreateResponseRsp) {
 	if rsp == nil || rsp.Usage == nil {
 		return
@@ -115,6 +129,7 @@ func (t *ModelCallAuditTask) SetTokensFromResponseUsage(rsp *OpenAICreateRespons
 	case rsp.Usage.InputTokensDetails != nil && rsp.Usage.InputTokensDetails.CachedTokens > 0:
 		t.CacheReadInputTokens = rsp.Usage.InputTokensDetails.CachedTokens
 	}
+	t.InputTokens = max(t.InputTokens-t.CacheReadInputTokens, 0)
 }
 
 // SetErrorFromResponseStatus 将 Response API 终态中的 in-band 失败/未完成原因

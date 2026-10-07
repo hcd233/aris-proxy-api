@@ -80,11 +80,15 @@ _Avoid_: price tier, rate rule
 _Avoid_: schedule, time slot
 
 **ContextTier（上下文区间）**:
-定价规则的上下文条件：按本次调用的 prompt 总 token（input + cacheCreation + cacheRead）落档，`context_min ≤ promptTokens < context_max`（`context_max=0` 表无上限），**整段跳档**（不做累进分段）——与 Gemini/Claude 官方分档口径一致。全不命中时回落最高档（末档延伸语义，与 models.dev「该档起及以上」同口径），计费永不落空为零价。
+定价规则的上下文条件：按本次调用的 prompt 总 token（净输入 + 缓存创建 + 缓存读取，四维互斥）落档，`context_min ≤ promptTokens < context_max`（`context_max=0` 表无上限），**整段跳档**（不做累进分段）——与 Gemini/Claude 官方分档口径一致。全不命中时回落最高档（末档延伸语义，与 models.dev「该档起及以上」同口径），计费永不落空为零价。
 _Avoid_: context pricing, token bracket
 
+**TokenAccounting（Token 入账口径）**:
+审计行与计费用的四维 token 一律**互斥**：输入（净输入，不含命中缓存的量）/输出/缓存创建/缓存读取，满足「净输入 + 缓存创建 + 缓存读取 = 上游口径的输入总量」。usage 入账时按上游协议归一化：OpenAI Chat 的 `prompt_tokens` 与 Response 的 `input_tokens` 都含 `cached_tokens`（输入维 = 总量 − 命中量）；Anthropic 官方 `input_tokens` 本身不含缓存两维；DeepSeek 风格 `prompt_cache_hit_tokens` 与 `prompt_cache_miss_tokens` 成对出现时按包含关系扣减。2026-10-08 之前的存量行为未归一化的旧口径（输入维含缓存命中量）。
+_Avoid_: token fields, usage mapping
+
 **EstimatedCost（估算费用）**:
-一次模型调用的费用估算（`model_call_audits.cost_micro`，微单位，NULL=未计价），按调用时刻与 prompt 总 token 匹配定价规则后计算：四项分别「单价 × tokens / 1e6 四舍五入」求和。请求时计算并落库（不随改价漂移），同时快照 `pricing_currency`。统计聚合按币种分组，不做汇率换算。
+一次模型调用的费用估算（`model_call_audits.cost_micro`，微单位，NULL=未计价），按调用时刻与 prompt 总 token 匹配定价规则后计算：四项分别「单价 × tokens / 1e6 四舍五入」求和（token 四维互斥，见 **TokenAccounting**）。请求时计算并落库（不随改价漂移），同时快照 `pricing_currency`。统计聚合按币种分组，不做汇率换算。
 _Avoid_: cost, billing amount, charge
 
 **SpecPrefill（模型规格导入）**:

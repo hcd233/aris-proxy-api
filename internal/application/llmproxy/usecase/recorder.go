@@ -132,7 +132,8 @@ func recordModelCall(ctx context.Context, submitter TaskSubmitter, tokenMetrics 
 		out.usage.apply(task)
 		reportTokenUsage(ctx, out.usage.reportable())
 		if tokenMetrics != nil {
-			tokenMetrics.AddInput(int64(task.InputTokens))
+			// InputTokens 已归一化为净输入，吞吐指标保持「总输入」口径：补回缓存两维
+			tokenMetrics.AddInput(int64(task.InputTokens + task.CacheCreationInputTokens + task.CacheReadInputTokens))
 			tokenMetrics.AddOutput(int64(task.OutputTokens))
 		}
 	}
@@ -155,10 +156,14 @@ func recordModelCall(ctx context.Context, submitter TaskSubmitter, tokenMetrics 
 // 按调用时刻与 prompt 总 token 匹配定价规则（第一命中、整段跳档），
 // 计算估算费用（微单位）并快照计价币种。未计价/失败调用保持 CostMicro 为 nil。
 //
+// 四维 token 互斥（上游 usage 已在 SetTokensFrom*Usage 归一化），
+// prompt 总量 = 输入 + 缓存创建 + 缓存读取，即上游口径的输入总量；
+// 输入维只计未命中缓存的净输入，避免缓存命中部分被输入价与缓存读价重复计费。
+//
 //	@param task *dto.ModelCallAuditTask 审计任务（token 计数已就位）
 //	@param pricing vo.Pricing 模型定价
 //	@author centonhuang
-//	@update 2026-10-05 10:00:00
+//	@update 2026-10-08 10:00:00
 func PriceModelCall(task *dto.ModelCallAuditTask, pricing vo.Pricing) {
 	if task.UpstreamStatusCode != http.StatusOK || !pricing.IsPriced() {
 		return
