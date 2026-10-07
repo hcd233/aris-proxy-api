@@ -31,7 +31,7 @@ func TestPricingFromDTO(t *testing.T) {
 	}
 	// 合法：条件规则 + 默认规则
 	p, err = port.PricingFromDTO(&dto.PricingDTO{
-		Currency: enum.CurrencyCNY,
+		Currency: enum.CurrencyUSD,
 		Rules: []dto.PricingRuleDTO{
 			{TimeWindows: []dto.TimeWindowDTO{{Days: []int{1}, Start: "00:30", End: "08:30", Timezone: "UTC"}},
 				ContextMax: 200000, InputPrice: 1},
@@ -41,7 +41,7 @@ func TestPricingFromDTO(t *testing.T) {
 	if err != nil || !p.IsPriced() {
 		t.Fatalf("valid dto: err=%v", err)
 	}
-	if got := port.PricingToDTO(p); got == nil || got.Currency != enum.CurrencyCNY || len(got.Rules) != 2 {
+	if got := port.PricingToDTO(p); got == nil || got.Currency != enum.CurrencyUSD || len(got.Rules) != 2 {
 		t.Fatalf("round trip dto = %+v", got)
 	}
 	// 非法：缺币种但有规则
@@ -59,5 +59,12 @@ func TestPricingFromDTO(t *testing.T) {
 	p2, err := port.PricingFromDTO(&dto.PricingDTO{Currency: enum.CurrencyNone, Rules: []dto.PricingRuleDTO{}})
 	if err != nil || p2.IsPriced() {
 		t.Fatalf("explicit clear: p=%+v err=%v", p2, err)
+	}
+	// 非法：已废弃币种
+	if _, err := port.PricingFromDTO(&dto.PricingDTO{
+		Currency: enum.Currency("CNY"),
+		Rules:    []dto.PricingRuleDTO{{InputPrice: 1}},
+	}); err == nil {
+		t.Fatal("deprecated CNY currency should be rejected")
 	}
 }

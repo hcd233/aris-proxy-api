@@ -17,7 +17,7 @@ type Model struct {
 	MaxOutputTokens int                `json:"max_output_tokens" gorm:"column:max_output_tokens;default:0;comment:最大输出长度(tokens)"`
 	Capabilities    []string           `json:"capabilities" gorm:"column:capabilities;not null;default:'[\"text\"]';comment:模型能力（输入模态集合，如 text/image）;serializer:json"`
 	PricingRules    []ModelPricingRule `json:"pricing_rules" gorm:"column:pricing_rules;not null;default:'[]';comment:定价规则(微单位单价,数组顺序=匹配优先级);serializer:json"`
-	PricingCurrency string             `json:"pricing_currency" gorm:"column:pricing_currency;not null;default:'';comment:计价币种(''/CNY/USD,空=未计价)"`
+	PricingCurrency string             `json:"pricing_currency" gorm:"column:pricing_currency;not null;default:'';comment:计价币种(''/USD,空=未计价)"`
 	DeletedAt       int64              `json:"deleted_at" gorm:"column:deleted_at;default:0;uniqueIndex:idx_model_alias_endpoint_deleted,priority:4;comment:删除时间"`
 }
 

@@ -89,7 +89,7 @@ func TestPriceModelCall_FailureOrUnpriced(t *testing.T) {
 		t.Fatalf("unpriced model must not be priced")
 	}
 	// 免费模型：计 0 并带币种快照
-	free, err := vo.NewPricing(enum.CurrencyCNY, []vo.PricingRule{{}})
+	free, err := vo.NewPricing(enum.CurrencyUSD, []vo.PricingRule{{}})
 	if err != nil {
 		t.Fatalf("NewPricing(free) error = %v", err)
 	}
@@ -98,7 +98,7 @@ func TestPriceModelCall_FailureOrUnpriced(t *testing.T) {
 	if task3.CostMicro == nil || *task3.CostMicro != 0 {
 		t.Fatalf("free model cost = %v, want 0", task3.CostMicro)
 	}
-	if task3.PricingCurrency != string(enum.CurrencyCNY) {
+	if task3.PricingCurrency != string(enum.CurrencyUSD) {
 		t.Fatalf("PricingCurrency = %q", task3.PricingCurrency)
 	}
 }

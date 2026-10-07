@@ -81,7 +81,7 @@ _Avoid_: color scheme, dark mode toggle
 ## Pricing & Cost（定价与成本）
 
 **PricingEditor（定价规则编辑器）**:
-Model 编辑弹窗内的定价录入区：币种下拉 + 规则行列表（时段窗口组、上下文区间、四价），行可增删与上下移（数组顺序 = 匹配优先级），无条件默认规则行标注「默认」。「从 models.dev 导入」仅填充默认规则行四价，可改后保存。
+Model 编辑弹窗内的定价录入区：「启用计价」开关（关 = 未计价，币种固定 USD）+ 规则行列表（时段窗口组、上下文区间、四价），行可增删与上下移（数组顺序 = 匹配优先级），无条件默认规则行标注「默认」。「从 models.dev 导入」在两种状态下都可点，命中后整体替换规则表（含上下文分档）并自动进入已计价；models.dev 无时段窗口数据，需手填。
 _Avoid_: price form, billing editor
 
 **Cost Column（费用列）**:

@@ -38,5 +38,5 @@ type ModelCallAudit struct {
 	OutputCostMicro          *int64    `json:"output_cost_micro" gorm:"column:output_cost_micro;comment:输出费用(微单位,NULL=无拆分)"`
 	CacheCreationCostMicro   *int64    `json:"cache_creation_cost_micro" gorm:"column:cache_creation_cost_micro;comment:缓存创建费用(微单位,NULL=无拆分)"`
 	CacheReadCostMicro       *int64    `json:"cache_read_cost_micro" gorm:"column:cache_read_cost_micro;comment:缓存读取费用(微单位,NULL=无拆分)"`
-	PricingCurrency          string    `json:"pricing_currency" gorm:"column:pricing_currency;not null;default:'';comment:计价币种快照(''/CNY/USD)"`
+	PricingCurrency          string    `json:"pricing_currency" gorm:"column:pricing_currency;not null;default:'';comment:计价币种快照(''/USD)"`
 }

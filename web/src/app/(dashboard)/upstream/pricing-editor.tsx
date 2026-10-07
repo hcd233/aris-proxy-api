@@ -16,11 +16,11 @@ import { Download, Plus, Trash2, ArrowUp, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
 import { useT } from "@/lib/i18n";
 import { api } from "@/lib/api-client";
-import type { PricingDTO, PricingRuleDTO, PricingCurrency, TimeWindowDTO } from "@/lib/types";
+import type { PricingDTO, PricingRuleDTO, TimeWindowDTO } from "@/lib/types";
 
 export interface PricingEditorProps {
   value?: PricingDTO;
-  onChange: (p: PricingDTO | undefined) => void;
+  onChange: (p: PricingDTO) => void;
   /** 用于导入的上游模型名（表单 upstreamModel 字段） */
   upstreamModel: string;
 }
@@ -60,28 +60,26 @@ function priceOrZero(v: string): number {
 
 /**
  * PricingEditor 定价规则编辑器。
- * - 币种下拉（无 / CNY / USD）；币种为空 = 未计价（规则区隐藏）
+ * - 「启用计价」开关（关 = 未计价，币种固定 USD，由规则表推导）；关时规则区隐藏
  * - 每条规则两个默认关闭的选项：「时段限制」勾选后编辑时段窗口；「上下文区间」勾选后编辑 min/max
  * - 行操作：增、删、上移/下移（数组顺序 = 匹配优先级）；无条件默认规则行标注「默认」
- * - 「从 models.dev 导入」整体填入定价（含上下文区间规则；时段窗口无数据需手填）
+ * - 「从 models.dev 导入」两种状态下都可点，命中后整体替换规则表并自动进入已计价（含上下文区间规则；时段窗口无数据需手填）
  */
 export function PricingEditor({ value, onChange, upstreamModel }: PricingEditorProps) {
   const t = useT();
   const [importing, setImporting] = useState(false);
-  const currency = value?.currency ?? "";
   const rules = value?.rules ?? [];
+  // 币种固定 USD：规则表非空 ⇔ 已计价
+  const priced = rules.length > 0;
 
-  const emit = (nextCurrency: PricingCurrency, nextRules: PricingRuleDTO[]) => {
-    if (nextCurrency === "" && nextRules.length === 0) {
-      onChange(undefined);
-      return;
-    }
-    onChange({ currency: nextCurrency, rules: nextRules });
+  const emit = (nextRules: PricingRuleDTO[]) => {
+    const next: PricingDTO =
+      nextRules.length > 0 ? { currency: "USD", rules: nextRules } : { currency: "", rules: [] };
+    onChange(next);
   };
 
   const patchRule = (idx: number, patch: Partial<PricingRuleDTO>) => {
-    const next = rules.map((r, i) => (i === idx ? { ...r, ...patch } : r));
-    emit(currency, next);
+    emit(rules.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
   };
 
   const moveRule = (idx: number, delta: number) => {
@@ -89,7 +87,7 @@ export function PricingEditor({ value, onChange, upstreamModel }: PricingEditorP
     if (j < 0 || j >= rules.length) return;
     const next = [...rules];
     [next[idx], next[j]] = [next[j], next[idx]];
-    emit(currency, next);
+    emit(next);
   };
 
   const handlePrefill = async () => {
@@ -100,11 +98,13 @@ export function PricingEditor({ value, onChange, upstreamModel }: PricingEditorP
     setImporting(true);
     try {
       const rsp = await api.prefillModelPricing(upstreamModel.trim());
-      if (!rsp.found || !rsp.pricing) {
+      const imported = rsp.pricing?.rules ?? [];
+      if (!rsp.found || imported.length === 0) {
         toast.error(t("upstream.pricing.prefill.miss"));
         return;
       }
-      emit((rsp.currency as PricingCurrency) ?? "USD", rsp.pricing.rules ?? []);
+      // 非空规则 ⇒ emit 推导为 USD，等价于「自动打开计价开关」
+      emit(imported);
       toast.success(t("upstream.pricing.prefill.hint"));
     } finally {
       setImporting(false);
@@ -113,46 +113,39 @@ export function PricingEditor({ value, onChange, upstreamModel }: PricingEditorP
 
   return (
     <div className="space-y-3">
-      {/* flex-wrap：币种选择 + 导入按钮的 min-content 之和（约 474px）超过弹窗正文宽度时
+      {/* flex-wrap：计价开关 + 单位说明 + 导入按钮的 min-content 之和超过弹窗正文宽度时
           换行；否则会把弹窗 grid 轨道撑宽，定价卡片整体溢出弹窗右边界 */}
       <div className="flex flex-wrap items-center gap-2">
-        <Label className="w-28 shrink-0">{t("upstream.pricing.currency")}</Label>
-        <Select
-          value={currency}
-          onValueChange={(v) => {
-            const nextCurrency = (v ?? "") as PricingCurrency;
-            if (nextCurrency === "") {
-              emit("", []);
-              return;
-            }
-            const next = rules.length > 0 ? rules : [{ ...emptyRule() }];
-            emit(nextCurrency, next);
-          }}
-        >
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder={t("upstream.pricing.currency.none")} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="">{t("upstream.pricing.currency.none")}</SelectItem>
-            <SelectItem value="CNY">CNY</SelectItem>
-            <SelectItem value="USD">USD</SelectItem>
-          </SelectContent>
-        </Select>
-        {currency !== "" && (
-          <Button
-            type="button"
-            variant="outline"
+        <div className="flex items-center gap-2">
+          <Switch
+            id="pricing-enabled"
             size="sm"
-            onClick={handlePrefill}
-            disabled={importing}
-          >
-            <Download className="size-4" />
-            {t("upstream.pricing.prefill")}
-          </Button>
+            checked={priced}
+            onCheckedChange={(checked) => emit(checked ? [emptyRule()] : [])}
+          />
+          <Label htmlFor="pricing-enabled">{t("upstream.pricing.enabled")}</Label>
+        </div>
+        {priced && (
+          <span className="text-xs text-muted-foreground">{t("upstream.pricing.unit")}</span>
         )}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="ml-auto"
+          onClick={handlePrefill}
+          disabled={importing}
+        >
+          <Download className="size-4" />
+          {t("upstream.pricing.prefill")}
+        </Button>
       </div>
 
-      {currency !== "" && (
+      {!priced && (
+        <p className="text-[11px] text-muted-foreground">{t("upstream.pricing.disabled_hint")}</p>
+      )}
+
+      {priced && (
         <div className="space-y-2">
           {rules.map((rule, idx) => (
             <div key={idx} className="rounded-md border p-2.5 space-y-2">
@@ -187,12 +180,7 @@ export function PricingEditor({ value, onChange, upstreamModel }: PricingEditorP
                     variant="ghost"
                     size="icon"
                     aria-label={t("common.delete")}
-                    onClick={() =>
-                      emit(
-                        currency,
-                        rules.filter((_, i) => i !== idx),
-                      )
-                    }
+                    onClick={() => emit(rules.filter((_, i) => i !== idx))}
                   >
                     <Trash2 className="size-4" />
                   </Button>
@@ -379,7 +367,7 @@ export function PricingEditor({ value, onChange, upstreamModel }: PricingEditorP
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => emit(currency, [...rules, emptyRule()])}
+            onClick={() => emit([...rules, emptyRule()])}
           >
             <Plus className="size-4" />
             {t("upstream.pricing.rule.add")}

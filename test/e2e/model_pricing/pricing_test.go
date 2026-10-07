@@ -1,7 +1,7 @@
 // Package model_pricing 模型计费 E2E。
 //
-// 前置：目标环境已配置带定价的模型别名 MODEL_ALIAS（如 currency=CNY、
-// input=1 元/1M、output=2 元/1M）与未计价别名 MODEL_ALIAS_UNPRICED；
+// 前置：目标环境已配置带定价的模型别名 MODEL_ALIAS（currency=USD、
+// input=1/1M、output=2/1M）与未计价别名 MODEL_ALIAS_UNPRICED；
 // WEB_JWT 提供 web 管理视角（缺省跳过成本断言）。默认离线 skip，不打生产。
 package model_pricing
 
@@ -140,5 +140,62 @@ func TestPricing_ModelCostRanking(t *testing.T) {
 		"/api/web/v1/audit/stats/model/cost?startTime="+start+"&endTime="+end)
 	if _, ok := obj["data"].([]any); !ok {
 		t.Fatalf("model cost data missing: %v", obj)
+	}
+}
+
+// findModelRowID 按 alias 在平铺模型列表定位行，返回其数据库主键 id
+// （区别于领域术语 Model ID / modelId —— 业务模型标识）。
+func findModelRowID(t *testing.T, baseURL, jwt, alias string) uint {
+	t.Helper()
+	obj := getJSON(t, baseURL, jwt, "/api/web/v1/model/list?page=1&pageSize=50&query="+alias)
+	items, _ := obj["items"].([]any)
+	for _, it := range items {
+		row, _ := it.(map[string]any)
+		if row["alias"] != alias {
+			continue
+		}
+		id, ok := row["id"].(float64)
+		if !ok {
+			t.Fatalf("model %s has non-numeric id: %v", alias, row["id"])
+		}
+		return uint(id)
+	}
+	t.Fatalf("model %s not found in flat list", alias)
+	return 0
+}
+
+// patchPricing 提交一次定价更新，返回 HTTP 状态码（不校验业务错误信封）。
+func patchPricing(t *testing.T, baseURL, jwt string, id uint, pricing map[string]any) int {
+	t.Helper()
+	body, err := sonic.Marshal(map[string]any{"pricing": pricing})
+	if err != nil {
+		t.Fatalf("marshal pricing: %v", err)
+	}
+	url := fmt.Sprintf("%s/api/web/v1/model?id=%d", strings.TrimRight(baseURL, "/"), id)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPatch, url, bytes.NewReader(body))
+	if err != nil {
+		t.Fatalf("new request: %v", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+jwt)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := newE2EClient().Do(req)
+	if err != nil {
+		t.Fatalf("send: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	return resp.StatusCode
+}
+
+// TestPricing_DeprecatedCurrencyRejected 已废弃的 CNY 币种必须被 422 拒绝（请求校验阶段拦截，不写库）。
+func TestPricing_DeprecatedCurrencyRejected(t *testing.T) {
+	t.Parallel()
+	env := mustEnv(t, "BASE_URL", "WEB_JWT", "MODEL_ALIAS")
+	id := findModelRowID(t, env["BASE_URL"], env["WEB_JWT"], env["MODEL_ALIAS"])
+	status := patchPricing(t, env["BASE_URL"], env["WEB_JWT"], id, map[string]any{
+		"currency": "CNY",
+		"rules":    []any{map[string]any{"input_price": 1}},
+	})
+	if status != http.StatusUnprocessableEntity {
+		t.Fatalf("CNY pricing must be rejected with 422, got %d", status)
 	}
 }

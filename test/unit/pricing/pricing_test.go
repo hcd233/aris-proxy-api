@@ -9,9 +9,10 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 )
 
-func mustPricing(t *testing.T, currency enum.Currency, rules []vo.PricingRule) vo.Pricing {
+// mustPricing 构造已计价（USD）的定价值对象，构造失败即终止测试。
+func mustPricing(t *testing.T, rules []vo.PricingRule) vo.Pricing {
 	t.Helper()
-	p, err := vo.NewPricing(currency, rules)
+	p, err := vo.NewPricing(enum.CurrencyUSD, rules)
 	if err != nil {
 		t.Fatalf("vo.NewPricing() error = %v", err)
 	}
@@ -30,8 +31,9 @@ func TestNewPricingValidation(t *testing.T) {
 	}{
 		{"未计价且无规则", enum.CurrencyNone, nil, false},
 		{"未计价却有规则", enum.CurrencyNone, []vo.PricingRule{defaultRule}, true},
-		{"计价但无规则", enum.CurrencyCNY, nil, true},
+		{"计价但无规则", enum.CurrencyUSD, nil, true},
 		{"非法币种", enum.Currency("JPY"), []vo.PricingRule{defaultRule}, true},
+		{"已废弃币种CNY", enum.Currency("CNY"), []vo.PricingRule{defaultRule}, true},
 		{"单条默认规则", enum.CurrencyUSD, []vo.PricingRule{defaultRule}, false},
 		{"两条无条件规则", enum.CurrencyUSD, []vo.PricingRule{defaultRule, defaultRule}, true},
 		{"缺默认规则两条条件", enum.CurrencyUSD, []vo.PricingRule{{ContextMax: 200_000, InputMicro: 1}, {ContextMin: 200_000, InputMicro: 2}}, true},
@@ -57,7 +59,7 @@ func TestNewPricingValidation(t *testing.T) {
 
 func TestPricingMatchFirstHitAndDefault(t *testing.T) {
 	t.Parallel()
-	p := mustPricing(t, enum.CurrencyUSD, []vo.PricingRule{
+	p := mustPricing(t, []vo.PricingRule{
 		{ContextMax: 200_000, InputMicro: 1_000_000}, // 有条件
 		{InputMicro: 3_000_000},                      // 默认
 	})
@@ -72,7 +74,7 @@ func TestPricingMatchFirstHitAndDefault(t *testing.T) {
 func TestPricingMatchTimeWindow(t *testing.T) {
 	t.Parallel()
 	// 22:00–02:00 跨午夜 + 仅周五/周六 + UTC
-	p := mustPricing(t, enum.CurrencyCNY, []vo.PricingRule{
+	p := mustPricing(t, []vo.PricingRule{
 		{TimeWindows: []vo.TimeWindow{{Days: []int{5, 6}, Start: "22:00", End: "02:00"}}, InputMicro: 1},
 		defaultRule,
 	})
@@ -102,7 +104,7 @@ func TestPricingMatchTimeWindow(t *testing.T) {
 func TestPricingMatchTimeWindowTimezoneDST(t *testing.T) {
 	t.Parallel()
 	// America/New_York 09:00–10:00：冬令时 = 14:00Z 附近，夏令时 = 13:00Z 附近
-	p := mustPricing(t, enum.CurrencyUSD, []vo.PricingRule{
+	p := mustPricing(t, []vo.PricingRule{
 		{TimeWindows: []vo.TimeWindow{{Start: "09:00", End: "10:00", Timezone: "America/New_York"}}, InputMicro: 7},
 		{InputMicro: 1},
 	})
@@ -127,7 +129,7 @@ func TestPricingMatchTimeWindowTimezoneDST(t *testing.T) {
 
 func TestPricingMatchContextTierHalfOpen(t *testing.T) {
 	t.Parallel()
-	p := mustPricing(t, enum.CurrencyUSD, []vo.PricingRule{
+	p := mustPricing(t, []vo.PricingRule{
 		{ContextMin: 200_000, InputMicro: 2}, // >200k 档（无上限）
 		{ContextMax: 200_000, InputMicro: 1}, // ≤200k 档
 		{InputMicro: 3},
@@ -145,7 +147,7 @@ func TestPricingMatchContextTierHalfOpen(t *testing.T) {
 
 func TestPricingComputeCost(t *testing.T) {
 	t.Parallel()
-	p := mustPricing(t, enum.CurrencyUSD, []vo.PricingRule{defaultRule})
+	p := mustPricing(t, []vo.PricingRule{defaultRule})
 	rule := vo.PricingRule{
 		InputMicro:       800_000, // $0.8/1M
 		OutputMicro:      4_000_000,
