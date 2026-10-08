@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { TimeRangePicker } from "@/components/ui/time-range-picker";
 import type { TimeRangeKey } from "@/lib/time-range";
 import { computeRange } from "@/lib/time-range";
-import { useTokenLayerColors } from "@/lib/theme";
+import { useRatioSegmentColors } from "@/lib/theme";
 import { RatioLegend, StackedRatioBar } from "@/components/charts/stacked-ratio-bar";
 
 /**
@@ -22,7 +22,7 @@ import { RatioLegend, StackedRatioBar } from "@/components/charts/stacked-ratio-
 export function ModelCostBarChart() {
   // t 引用已稳定化（见 lib/i18n.tsx），useMemo 改依赖 locale 以响应语言切换
   const { t, locale } = useI18n();
-  const tokenColors = useTokenLayerColors();
+  const tokenColors = useRatioSegmentColors();
   const [timeRange, setTimeRange] = usePersistentState<TimeRangeKey>(
     "dashboard.chart.modelCostBar.timeRange",
     "7d",

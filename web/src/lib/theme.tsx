@@ -72,6 +72,13 @@ const TOKEN_LAYER_COLORS: Record<ThemeName, TokenLayerColors> = {
   moonshot: { cacheRead: "#C9C9C9", input: "#FFFFFF", cacheCreated: "#FFEED9", output: "#737373" },
 };
 
+/* Composition ratio bars place all four layers side by side, so hues must
+ * diverge clearly (the stacked-area palette above is tonal on purpose). */
+const RATIO_SEGMENT_COLORS: Record<ThemeName, TokenLayerColors> = {
+  anthropic: { input: "#D97757", output: "#5F8A8B", cacheRead: "#9AA65A", cacheCreated: "#D9A441" },
+  moonshot: { input: "#FFFFFF", output: "#7FA3D6", cacheRead: "#6B6B6B", cacheCreated: "#D9A86C" },
+};
+
 function chartSeriesColors(theme: ThemeName): readonly string[] {
   return CHART_SERIES_COLORS[theme];
 }
@@ -161,4 +168,8 @@ export function useChartSeriesColors(): readonly string[] {
 
 export function useTokenLayerColors(): TokenLayerColors {
   return tokenLayerColors(useTheme().theme);
+}
+
+export function useRatioSegmentColors(): TokenLayerColors {
+  return RATIO_SEGMENT_COLORS[useTheme().theme];
 }
