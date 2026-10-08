@@ -37,7 +37,7 @@ type AuditRepository interface {
 	// ListByAPIKeyIDs 按 api_key_id IN (...) 分页查询；apiKeyIDs 为空时返回空结果且不打 SQL
 	ListByAPIKeyIDs(ctx context.Context, apiKeyIDs []uint, param model.CommonParam, startTime, endTime time.Time, criteria *filter.FilterCriteria) ([]*aggregate.ModelCallAudit, *model.PageInfo, error)
 
-	// QueryModelCost 模型成本排行（group by model_id, pricing_currency；仅带四维拆分的行）
+	// QueryModelCost 模型成本排行（group by model_id, pricing_currency；仅带四维拆分的行）（仅统计上游状态码 200 的记录）
 	//
 	//	@receiver r AuditRepository
 	//	@param ctx context.Context
@@ -65,16 +65,16 @@ type AuditRepository interface {
 	// ListDistinctUserAgents 查询去重的 User-Agent 列表（排除空值）。apiKeyIDs 为 nil 时查全部（admin/demo），非 nil 时按 key 过滤（空列表返回空结果，名下无 Key 不得越权查全量）。
 	ListDistinctUserAgents(ctx context.Context, apiKeyIDs []uint, keyword string, startTime, endTime time.Time) ([]string, error)
 
-	// QueryModelTrend 按模型 + 时间桶统计调用次数。apiKeyIDs 为 nil 时查全部（admin），非 nil 时按 key 过滤（空列表返回空结果，名下无 Key 不得越权查全量）。
+	// QueryModelTrend 按模型 + 时间桶统计调用次数（仅统计上游状态码 200 的记录）。apiKeyIDs 为 nil 时查全部（admin），非 nil 时按 key 过滤（空列表返回空结果，名下无 Key 不得越权查全量）。
 	QueryModelTrend(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*ModelTrendPoint, error)
 
 	// QueryRequestRate 按模型 + 时间桶统计请求成功率。apiKeyIDs 为 nil 时查全部（admin），非 nil 时按 key 过滤（空列表返回空结果，名下无 Key 不得越权查全量）。
 	QueryRequestRate(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*RequestRatePoint, error)
 
-	// QueryTokenThroughput 按模型 + 时间桶统计 Token 吞吐量。apiKeyIDs 为 nil 时查全部（admin），非 nil 时按 key 过滤（空列表返回空结果，名下无 Key 不得越权查全量）。
+	// QueryTokenThroughput 按模型 + 时间桶统计 Token 吞吐量（仅统计上游状态码 200 的记录）。apiKeyIDs 为 nil 时查全部（admin），非 nil 时按 key 过滤（空列表返回空结果，名下无 Key 不得越权查全量）。
 	QueryTokenThroughput(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*TokenThroughputPoint, error)
 
-	// QueryFirstTokenLatency 按模型 + 时间桶统计平均首 Token 延迟。apiKeyIDs 为 nil 时查全部（admin），非 nil 时按 key 过滤（空列表返回空结果，名下无 Key 不得越权查全量）。
+	// QueryFirstTokenLatency 按模型 + 时间桶统计平均首 Token 延迟（仅统计上游状态码 200 的记录）。apiKeyIDs 为 nil 时查全部（admin），非 nil 时按 key 过滤（空列表返回空结果，名下无 Key 不得越权查全量）。
 	QueryFirstTokenLatency(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*FirstTokenLatencyPoint, error)
 }
 

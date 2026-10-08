@@ -255,6 +255,7 @@ func (r *auditRepository) QueryModelCost(ctx context.Context, apiKeyIDs []uint, 
 	db := r.db.WithContext(ctx).Model(&dbmodel.ModelCallAudit{}).
 		Where(constant.FieldCreatedAt+" >= ? AND "+constant.FieldCreatedAt+" <= ?", startTime, endTime).
 		Where(constant.DBConditionDeletedAtZero).
+		Where(constant.SQLConditionUpstreamSuccess).
 		Where(constant.FieldInputCostMicro + " IS NOT NULL")
 	if len(apiKeyIDs) > 0 {
 		db = db.Where(constant.FieldAPIKeyID+" IN ?", apiKeyIDs)
@@ -446,7 +447,8 @@ func (r *auditRepository) QueryModelTrend(ctx context.Context, apiKeyIDs []uint,
 	}
 	db := r.db.WithContext(ctx).Model(&dbmodel.ModelCallAudit{}).
 		Where(constant.FieldCreatedAt+" >= ? AND "+constant.FieldCreatedAt+" <= ?", startTime, endTime).
-		Where(constant.DBConditionDeletedAtZero)
+		Where(constant.DBConditionDeletedAtZero).
+		Where(constant.SQLConditionUpstreamSuccess)
 
 	if len(apiKeyIDs) > 0 {
 		db = db.Where(constant.FieldAPIKeyID+" IN ?", apiKeyIDs)
@@ -494,7 +496,8 @@ func (r *auditRepository) QueryTokenThroughput(ctx context.Context, apiKeyIDs []
 	}
 	db := r.db.WithContext(ctx).Model(&dbmodel.ModelCallAudit{}).
 		Where(constant.FieldCreatedAt+" >= ? AND "+constant.FieldCreatedAt+" <= ?", startTime, endTime).
-		Where(constant.DBConditionDeletedAtZero)
+		Where(constant.DBConditionDeletedAtZero).
+		Where(constant.SQLConditionUpstreamSuccess)
 
 	if len(apiKeyIDs) > 0 {
 		db = db.Where(constant.FieldAPIKeyID+" IN ?", apiKeyIDs)
@@ -525,7 +528,8 @@ func (r *auditRepository) QueryFirstTokenLatency(ctx context.Context, apiKeyIDs 
 	}
 	db := r.db.WithContext(ctx).Model(&dbmodel.ModelCallAudit{}).
 		Where(constant.FieldCreatedAt+" >= ? AND "+constant.FieldCreatedAt+" <= ?", startTime, endTime).
-		Where(constant.DBConditionDeletedAtZero)
+		Where(constant.DBConditionDeletedAtZero).
+		Where(constant.SQLConditionUpstreamSuccess)
 
 	if len(apiKeyIDs) > 0 {
 		db = db.Where(constant.FieldAPIKeyID+" IN ?", apiKeyIDs)
