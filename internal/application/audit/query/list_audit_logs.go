@@ -256,8 +256,8 @@ func buildAuditViews(ctx context.Context, repo modelcall.AuditRepository, audits
 			UpstreamStatusCode:       audit.Status().UpstreamStatusCode(),
 			ErrorMessage:             audit.Status().ErrorMessage(),
 			TraceID:                  audit.TraceID(),
-			CostMicro:                audit.GetCostMicro(),
-			PricingCurrency:          audit.GetPricingCurrency(),
+			CostMicro:                audit.CostMicro(),
+			PricingCurrency:          audit.PricingCurrency(),
 		}
 		if relation, ok := relations[audit.APIKeyID()]; ok {
 			view.APIKeyName = relation.APIKeyName

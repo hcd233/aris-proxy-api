@@ -8,6 +8,7 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/samber/lo"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
@@ -19,6 +20,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
+	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
@@ -55,9 +57,7 @@ func toModelAggregate(m *dbmodel.Model) (*aggregate.Model, error) {
 	}
 	model.SetUserID(m.UserID)
 	model.SetModelID(m.ModelID)
-	if err := model.UpdatePricing(pricingFromDB(m.PricingRules, m.PricingCurrency)); err != nil {
-		return nil, err
-	}
+	model.UpdatePricing(pricingFromDB(m.ID, m.PricingRules, m.PricingCurrency))
 	model.SetTimestamps(m.CreatedAt, m.UpdatedAt)
 	return model, nil
 }
@@ -79,7 +79,8 @@ func toModelDBModel(m *aggregate.Model) *dbmodel.Model {
 }
 
 // pricingFromDB DB 定价规则（微单位）→ 值对象；库内数据非法时按未计价降级，不阻断读路径。
-func pricingFromDB(rules []dbmodel.ModelPricingRule, currency string) vo.Pricing {
+// 降级会让该模型静默停止计费（如校验规则收紧后的存量数据），故必须留 Warn 日志。
+func pricingFromDB(modelID uint, rules []dbmodel.ModelPricingRule, currency string) vo.Pricing {
 	if currency == "" {
 		return vo.Pricing{}
 	}
@@ -98,6 +99,8 @@ func pricingFromDB(rules []dbmodel.ModelPricingRule, currency string) vo.Pricing
 	})
 	p, err := vo.NewPricing(enum.Currency(currency), vr)
 	if err != nil {
+		logger.Logger().Warn("[ModelRepository] Invalid stored pricing, treated as unpriced",
+			zap.Uint("modelID", modelID), zap.Error(err))
 		return vo.Pricing{}
 	}
 	return p
@@ -173,7 +176,7 @@ func updateModelTx(tx *gorm.DB, m *aggregate.Model, expectedModelID string) (int
 		constant.FieldModelMaxOutputTokens: m.MaxOutputTokens(),
 		constant.FieldModelCapabilities:    string(capJSON),
 		constant.FieldModelPricingRules:    string(pricingJSON),
-		constant.FieldModelPricingCurrency: string(m.Pricing().Currency()),
+		constant.FieldPricingCurrency:      string(m.Pricing().Currency()),
 	}
 	query := tx.Model(&dbmodel.Model{}).Where(constant.WhereIDEquals, m.AggregateID())
 	if expectedModelID != "" {

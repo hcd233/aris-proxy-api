@@ -4,9 +4,12 @@ import (
 	"context"
 	"strings"
 
+	"go.uber.org/zap"
+
 	"github.com/hcd233/aris-proxy-api/internal/application/model/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
 // prefillSpecHandler 从公开规格源导入表单初值（仅填充，永不自动改价）
@@ -43,7 +46,10 @@ func (h *prefillSpecHandler) Handle(ctx context.Context, q port.PrefillSpecQuery
 		return &port.PrefillSpecResult{}, nil
 	}
 	spec, ok, err := h.provider.Describe(ctx, name)
-	// 拉取失败/未命中统一降级为未命中（录入不被阻塞），因此只走正向分支
+	if err != nil {
+		// 降级为未命中（录入不被阻塞），但必须留痕：否则数据源故障只表现为「一直未命中」
+		logger.WithCtx(ctx).Warn("[ModelQuery] Describe model spec failed", zap.String("upstreamModel", name), zap.Error(err))
+	}
 	if err == nil && ok {
 		return &port.PrefillSpecResult{
 			Found:           true,

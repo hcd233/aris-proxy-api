@@ -5,9 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
-	gormlogger "gorm.io/gorm/logger"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	commonvo "github.com/hcd233/aris-proxy-api/internal/common/vo"
@@ -15,6 +13,7 @@ import (
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
 	"github.com/hcd233/aris-proxy-api/internal/util"
+	"github.com/hcd233/aris-proxy-api/test/unit/sqlitetest"
 )
 
 // TestStorePoolPersistsAPIKeyID 协程池落库时必须写入 api_key_id。
@@ -28,17 +27,7 @@ import (
 func TestStorePoolPersistsAPIKeyID(t *testing.T) {
 	t.Parallel()
 
-	db, err := gorm.Open(sqlite.Open("file:"+t.Name()+"?mode=memory&cache=private"),
-		&gorm.Config{TranslateError: true, Logger: gormlogger.Default.LogMode(gormlogger.Silent)})
-	if err != nil {
-		t.Fatalf("open sqlite: %v", err)
-	}
-	sqlDB, err := db.DB()
-	if err != nil {
-		t.Fatalf("sql db: %v", err)
-	}
-	// cache=private 的内存库按连接隔离：限单连接让异步写入与读取共库，否则多连接下读到空表（抖动）
-	sqlDB.SetMaxOpenConns(1)
+	db := sqlitetest.OpenPrivateMemoryDB(t)
 	if err := db.AutoMigrate(&dbmodel.Session{}, &dbmodel.Message{}, &dbmodel.Tool{}); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}

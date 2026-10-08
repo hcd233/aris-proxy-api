@@ -85,6 +85,8 @@ const (
 	// 管理路由仍受 huma 默认 1MB 限制，此处仅兜底 LLM 代理路由放开后的大 body。
 	// 生产覆盖为 48MB，需低于 openresty client_max_body_size（50m）。
 	MaxHTTPBodyBytes int = 16 * 1024 * 1024
+	// MinHTTPBodyBytes HTTP_BODY_LIMIT 下限：不低于 huma 管理路由默认 1MB，防误配导致管理接口全部 413。
+	MinHTTPBodyBytes int = 1 * 1024 * 1024
 
 	MIMETypeOctetStream = "application/octet-stream"
 

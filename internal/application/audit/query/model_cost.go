@@ -7,6 +7,7 @@ import (
 	"github.com/samber/lo"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/audit/port"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 )
@@ -86,7 +87,7 @@ func (h *modelCostByUserHandler) Handle(ctx context.Context, q ModelCostByUserQu
 func toModelCostItem(p *modelcall.ModelCostPoint, _ int) *dto.ModelCostItem {
 	return &dto.ModelCostItem{
 		ModelID:           p.ModelID,
-		Currency:          p.Currency,
+		Currency:          enum.Currency(p.Currency),
 		InputCost:         dto.PriceDisplayFromMicro(p.InputCostMicro),
 		OutputCost:        dto.PriceDisplayFromMicro(p.OutputCostMicro),
 		CacheCreationCost: dto.PriceDisplayFromMicro(p.CacheCreationCostMicro),

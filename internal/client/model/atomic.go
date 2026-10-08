@@ -15,6 +15,15 @@ type TargetModel struct {
 	ContextLength   int
 	MaxOutputTokens int
 	Capabilities    []string
+	Cost            TargetCost // 基础档单价（USD/1M tokens），未计价为零值
+}
+
+// TargetCost 模型基础档单价（USD/1M tokens）
+type TargetCost struct {
+	Input      float64
+	Output     float64
+	CacheRead  float64
+	CacheWrite float64
 }
 
 // Target 单个 agent harness 配置写入器

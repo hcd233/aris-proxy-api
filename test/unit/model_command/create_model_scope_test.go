@@ -63,6 +63,7 @@ func (r *scopedEndpointRepo) Paginate(context.Context, model.CommonParam, *uint)
 type recordingModelRepo struct {
 	gotOwner    uint
 	gotEndpoint uint
+	gotPricing  vo.Pricing
 }
 
 func (r *recordingModelRepo) FindByAlias(context.Context, vo.EndpointAlias, *uint) ([]*aggregate.Model, error) {
@@ -74,6 +75,7 @@ func (r *recordingModelRepo) FindByID(context.Context, uint, *uint) (*aggregate.
 func (r *recordingModelRepo) Create(_ context.Context, m *aggregate.Model, ownerUserID uint) (uint, error) {
 	r.gotOwner = ownerUserID
 	r.gotEndpoint = m.EndpointID()
+	r.gotPricing = m.Pricing()
 	return 1, nil
 }
 func (r *recordingModelRepo) Update(context.Context, *aggregate.Model) error { return nil }
@@ -187,5 +189,24 @@ func TestCreateModel_AdminScope(t *testing.T) {
 	}
 	if repo.gotOwner != 202 {
 		t.Fatalf("admin-created model owner = %d, want 202 (inherited from endpoint)", repo.gotOwner)
+	}
+}
+
+// 回归：创建命令携带的定价必须落到聚合上（此前 createModelHandler 静默丢弃 cmd.Pricing）。
+func TestCreateModel_PersistsPricing(t *testing.T) {
+	t.Parallel()
+	pricing, err := vo.NewPricing(enum.CurrencyUSD, []vo.PricingRule{{InputMicro: 1_000_000}})
+	if err != nil {
+		t.Fatalf("NewPricing: %v", err)
+	}
+	repo := &recordingModelRepo{}
+	h := command.NewCreateModelHandler(newScopedEndpointRepo(), repo)
+	cmd := validCreateCmd(1, uptr(101))
+	cmd.Pricing = pricing
+	if _, err := h.Handle(t.Context(), cmd); err != nil {
+		t.Fatalf("create failed: %v", err)
+	}
+	if !repo.gotPricing.IsPriced() || repo.gotPricing.Rules()[0].InputMicro != 1_000_000 {
+		t.Fatalf("pricing not persisted: %+v", repo.gotPricing.Rules())
 	}
 }

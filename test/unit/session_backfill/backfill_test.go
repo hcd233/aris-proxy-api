@@ -17,12 +17,11 @@ import (
 	"context"
 	"testing"
 
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
-	gormlogger "gorm.io/gorm/logger"
 
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
+	"github.com/hcd233/aris-proxy-api/test/unit/sqlitetest"
 )
 
 // deletedAtStamp 软删标记（BaseModel.DeletedAt 为 int64，0 = 存活）
@@ -38,17 +37,7 @@ type sessionSeed struct {
 
 func newBackfillDB(t *testing.T) *gorm.DB {
 	t.Helper()
-	db, err := gorm.Open(sqlite.Open("file:"+t.Name()+"?mode=memory&cache=private"),
-		&gorm.Config{TranslateError: true, Logger: gormlogger.Default.LogMode(gormlogger.Silent)})
-	if err != nil {
-		t.Fatalf("open sqlite: %v", err)
-	}
-	sqlDB, err := db.DB()
-	if err != nil {
-		t.Fatalf("sql db: %v", err)
-	}
-	// cache=private 的内存库按连接隔离：限单连接保证读写共库
-	sqlDB.SetMaxOpenConns(1)
+	db := sqlitetest.OpenPrivateMemoryDB(t)
 	if err := db.AutoMigrate(&dbmodel.ProxyAPIKey{}, &dbmodel.Session{}, &dbmodel.Trace{}); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}

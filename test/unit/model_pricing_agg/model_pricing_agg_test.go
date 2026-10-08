@@ -22,16 +22,12 @@ func TestModelUpdatePricing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewPricing() error = %v", err)
 	}
-	if err := m.UpdatePricing(p); err != nil {
-		t.Fatalf("UpdatePricing() error = %v", err)
-	}
+	m.UpdatePricing(p)
 	if got := m.Pricing().Currency(); got != enum.CurrencyUSD {
 		t.Fatalf("Currency() = %v", got)
 	}
 	// 清空定价（未计价）
-	if err := m.UpdatePricing(vo.Pricing{}); err != nil {
-		t.Fatalf("UpdatePricing(empty) error = %v", err)
-	}
+	m.UpdatePricing(vo.Pricing{})
 	if m.Pricing().IsPriced() {
 		t.Fatalf("pricing should be cleared")
 	}

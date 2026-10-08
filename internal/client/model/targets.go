@@ -6,6 +6,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/samber/lo"
+
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
@@ -115,9 +117,9 @@ func (OpenCodeTarget) Write(path, host, apiKey string, models []TargetModel) err
 			Temperature: true,
 			ToolCall:    true,
 		}
-		if slices.Contains(caps, enum.InputModalityImage) {
-			entry.Attachment = true
-		}
+		entry.Attachment = slices.ContainsFunc(caps, func(c string) bool {
+			return slices.Contains(constant.ClientModelAttachmentModalities, c)
+		})
 		entries[m.Alias] = entry
 	}
 	provider[constant.ClientModelKeyModels] = entries
@@ -208,7 +210,10 @@ func (PiTarget) Write(path, host, apiKey string, models []TargetModel) error {
 		if byID[m.Alias] {
 			continue
 		}
-		caps := m.Capabilities
+		// Pi 的 input 只接受 text/image：pdf/video/audio 写入会让 Pi 拒绝加载整份配置
+		caps := lo.Filter(m.Capabilities, func(c string, _ int) bool {
+			return slices.Contains(constant.ClientModelPiInputModalities, c)
+		})
 		if len(caps) == 0 {
 			caps = defaultCapabilities()
 		}
@@ -227,7 +232,12 @@ func (PiTarget) Write(path, host, apiKey string, models []TargetModel) error {
 			Input:         caps,
 			ContextWindow: contextLen,
 			MaxTokens:     maxTokens,
-			Cost:          piCost{},
+			Cost: piCost{
+				Input:      m.Cost.Input,
+				Output:     m.Cost.Output,
+				CacheRead:  m.Cost.CacheRead,
+				CacheWrite: m.Cost.CacheWrite,
+			},
 		})
 		byID[m.Alias] = true
 	}

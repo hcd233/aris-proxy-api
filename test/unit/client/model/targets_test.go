@@ -230,3 +230,69 @@ func TestTargets_IncludesAllAgents(t *testing.T) {
 		}
 	}
 }
+
+// Pi 的 input 仅接受 text/image：pdf/video/audio 必须被过滤，否则 Pi 拒绝加载整份配置；
+// 有定价时基础档单价写入 cost。
+func TestPiWrite_FiltersUnsupportedModalitiesAndWritesCost(t *testing.T) {
+	t.Parallel()
+	path := filepath.Join(t.TempDir(), "models.json")
+	models := []model.TargetModel{{
+		Alias:        "omni",
+		Capabilities: []string{"text", "image", "pdf", "video", "audio"},
+		Cost:         model.TargetCost{Input: 1.25, Output: 10, CacheRead: 0.125, CacheWrite: 1.5},
+	}, {
+		Alias:        "pdf-only",
+		Capabilities: []string{"text", "pdf"},
+	}}
+	if err := (model.PiTarget{}).Write(path, "https://aris.example.com", "sk-test", models); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var root map[string]any
+	if err := sonic.Unmarshal(data, &root); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	entries := root["providers"].(map[string]any)["aris-proxy"].(map[string]any)["models"].([]any)
+	omni := entries[0].(map[string]any)
+	if got := omni["input"].([]any); len(got) != 2 || got[0] != "text" || got[1] != "image" {
+		t.Fatalf("pi input must keep only text/image, got %v", got)
+	}
+	cost := omni["cost"].(map[string]any)
+	if cost["input"] != 1.25 || cost["output"] != float64(10) || cost["cacheRead"] != 0.125 || cost["cacheWrite"] != 1.5 {
+		t.Fatalf("pi cost mismatch: %v", cost)
+	}
+	if got := entries[1].(map[string]any)["input"].([]any); len(got) != 1 || got[0] != "text" {
+		t.Fatalf("pdf-only must degrade to text, got %v", got)
+	}
+}
+
+// OpenCode：pdf 同样需要附件上传入口
+func TestOpenCodeWrite_PDFEnablesAttachment(t *testing.T) {
+	t.Parallel()
+	path := filepath.Join(t.TempDir(), "opencode.json")
+	models := []model.TargetModel{
+		{Alias: "pdf", Capabilities: []string{"text", "pdf"}},
+		{Alias: "plain", Capabilities: []string{"text"}},
+	}
+	if err := (model.OpenCodeTarget{}).Write(path, "https://aris.example.com", "sk-test", models); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cfg map[string]any
+	if err := sonic.Unmarshal(data, &cfg); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	entries := cfg["provider"].(map[string]any)["aris-proxy"].(map[string]any)["models"].(map[string]any)
+	if entries["pdf"].(map[string]any)["attachment"] != true {
+		t.Fatalf("pdf model must enable attachment:\n%s", data)
+	}
+	if _, ok := entries["plain"].(map[string]any)["attachment"]; ok {
+		t.Fatalf("text-only model must not enable attachment:\n%s", data)
+	}
+}

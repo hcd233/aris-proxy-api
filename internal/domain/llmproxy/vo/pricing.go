@@ -5,6 +5,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/samber/lo"
@@ -78,6 +79,9 @@ func NewPricing(currency enum.Currency, rules []PricingRule) (Pricing, error) {
 	}
 	if len(rules) == 0 {
 		return Pricing{}, ierr.New(ierr.ErrValidation, "pricing rules cannot be empty")
+	}
+	if len(rules) > constant.PricingMaxRules {
+		return Pricing{}, ierr.New(ierr.ErrValidation, "too many pricing rules")
 	}
 	defaults := 0
 	norms := make([]normRule, 0, len(rules))
@@ -171,6 +175,20 @@ func (p Pricing) topBand() PricingRule {
 	return top
 }
 
+// BaseRule 基础档：prompt 为 0、不受时段限制时适用的规则（默认规则或起点为 0 的无时段区间），
+// 用于对外导出单一参考价；未计价返回 false。
+//
+//	@receiver p Pricing
+//	@return PricingRule
+//	@return bool
+//	@author centonhuang
+//	@update 2026-10-08 10:00:00
+func (p Pricing) BaseRule() (PricingRule, bool) {
+	return lo.Find(p.rules, func(r PricingRule) bool {
+		return len(r.TimeWindows) == 0 && r.matchContext(0)
+	})
+}
+
 // CostBreakdown 费用四维拆分（微单位）：输入/输出/缓存创建/缓存读取。
 type CostBreakdown struct {
 	InputMicro       int64
@@ -184,40 +202,23 @@ func (b CostBreakdown) Total() int64 {
 	return b.InputMicro + b.OutputMicro + b.CacheCreateMicro + b.CacheReadMicro
 }
 
-// ComputeCostBreakdown 按命中规则计算四维费用拆分（微单位）；
-// 整段跳档由调用方 Match 选档。总费用=四维合计。
+// CostBreakdown 按本规则单价计算四维费用拆分（微单位）；整段跳档由调用方 Match 选档。
 //
-//	@receiver p Pricing
-//	@param rule PricingRule 命中的规则
+//	@receiver r PricingRule
 //	@param input int64 输入 token
 //	@param output int64 输出 token
 //	@param cacheCreate int64 缓存创建 token
 //	@param cacheRead int64 缓存读取 token
 //	@return CostBreakdown
 //	@author centonhuang
-//	@update 2026-10-07 10:00:00
-func (p Pricing) ComputeCostBreakdown(rule PricingRule, input, output, cacheCreate, cacheRead int64) CostBreakdown {
+//	@update 2026-10-08 10:00:00
+func (r PricingRule) CostBreakdown(input, output, cacheCreate, cacheRead int64) CostBreakdown {
 	return CostBreakdown{
-		InputMicro:       roundCost(rule.InputMicro, input),
-		OutputMicro:      roundCost(rule.OutputMicro, output),
-		CacheCreateMicro: roundCost(rule.CacheCreateMicro, cacheCreate),
-		CacheReadMicro:   roundCost(rule.CacheReadMicro, cacheRead),
+		InputMicro:       roundCost(r.InputMicro, input),
+		OutputMicro:      roundCost(r.OutputMicro, output),
+		CacheCreateMicro: roundCost(r.CacheCreateMicro, cacheCreate),
+		CacheReadMicro:   roundCost(r.CacheReadMicro, cacheRead),
 	}
-}
-
-// ComputeCost 按命中规则计算估算费用（微单位）；整段跳档由调用方 Match 选档。
-//
-//	@receiver p Pricing
-//	@param rule PricingRule 命中的规则
-//	@param input int64 输入 token
-//	@param output int64 输出 token
-//	@param cacheCreate int64 缓存创建 token
-//	@param cacheRead int64 缓存读取 token
-//	@return int64 估算费用（微单位）
-//	@author centonhuang
-//	@update 2026-10-05 10:00:00
-func (p Pricing) ComputeCost(rule PricingRule, input, output, cacheCreate, cacheRead int64) int64 {
-	return p.ComputeCostBreakdown(rule, input, output, cacheCreate, cacheRead).Total()
 }
 
 // isDefault 是否无条件默认规则（全时段 + 全区间）。
@@ -303,15 +304,14 @@ func validateContiguousBands(rules []PricingRule) error {
 
 // normalizeWindows 校验并归一化时段窗口（解析时区与 HH:MM）。
 func normalizeWindows(ws []TimeWindow) ([]normWindow, error) {
+	if len(ws) > constant.PricingMaxTimeWindows {
+		return nil, ierr.New(ierr.ErrValidation, "too many time windows")
+	}
 	out := make([]normWindow, 0, len(ws))
 	for _, w := range ws {
-		loc := time.UTC
-		if w.Timezone != "" {
-			l, err := time.LoadLocation(w.Timezone)
-			if err != nil {
-				return nil, ierr.New(ierr.ErrValidation, "invalid timezone: "+w.Timezone)
-			}
-			loc = l
+		loc, err := loadLocation(w.Timezone)
+		if err != nil {
+			return nil, err
 		}
 		start, err := parseHHMM(w.Start)
 		if err != nil {
@@ -324,14 +324,38 @@ func normalizeWindows(ws []TimeWindow) ([]normWindow, error) {
 		if start == end {
 			return nil, ierr.New(ierr.ErrValidation, "time window start equals end")
 		}
+		if len(w.Days) > constant.PricingDaysPerWeek {
+			return nil, ierr.New(ierr.ErrValidation, "too many time window days")
+		}
 		for _, d := range w.Days {
-			if d < 1 || d > 7 {
+			if d < 1 || d > constant.PricingDaysPerWeek {
 				return nil, ierr.New(ierr.ErrValidation, "time window day out of range")
 			}
 		}
 		out = append(out, normWindow{days: slices.Clone(w.Days), startMin: start, endMin: end, loc: loc})
 	}
 	return out, nil
+}
+
+// locationCache IANA 时区名 → *time.Location。time.LoadLocation 每次读 zoneinfo 文件且不缓存，
+// 而 NewPricing 在每次从库还原模型（含代理热路径）时都会执行，故做进程级缓存；
+// 只缓存解析成功的时区，非法名每次重新报错。
+var locationCache sync.Map
+
+// loadLocation 解析时区名（空按 UTC），带进程级缓存。
+func loadLocation(name string) (*time.Location, error) {
+	if name == "" {
+		return time.UTC, nil
+	}
+	if v, ok := locationCache.Load(name); ok {
+		return v.(*time.Location), nil //nolint:forcetypeassert // 仅本函数写入，类型恒定
+	}
+	loc, err := time.LoadLocation(name)
+	if err != nil {
+		return nil, ierr.New(ierr.ErrValidation, "invalid timezone: "+name)
+	}
+	locationCache.Store(name, loc)
+	return loc, nil
 }
 
 // parseHHMM 解析 "HH:MM" 为当日分钟数。

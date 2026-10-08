@@ -128,16 +128,16 @@ func (a *ModelCallAudit) UserAgent() string { return a.userAgent }
 // TraceID 返回 Trace ID
 func (a *ModelCallAudit) TraceID() string { return a.traceID }
 
-// GetCostMicro 返回估算费用（微单位）；nil=未计价
-func (a *ModelCallAudit) GetCostMicro() *int64 { return a.costMicro }
+// CostMicro 返回估算费用（微单位）；nil=未计价
+func (a *ModelCallAudit) CostMicro() *int64 { return a.costMicro }
 
-// GetCostBreakdownMicro 返回四维费用拆分（微单位指针；nil=无拆分数据）
-func (a *ModelCallAudit) GetCostBreakdownMicro() (input, output, cacheCreate, cacheRead *int64) {
+// CostBreakdownMicro 返回四维费用拆分（微单位指针；nil=无拆分数据）
+func (a *ModelCallAudit) CostBreakdownMicro() (input, output, cacheCreate, cacheRead *int64) {
 	return a.inputCostMicro, a.outputCostMicro, a.cacheCreateCostMicro, a.cacheReadCostMicro
 }
 
-// GetPricingCurrency 返回计价币种快照
-func (a *ModelCallAudit) GetPricingCurrency() enum.Currency { return a.pricingCurrency }
+// PricingCurrency 返回计价币种快照
+func (a *ModelCallAudit) PricingCurrency() enum.Currency { return a.pricingCurrency }
 
 // CreatedAt 返回创建时间
 func (a *ModelCallAudit) CreatedAt() time.Time { return a.createdAt }

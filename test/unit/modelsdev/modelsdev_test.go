@@ -5,8 +5,14 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"slices"
+	"strings"
+	"sync/atomic"
 	"testing"
 
+	"github.com/alicebob/miniredis/v2"
+	"github.com/redis/go-redis/v9"
+
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/modelsdev"
 )
@@ -134,5 +140,108 @@ func TestDescribeMissingLimitAndModalities(t *testing.T) {
 	}
 	if spec.ContextLength != 0 || spec.MaxOutputTokens != 0 || len(spec.InputModalities) != 0 {
 		t.Fatalf("missing fields must be zero: %+v", spec)
+	}
+}
+
+// countingServer 记录回源次数的文档服务（body 由 doc 回调按次返回）
+func countingServer(t *testing.T, doc func(n int32) string) (*httptest.Server, *atomic.Int32) {
+	t.Helper()
+	var hits atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		n := hits.Add(1)
+		_, _ = w.Write([]byte(doc(n)))
+	}))
+	t.Cleanup(srv.Close)
+	return srv, &hits
+}
+
+func TestDescribeNullCostAsZero(t *testing.T) {
+	t.Parallel()
+	c := newTestClient(t, `{"p":{"models":{"m":{"cost":{"input":1,"output":null,"cache_read":"null"}}}}}`)
+	spec, ok, err := c.Describe(t.Context(), "m")
+	if err != nil || !ok {
+		t.Fatalf("null cost must not fail the lookup: ok=%v err=%v", ok, err)
+	}
+	if tier := spec.Quote.Tiers[0]; tier.Input != 1 || tier.Output != 0 {
+		t.Fatalf("tier = %+v", tier)
+	}
+}
+
+// 解析结果进程内缓存：连续查询只回源一次（此前每次 Describe 都重新反序列化整份文档）
+func TestDescribeCachesParsedCatalog(t *testing.T) {
+	t.Parallel()
+	srv, hits := countingServer(t, func(int32) string { return docNested })
+	c := modelsdev.NewClient(srv.Client(), nil)
+	c.Source = srv.URL
+	for range 3 {
+		if _, ok, err := c.Describe(t.Context(), "gemini-2.5-pro"); err != nil || !ok {
+			t.Fatalf("describe: ok=%v err=%v", ok, err)
+		}
+	}
+	if got := hits.Load(); got != 1 {
+		t.Fatalf("source hits = %d, want 1", got)
+	}
+}
+
+// 非 JSON 响应（如代理错误页 200）不得写入 Redis，且下一次查询会重新回源并恢复
+func TestDescribeInvalidDocNotCached(t *testing.T) {
+	t.Parallel()
+	mr := miniredis.RunT(t)
+	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	srv, hits := countingServer(t, func(n int32) string {
+		if n == 1 {
+			return "<html>bad gateway</html>"
+		}
+		return docNested
+	})
+	c := modelsdev.NewClient(srv.Client(), rdb)
+	c.Source = srv.URL
+	if _, _, err := c.Describe(t.Context(), "gemini-2.5-pro"); err == nil {
+		t.Fatal("invalid document must surface an error")
+	}
+	if mr.Exists(constant.ModelsDevDocCacheKey) {
+		t.Fatal("invalid document must not be cached")
+	}
+	if _, ok, err := c.Describe(t.Context(), "gemini-2.5-pro"); err != nil || !ok {
+		t.Fatalf("second describe must refetch and succeed: ok=%v err=%v", ok, err)
+	}
+	if !mr.Exists(constant.ModelsDevDocCacheKey) || hits.Load() != 2 {
+		t.Fatalf("valid document must be cached after refetch (hits=%d)", hits.Load())
+	}
+}
+
+// Redis 中的损坏缓存视为未命中，回源覆盖
+func TestDescribeCorruptRedisCacheRefetches(t *testing.T) {
+	t.Parallel()
+	mr := miniredis.RunT(t)
+	if err := mr.Set(constant.ModelsDevDocCacheKey, `{"truncated`); err != nil {
+		t.Fatal(err)
+	}
+	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	srv, hits := countingServer(t, func(int32) string { return docNested })
+	c := modelsdev.NewClient(srv.Client(), rdb)
+	c.Source = srv.URL
+	if _, ok, err := c.Describe(t.Context(), "gemini-2.5-pro"); err != nil || !ok {
+		t.Fatalf("describe: ok=%v err=%v", ok, err)
+	}
+	if hits.Load() != 1 {
+		t.Fatalf("corrupt cache must trigger refetch, hits=%d", hits.Load())
+	}
+}
+
+// 超过读取上限的文档直接报错，不截断后解析/缓存
+func TestDescribeOversizeDocRejected(t *testing.T) {
+	t.Parallel()
+	mr := miniredis.RunT(t)
+	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	huge := `{"p":{"models":{"m":{"cost":{"input":1}}}},"pad":"` + strings.Repeat("x", constant.PricingModelsDevMaxDocBytes) + `"}`
+	srv, _ := countingServer(t, func(int32) string { return huge })
+	c := modelsdev.NewClient(srv.Client(), rdb)
+	c.Source = srv.URL
+	if _, _, err := c.Describe(t.Context(), "m"); err == nil {
+		t.Fatal("oversize document must be rejected")
+	}
+	if mr.Exists(constant.ModelsDevDocCacheKey) {
+		t.Fatal("oversize document must not be cached")
 	}
 }

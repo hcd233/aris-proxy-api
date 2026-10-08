@@ -11,36 +11,16 @@ package session_owner_id
 import (
 	"testing"
 
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
-	gormlogger "gorm.io/gorm/logger"
-
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
+	"github.com/hcd233/aris-proxy-api/test/unit/sqlitetest"
 )
-
-// openMemoryDB 每个用例独立的内存库（cache=private，避免用例间串扰）
-func openMemoryDB(t *testing.T) *gorm.DB {
-	t.Helper()
-	db, err := gorm.Open(sqlite.Open("file:"+t.Name()+"?mode=memory&cache=private"),
-		&gorm.Config{TranslateError: true, Logger: gormlogger.Default.LogMode(gormlogger.Silent)})
-	if err != nil {
-		t.Fatalf("open sqlite: %v", err)
-	}
-	sqlDB, err := db.DB()
-	if err != nil {
-		t.Fatalf("sql db: %v", err)
-	}
-	// cache=private 的内存库按连接隔离：限单连接保证读写共库
-	sqlDB.SetMaxOpenConns(1)
-	return db
-}
 
 // TestSessionAPIKeyIDColumnAndIndex sessions 表必须有 api_key_id 列与其索引。
 //
 // 归属过滤是热路径（列表/详情/删除/评分/导出都要过），无索引会退化全表扫描。
 func TestSessionAPIKeyIDColumnAndIndex(t *testing.T) {
 	t.Parallel()
-	db := openMemoryDB(t)
+	db := sqlitetest.OpenPrivateMemoryDB(t)
 	if err := db.AutoMigrate(&dbmodel.Session{}); err != nil {
 		t.Fatalf("automigrate sessions: %v", err)
 	}
@@ -55,7 +35,7 @@ func TestSessionAPIKeyIDColumnAndIndex(t *testing.T) {
 // TestTraceAPIKeyIDColumnAndIndex traces 表同理。
 func TestTraceAPIKeyIDColumnAndIndex(t *testing.T) {
 	t.Parallel()
-	db := openMemoryDB(t)
+	db := sqlitetest.OpenPrivateMemoryDB(t)
 	if err := db.AutoMigrate(&dbmodel.Trace{}); err != nil {
 		t.Fatalf("automigrate traces: %v", err)
 	}
@@ -73,7 +53,7 @@ func TestTraceAPIKeyIDColumnAndIndex(t *testing.T) {
 // 得以成立的前提，不需要额外守卫。
 func TestAPIKeyIDDefaultsToZero(t *testing.T) {
 	t.Parallel()
-	db := openMemoryDB(t)
+	db := sqlitetest.OpenPrivateMemoryDB(t)
 	if err := db.AutoMigrate(&dbmodel.Session{}); err != nil {
 		t.Fatalf("automigrate sessions: %v", err)
 	}

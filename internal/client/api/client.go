@@ -58,11 +58,20 @@ type clientModelsList struct {
 
 // ClientModel 服务端返回的启用模型条目
 type ClientModel struct {
-	Alias           string   `json:"alias"`
-	UpstreamModel   string   `json:"upstreamModel"`
-	ContextLength   int      `json:"contextLength"`
-	MaxOutputTokens int      `json:"maxOutputTokens"`
-	Capabilities    []string `json:"capabilities"`
+	Alias           string          `json:"alias"`
+	UpstreamModel   string          `json:"upstreamModel"`
+	ContextLength   int             `json:"contextLength"`
+	MaxOutputTokens int             `json:"maxOutputTokens"`
+	Capabilities    []string        `json:"capabilities"`
+	Cost            ClientModelCost `json:"cost"`
+}
+
+// ClientModelCost 服务端下发的基础档单价（USD/1M tokens），未计价时为零值
+type ClientModelCost struct {
+	Input      float64 `json:"input"`
+	Output     float64 `json:"output"`
+	CacheRead  float64 `json:"cacheRead"`
+	CacheWrite float64 `json:"cacheWrite"`
 }
 
 // ListModels 拉取服务端启用模型列表（GET /api/cli/v1/model/list，API Key 鉴权）

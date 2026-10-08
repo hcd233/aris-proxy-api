@@ -89,8 +89,7 @@ func (h *modelHandler) HandleUpdateModel(ctx context.Context, req *dto.UpdateMod
 	rsp := &dto.ModelUpdateRsp{}
 	scope, err := scopeFor(ctx, util.CtxValuePermission(ctx))
 	if err != nil {
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrUnauthorized.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrUnauthorized.BizError())
 	}
 
 	cmd := port.UpdateModelCommand{
@@ -109,8 +108,7 @@ func (h *modelHandler) HandleUpdateModel(ctx context.Context, req *dto.UpdateMod
 	if req.Body.Pricing != nil {
 		pricing, perr := port.PricingFromDTO(req.Body.Pricing)
 		if perr != nil {
-			rsp.Error = ierr.ToBizErrorLocalized(ctx, perr, ierr.ErrValidation.BizError())
-			return apiutil.WrapHTTPResponse(rsp, nil)
+			return nil, apiutil.NewHumaBizError(ctx, perr, ierr.ErrValidation.BizError())
 		}
 		cmd.Pricing = pricing
 		cmd.PricingSet = true
@@ -118,8 +116,7 @@ func (h *modelHandler) HandleUpdateModel(ctx context.Context, req *dto.UpdateMod
 	counts, err := h.update.Handle(ctx, cmd)
 	if err != nil {
 		logger.WithCtx(ctx).Error("[ModelHandler] Update model failed", zap.Error(err))
-		rsp.Error = ierr.ToBizErrorLocalized(ctx, err, ierr.ErrInternal.BizError())
-		return apiutil.WrapHTTPResponse(rsp, nil)
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 	rsp.AuditCount = counts.AuditCount
 	rsp.SessionCount = counts.SessionCount

@@ -48,7 +48,7 @@ func NewAuditRepository(db *gorm.DB) modelcall.AuditRepository {
 //	@update 2026-04-22 17:00:00
 func (r *auditRepository) Save(ctx context.Context, audit *aggregate.ModelCallAudit) error {
 	db := r.db.WithContext(ctx)
-	inputCostMicro, outputCostMicro, cacheCreateCostMicro, cacheReadCostMicro := audit.GetCostBreakdownMicro()
+	inputCostMicro, outputCostMicro, cacheCreateCostMicro, cacheReadCostMicro := audit.CostBreakdownMicro()
 	record := &dbmodel.ModelCallAudit{
 		APIKeyID:                 audit.APIKeyID(),
 		ModelID:                  audit.ModelID(),
@@ -65,12 +65,12 @@ func (r *auditRepository) Save(ctx context.Context, audit *aggregate.ModelCallAu
 		UpstreamStatusCode:       audit.Status().UpstreamStatusCode(),
 		ErrorMessage:             audit.Status().ErrorMessage(),
 		TraceID:                  audit.TraceID(),
-		CostMicro:                audit.GetCostMicro(),
+		CostMicro:                audit.CostMicro(),
 		InputCostMicro:           inputCostMicro,
 		OutputCostMicro:          outputCostMicro,
 		CacheCreationCostMicro:   cacheCreateCostMicro,
 		CacheReadCostMicro:       cacheReadCostMicro,
-		PricingCurrency:          string(audit.GetPricingCurrency()),
+		PricingCurrency:          string(audit.PricingCurrency()),
 	}
 	if err := r.dao.Create(db, record); err != nil {
 		return ierr.Wrap(ierr.ErrDBCreate, err, "create model call audit")

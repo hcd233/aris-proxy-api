@@ -59,6 +59,11 @@ const (
 	GopathBinSubDir            = "bin"
 	GopathBinFileMode          = 0o111
 
+	// models.dev 公开模型规格数据源
+	ModelsDevAPIURL      = "https://models.dev/api.json"
+	ModelsDevDocCacheKey = "pricing:modelsdev:doc"
+	ModelsDevTierTypeCtx = "context"
+
 	// OpenAPI / Huma configuration
 	OpenAPIVersion       = "3.1.0"
 	APITitle             = "Aris API Tmpl"
@@ -67,10 +72,6 @@ const (
 	ContactName          = "hcd233"
 	ContactEmail         = "lvlvko233@qq.com"
 	ContactURL           = "https://github.com/hcd233"
-	ModelsDevAPIURL      = "https://models.dev/api.json"
-	ModelsDevDocCacheKey = "pricing:modelsdev:doc"
-	ModelsDevTierTypeCtx = "context"
-
 	LicenseName          = "Apache 2.0"
 	LicenseURL           = "https://www.apache.org/licenses/LICENSE-2.0.html"
 	SecuritySchemeJWT    = "jwtAuth"
@@ -148,7 +149,6 @@ const (
 	FieldModelMaxOutputTokens                = "max_output_tokens"
 	FieldModelCapabilities                   = "capabilities"
 	FieldModelPricingRules                   = "pricing_rules"
-	FieldModelPricingCurrency                = "pricing_currency"
 	FieldCostMicro                           = "cost_micro"
 	FieldInputCostMicro                      = "input_cost_micro"
 	FieldOutputCostMicro                     = "output_cost_micro"

@@ -1,6 +1,8 @@
 // Package constant 客户端模型导出常量
 package constant
 
+import "github.com/hcd233/aris-proxy-api/internal/common/enum"
+
 // ClientModelExport 模型导出目标与默认值
 const (
 	// ClientModelProviderID 本工具写入各 harness 的 provider 标识
@@ -100,6 +102,12 @@ const (
 
 // ClaudeTierOrder / ClaudeTierEnvKeys tier 顺序与对应环境变量
 var ClaudeTierOrder = []string{"opus", "sonnet", "haiku"}
+
+// ClientModelPiInputModalities Pi models.json 的 input 仅接受 text/image，其余模态导出时丢弃
+var ClientModelPiInputModalities = []string{enum.InputModalityText, enum.InputModalityImage}
+
+// ClientModelAttachmentModalities 任一命中即开启 OpenCode attachment（附件上传入口）
+var ClientModelAttachmentModalities = []string{enum.InputModalityImage, enum.InputModalityPDF}
 
 var ClaudeTierEnvKeys = map[string]string{
 	"opus":   ClaudeTierOpusKey,

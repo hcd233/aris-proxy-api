@@ -72,7 +72,12 @@ export function ModelCostBarChart() {
   }, [fetchData]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  const maxTotal = useMemo(() => data.reduce((m, d) => Math.max(m, d.totalCost), 0), [data]);
+  // 进度条按币种分别归一化：不同币种金额不可比，混算会让小币种的条形失真
+  const maxTotalByCurrency = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const d of data) m.set(d.currency, Math.max(m.get(d.currency) ?? 0, d.totalCost));
+    return m;
+  }, [data]);
 
   const sorted = useMemo(() => {
     return [...data].sort((a, b) =>
@@ -152,6 +157,7 @@ export function ModelCostBarChart() {
               </thead>
               <tbody>
                 {sorted.map((item, i) => {
+                  const maxTotal = maxTotalByCurrency.get(item.currency) ?? 0;
                   const widthPct =
                     maxTotal > 0 ? Math.max((item.totalCost / maxTotal) * 100, 2) : 2;
                   return (

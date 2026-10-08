@@ -9,6 +9,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/bytedance/sonic"
 	"github.com/redis/go-redis/v9"
@@ -19,12 +21,16 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 )
 
-// Client models.dev 公开规格查询：拉取公开文档（Redis 缓存 24h），按模型 ID 精确匹配。
-// 实现 port.ModelSpecProvider。
+// Client models.dev 公开规格查询：拉取公开文档（Redis 缓存原文 24h + 进程内缓存解析结果），
+// 按模型 ID 精确匹配。实现 port.ModelSpecProvider。
 type Client struct {
 	Source string // 数据源地址；空 = constant.ModelsDevAPIURL（测试可注入）
 	http   *http.Client
 	redis  redis.UniversalClient // nil = 不缓存
+
+	mu       sync.Mutex                   // 串行化加载：并发未命中只回源一次
+	catalog  map[string]modelsDevProvider // 解析后的文档：provider → models
+	loadedAt time.Time
 }
 
 type modelsDevProvider struct {
@@ -94,13 +100,9 @@ func NewClient(hc *http.Client, rdb redis.UniversalClient) *Client {
 //	@author centonhuang
 //	@update 2026-10-07 16:00:00
 func (c *Client) Describe(ctx context.Context, modelID string) (port.ModelSpec, bool, error) {
-	raw, err := c.doc(ctx)
+	doc, err := c.loadCatalog(ctx)
 	if err != nil {
 		return port.ModelSpec{}, false, err
-	}
-	var doc map[string]modelsDevProvider
-	if err := sonic.Unmarshal(raw, &doc); err != nil {
-		return port.ModelSpec{}, false, ierr.Wrap(ierr.ErrDTOUnmarshal, err, "parse models.dev pricing")
 	}
 	entry, ok := pickProvider(doc, modelID)
 	if !ok {
@@ -198,13 +200,49 @@ func fillTier(t *port.PricingTier, input, output, cacheWrite, cacheRead sonic.No
 	return err
 }
 
-// doc 读取定价文档：Redis 缓存优先，未命中则拉取并回填缓存
-func (c *Client) doc(ctx context.Context) ([]byte, error) {
+// loadCatalog 返回解析后的文档：进程内缓存（TTL 内）优先，过期再走 Redis → 回源。
+// 文档数 MB，逐请求反序列化在低 CPU 配额下代价可观，故缓存解析结果而非原文。
+func (c *Client) loadCatalog(ctx context.Context) (map[string]modelsDevProvider, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.catalog != nil && time.Since(c.loadedAt) < constant.PricingModelsDevParsedTTL {
+		return c.catalog, nil
+	}
+	doc, err := c.loadFromSource(ctx)
+	if err != nil {
+		return nil, err
+	}
+	c.catalog, c.loadedAt = doc, time.Now()
+	return doc, nil
+}
+
+// loadFromSource Redis 原文缓存优先（损坏视为未命中）；回源拉取后仅在可完整解析时回填 Redis，
+// 防止截断/非 JSON 响应（如代理错误页）被缓存 24h。
+func (c *Client) loadFromSource(ctx context.Context) (map[string]modelsDevProvider, error) {
 	if c.redis != nil {
 		if cached, err := c.redis.Get(ctx, constant.ModelsDevDocCacheKey).Bytes(); err == nil && len(cached) > 0 {
-			return cached, nil
+			if doc, perr := parseCatalog(cached); perr == nil {
+				return doc, nil
+			}
 		}
 	}
+	body, err := c.fetch(ctx)
+	if err != nil {
+		return nil, err
+	}
+	doc, err := parseCatalog(body)
+	if err != nil {
+		return nil, err
+	}
+	if c.redis != nil {
+		//nolint:errcheck // 缓存失败不影响查询
+		_ = c.redis.Set(ctx, constant.ModelsDevDocCacheKey, body, constant.PricingModelsDevCacheTTL).Err()
+	}
+	return doc, nil
+}
+
+// fetch 回源拉取原文；超过读取上限视为异常响应直接报错（不截断后继续解析）。
+func (c *Client) fetch(ctx context.Context) ([]byte, error) {
 	url := c.Source
 	if url == "" {
 		url = constant.ModelsDevAPIURL
@@ -221,21 +259,29 @@ func (c *Client) doc(ctx context.Context) ([]byte, error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, ierr.New(ierr.ErrInternal, "fetch models.dev pricing failed: "+resp.Status)
 	}
-	body, err := io.ReadAll(io.LimitReader(resp.Body, constant.PricingModelsDevMaxDocBytes))
+	body, err := io.ReadAll(io.LimitReader(resp.Body, constant.PricingModelsDevMaxDocBytes+1))
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrInternal, err, "read models.dev pricing")
 	}
-	if c.redis != nil {
-		//nolint:errcheck // 缓存失败不影响查询
-		_ = c.redis.Set(ctx, constant.ModelsDevDocCacheKey, body, constant.PricingModelsDevCacheTTL).Err()
+	if len(body) > constant.PricingModelsDevMaxDocBytes {
+		return nil, ierr.New(ierr.ErrInternal, "models.dev pricing document exceeds size limit")
 	}
 	return body, nil
 }
 
-// parseCost 解析单个价格值（string 或 number 形态），空值按 0。
+// parseCatalog 反序列化文档
+func parseCatalog(raw []byte) (map[string]modelsDevProvider, error) {
+	var doc map[string]modelsDevProvider
+	if err := sonic.Unmarshal(raw, &doc); err != nil {
+		return nil, ierr.Wrap(ierr.ErrDTOUnmarshal, err, "parse models.dev pricing")
+	}
+	return doc, nil
+}
+
+// parseCost 解析单个价格值（string 或 number 形态），缺省/空串/null（含字符串 "null"）按 0。
 func parseCost(raw sonic.NoCopyRawMessage) (float64, error) {
 	s := strings.Trim(string(raw), `"`)
-	if s == "" {
+	if s == "" || s == constant.NullJSONLiteral {
 		return 0, nil
 	}
 	f, err := strconv.ParseFloat(s, constant.PricingParseBitSize)

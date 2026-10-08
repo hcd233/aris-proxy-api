@@ -66,9 +66,7 @@ func (h *updateModelHandler) Handle(ctx context.Context, cmd port.UpdateModelCom
 		return llmproxy.ModelIDSyncCounts{}, uerr
 	}
 	if cmd.PricingSet {
-		if perr := m.UpdatePricing(cmd.Pricing); perr != nil {
-			return llmproxy.ModelIDSyncCounts{}, perr
-		}
+		m.UpdatePricing(cmd.Pricing)
 	}
 
 	// 改名路径（syncHistory 且 modelId 实际变化）：模型更新与历史替换必须走

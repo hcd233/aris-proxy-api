@@ -167,9 +167,8 @@ func TestPricingMatchContextTierHalfOpen(t *testing.T) {
 	}
 }
 
-func TestPricingComputeCost(t *testing.T) {
+func TestPricingRuleCostBreakdown(t *testing.T) {
 	t.Parallel()
-	p := mustPricing(t, []vo.PricingRule{defaultRule})
 	rule := vo.PricingRule{
 		InputMicro:       800_000, // $0.8/1M
 		OutputMicro:      4_000_000,
@@ -178,19 +177,85 @@ func TestPricingComputeCost(t *testing.T) {
 	}
 	// 1000 in + 500 out + 0 + 250 cacheRead
 	// 800000*1000/1e6=800; 4000000*500/1e6=2000; 80000*250/1e6=20 → 2820
-	if got := p.ComputeCost(rule, 1000, 500, 0, 250); got != 2820 {
-		t.Fatalf("ComputeCost = %d, want 2820", got)
+	b := rule.CostBreakdown(1000, 500, 0, 250)
+	if b.InputMicro != 800 || b.OutputMicro != 2000 || b.CacheCreateMicro != 0 || b.CacheReadMicro != 20 || b.Total() != 2820 {
+		t.Fatalf("CostBreakdown = %+v total=%d, want 800/2000/0/20 total 2820", b, b.Total())
 	}
 	// 半入：500000 tokens × 1 微单位/1M = 0.5 → 1
-	if got := p.ComputeCost(vo.PricingRule{InputMicro: 1}, 500_000, 0, 0, 0); got != 1 {
+	if got := (vo.PricingRule{InputMicro: 1}).CostBreakdown(500_000, 0, 0, 0).Total(); got != 1 {
 		t.Fatalf("round half = %d, want 1", got)
 	}
 	// 免费规则
-	if got := p.ComputeCost(vo.PricingRule{}, 1_000_000, 1_000_000, 1_000_000, 1_000_000); got != 0 {
+	if got := (vo.PricingRule{}).CostBreakdown(1_000_000, 1_000_000, 1_000_000, 1_000_000).Total(); got != 0 {
 		t.Fatalf("free rule = %d, want 0", got)
 	}
 	// 大数不溢出：1e12 微单位 × 1e9 tokens / 1e6 = 1e15
-	if got := p.ComputeCost(vo.PricingRule{InputMicro: constant.PricingMaxPriceMicro}, 1_000_000_000, 0, 0, 0); got != 1_000_000_000_000_000 {
+	if got := (vo.PricingRule{InputMicro: constant.PricingMaxPriceMicro}).CostBreakdown(1_000_000_000, 0, 0, 0).Total(); got != 1_000_000_000_000_000 {
 		t.Fatalf("big = %d", got)
+	}
+}
+
+func TestPricingBaseRule(t *testing.T) {
+	t.Parallel()
+	// 默认规则在后、时段规则在前：基础档必须跳过时段规则取无条件默认
+	withDefault := mustPricing(t, []vo.PricingRule{
+		{TimeWindows: []vo.TimeWindow{{Start: "00:00", End: "08:00"}}, InputMicro: 1},
+		{InputMicro: 3},
+	})
+	if r, ok := withDefault.BaseRule(); !ok || r.InputMicro != 3 {
+		t.Fatalf("BaseRule with default = %+v ok=%v, want InputMicro 3", r, ok)
+	}
+	// 无默认规则的连续区间：基础档为起点 0 的区间
+	bands := mustPricing(t, []vo.PricingRule{
+		{ContextMin: 200_000, InputMicro: 2},
+		{ContextMax: 200_000, InputMicro: 1},
+	})
+	if r, ok := bands.BaseRule(); !ok || r.InputMicro != 1 {
+		t.Fatalf("BaseRule with bands = %+v ok=%v, want InputMicro 1", r, ok)
+	}
+	if _, ok := (vo.Pricing{}).BaseRule(); ok {
+		t.Fatal("unpriced must have no base rule")
+	}
+}
+
+func TestNewPricingLimits(t *testing.T) {
+	t.Parallel()
+	tooManyRules := make([]vo.PricingRule, constant.PricingMaxRules+1)
+	for i := range tooManyRules {
+		tooManyRules[i] = vo.PricingRule{TimeWindows: []vo.TimeWindow{{Start: "00:00", End: "01:00"}}}
+	}
+	tooManyRules[0] = defaultRule
+	if _, err := vo.NewPricing(enum.CurrencyUSD, tooManyRules); err == nil {
+		t.Fatal("rules over limit must be rejected")
+	}
+	if _, err := vo.NewPricing(enum.CurrencyUSD, tooManyRules[:constant.PricingMaxRules]); err != nil {
+		t.Fatalf("rules at limit must pass: %v", err)
+	}
+
+	windows := make([]vo.TimeWindow, constant.PricingMaxTimeWindows+1)
+	for i := range windows {
+		windows[i] = vo.TimeWindow{Start: "00:00", End: "01:00", Timezone: "Asia/Shanghai"}
+	}
+	if _, err := vo.NewPricing(enum.CurrencyUSD, []vo.PricingRule{{TimeWindows: windows}, defaultRule}); err == nil {
+		t.Fatal("time windows over limit must be rejected")
+	}
+	if _, err := vo.NewPricing(enum.CurrencyUSD, []vo.PricingRule{{TimeWindows: windows[:constant.PricingMaxTimeWindows]}, defaultRule}); err != nil {
+		t.Fatalf("time windows at limit must pass: %v", err)
+	}
+
+	days := []vo.TimeWindow{{Start: "00:00", End: "01:00", Days: []int{1, 2, 3, 4, 5, 6, 7, 1}}}
+	if _, err := vo.NewPricing(enum.CurrencyUSD, []vo.PricingRule{{TimeWindows: days}, defaultRule}); err == nil {
+		t.Fatal("days over limit must be rejected")
+	}
+}
+
+func TestNewPricingInvalidTimezoneNotCached(t *testing.T) {
+	t.Parallel()
+	// 时区缓存只存成功结果：非法时区重复构造必须每次都报错
+	rules := []vo.PricingRule{{TimeWindows: []vo.TimeWindow{{Start: "09:00", End: "10:00", Timezone: "Mars/Base"}}}, defaultRule}
+	for range 2 {
+		if _, err := vo.NewPricing(enum.CurrencyUSD, rules); err == nil {
+			t.Fatal("invalid timezone must be rejected every time")
+		}
 	}
 }

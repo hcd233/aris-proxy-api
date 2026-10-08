@@ -21,6 +21,14 @@ const (
 	PricingModelsDevMaxDocBytes = 16 << 20
 	// PricingParseBitSize 价格字符串解析的浮点位宽。
 	PricingParseBitSize = 64
+	// PricingModelsDevParsedTTL models.dev 解析结果的进程内缓存时长（避免每次请求重解析数 MB 文档）。
+	PricingModelsDevParsedTTL = 1 * time.Hour
+	// PricingMaxRules 单模型定价规则条数上限。
+	PricingMaxRules = 32
+	// PricingMaxTimeWindows 单条规则时段窗口数上限。
+	PricingMaxTimeWindows = 8
+	// PricingDaysPerWeek 时段窗口星期取值上限（1=周一…7=周日），也是 days 数组长度上限。
+	PricingDaysPerWeek = 7
 )
 
 // ModelsDevOfficialProviders models.dev 报价去重优先级：官方渠道优先（列表序靠前者胜）。

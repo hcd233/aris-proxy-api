@@ -98,10 +98,9 @@ func (m *Model) Pricing() vo.Pricing { return m.pricing }
 func (m *Model) CreatedAt() time.Time { return m.createdAt }
 func (m *Model) UpdatedAt() time.Time { return m.updatedAt }
 
-// UpdatePricing 更新模型定价（vo 构造已校验，此处仅替换）
-func (m *Model) UpdatePricing(pricing vo.Pricing) error {
+// UpdatePricing 更新模型定价（vo.NewPricing 构造时已校验，此处仅替换）
+func (m *Model) UpdatePricing(pricing vo.Pricing) {
 	m.pricing = pricing
-	return nil
 }
 
 // SetModelID 设置业务模型 ID（仓储恢复用）

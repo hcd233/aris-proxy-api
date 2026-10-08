@@ -9,6 +9,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
+	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
@@ -39,7 +40,22 @@ func (q *ListClientModels) Handle(ctx context.Context) (*dto.ClientModelsRsp, er
 				ContextLength:   p.ContextLength,
 				MaxOutputTokens: p.MaxOutputTokens,
 				Capabilities:    lo.Map(p.Capabilities, func(c string, _ int) enum.InputModality { return c }),
+				Cost:            toClientModelCost(p.Pricing),
 			}
 		}),
 	}, nil
+}
+
+// toClientModelCost 定价 → 客户端导出的基础档单价（展示单位）；未计价返回 nil
+func toClientModelCost(p vo.Pricing) *dto.ClientModelCost {
+	rule, ok := p.BaseRule()
+	if !ok {
+		return nil
+	}
+	return &dto.ClientModelCost{
+		Input:      dto.PriceDisplayFromMicro(rule.InputMicro),
+		Output:     dto.PriceDisplayFromMicro(rule.OutputMicro),
+		CacheRead:  dto.PriceDisplayFromMicro(rule.CacheReadMicro),
+		CacheWrite: dto.PriceDisplayFromMicro(rule.CacheCreateMicro),
+	}
 }

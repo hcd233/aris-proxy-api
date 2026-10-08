@@ -271,6 +271,7 @@ func (r *endpointReadRepository) ListEnabledModelDetails(ctx context.Context, us
 			ContextLength:   m.ContextLength,
 			MaxOutputTokens: m.MaxOutputTokens,
 			Capabilities:    m.Capabilities,
+			Pricing:         pricingFromDB(m.ID, m.PricingRules, m.PricingCurrency),
 		}
 	}), nil
 }

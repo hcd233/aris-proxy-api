@@ -95,6 +95,7 @@ type ModelDetailProjection struct {
 	ContextLength   int
 	MaxOutputTokens int
 	Capabilities    []string
+	Pricing         vo.Pricing
 }
 
 // EndpointProjection 端点只读投影

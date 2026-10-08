@@ -328,7 +328,12 @@ func InitEnvironment() {
 	WriteTimeout = config.GetDuration("write.timeout")
 
 	HTTPClientTimeout = config.GetDuration("http.client.timeout")
+	// ≤0/非数字（GetInt 得 0）回落默认值，而非 fiber 的 4MB 内建默认；下限钳到管理路由 1MB，防误配过小
 	HTTPBodyLimit = config.GetInt("http.body.limit")
+	if HTTPBodyLimit <= 0 {
+		HTTPBodyLimit = constant.MaxHTTPBodyBytes
+	}
+	HTTPBodyLimit = max(HTTPBodyLimit, constant.MinHTTPBodyBytes)
 
 	LogLevel = config.GetString("log.level")
 	LogDirPath = config.GetString("log.dir")

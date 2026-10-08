@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useState } from "react";
 import { Plus, Trash2, ArrowUp, ArrowDown } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import type { PricingDTO, PricingRuleDTO, TimeWindowDTO } from "@/lib/types";
@@ -48,6 +49,10 @@ const timeEnabled = (r: PricingRuleDTO): boolean => (r.time_windows ?? []).lengt
 const contextEnabled = (r: PricingRuleDTO): boolean =>
   (r.context_min ?? 0) > 0 || (r.context_max ?? 0) > 0;
 
+// 规则行的稳定 key（只在事件回调里生成，不在 render 期调用）
+let ruleKeySeq = 0;
+const newRuleKey = (): string => `rule-${++ruleKeySeq}`;
+
 function priceOrZero(v: string): number {
   const n = Number(v);
   return Number.isFinite(n) && n >= 0 ? n : 0;
@@ -67,23 +72,46 @@ export function PricingEditor({ value, onChange }: PricingEditorProps) {
   // 币种固定 USD：规则表非空 ⇔ 已计价
   const priced = rules.length > 0;
 
-  const emit = (nextRules: PricingRuleDTO[]) => {
+  // 行 key 与本组件发出的 rules 数组绑定：上移/下移/删除时 key 跟随规则移动（焦点与 DOM 不错位）；
+  // 外部替换 rules（如导入）时数组引用不同，回落按下标的 key（整体重挂载，可接受）。
+  const [keyed, setKeyed] = useState<{ rules: PricingRuleDTO[] | null; keys: string[] }>({
+    rules: null,
+    keys: [],
+  });
+  const keys = keyed.rules === rules ? keyed.keys : rules.map((_, i) => `ext-${i}`);
+
+  const emit = (nextRules: PricingRuleDTO[], nextKeys: string[]) => {
     const next: PricingDTO =
       nextRules.length > 0 ? { currency: "USD", rules: nextRules } : { currency: "", rules: [] };
+    setKeyed({ rules: next.rules ?? [], keys: nextRules.length > 0 ? nextKeys : [] });
     onChange(next);
   };
 
   const patchRule = (idx: number, patch: Partial<PricingRuleDTO>) => {
-    emit(rules.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
+    emit(
+      rules.map((r, i) => (i === idx ? { ...r, ...patch } : r)),
+      keys,
+    );
   };
 
   const moveRule = (idx: number, delta: number) => {
     const j = idx + delta;
     if (j < 0 || j >= rules.length) return;
     const next = [...rules];
+    const nextKeys = [...keys];
     [next[idx], next[j]] = [next[j], next[idx]];
-    emit(next);
+    [nextKeys[idx], nextKeys[j]] = [nextKeys[j], nextKeys[idx]];
+    emit(next, nextKeys);
   };
+
+  const removeRule = (idx: number) => {
+    emit(
+      rules.filter((_, i) => i !== idx),
+      keys.filter((_, i) => i !== idx),
+    );
+  };
+
+  const addRule = () => emit([...rules, emptyRule()], [...keys, newRuleKey()]);
 
   return (
     <div className="space-y-3">
@@ -95,7 +123,9 @@ export function PricingEditor({ value, onChange }: PricingEditorProps) {
             id="pricing-enabled"
             size="sm"
             checked={priced}
-            onCheckedChange={(checked) => emit(checked ? [emptyRule()] : [])}
+            onCheckedChange={(checked) =>
+              checked ? emit([emptyRule()], [newRuleKey()]) : emit([], [])
+            }
           />
           <Label htmlFor="pricing-enabled">{t("upstream.pricing.enabled")}</Label>
         </div>
@@ -111,7 +141,7 @@ export function PricingEditor({ value, onChange }: PricingEditorProps) {
       {priced && (
         <div className="space-y-2">
           {rules.map((rule, idx) => (
-            <div key={idx} className="rounded-md border p-2.5 space-y-2">
+            <div key={keys[idx]} className="rounded-md border p-2.5 space-y-2">
               <div className="flex items-center gap-1.5">
                 <span className="text-xs font-medium text-muted-foreground">#{idx + 1}</span>
                 {isDefaultRule(rule) && (
@@ -143,7 +173,7 @@ export function PricingEditor({ value, onChange }: PricingEditorProps) {
                     variant="ghost"
                     size="icon"
                     aria-label={t("common.delete")}
-                    onClick={() => emit(rules.filter((_, i) => i !== idx))}
+                    onClick={() => removeRule(idx)}
                   >
                     <Trash2 className="size-4" />
                   </Button>
@@ -337,7 +367,9 @@ export function PricingEditor({ value, onChange }: PricingEditorProps) {
                       type="number"
                       min={0}
                       step={0.000001}
-                      value={String(rule[field] ?? 0)}
+                      // 必须传 number：React 对 number 输入框用宽松比较（"0.0" == 0）保留 DOM 中间态；
+                      // 传字符串会严格比较，把 "0.0" 回写成 "0"，导致 0.05 这类小数无法逐字输入
+                      value={rule[field] ?? 0}
                       onChange={(e) => patchRule(idx, { [field]: priceOrZero(e.target.value) })}
                     />
                   </div>
@@ -345,12 +377,7 @@ export function PricingEditor({ value, onChange }: PricingEditorProps) {
               </div>
             </div>
           ))}
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => emit([...rules, emptyRule()])}
-          >
+          <Button type="button" variant="outline" size="sm" onClick={addRule}>
             <Plus className="size-4" />
             {t("upstream.pricing.rule.add")}
           </Button>

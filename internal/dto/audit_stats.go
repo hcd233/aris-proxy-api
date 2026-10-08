@@ -151,11 +151,11 @@ type ModelCostRsp struct {
 
 // ModelCostItem 模型成本排行行（展示单位）
 type ModelCostItem struct {
-	ModelID           string  `json:"modelId" doc:"业务模型ID"`
-	Currency          string  `json:"currency" doc:"计价币种"`
-	InputCost         float64 `json:"inputCost" doc:"输入成本"`
-	OutputCost        float64 `json:"outputCost" doc:"输出成本"`
-	CacheCreationCost float64 `json:"cacheCreationCost" doc:"缓存创建成本"`
-	CacheReadCost     float64 `json:"cacheReadCost" doc:"缓存读取成本"`
-	TotalCost         float64 `json:"totalCost" doc:"总成本（四维合计）"`
+	ModelID           string        `json:"modelId" doc:"业务模型ID"`
+	Currency          enum.Currency `json:"currency" doc:"计价币种"`
+	InputCost         float64       `json:"inputCost" doc:"输入成本"`
+	OutputCost        float64       `json:"outputCost" doc:"输出成本"`
+	CacheCreationCost float64       `json:"cacheCreationCost" doc:"缓存创建成本"`
+	CacheReadCost     float64       `json:"cacheReadCost" doc:"缓存读取成本"`
+	TotalCost         float64       `json:"totalCost" doc:"总成本（四维合计）"`
 }

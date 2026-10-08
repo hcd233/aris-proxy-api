@@ -101,6 +101,7 @@ func RunExport(ctx context.Context, opts ExportOptions) error {
 				ContextLength:   m.ContextLength,
 				MaxOutputTokens: m.MaxOutputTokens,
 				Capabilities:    m.Capabilities,
+				Cost:            TargetCost(m.Cost),
 			})
 		}
 	}

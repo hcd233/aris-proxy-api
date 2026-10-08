@@ -61,6 +61,7 @@ func (h *createModelHandler) Handle(ctx context.Context, cmd port.CreateModelCom
 	if cmd.ModelID != nil && *cmd.ModelID != "" {
 		m.SetModelID(*cmd.ModelID)
 	}
+	m.UpdatePricing(cmd.Pricing)
 
 	id, err := h.modelRepo.Create(ctx, m, ep.UserID())
 	if err != nil {
