@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { api } from "@/lib/api-client";
-import { useT } from "@/lib/i18n";
+import { useI18n } from "@/lib/i18n";
 import { formatCost } from "@/lib/money";
 import type { ModelCostItem } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,15 +12,17 @@ import { Button } from "@/components/ui/button";
 import { TimeRangePicker } from "@/components/ui/time-range-picker";
 import type { TimeRangeKey } from "@/lib/time-range";
 import { computeRange } from "@/lib/time-range";
-
-type SortField = "totalCost" | "inputCost" | "outputCost" | "cacheReadCost" | "cacheCreationCost";
+import { useTokenLayerColors } from "@/lib/theme";
+import { RatioLegend, StackedRatioBar } from "@/components/charts/stacked-ratio-bar";
 
 /**
- * ModelCostBarChart 模型成本排行：时间范围内各模型成本（输入/输出/缓存读/缓存写四维 + 总成本）。
- * 行 = 模型 × 币种；条形宽度按总成本占比；列头可排序。
+ * ModelCostBarChart 模型成本：时间范围内各模型总成本 + 输入/输出/缓存读/缓存写四维成本占比条。
+ * 行 = 模型 × 币种；模型名下方条形按同币种最大总成本归一化；总成本列可排序。
  */
 export function ModelCostBarChart() {
-  const t = useT();
+  // t 引用已稳定化（见 lib/i18n.tsx），useMemo 改依赖 locale 以响应语言切换
+  const { t, locale } = useI18n();
+  const tokenColors = useTokenLayerColors();
   const [timeRange, setTimeRange] = usePersistentState<TimeRangeKey>(
     "dashboard.chart.modelCostBar.timeRange",
     "7d",
@@ -37,7 +39,6 @@ export function ModelCostBarChart() {
   const [data, setData] = useState<ModelCostItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [sortField, setSortField] = useState<SortField>("totalCost");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
   const fetchData = useCallback(
@@ -81,32 +82,20 @@ export function ModelCostBarChart() {
 
   const sorted = useMemo(() => {
     return [...data].sort((a, b) =>
-      sortDir === "desc" ? b[sortField] - a[sortField] : a[sortField] - b[sortField],
+      sortDir === "desc" ? b.totalCost - a.totalCost : a.totalCost - b.totalCost,
     );
-  }, [data, sortField, sortDir]);
+  }, [data, sortDir]);
 
-  function handleSort(field: SortField) {
-    if (sortField === field) {
-      setSortDir((d) => (d === "desc" ? "asc" : "desc"));
-    } else {
-      setSortField(field);
-      setSortDir("desc");
-    }
-  }
-
-  function sortIndicator(field: SortField) {
-    if (sortField !== field) return "";
-    return sortDir === "desc" ? " ▼" : " ▲";
-  }
-
-  const headCell = (field: SortField, label: string, right = true) => (
-    <th
-      className={`cursor-pointer py-2 pr-4 font-medium hover:text-foreground ${right ? "text-right" : "text-left"}`}
-      onClick={() => handleSort(field)}
-    >
-      {label}
-      {sortIndicator(field)}
-    </th>
+  const legend = useMemo(
+    () => [
+      { key: "input", label: t("cost.dim.input"), color: tokenColors.input },
+      { key: "output", label: t("cost.dim.output"), color: tokenColors.output },
+      { key: "cacheRead", label: t("cost.dim.cacheRead"), color: tokenColors.cacheRead },
+      { key: "cacheWrite", label: t("cost.dim.cacheWrite"), color: tokenColors.cacheCreated },
+    ],
+    // locale 必须在依赖里：t 引用已稳定（见 lib/i18n.tsx），翻译文本刷新只能靠 locale 驱动重算
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [locale, t, tokenColors],
   );
 
   return (
@@ -148,11 +137,16 @@ export function ModelCostBarChart() {
                 <tr className="whitespace-nowrap border-b border-border text-muted-foreground">
                   <th className="w-8 py-2 pl-6 text-left font-medium">{t("model_chart.rank")}</th>
                   <th className="py-2 text-left font-medium">{t("model_chart.model")}</th>
-                  {headCell("totalCost", t("cost.dim.total"))}
-                  {headCell("inputCost", t("cost.dim.input"))}
-                  {headCell("outputCost", t("cost.dim.output"))}
-                  {headCell("cacheReadCost", t("cost.dim.cacheRead"))}
-                  <th className="py-2 pr-6 text-right font-medium">{t("cost.dim.cacheWrite")}</th>
+                  <th
+                    className="cursor-pointer py-2 pr-4 text-right font-medium hover:text-foreground"
+                    onClick={() => setSortDir((d) => (d === "desc" ? "asc" : "desc"))}
+                  >
+                    {t("cost.dim.total")}
+                    {sortDir === "desc" ? " ▼" : " ▲"}
+                  </th>
+                  <th className="w-[360px] py-2 pr-6 text-left text-xs font-medium">
+                    <RatioLegend segments={legend} />
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -178,17 +172,16 @@ export function ModelCostBarChart() {
                       <td className="py-3 pr-4 text-right font-semibold">
                         {formatCost(item.totalCost, item.currency)}
                       </td>
-                      <td className="py-3 pr-4 text-right">
-                        {formatCost(item.inputCost, item.currency)}
-                      </td>
-                      <td className="py-3 pr-4 text-right">
-                        {formatCost(item.outputCost, item.currency)}
-                      </td>
-                      <td className="py-3 pr-4 text-right">
-                        {formatCost(item.cacheReadCost, item.currency)}
-                      </td>
-                      <td className="py-3 pr-6 text-right">
-                        {formatCost(item.cacheCreationCost, item.currency)}
+                      <td className="w-[360px] py-3 pr-6">
+                        <StackedRatioBar
+                          formatValue={(v) => formatCost(v, item.currency)}
+                          segments={[
+                            { ...legend[0], value: item.inputCost },
+                            { ...legend[1], value: item.outputCost },
+                            { ...legend[2], value: item.cacheReadCost },
+                            { ...legend[3], value: item.cacheCreationCost },
+                          ]}
+                        />
                       </td>
                     </tr>
                   );

@@ -851,7 +851,7 @@
   "upstream.pricing.cacheReadPrice": "キャッシュ読み取り単価",
   "audit.cost.column": "費用",
   "audit.cost.unpriced": "価格設定済みのデータなし",
-  "dashboard.model_cost": "モデルコストランキング",
+  "dashboard.model_cost": "モデルコスト",
   "cost.dim.total": "合計",
   "cost.dim.input": "入力",
   "cost.dim.output": "出力",

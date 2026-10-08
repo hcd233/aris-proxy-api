@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { api } from "@/lib/api-client";
-import { useT } from "@/lib/i18n";
+import { useI18n } from "@/lib/i18n";
 import type { ModelUsageItem } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,9 +12,7 @@ import { TimeRangePicker } from "@/components/ui/time-range-picker";
 import type { TimeRangeKey } from "@/lib/time-range";
 import { computeRange } from "@/lib/time-range";
 import { useTokenLayerColors } from "@/lib/theme";
-
-type SortField =
-  "total" | "inputTokens" | "outputTokens" | "cacheReadTokens" | "cacheCreationTokens";
+import { RatioLegend, StackedRatioBar } from "@/components/charts/stacked-ratio-bar";
 
 function formatTokenCount(v: number): string {
   if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
@@ -22,116 +20,18 @@ function formatTokenCount(v: number): string {
   return String(v);
 }
 
-function tokenTotal(item: ModelUsageItem): number {
-  return item.inputTokens + item.outputTokens;
+function formatExactTokenCount(v: number): string {
+  return v.toLocaleString();
 }
 
-function BarWithTooltip({
-  cacheLabel,
-  cacheValue,
-  cacheColor,
-  mainLabel,
-  mainValue,
-  mainColor,
-}: {
-  cacheLabel: string;
-  cacheValue: number;
-  cacheColor: string;
-  mainLabel: string;
-  mainValue: number;
-  mainColor: string;
-}) {
-  const [hovered, setHovered] = useState(false);
-  const [tooltipPos, setTooltipPos] = useState({ left: 0, top: 0 });
-  const barRef = useRef<HTMLDivElement>(null);
-  const tooltipRef = useRef<HTMLDivElement>(null);
-
-  const denom = mainValue > 0 ? mainValue : 1;
-  const cachePct = Math.min((cacheValue / denom) * 100, 100);
-  const freshPct = Math.max(100 - cachePct, 0);
-  const cacheRatio = denom > 0 ? Math.round((cacheValue / denom) * 100) : 0;
-
-  useLayoutEffect(() => {
-    if (!hovered || !barRef.current || !tooltipRef.current) return;
-    const barRect = barRef.current.getBoundingClientRect();
-    const ttRect = tooltipRef.current.getBoundingClientRect();
-    const left = barRect.left + barRect.width / 2 - ttRect.width / 2;
-    const top = barRect.top - ttRect.height - 8;
-    const clampedLeft = Math.max(8, Math.min(left, window.innerWidth - ttRect.width - 8));
-    setTooltipPos({ left: clampedLeft, top });
-  }, [hovered]);
-
-  return (
-    <div
-      ref={barRef}
-      className="relative"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
-      <div className="flex h-3 overflow-hidden rounded-md bg-muted">
-        {cachePct > 0 && (
-          <div
-            style={{ width: `${cachePct}%`, backgroundColor: cacheColor }}
-            className="transition-all duration-200"
-          />
-        )}
-        {freshPct > 0 && (
-          <div
-            style={{ width: `${freshPct}%`, backgroundColor: mainColor }}
-            className="transition-all duration-200"
-          />
-        )}
-      </div>
-      <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
-        <span style={{ color: cacheColor }}>
-          {cacheLabel} {formatTokenCount(cacheValue)}
-        </span>
-        <span style={{ color: mainColor }}>
-          {mainLabel} {formatTokenCount(mainValue)}
-        </span>
-      </div>
-
-      {hovered && (
-        <div
-          ref={tooltipRef}
-          className="pointer-events-none fixed z-50"
-          style={{ left: tooltipPos.left, top: tooltipPos.top }}
-        >
-          <div className="grid min-w-40 items-start gap-1.5 rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-xl">
-            <div className="flex items-center gap-2">
-              <div
-                className="h-2.5 w-2.5 shrink-0 rounded-[2px]"
-                style={{ backgroundColor: mainColor }}
-              />
-              <div className="flex flex-1 items-center justify-between leading-none">
-                <span className="text-muted-foreground">{mainLabel}</span>
-                <span className="font-mono font-medium text-foreground tabular-nums">
-                  {formatTokenCount(mainValue)}
-                </span>
-              </div>
-            </div>
-            <div className="border-t border-border/50" />
-            <div className="flex items-center gap-2">
-              <div
-                className="h-2.5 w-2.5 shrink-0 rounded-[2px]"
-                style={{ backgroundColor: cacheColor }}
-              />
-              <div className="flex flex-1 items-center justify-between leading-none">
-                <span className="text-muted-foreground">{cacheLabel}</span>
-                <span className="font-mono font-medium text-foreground tabular-nums">
-                  {cacheRatio}%
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+/** tokenTotal 总计 = 输入 + 输出 + 缓存读 + 缓存写。 */
+function tokenTotal(item: ModelUsageItem): number {
+  return item.inputTokens + item.outputTokens + item.cacheReadTokens + item.cacheCreationTokens;
 }
 
 export function ModelTokenBarChart() {
-  const t = useT();
+  // t 引用已稳定化（见 lib/i18n.tsx），useMemo 改依赖 locale 以响应语言切换
+  const { t, locale } = useI18n();
   const tokenColors = useTokenLayerColors();
   const [timeRange, setTimeRange] = usePersistentState<TimeRangeKey>(
     "dashboard.chart.modelTokenBar.timeRange",
@@ -149,7 +49,6 @@ export function ModelTokenBarChart() {
   const [data, setData] = useState<ModelUsageItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [sortField, setSortField] = useState<SortField>("total");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
   const fetchData = useCallback(
@@ -185,33 +84,22 @@ export function ModelTokenBarChart() {
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const sorted = useMemo(() => {
-    const arr = [...data].sort((a, b) => {
-      let va: number, vb: number;
-      if (sortField === "total") {
-        va = tokenTotal(a);
-        vb = tokenTotal(b);
-      } else {
-        va = a[sortField];
-        vb = b[sortField];
-      }
-      return sortDir === "desc" ? vb - va : va - vb;
-    });
-    return arr;
-  }, [data, sortField, sortDir]);
+    return [...data].sort((a, b) =>
+      sortDir === "desc" ? tokenTotal(b) - tokenTotal(a) : tokenTotal(a) - tokenTotal(b),
+    );
+  }, [data, sortDir]);
 
-  function handleSort(field: SortField) {
-    if (sortField === field) {
-      setSortDir((d) => (d === "desc" ? "asc" : "desc"));
-    } else {
-      setSortField(field);
-      setSortDir("desc");
-    }
-  }
-
-  function sortIndicator(field: SortField) {
-    if (sortField !== field) return "";
-    return sortDir === "desc" ? " ▼" : " ▲";
-  }
+  const legend = useMemo(
+    () => [
+      { key: "input", label: t("charts.input"), color: tokenColors.input },
+      { key: "output", label: t("charts.output"), color: tokenColors.output },
+      { key: "cacheRead", label: t("charts.cache_read"), color: tokenColors.cacheRead },
+      { key: "cacheWrite", label: t("charts.cache_write"), color: tokenColors.cacheCreated },
+    ],
+    // locale 必须在依赖里：t 引用已稳定（见 lib/i18n.tsx），翻译文本刷新只能靠 locale 驱动重算
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [locale, t, tokenColors],
+  );
 
   return (
     <Card>
@@ -250,53 +138,40 @@ export function ModelTokenBarChart() {
                   <th className="py-2 text-left font-medium">{t("model_chart.model")}</th>
                   <th
                     className="cursor-pointer py-2 pr-4 text-right font-medium hover:text-foreground"
-                    onClick={() => handleSort("total")}
+                    onClick={() => setSortDir((d) => (d === "desc" ? "asc" : "desc"))}
                   >
                     {t("charts.total")}
-                    {sortIndicator("total")}
+                    {sortDir === "desc" ? " ▼" : " ▲"}
                   </th>
-                  <th className="w-[220px] py-2 text-left font-medium">{t("charts.input")}</th>
-                  <th className="w-[220px] py-2 pr-6 text-left font-medium">
-                    {t("charts.output")}
+                  <th className="w-[360px] py-2 pr-6 text-left text-xs font-medium">
+                    <RatioLegend segments={legend} />
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {sorted.map((item, i) => {
-                  const total = tokenTotal(item);
-                  return (
-                    <tr
-                      key={item.modelId}
-                      className="border-b border-border transition-colors hover:bg-muted/50"
-                    >
-                      <td className="py-3 pl-6 pr-2 text-muted-foreground">{i + 1}</td>
-                      <td className="py-3 pr-4 font-medium">{item.modelId}</td>
-                      <td className="py-3 pr-4 text-right font-semibold">
-                        {formatTokenCount(total)}
-                      </td>
-                      <td className="w-[220px] py-3 pr-4">
-                        <BarWithTooltip
-                          cacheLabel={t("charts.cache_read")}
-                          cacheValue={item.cacheReadTokens}
-                          cacheColor={tokenColors.cacheRead}
-                          mainLabel={t("charts.input")}
-                          mainValue={item.inputTokens}
-                          mainColor={tokenColors.input}
-                        />
-                      </td>
-                      <td className="w-[220px] py-3 pr-6">
-                        <BarWithTooltip
-                          cacheLabel={t("charts.cache_write")}
-                          cacheValue={item.cacheCreationTokens}
-                          cacheColor={tokenColors.cacheCreated}
-                          mainLabel={t("charts.output")}
-                          mainValue={item.outputTokens}
-                          mainColor={tokenColors.output}
-                        />
-                      </td>
-                    </tr>
-                  );
-                })}
+                {sorted.map((item, i) => (
+                  <tr
+                    key={item.modelId}
+                    className="border-b border-border transition-colors hover:bg-muted/50"
+                  >
+                    <td className="py-3 pl-6 pr-2 text-muted-foreground">{i + 1}</td>
+                    <td className="py-3 pr-4 font-medium">{item.modelId}</td>
+                    <td className="py-3 pr-4 text-right font-semibold">
+                      {formatTokenCount(tokenTotal(item))}
+                    </td>
+                    <td className="w-[360px] py-3 pr-6">
+                      <StackedRatioBar
+                        formatValue={formatExactTokenCount}
+                        segments={[
+                          { ...legend[0], value: item.inputTokens },
+                          { ...legend[1], value: item.outputTokens },
+                          { ...legend[2], value: item.cacheReadTokens },
+                          { ...legend[3], value: item.cacheCreationTokens },
+                        ]}
+                      />
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

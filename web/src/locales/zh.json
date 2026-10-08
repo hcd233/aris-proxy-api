@@ -851,7 +851,7 @@
   "upstream.pricing.cacheReadPrice": "缓存读取单价",
   "audit.cost.column": "费用",
   "audit.cost.unpriced": "暂无计价数据",
-  "dashboard.model_cost": "模型成本排行",
+  "dashboard.model_cost": "模型成本",
   "cost.dim.total": "总成本",
   "cost.dim.input": "输入",
   "cost.dim.output": "输出",

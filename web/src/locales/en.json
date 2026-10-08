@@ -851,7 +851,7 @@
   "upstream.pricing.cacheReadPrice": "Cache read price",
   "audit.cost.column": "Cost",
   "audit.cost.unpriced": "No priced data",
-  "dashboard.model_cost": "Model cost ranking",
+  "dashboard.model_cost": "Model cost",
   "cost.dim.total": "Total",
   "cost.dim.input": "Input",
   "cost.dim.output": "Output",
