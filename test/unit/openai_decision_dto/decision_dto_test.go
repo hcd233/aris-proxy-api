@@ -139,7 +139,7 @@ func TestDecisionQuestion_ThreeTypes(t *testing.T) {
 func TestOpenAIDecisionRsp_UsageDetails(t *testing.T) {
 	t.Parallel()
 
-	raw := `{"model":"gpt-x","answers":[{"type":"predicate","name":"d","probability":0.9}],
+	raw := `{"answers":[{"type":"predicate","name":"d","probability":0.9}],
 		"usage":{"input_tokens":42,"output_tokens":7,"total_tokens":49,
 		"input_tokens_details":{"cached_tokens":12,"cache_write_tokens":5},
 		"output_tokens_details":{"reasoning_tokens":3}}}`
@@ -152,9 +152,6 @@ func TestOpenAIDecisionRsp_UsageDetails(t *testing.T) {
 	}
 	if rsp.Usage.InputTokensDetails.CachedTokens != 12 || rsp.Usage.InputTokensDetails.CacheWriteTokens != 5 {
 		t.Fatalf("input details = %+v", rsp.Usage.InputTokensDetails)
-	}
-	if rsp.Usage.OutputTokensDetails == nil || rsp.Usage.OutputTokensDetails.ReasoningTokens != 3 {
-		t.Fatalf("output details = %+v", rsp.Usage.OutputTokensDetails)
 	}
 	if got := rsp.Usage.InputOutputTokens(); got != 49 {
 		t.Fatalf("InputOutputTokens() = %d, want 49", got)

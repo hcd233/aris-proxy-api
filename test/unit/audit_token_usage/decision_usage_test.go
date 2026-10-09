@@ -13,7 +13,6 @@ func TestSetTokensFromDecisionUsage_NormalizesNetInput(t *testing.T) {
 		Usage: &dto.OpenAIDecisionUsage{
 			InputTokens:  42,
 			OutputTokens: 7,
-			TotalTokens:  49,
 			InputTokensDetails: &dto.DecisionInputTokensDetails{
 				CachedTokens:     12,
 				CacheWriteTokens: 5,

@@ -137,31 +137,23 @@ type DecisionScoreLevel struct {
 
 // ==================== Decision 响应（审计/存储子集） ====================
 
-// OpenAIDecisionRsp Decision 响应子集
+// OpenAIDecisionRsp Decision 响应子集（仅审计/存储所需字段）
 type OpenAIDecisionRsp struct {
-	Model   string                 `json:"model" doc:"上游返回的模型名"`
 	Answers sonic.NoCopyRawMessage `json:"answers" doc:"答案数组(原样保留)"`
 	Usage   *OpenAIDecisionUsage   `json:"usage,omitempty" doc:"使用量"`
 }
 
 // OpenAIDecisionUsage Decision 使用量
 type OpenAIDecisionUsage struct {
-	InputTokens         int                          `json:"input_tokens" doc:"输入 token"`
-	OutputTokens        int                          `json:"output_tokens" doc:"输出 token"`
-	TotalTokens         int                          `json:"total_tokens" doc:"总 token"`
-	InputTokensDetails  *DecisionInputTokensDetails  `json:"input_tokens_details,omitempty" doc:"输入明细"`
-	OutputTokensDetails *DecisionOutputTokensDetails `json:"output_tokens_details,omitempty" doc:"输出明细"`
+	InputTokens        int                         `json:"input_tokens" doc:"输入 token"`
+	OutputTokens       int                         `json:"output_tokens" doc:"输出 token"`
+	InputTokensDetails *DecisionInputTokensDetails `json:"input_tokens_details,omitempty" doc:"输入明细"`
 }
 
 // DecisionInputTokensDetails 输入明细（两维均为 input_tokens 的子集）
 type DecisionInputTokensDetails struct {
 	CachedTokens     int `json:"cached_tokens" doc:"缓存命中 token"`
 	CacheWriteTokens int `json:"cache_write_tokens" doc:"缓存写入 token"`
-}
-
-// DecisionOutputTokensDetails 输出明细
-type DecisionOutputTokensDetails struct {
-	ReasoningTokens int `json:"reasoning_tokens" doc:"推理 token"`
 }
 
 // InputOutputTokens 返回 input_tokens + output_tokens（原始口径，供限流上报）

@@ -35,7 +35,7 @@ _Avoid_: jwt token, session token
 ## LLM Proxy（LLM 代理）
 
 **Endpoint（上游端点）**:
-一个上游 LLM 服务连接配置，包含名称、OpenAI 和 Anthropic 两个协议的 Base URL、共享 API Key，以及各接口（OpenAI Chat Completion / OpenAI Response / Anthropic Message）的支持标记。归属某个 User（多租户隔离），通过 `EndpointResolver` 按模型别名在当前用户的配置范围内解析出目标端点。管理后台对所有 user 级用户开放自管；admin 可查看全量并按用户名过滤、代建。
+一个上游 LLM 服务连接配置，包含名称、OpenAI 和 Anthropic 两个协议的 Base URL、共享 API Key，以及各接口（OpenAI Chat Completion / OpenAI Response / Anthropic Message / OpenAI Decision）的支持标记。归属某个 User（多租户隔离），通过 `EndpointResolver` 按模型别名在当前用户的配置范围内解析出目标端点。管理后台对所有 user 级用户开放自管；admin 可查看全量并按用户名过滤、代建。
 _Avoid_: upstream, provider, backend
 
 **Model（模型别名）**:
@@ -52,8 +52,12 @@ _Avoid_: model name, exposed name
 _Avoid_: connection info, auth config
 
 **ProtocolType（协议类型）**:
-网关支持的三种上游 LLM 协议：`openai-chat-completion`（OpenAI Chat Completions）、`openai-response`（OpenAI Response API）、`anthropic-message`（Anthropic Messages）。决定请求的序列化/反序列化方式和传输通道。网关支持跨协议转换（如 OpenAI 接口调用 Anthropic 上游）。
+网关支持的四种上游 LLM 协议：`openai-chat-completion`（OpenAI Chat Completions）、`openai-response`（OpenAI Response API）、`anthropic-message`（Anthropic Messages）、`openai-decision`（OpenAI Decision API）。决定请求的序列化/反序列化方式和传输通道。网关支持跨协议转换（如 OpenAI 接口调用 Anthropic 上游），但 **Decision 仅支持原生转发**：predicate/choice/score 在 Chat/Anthropic 协议中没有等价语义。
 _Avoid_: provider type, api type
+
+**DecisionAPI（决策接口）**:
+OpenAI `POST /v1/decisions`。对同一 `input`（文本，或仅含文本+图片的 user 消息数组，最多 128 张图）批量回答分类/打分问题，按提问顺序返回 `answers`。问题三型：`predicate`（估算陈述为真的概率）/ `choice`（从 2~255 个选项中选择，选项值可为 string 或 bool，同文本的不同类型视为不同选项）/ `score`（按有序等级打分）；答案四态：`predicate` / `choice` / `score` / `refusal`（模型拒答，触发词 deny 拦截时也用它代答）。接口无流式形态，网关走端点声明的 `supportOpenAIDecision` 开关做原生转发，并沿用触发词 deny/omit 语义（capture 不适用）。
+_Avoid_: decision completion, classify api
 
 **EndpointResolver（端点解析器）**:
 按模型别名解析出目标 Endpoint 和 Model 的领域服务。输入 `alias`，查 `model` 表收集所有关联的 `endpoint_id`，随机选一个，再查 `endpoint` 表组装 `UpstreamCreds`。调用方根据请求协议取对应 Base URL 并检查接口支持标记。

@@ -337,28 +337,10 @@ type decisionRefusalAnswer struct {
 	Name *string `json:"name"`
 }
 
-// decisionRefusalUsage 零值 usage（响应契约要求该对象存在）。
-type decisionRefusalUsage struct {
-	InputTokens         int                                `json:"input_tokens"`
-	OutputTokens        int                                `json:"output_tokens"`
-	TotalTokens         int                                `json:"total_tokens"`
-	InputTokensDetails  decisionRefusalInputTokensDetails  `json:"input_tokens_details"`
-	OutputTokensDetails decisionRefusalOutputTokensDetails `json:"output_tokens_details"`
-}
-
-type decisionRefusalInputTokensDetails struct {
-	CachedTokens     int `json:"cached_tokens"`
-	CacheWriteTokens int `json:"cache_write_tokens"`
-}
-
-type decisionRefusalOutputTokensDetails struct {
-	ReasoningTokens int `json:"reasoning_tokens"`
-}
-
 type decisionRefusalBody struct {
 	Model   string                  `json:"model"`
 	Answers []decisionRefusalAnswer `json:"answers"`
-	Usage   decisionRefusalUsage    `json:"usage"`
+	Usage   dto.OpenAIDecisionUsage `json:"usage"`
 }
 
 // BuildDecisionRefusalBody 构造触发词 deny 命中的 Decision 响应：HTTP 200，
@@ -379,7 +361,10 @@ func BuildDecisionRefusalBody(model string, questions []*dto.DecisionQuestion) p
 	body := lo.Must1(sonic.Marshal(&decisionRefusalBody{
 		Model:   model,
 		Answers: answers,
-		Usage:   decisionRefusalUsage{},
+		// usage 契约要求该对象存在，且明细两维也需是零值对象而非缺省。
+		Usage: dto.OpenAIDecisionUsage{
+			InputTokensDetails: &dto.DecisionInputTokensDetails{},
+		},
 	}))
 	return &port.JSONResult{
 		StatusCode: http.StatusOK,

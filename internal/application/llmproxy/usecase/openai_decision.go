@@ -68,7 +68,8 @@ func buildDecisionInputMessage(input dto.DecisionInput) *commonvo.UnifiedMessage
 				continue
 			}
 			// Decision 与 Response API 共用内容块类型，归一为统一词汇
-			// （input_text/input_image/input_file → text/image_url/file）。
+			// （input_text/input_image → text/image_url），与 dto.FromResponseAPIMessage 口径一致。
+			// input_file 不在支持范围（Decision 不支持文件），故不映射。
 			switch part.Type {
 			case enum.ResponseContentTypeInputText:
 				parts = append(parts, &commonvo.UnifiedContentPart{
@@ -80,13 +81,6 @@ func buildDecisionInputMessage(input dto.DecisionInput) *commonvo.UnifiedMessage
 					Type:        enum.ContentPartTypeImageURL,
 					ImageURL:    lo.FromPtr(part.ImageURL),
 					ImageDetail: lo.FromPtr(part.Detail),
-				})
-			case enum.ResponseContentTypeInputFile:
-				parts = append(parts, &commonvo.UnifiedContentPart{
-					Type:     enum.ContentPartTypeFile,
-					FileData: lo.FromPtr(part.FileData),
-					FileID:   lo.FromPtr(part.FileID),
-					Filename: lo.FromPtr(part.Filename),
 				})
 			}
 		}

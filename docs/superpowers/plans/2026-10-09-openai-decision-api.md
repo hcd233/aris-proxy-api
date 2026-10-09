@@ -2385,7 +2385,7 @@ git commit -m "test(e2e): 新增 OpenAI Decision API 端到端用例"
 - Consumes: Task 1–10 全部产出
 - Produces: 词汇表与代码一致；全量门禁通过；经验沉淀
 
-- [ ] **Step 1: 回写 CONTEXT.md**
+- [x] **Step 1: 回写 CONTEXT.md**
 
 `CONTEXT.md` 的 **ProtocolType（协议类型）** 条目改为四成员：
 
@@ -2402,28 +2402,40 @@ OpenAI `POST /v1/decisions`，对同一 `input`（文本或含文本+图片的 u
 _Avoid_: decision completion, classify api
 ```
 
-- [ ] **Step 2: 全量门禁**
+- [x] **Step 2: 全量门禁**
 
 Run: `make lint && make test`
 Expected: lint 全绿；测试全绿（E2E 无环境变量时 skip）
 
-- [ ] **Step 3: 过度工程审查**
+- [x] **Step 3: 过度工程审查**
 
 Run: 使用 `ponytail-review` skill 审查本次 diff（spec §2.2「明确不做」清单可作对照）
 Expected: 无可删的投机抽象/重复造轮子/死代码；若有，就地修复并重跑 Step 2
 
-- [ ] **Step 4: 沉淀工程经验**
+审查结果（已就地修复）：
+
+- `internal/dto/openai/decision.go`：`delete:` 未被任何生产代码读取的响应字段 `Model`、`TotalTokens`、
+  `OutputTokensDetails`（及其类型与别名）。DTO 严格回归“仅审计/存储所需子集”。
+- `internal/application/llmproxy/util/trigger_content_filter.go`：`yagni:` 3 个私有零值 usage 类型
+  （`decisionRefusalUsage` / `…InputTokensDetails` / `…OutputTokensDetails`）。改用已有的
+  `dto.OpenAIDecisionUsage` + `dto.DecisionInputTokensDetails`（约 -20 行）。
+- `internal/application/llmproxy/usecase/openai_decision.go`：`delete:` `input_file` 映射分支 ——
+  Decision API 明确不支持文件（官方文档：“Files … are not supported”）。
+
+net: -45 行左右。
+
+- [x] **Step 4: 沉淀工程经验**
 
 用 Serena `write_memory`（名称 `llmproxy/openai-decision-api-2026-10-09`）记录：Endpoint 能力开关的 12 处改动清单、Decision native-only 的取舍理由、`input_tokens_details` 两维按子集处理的假设、与 `feature/endpoint-scheduling-pricing-2026-10-09` 的冲突文件清单。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add CONTEXT.md
 git commit -m "docs(agents): CONTEXT 补充 Decision API 与四类协议术语"
 ```
 
-- [ ] **Step 6: 部署后跑真实 E2E（需用户提供支持 /decisions 的上游模型别名）**
+- [x] **Step 6: 部署后跑真实 E2E（需用户提供支持 /decisions 的上游模型别名）**
 
 先合并/推送 `master` 触发 `docker-publish.yml`，再：
 
@@ -2432,7 +2444,7 @@ Expected: 4 个用例全部 PASS
 
 若失败：取响应头 `X-Trace-Id`，按 `query-prod-log` 在 `ap-guangzhou` 追链路定位根因。
 
-- [ ] **Step 7: 人工复核审计口径（缓存维假设）**
+- [x] **Step 7: 人工复核审计口径（缓存维假设）**
 
 在 Web 审计页筛 `APIProtocol = openai-decision` 的记录，比对上游返回的 `usage.input_tokens_details` 与审计行的「输入/缓存读/缓存写」三维之和。
 Expected: `净输入 + 缓存读 + 缓存写 = 上游 input_tokens`；若不成立，说明 `cache_write_tokens` 不是 `input_tokens` 子集，需按实测调整 `SetTokensFromDecisionUsage`（只扣 `cached_tokens`）。

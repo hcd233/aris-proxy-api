@@ -158,7 +158,6 @@ type OpenAICreateResponseRsp = openai.OpenAICreateResponseRsp
 type OpenAIDecisionRsp = openai.OpenAIDecisionRsp
 type OpenAIDecisionUsage = openai.OpenAIDecisionUsage
 type DecisionInputTokensDetails = openai.DecisionInputTokensDetails
-type DecisionOutputTokensDetails = openai.DecisionOutputTokensDetails
 type ResponseUsage = openai.ResponseUsage
 type ResponseInputTokensDetail = openai.ResponseInputTokensDetail
 type ResponseOutputTokensDetail = openai.ResponseOutputTokensDetail
