@@ -69,15 +69,16 @@ type DeleteModelReq struct {
 //	@author centonhuang
 //	@update 2026-08-28 10:00:00
 type ListModelsReq struct {
-	Page       int       `query:"page" required:"true" minimum:"1" doc:"页码"`
-	PageSize   int       `query:"pageSize" required:"true" minimum:"1" maximum:"500" doc:"每页条数"`
-	Query      string    `query:"query" maxLength:"100" doc:"关键词（命中 alias / modelId / upstreamModel）"`
-	Sort       enum.Sort `query:"sort" enum:"asc,desc" doc:"排序方向"`
-	SortField  string    `query:"sortField" maxLength:"50" doc:"排序列（白名单：alias/context_length/max_output_tokens/created_at/endpoint_id/enabled；非法值回退 created_at）"`
-	Status     string    `query:"status" enum:"enabled,disabled" doc:"启用状态筛选（缺省为全部）"`
-	EndpointID uint      `query:"endpointID" minimum:"1" doc:"按所属端点过滤（0=不过滤）"`
-	Capability string    `query:"capability" enum:"text,image,pdf,video,audio" doc:"按输入模态过滤（缺省为全部）"`
-	Username   string    `query:"username" maxLength:"64" doc:"按归属用户名过滤（仅管理员生效）"`
+	Page        int       `query:"page" required:"true" minimum:"1" doc:"页码"`
+	PageSize    int       `query:"pageSize" required:"true" minimum:"1" maximum:"500" doc:"每页条数"`
+	Query       string    `query:"query" maxLength:"100" doc:"关键词（命中 alias / modelId / upstreamModel）"`
+	Sort        enum.Sort `query:"sort" enum:"asc,desc" doc:"排序方向"`
+	SortField   string    `query:"sortField" maxLength:"50" doc:"排序列（白名单：alias/context_length/max_output_tokens/created_at/endpoint_id/enabled；非法值回退 created_at）"`
+	Status      string    `query:"status" enum:"enabled,disabled" doc:"启用状态筛选（缺省为全部）"`
+	EndpointID  uint      `query:"endpointID" minimum:"1" doc:"按所属端点过滤（0=不过滤）"`
+	Capability  string    `query:"capability" enum:"text,image,pdf,video,audio" doc:"按输入模态过滤（缺省为全部）"`
+	MissingOnly bool      `query:"missingOnly" doc:"仅看配置缺失（未计价或未填规格）"`
+	Username    string    `query:"username" maxLength:"64" doc:"按归属用户名过滤（仅管理员生效）"`
 }
 
 // ListModelsRsp 平铺模型列表响应
@@ -119,6 +120,7 @@ type ModelListItem struct {
 	MaxOutputTokens int                    `json:"maxOutputTokens" doc:"最大输出长度（tokens）"`
 	Capabilities    []enum.InputModality   `json:"capabilities" doc:"模型能力（输入模态集合）"`
 	Pricing         *PricingDTO            `json:"pricing,omitempty" doc:"定价（未计价缺省）"`
+	ConfigMissing   []enum.ConfigMissing   `json:"config_missing,omitempty" enum:"pricing,spec" doc:"配置缺失项: pricing(未计价)/spec(未填规格)"`
 	CreatedAt       time.Time              `json:"createdAt" doc:"创建时间"`
 	UpdatedAt       time.Time              `json:"updatedAt" doc:"更新时间"`
 }

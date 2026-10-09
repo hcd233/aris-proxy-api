@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import type { ModelListSortField, ModelListItem, UpstreamUser } from "@/lib/types";
 import {
   CapabilityBadges,
+  ConfigMissingBadges,
   ModelActionsCell,
   ModelAliasCell,
   ModelIdCell,
@@ -224,6 +225,7 @@ export function FlatView({
               <SpecBadges contextLength={m.contextLength} maxOutputTokens={m.maxOutputTokens} />
               <CapabilityBadges capabilities={m.capabilities} />
               <PricingInline pricing={m.pricing} />
+              <ConfigMissingBadges missing={m.config_missing} />
             </div>
           </div>
         ))}
@@ -299,6 +301,7 @@ export function FlatView({
             </TableCell>
             <TableCell className={cn(!m.enabled && "opacity-45")}>
               <PricingInline pricing={m.pricing} />
+              <ConfigMissingBadges missing={m.config_missing} />
             </TableCell>
             <TableCell>
               <Switch

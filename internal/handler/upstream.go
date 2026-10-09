@@ -120,6 +120,7 @@ func toUpstreamModelItem(v *upstreamport.UpstreamModelView) *dto.UpstreamModelIt
 		MaxOutputTokens: v.MaxOutputTokens,
 		Capabilities:    v.Capabilities,
 		Pricing:         modelport.PricingToDTO(v.Pricing),
+		ConfigMissing:   v.ConfigMissing,
 		CreatedAt:       v.CreatedAt,
 		UpdatedAt:       v.UpdatedAt,
 	}

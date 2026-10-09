@@ -95,6 +95,19 @@ func (m *Model) Capabilities() []enum.InputModality {
 // Pricing 模型定价（币种 + 规则表；未计价时 IsPriced 为 false）
 func (m *Model) Pricing() vo.Pricing { return m.pricing }
 
+// MissingConfig 计算模型配置缺失项：pricing=未计价（currency 空），spec=未填规格（context_length=0）。
+// 免费模型（currency=USD 且四价全 0）不算缺失。
+func (m *Model) MissingConfig() []enum.ConfigMissing {
+	var missing []enum.ConfigMissing
+	if !m.pricing.IsPriced() {
+		missing = append(missing, enum.ConfigMissingPricing)
+	}
+	if m.contextLength == 0 {
+		missing = append(missing, enum.ConfigMissingSpec)
+	}
+	return missing
+}
+
 func (m *Model) CreatedAt() time.Time { return m.createdAt }
 func (m *Model) UpdatedAt() time.Time { return m.updatedAt }
 

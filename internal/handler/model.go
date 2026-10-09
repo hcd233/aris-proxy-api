@@ -166,6 +166,7 @@ func (h *modelHandler) HandleListModels(ctx context.Context, req *dto.ListModels
 		Status:      req.Status,
 		EndpointID:  req.EndpointID,
 		Capability:  req.Capability,
+		MissingOnly: req.MissingOnly,
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[ModelHandler] List models failed", zap.Error(err))
@@ -190,6 +191,7 @@ func toModelListItem(v *port.ListModelView) *dto.ModelListItem {
 		MaxOutputTokens: v.MaxOutputTokens,
 		Capabilities:    v.Capabilities,
 		Pricing:         port.PricingToDTO(v.Pricing),
+		ConfigMissing:   v.ConfigMissing,
 		CreatedAt:       v.CreatedAt,
 		UpdatedAt:       v.UpdatedAt,
 	}

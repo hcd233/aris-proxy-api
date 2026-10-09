@@ -48,7 +48,7 @@ func (h *listModelHandler) Handle(ctx context.Context, q port.ListModelQuery) ([
 		scope = lo.ToPtr(u.AggregateID())
 	}
 
-	filter := llmproxy.ModelListFilter{Status: q.Status, EndpointID: q.EndpointID, Capability: q.Capability}
+	filter := llmproxy.ModelListFilter{Status: q.Status, EndpointID: q.EndpointID, Capability: q.Capability, MissingOnly: q.MissingOnly}
 	models, pageInfo, err := h.modelRepo.PaginateWithFilter(ctx, q.CommonParam, filter, scope)
 	if err != nil {
 		log.Error("[ModelQuery] Paginate models failed", zap.Error(err))
@@ -107,6 +107,7 @@ func toListModelView(m *llmagg.Model, epsByID map[uint]*llmagg.Endpoint, usersBy
 		MaxOutputTokens: m.MaxOutputTokens(),
 		Capabilities:    m.Capabilities(),
 		Pricing:         m.Pricing(),
+		ConfigMissing:   m.MissingConfig(),
 		CreatedAt:       m.CreatedAt(),
 		UpdatedAt:       m.UpdatedAt(),
 	}

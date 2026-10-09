@@ -48,6 +48,24 @@ export const emptyPricing: PricingDTO = { currency: "", rules: [] };
 
 // 无条件默认规则判定见 ./pricing-rule（isDefaultRule）
 
+/** 配置缺失徽标：未定价（pricing）/ 未填规格（spec）；无缺失不渲染 */
+export function ConfigMissingBadges({ missing }: { missing?: string[] }) {
+  const t = useT();
+  if (!missing || missing.length === 0) return null;
+  return (
+    <div className="flex items-center gap-1">
+      {missing.map((m) => (
+        <span
+          key={m}
+          className="inline-flex items-center rounded-md bg-amber-500/15 px-1.5 py-0.5 font-mono text-[11px] text-amber-600 dark:text-amber-400"
+        >
+          {m === "pricing" ? t("upstream.missing.pricing") : t("upstream.missing.spec")}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 // 归属用户展示单元：头像 + 用户名；user 缺省显示占位 —（恒定短占位不加 tooltip）
 export function OwnerCell({ user }: { user?: UpstreamUser }) {
   if (!user) {

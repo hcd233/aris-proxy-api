@@ -34,6 +34,7 @@ export interface ModelListApiParams {
   endpointID?: number;
   capability?: ModelCapability;
   username?: string;
+  missingOnly?: boolean;
 }
 
 /**
@@ -55,6 +56,7 @@ export function buildModelListParams(input: ModelListParamsInput): ModelListApiP
     out.capability = params.capability as ModelCapability;
   }
   if (params.username) out.username = params.username;
+  if (params.missingOnly === "true") out.missingOnly = true;
 
   // endpoint facet 存的是端点 ID 字符串（paramName=endpointID）
   const epID = Number(params.endpointID ?? params.endpoint);

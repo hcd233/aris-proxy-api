@@ -46,6 +46,7 @@ type ListModelView struct {
 	MaxOutputTokens int
 	Capabilities    []enum.InputModality
 	Pricing         vo.Pricing
+	ConfigMissing   []enum.ConfigMissing // 配置缺失项：pricing（未计价）/spec（未填规格）
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 }
@@ -65,6 +66,7 @@ type ListModelQuery struct {
 	Status      string
 	EndpointID  uint
 	Capability  string
+	MissingOnly bool
 }
 
 // ListModelHandler 平铺模型列表查询处理器

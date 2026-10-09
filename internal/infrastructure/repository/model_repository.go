@@ -286,6 +286,9 @@ func (r *modelRepository) PaginateWithFilter(ctx context.Context, param model.Co
 	if lo.Contains(enum.InputModalities, filter.Capability) {
 		db = db.Where(constant.WhereCapabilitiesLike, `%"`+filter.Capability+`"%`)
 	}
+	if filter.MissingOnly {
+		db = db.Where(constant.WhereModelConfigMissing)
+	}
 	// 白名单外回退默认列但保留调用方排序方向，不报错（避免前端拼错导致整页 500）
 	if !lo.Contains(constant.ModelListSortFields, param.SortField) {
 		param.SortField = constant.ModelListDefaultSortField

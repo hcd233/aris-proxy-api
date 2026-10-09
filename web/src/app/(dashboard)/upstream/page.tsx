@@ -130,6 +130,23 @@ export default function UpstreamPage() {
     }
   }, []);
 
+  // 配置缺失筛选（两个视图共有）：选中后 missingOnly=true 参数（仅看未定价/未填规格）
+  const missingFacet = useMemo<FacetDef[]>(
+    () => [
+      {
+        key: "missingOnly",
+        label: t("upstream.filter_config_missing"),
+        options: ["true"],
+        formatValue: () => t("upstream.filter_config_missing_value"),
+        target: "param",
+        single: true,
+      },
+    ],
+    // locale 必须在依赖里：t 引用已稳定（见 lib/i18n.tsx），翻译文本刷新只能靠 locale 驱动重算
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [locale],
+  );
+
   const usernameFacet = useMemo<FacetDef[]>(
     () =>
       isAdmin()
@@ -607,7 +624,11 @@ export default function UpstreamPage() {
                 />
                 <FilterBar
                   {...activeFilterBar}
-                  facets={view === "grouped" ? usernameFacet : flatFacets}
+                  facets={
+                    view === "grouped"
+                      ? [...missingFacet, ...usernameFacet]
+                      : [...missingFacet, ...flatFacets]
+                  }
                   placeholder={t("upstream.search_placeholder")}
                 />
               </div>

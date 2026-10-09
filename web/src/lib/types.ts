@@ -427,6 +427,8 @@ export interface UpstreamModelItem {
   maxOutputTokens: number;
   capabilities: ModelCapability[];
   pricing?: PricingDTO;
+  /** 配置缺失项：pricing(未计价)/spec(未填规格) */
+  config_missing?: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -561,6 +563,8 @@ export interface ModelListItem {
   maxOutputTokens: number;
   capabilities: ModelCapability[];
   pricing?: PricingDTO;
+  /** 配置缺失项：pricing(未计价)/spec(未填规格) */
+  config_missing?: string[];
   createdAt: string;
   updatedAt: string;
 }
