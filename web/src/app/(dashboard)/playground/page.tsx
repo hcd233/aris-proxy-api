@@ -2,57 +2,82 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, ApiError } from "@/lib/api-client";
-import { showErrorToast } from "@/lib/api-error-handler";
 import { PermissionGuard } from "@/components/permission-guard";
 import { useAuth } from "@/lib/auth-context";
 import type { APIKeyItem } from "@/lib/types";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { LocaleFade } from "@/components/locale-fade";
 import { PageHeader } from "@/components/page-header";
-import Link from "next/link";
-import { Play, Plus, Square, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { PanelLeft } from "lucide-react";
 import { useT } from "@/lib/i18n";
+import { toast } from "sonner";
 import {
   buildChatBody,
+  deriveTitle,
+  estimateCost,
   fetchAllPages,
+  loadParams,
+  loadSessions,
   newMessage,
+  newSession,
   ownedKeys,
   parseSSELine,
+  saveParams,
+  saveSessions,
   selectableModels,
+  truncateAfter,
+  upsertSession,
+  type ChatUsage,
   type PlaygroundMessage,
   type PlaygroundModelOption,
+  type PlaygroundParams,
+  type PlaygroundSession,
+  type PlaygroundTurnMeta,
 } from "./playground-logic";
+import { Composer } from "@/components/playground/composer";
+import { ConversationView } from "@/components/playground/conversation-view";
+import { ParamsDrawer } from "@/components/playground/params-drawer";
+import { SessionSidebar } from "@/components/playground/session-sidebar";
+
+const DEFAULT_PARAMS: PlaygroundParams = {
+  model: "",
+  apiKeyID: null,
+  temperature: "",
+  maxTokens: "",
+  stream: true,
+};
 
 function PlaygroundPage() {
   const t = useT();
   const { user, isAdmin } = useAuth();
-  const [models, setModels] = useState<PlaygroundModelOption[]>([]);
-  const [model, setModel] = useState("");
-  const [keys, setKeys] = useState<APIKeyItem[]>([]);
-  const [keysLoaded, setKeysLoaded] = useState(false);
-  const [apiKeyID, setApiKeyID] = useState<number | null>(null);
-  const [messages, setMessages] = useState<PlaygroundMessage[]>([newMessage("user", "")]);
-  const [stream, setStream] = useState(true);
-  const [temperature, setTemperature] = useState("");
-  const [maxTokens, setMaxTokens] = useState("");
-  const [sending, setSending] = useState(false);
-  const [output, setOutput] = useState("");
-  const abortRef = useRef<AbortController | null>(null);
-
   const userId = user?.id;
   // 解析按用户租户隔离：管理员的模型列表含全部用户，只列本人名下的别名才能调通
   const ownerName = isAdmin() ? user?.name : undefined;
 
+  const [sessions, setSessions] = useState<PlaygroundSession[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [params, setParams] = useState<PlaygroundParams>(DEFAULT_PARAMS);
+  const [models, setModels] = useState<PlaygroundModelOption[]>([]);
+  const [keys, setKeys] = useState<APIKeyItem[]>([]);
+  const [keysLoaded, setKeysLoaded] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [paramsOpen, setParamsOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
+
+  // 本地会话/参数初始化（一次）
+  /* eslint-disable react-hooks/set-state-in-effect -- Reading localStorage requires setting state in effect on mount */
+  useEffect(() => {
+    const loaded = loadSessions();
+    const next = loaded.length > 0 ? loaded : [newSession()];
+    setSessions(next);
+    setActiveId(next[0].id);
+    setParams({ ...DEFAULT_PARAMS, ...(loadParams() ?? {}) });
+  }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  // 模型与 Key 拉取（分页拉全量 + 租户隔离）
   useEffect(() => {
     if (userId === undefined) return;
     let cancelled = false;
@@ -75,13 +100,18 @@ function PlaygroundPage() {
         ]);
         if (cancelled) return;
         setModels(
-          selectableModels(modelItems.map((m) => ({ alias: m.alias, enabled: m.enabled }))),
+          selectableModels(
+            modelItems.map((m) => ({ alias: m.alias, enabled: m.enabled, pricing: m.pricing })),
+          ),
         );
         const mine = ownedKeys(keyItems, userId);
         setKeys(mine);
-        setApiKeyID((prev) => prev ?? mine[0]?.id ?? null);
+        setParams((prev) => ({ ...prev, apiKeyID: prev.apiKeyID ?? mine[0]?.id ?? null }));
       } catch (err) {
-        if (!cancelled) showErrorToast(err, { title: t("playground.load_models_error") });
+        if (!cancelled) {
+          toast.error(t("playground.load_models_error"));
+          console.error(err);
+        }
       } finally {
         if (!cancelled) setKeysLoaded(true);
       }
@@ -91,219 +121,338 @@ function PlaygroundPage() {
     };
   }, [t, userId, ownerName]);
 
-  // 离开页面时中断进行中的流，避免卸载后继续 setState 与上游空跑
+  // 离开页面时中断进行中的流
   useEffect(() => () => abortRef.current?.abort(), []);
 
-  const patchMessage = useCallback((idx: number, patch: Partial<PlaygroundMessage>) => {
-    setMessages((prev) => prev.map((m, i) => (i === idx ? { ...m, ...patch } : m)));
+  const persist = useCallback(
+    (next: PlaygroundSession[]) => {
+      if (!saveSessions(next)) toast.error(t("playground.session.save_failed"));
+    },
+    [t],
+  );
+
+  const patchActive = useCallback(
+    (patch: (s: PlaygroundSession) => PlaygroundSession) => {
+      setSessions((prev) => prev.map((s) => (s.id === activeId ? patch(s) : s)));
+    },
+    [activeId],
+  );
+
+  const patchParams = useCallback((patch: Partial<PlaygroundParams>) => {
+    setParams((prev) => {
+      const next = { ...prev, ...patch };
+      saveParams(next);
+      return next;
+    });
   }, []);
 
-  const handleStop = useCallback(() => abortRef.current?.abort(), []);
+  /** 以给定上下文发起一次生成；终态统一写 meta 并持久化 */
+  const runGenerate = useCallback(
+    async (context: PlaygroundMessage[]) => {
+      if (!params.model || params.apiKeyID === null) return;
+      const pricing = models.find((m) => m.alias === params.model)?.pricing;
+      const temp = params.temperature.trim() === "" ? undefined : Number(params.temperature);
+      const maxTok = params.maxTokens.trim() === "" ? undefined : Number(params.maxTokens);
+      const body = {
+        ...buildChatBody(context, {
+          model: params.model,
+          stream: params.stream,
+          temperature: temp,
+          maxTokens: maxTok,
+        }),
+        stream_options: { include_usage: true },
+      };
 
-  const handleSend = useCallback(async () => {
-    if (!model || apiKeyID === null || sending) return;
-    const temp = temperature.trim() === "" ? undefined : Number(temperature);
-    const maxTok = maxTokens.trim() === "" ? undefined : Number(maxTokens);
-    const body = buildChatBody(messages, {
-      model,
-      stream,
-      temperature: temp,
-      maxTokens: maxTok,
-    });
-    setSending(true);
-    setOutput("");
-    try {
-      if (stream) {
-        const controller = new AbortController();
-        abortRef.current = controller;
-        await api.playgroundChatStream(
-          apiKeyID,
-          body,
-          (line) => {
-            const ev = parseSSELine(line);
-            if (ev.type === "delta") setOutput((prev) => prev + ev.text);
-          },
-          controller.signal,
-        );
-      } else {
-        const rsp = (await api.playgroundChat(apiKeyID, body)) as {
-          choices?: { message?: { content?: string } }[];
+      const placeholder = newMessage("assistant", "");
+      setSessions((prev) =>
+        prev.map((s) => (s.id === activeId ? { ...s, messages: [...context, placeholder] } : s)),
+      );
+      setSending(true);
+      const startAt = Date.now();
+      let firstTokenMs: number | undefined;
+      let usage: ChatUsage | undefined;
+      let pending = "";
+      let raf = 0;
+      const flush = () => {
+        raf = 0;
+        const text = pending;
+        patchActive((s) => ({
+          ...s,
+          messages: s.messages.map((m) => (m.id === placeholder.id ? { ...m, content: text } : m)),
+        }));
+      };
+      const finalize = (extra: Partial<PlaygroundTurnMeta>) => {
+        if (raf) cancelAnimationFrame(raf);
+        const meta: PlaygroundTurnMeta = {
+          model: params.model,
+          usage,
+          firstTokenMs,
+          totalMs: Date.now() - startAt,
+          cost: usage ? estimateCost(usage, pricing) : null,
+          requestSnapshot: body,
+          ...extra,
         };
-        setOutput(rsp.choices?.[0]?.message?.content ?? "");
+        setSessions((prev) => {
+          const next = prev.map((s) =>
+            s.id === activeId
+              ? {
+                  ...s,
+                  messages: s.messages.map((m) =>
+                    m.id === placeholder.id ? { ...m, content: pending, meta } : m,
+                  ),
+                }
+              : s,
+          );
+          persist(next);
+          return next;
+        });
+        setSending(false);
+        abortRef.current = null;
+      };
+
+      try {
+        if (params.stream) {
+          const controller = new AbortController();
+          abortRef.current = controller;
+          await api.playgroundChatStream(
+            params.apiKeyID,
+            body,
+            (line) => {
+              const ev = parseSSELine(line);
+              if (ev.type === "delta") {
+                if (firstTokenMs === undefined) firstTokenMs = Date.now() - startAt;
+                pending += ev.text;
+                if (!raf) raf = requestAnimationFrame(flush);
+              } else if (ev.type === "usage") {
+                usage = ev.usage;
+              }
+            },
+            controller.signal,
+          );
+          finalize({});
+        } else {
+          const rsp = (await api.playgroundChat(params.apiKeyID, body)) as {
+            choices?: { message?: { content?: string } }[];
+            usage?: {
+              prompt_tokens?: number;
+              completion_tokens?: number;
+              prompt_tokens_details?: { cached_tokens?: number };
+            };
+          };
+          pending = rsp.choices?.[0]?.message?.content ?? "";
+          if (rsp.usage) {
+            usage = {
+              promptTokens: rsp.usage.prompt_tokens ?? 0,
+              completionTokens: rsp.usage.completion_tokens ?? 0,
+              cachedTokens: rsp.usage.prompt_tokens_details?.cached_tokens ?? 0,
+            };
+          }
+          finalize({});
+        }
+      } catch (err) {
+        // 401 交给 api-client 全局刷新不展示；AbortError 标中断；其余内联错误卡
+        const aborted = err instanceof DOMException && err.name === "AbortError";
+        if (aborted) {
+          finalize({ interrupted: true });
+        } else if (err instanceof ApiError && err.status === 401) {
+          finalize({});
+        } else {
+          finalize({
+            error: {
+              status: err instanceof ApiError ? err.status : undefined,
+              message: err instanceof Error ? err.message : String(err),
+            },
+          });
+        }
       }
-    } catch (err) {
-      const aborted = err instanceof DOMException && err.name === "AbortError";
-      if (!aborted && !(err instanceof ApiError && err.status === 401)) {
-        showErrorToast(err, { title: t("playground.send_error") });
-      }
-    } finally {
-      setSending(false);
-      abortRef.current = null;
-    }
-  }, [model, apiKeyID, sending, messages, stream, temperature, maxTokens, t]);
+    },
+    [activeId, models, params, patchActive, persist],
+  );
+
+  const handleSend = useCallback(
+    (content: string) => {
+      if (!activeId || sending) return;
+      const session = sessions.find((s) => s.id === activeId);
+      if (!session) return;
+      const messages = [...session.messages, newMessage("user", content)];
+      const title = session.title || deriveTitle(messages);
+      const next = sessions.map((s) => (s.id === activeId ? { ...s, messages, title } : s));
+      setSessions(next);
+      persist(next);
+      void runGenerate(messages);
+    },
+    [activeId, sending, sessions, persist, runGenerate],
+  );
+
+  const handleEditSave = useCallback(
+    (index: number, content: string) => {
+      const session = sessions.find((s) => s.id === activeId);
+      if (!session) return;
+      const edited = truncateAfter(session.messages, index).map((m, i) =>
+        i === index ? { ...m, content, meta: undefined } : m,
+      );
+      const next = sessions.map((s) =>
+        s.id === activeId ? { ...s, messages: edited, title: deriveTitle(edited) } : s,
+      );
+      setSessions(next);
+      persist(next);
+      void runGenerate(edited);
+    },
+    [activeId, sessions, persist, runGenerate],
+  );
+
+  const handleRerun = useCallback(
+    (index: number) => {
+      const session = sessions.find((s) => s.id === activeId);
+      if (!session) return;
+      const kept = session.messages.filter((_, i) => i !== index);
+      const next = sessions.map((s) => (s.id === activeId ? { ...s, messages: kept } : s));
+      setSessions(next);
+      persist(next);
+      void runGenerate(kept);
+    },
+    [activeId, sessions, persist, runGenerate],
+  );
+
+  const handleDelete = useCallback(
+    (index: number) => {
+      const session = sessions.find((s) => s.id === activeId);
+      if (!session) return;
+      const kept = session.messages.filter((_, i) => i !== index);
+      const next = sessions.map((s) => (s.id === activeId ? { ...s, messages: kept } : s));
+      setSessions(next);
+      persist(next);
+    },
+    [activeId, sessions, persist],
+  );
+
+  const handleRetry = handleRerun;
+
+  const handleInsertRole = useCallback(
+    (role: "system" | "assistant") => {
+      patchActive((s) => ({ ...s, messages: [...s.messages, newMessage(role, "")] }));
+    },
+    [patchActive],
+  );
+
+  const handleNewSession = useCallback(() => {
+    const s = newSession();
+    setSessions((prev) => {
+      const next = upsertSession(prev, s);
+      persist(next);
+      return next;
+    });
+    setActiveId(s.id);
+    setSidebarOpen(false);
+  }, [persist]);
+
+  const handleSelectSession = useCallback((id: string) => {
+    setActiveId(id);
+    setSidebarOpen(false);
+  }, []);
+
+  const handleRenameSession = useCallback(
+    (id: string, title: string) => {
+      setSessions((prev) => {
+        const next = prev.map((s) => (s.id === id ? { ...s, title } : s));
+        persist(next);
+        return next;
+      });
+    },
+    [persist],
+  );
+
+  const handleDeleteSession = useCallback(
+    (id: string) => {
+      setSessions((prev) => {
+        const rest = prev.filter((s) => s.id !== id);
+        const next = rest.length > 0 ? rest : [newSession()];
+        persist(next);
+        return next;
+      });
+    },
+    [persist],
+  );
+
+  // 活动会话兜底：被删后回退到首项（删除时保底重建，不会为空）
+  const active = sessions.find((s) => s.id === activeId) ?? sessions[0];
+  if (!active) return null;
 
   return (
-    <div className="space-y-4">
-      <PageHeader title={t("playground.title")} description={t("playground.description")} />
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">{t("playground.request")}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="space-y-1">
-              <Label htmlFor="pg-model">{t("playground.model")}</Label>
-              <Select value={model} onValueChange={(v) => setModel(String(v))}>
-                <SelectTrigger id="pg-model" className="w-full">
-                  <SelectValue placeholder={t("playground.model.placeholder")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {models.map((m) => (
-                    <SelectItem key={m.alias} value={m.alias}>
-                      {m.alias}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1">
-              <Label htmlFor="pg-apikey">{t("playground.api_key")}</Label>
-              {keysLoaded && keys.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  {t("playground.api_key.empty")}{" "}
-                  <Link href="/apikeys/" className="underline underline-offset-2">
-                    {t("playground.api_key.create")}
-                  </Link>
-                </p>
-              ) : (
-                <Select
-                  value={apiKeyID === null ? "" : String(apiKeyID)}
-                  onValueChange={(v) => setApiKeyID(Number(v))}
-                >
-                  <SelectTrigger id="pg-apikey" className="w-full">
-                    <SelectValue placeholder={t("playground.api_key.placeholder")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {keys.map((k) => (
-                      <SelectItem key={k.id} value={String(k.id)}>
-                        {k.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-              <p className="text-[11px] text-muted-foreground">{t("playground.api_key.hint")}</p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1">
-                <Label htmlFor="pg-temperature">{t("playground.temperature")}</Label>
-                <Input
-                  id="pg-temperature"
-                  type="number"
-                  min={0}
-                  max={2}
-                  step={0.1}
-                  value={temperature}
-                  onChange={(e) => setTemperature(e.target.value)}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="pg-max-tokens">{t("playground.max_tokens")}</Label>
-                <Input
-                  id="pg-max-tokens"
-                  type="number"
-                  min={1}
-                  value={maxTokens}
-                  onChange={(e) => setMaxTokens(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Switch checked={stream} onCheckedChange={setStream} id="pg-stream" />
-              <Label htmlFor="pg-stream">{t("playground.stream")}</Label>
-            </div>
-
-            <div className="space-y-2">
-              <Label>{t("playground.messages")}</Label>
-              {messages.map((m, idx) => (
-                <div key={idx} className="flex items-start gap-1.5">
-                  <Select
-                    value={m.role}
-                    onValueChange={(v) =>
-                      patchMessage(idx, { role: v as PlaygroundMessage["role"] })
-                    }
-                  >
-                    <SelectTrigger className="w-28 shrink-0">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="system">system</SelectItem>
-                      <SelectItem value="user">user</SelectItem>
-                      <SelectItem value="assistant">assistant</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Input
-                    value={m.content}
-                    placeholder={t("playground.message.placeholder")}
-                    onChange={(e) => patchMessage(idx, { content: e.target.value })}
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={t("playground.message.delete")}
-                    disabled={messages.length === 1}
-                    onClick={() => setMessages((prev) => prev.filter((_, i) => i !== idx))}
-                  >
-                    <Trash2 className="size-3.5 text-muted-foreground" />
-                  </Button>
-                </div>
-              ))}
+    <LocaleFade>
+      <div className="space-y-4">
+        <PageHeader title={t("playground.title")} description={t("playground.description")} />
+        <div className="flex h-[calc(100dvh-13rem)] gap-4">
+          {/* 会话侧栏：lg+ 常驻；< lg 走 Sheet 抽屉 */}
+          <aside className="hidden w-60 shrink-0 lg:block">
+            <SessionSidebar
+              sessions={sessions}
+              activeId={active.id}
+              onSelect={handleSelectSession}
+              onNew={handleNewSession}
+              onRename={handleRenameSession}
+              onDelete={handleDeleteSession}
+            />
+          </aside>
+          {/* 对话主区 */}
+          <div className="flex min-w-0 flex-1 flex-col">
+            <div className="flex items-center gap-2 lg:hidden">
               <Button
-                type="button"
                 variant="outline"
-                size="sm"
-                onClick={() => setMessages((prev) => [...prev, newMessage("user", "")])}
+                size="icon-sm"
+                aria-label={t("playground.session.open")}
+                onClick={() => setSidebarOpen(true)}
               >
-                <Plus className="size-4" />
-                {t("playground.message.add")}
+                <PanelLeft className="size-4" />
               </Button>
             </div>
-
-            {sending && stream ? (
-              <Button onClick={handleStop} variant="outline" className="w-full">
-                <Square className="size-4" />
-                {t("playground.stop")}
-              </Button>
-            ) : (
-              <Button
-                onClick={handleSend}
-                disabled={!model || apiKeyID === null || sending}
-                className="w-full"
-              >
-                <Play className="size-4" />
-                {sending ? t("playground.sending") : t("playground.send")}
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">{t("playground.output")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <pre className="min-h-40 whitespace-pre-wrap rounded-md bg-muted p-3 font-mono text-sm">
-              {output || t("playground.output.placeholder")}
-            </pre>
-          </CardContent>
-        </Card>
+            <ConversationView
+              messages={active.messages}
+              sending={sending}
+              onEditSave={handleEditSave}
+              onDelete={handleDelete}
+              onRerun={handleRerun}
+              onRetry={handleRetry}
+            />
+            <Composer
+              model={params.model}
+              stream={params.stream}
+              sending={sending}
+              disabled={!params.model || params.apiKeyID === null}
+              onSend={handleSend}
+              onStop={() => abortRef.current?.abort()}
+              onInsertRole={handleInsertRole}
+              onOpenParams={() => setParamsOpen(true)}
+            />
+          </div>
+        </div>
+        <ParamsDrawer
+          open={paramsOpen}
+          onOpenChange={setParamsOpen}
+          models={models}
+          keys={keys}
+          keysLoaded={keysLoaded}
+          params={params}
+          onParamsChange={patchParams}
+        />
+        {/* < lg 会话抽屉 */}
+        <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+          <SheetContent side="left" className="w-60 sm:max-w-[15rem]">
+            <SheetHeader>
+              <SheetTitle>{t("playground.session.open")}</SheetTitle>
+            </SheetHeader>
+            <SessionSidebar
+              sessions={sessions}
+              activeId={active.id}
+              onSelect={handleSelectSession}
+              onNew={handleNewSession}
+              onRename={handleRenameSession}
+              onDelete={handleDeleteSession}
+            />
+          </SheetContent>
+        </Sheet>
       </div>
-    </div>
+    </LocaleFade>
   );
 }
 
