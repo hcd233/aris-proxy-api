@@ -142,11 +142,11 @@ func newLeakFixture(t *testing.T) *leakFixture {
 
 	endpointRepo := repository.NewEndpointRepository(db)
 	modelRepo := repository.NewModelRepository(db)
-	resolver := llmproxyservice.NewEndpointResolver(endpointRepo, modelRepo, false)
+	resolver := llmproxyservice.NewEndpointResolver(endpointRepo, modelRepo, false, nil)
 	listModels := usecase.NewListOpenAIModels(repository.NewEndpointReadRepository(db))
 
 	openAIUC := usecase.NewOpenAIUseCase(resolver, listModels, openAIProxy, anthropicProxy,
-		noopTaskSubmitter{}, noopTriggerChecker{}, metrics.NewTokenUsageCounter(registry))
+		noopTaskSubmitter{}, noopTriggerChecker{}, metrics.NewTokenUsageCounter(registry), nil)
 	openAIHandler := handler.NewOpenAIHandler(handler.OpenAIDependencies{
 		UseCase:  openAIUC,
 		SSEGauge: metrics.NewSSEGauge(registry),

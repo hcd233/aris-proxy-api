@@ -11,6 +11,8 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 )
@@ -86,6 +88,73 @@ func (s *AffinityStore) Get(ctx context.Context, userID uint, alias, key string)
 //	@update 2026-10-09 10:00:00
 func (s *AffinityStore) Put(ctx context.Context, userID uint, alias, key string, endpointID uint) {
 	if err := s.rdb.Set(ctx, fmt.Sprintf(constant.AffinityKeyTemplate, userID, alias, key), endpointID, constant.AffinityTTL).Err(); err != nil {
-		logger.WithCtx(ctx).Warn("[AffinityStore] put affinity failed", zap.Error(err))
+		logger.WithCtx(ctx).Warn("[AffinityStore] Put affinity failed", zap.Error(err))
 	}
+}
+
+// firstUserTextOpenAIChat 提取 chat 请求首条 user 消息文本（多模态取 text parts 拼接，无 text 空串）。
+func firstUserTextOpenAIChat(msgs []*dto.OpenAIChatCompletionMessageParam) string {
+	for _, m := range msgs {
+		if m == nil || m.Role != enum.RoleUser || m.Content == nil {
+			continue
+		}
+		if m.Content.Text != "" {
+			return m.Content.Text
+		}
+		var b strings.Builder
+		for _, p := range m.Content.Parts {
+			if p != nil && p.Type == enum.ContentPartTypeText && p.Text != nil {
+				b.WriteString(*p.Text)
+			}
+		}
+		return b.String()
+	}
+	return ""
+}
+
+// firstUserTextAnthropic 提取 messages 请求首条 user 消息文本（多模态取 text blocks 拼接）。
+func firstUserTextAnthropic(msgs []*dto.AnthropicMessageParam) string {
+	for _, m := range msgs {
+		if m == nil || m.Role != enum.RoleUser || m.Content == nil {
+			continue
+		}
+		if m.Content.Text != "" {
+			return m.Content.Text
+		}
+		var b strings.Builder
+		for _, blk := range m.Content.Blocks {
+			if blk != nil && blk.Type == enum.AnthropicContentBlockTypeText && blk.Text != nil {
+				b.WriteString(*blk.Text)
+			}
+		}
+		return b.String()
+	}
+	return ""
+}
+
+// firstUserTextResponse 提取 response 请求首条 user 输入文本：
+// input 为纯字符串时即 user 输入；为 item 数组时取首条 role=user 的浅层 text。
+func firstUserTextResponse(input *dto.ResponseInput) string {
+	if input == nil {
+		return ""
+	}
+	if input.Text != "" {
+		return input.Text
+	}
+	for _, item := range input.Items {
+		if item == nil || item.Role == nil || *item.Role != enum.RoleUser || item.Content == nil {
+			continue
+		}
+		if item.Content.Text != "" {
+			return item.Content.Text
+		}
+		var b strings.Builder
+		for _, p := range item.Content.Parts {
+			if p != nil && p.Text != nil {
+				b.WriteString(*p.Text)
+			}
+		}
+		return b.String()
+	}
+	return ""
 }

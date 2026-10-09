@@ -262,6 +262,7 @@ func TestEndpointResolver_ResolveSkipsDisabledModels(t *testing.T) {
 		&endpointByIDRepo{endpoints: map[uint]*aggregate.Endpoint{1: ep}},
 		&staticModelRepo{models: []*aggregate.Model{disabledModel, enabledModel}},
 		false,
+		nil,
 	)
 
 	cands, err := resolver.ResolveCandidates(ctx, 0, alias, func(ep *aggregate.Endpoint) bool {
@@ -291,6 +292,7 @@ func TestEndpointResolver_ResolveFiltersUnsupportedEndpoints(t *testing.T) {
 		&endpointByIDRepo{endpoints: map[uint]*aggregate.Endpoint{1: anthropicOnly, 2: openAIOnly}},
 		&staticModelRepo{models: []*aggregate.Model{anthropicModel, openAIModel}},
 		false,
+		nil,
 	)
 
 	cands, err := resolver.ResolveCandidates(ctx, 0, alias, func(ep *aggregate.Endpoint) bool {
@@ -318,7 +320,7 @@ func TestEndpointResolver_Resolve(t *testing.T) {
 			t.Parallel()
 			modelRepo := newStubModelRepo(tc.ModelBehavior)
 			endpointRepo := &stubEndpointRepo{}
-			resolver := service.NewEndpointResolver(endpointRepo, modelRepo, false)
+			resolver := service.NewEndpointResolver(endpointRepo, modelRepo, false, nil)
 
 			cands, err := resolver.ResolveCandidates(ctx, 0, vo.EndpointAlias(tc.Alias), nil)
 
@@ -406,6 +408,7 @@ func TestEndpointResolver_UserIsolation(t *testing.T) {
 		&stubEndpointRepo{},
 		&ownedModelRepo{ownerUserID: 101, alias: "gpt-x"},
 		false,
+		nil,
 	)
 
 	// 归属用户解析成功
@@ -467,7 +470,7 @@ func TestEndpointResolver_SharedPoolFallback(t *testing.T) {
 	alias := vo.EndpointAlias("gpt-shared")
 	endpointRepo := &stubEndpointRepo{}
 
-	resolverOn := service.NewEndpointResolver(endpointRepo, &sharedPoolModelRepo{alias: alias.String()}, true)
+	resolverOn := service.NewEndpointResolver(endpointRepo, &sharedPoolModelRepo{alias: alias.String()}, true, nil)
 	cands, err := resolverOn.ResolveCandidates(ctx, 101, alias, nil)
 	if err != nil {
 		t.Fatalf("fallback resolve should succeed: %v", err)
@@ -476,7 +479,7 @@ func TestEndpointResolver_SharedPoolFallback(t *testing.T) {
 		t.Fatal("expected candidates resolved from shared pool")
 	}
 
-	resolverOff := service.NewEndpointResolver(endpointRepo, &sharedPoolModelRepo{alias: alias.String()}, false)
+	resolverOff := service.NewEndpointResolver(endpointRepo, &sharedPoolModelRepo{alias: alias.String()}, false, nil)
 	_, err = resolverOff.ResolveCandidates(ctx, 101, alias, nil)
 	if !errors.Is(err, ierr.ErrDataNotExists) {
 		t.Fatalf("fallback disabled must be ErrDataNotExists, got %v", err)

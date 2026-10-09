@@ -19,11 +19,20 @@ type Candidate struct {
 	Model    *aggregate.Model
 }
 
+// EndpointAffinity 端点亲和查询（application 层 AffinityStore 实现，domain 只依赖接口）。
+// 方法签名与 usecase.AffinityStore.Get 一致。
+type EndpointAffinity interface {
+	Get(ctx context.Context, userID uint, alias, key string) (uint, bool)
+}
+
 // EndpointResolver 模型端点解析领域服务
 //
 // 按 alias 查询 model 表 → 过滤可用 endpoint → 按调度优先级有序返回候选。
 type EndpointResolver interface {
 	ResolveCandidates(ctx context.Context, userID uint, alias vo.EndpointAlias, matcher func(*aggregate.Endpoint) bool) ([]Candidate, error)
+	// ResolveCandidatesWithAffinity 在 ResolveCandidates 基础上把亲和命中的候选提到最前。
+	// key 为空串或 affinity 为 nil 时等价 ResolveCandidates。
+	ResolveCandidatesWithAffinity(ctx context.Context, userID uint, alias vo.EndpointAlias, key string, matcher func(*aggregate.Endpoint) bool) ([]Candidate, error)
 }
 
 type endpointResolver struct {
@@ -31,6 +40,7 @@ type endpointResolver struct {
 	modelRepo    llmproxy.ModelRepository
 	// sharedPoolFallback 用户租户未命中 alias 时回退查共享池（多租户化过渡开关）
 	sharedPoolFallback bool
+	affinity           EndpointAffinity // 可为 nil（无亲和）
 }
 
 // NewEndpointResolver 构造领域服务
@@ -41,12 +51,33 @@ func NewEndpointResolver(
 	endpointRepo llmproxy.EndpointRepository,
 	modelRepo llmproxy.ModelRepository,
 	sharedPoolFallback bool,
+	affinity EndpointAffinity,
 ) EndpointResolver {
 	return &endpointResolver{
 		endpointRepo:       endpointRepo,
 		modelRepo:          modelRepo,
 		sharedPoolFallback: sharedPoolFallback,
+		affinity:           affinity,
 	}
+}
+
+// ResolveCandidatesWithAffinity 在 ResolveCandidates 基础上把亲和命中的候选提到最前。
+// 亲和端点不在候选（被禁用/被 matcher 过滤/已删除）时忽略亲和按序返回；读失败 fail-open。
+func (r *endpointResolver) ResolveCandidatesWithAffinity(ctx context.Context, userID uint, alias vo.EndpointAlias, key string, matcher func(*aggregate.Endpoint) bool) ([]Candidate, error) {
+	cands, err := r.ResolveCandidates(ctx, userID, alias, matcher)
+	if err != nil || key == "" || r.affinity == nil {
+		return cands, err
+	}
+	pinnedID, ok := r.affinity.Get(ctx, userID, alias.String(), key)
+	if !ok {
+		return cands, nil
+	}
+	for i, c := range cands {
+		if c.Endpoint.AggregateID() == pinnedID {
+			return append([]Candidate{c}, append(cands[:i], cands[i+1:]...)...), nil
+		}
+	}
+	return cands, nil
 }
 
 // ResolveCandidates 按 alias 解析出全部可用候选，按调度优先级有序返回。

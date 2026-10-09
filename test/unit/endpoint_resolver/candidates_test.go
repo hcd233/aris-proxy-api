@@ -87,6 +87,12 @@ func (r *multiEndpointRepo) FindIDsByScope(context.Context, *uint) ([]uint, erro
 // newTestResolver 按候选声明构造 resolver：每个 cand 建一个 endpoint（ID 递增）+ 一条 model 记录。
 func newTestResolver(t *testing.T, cands ...cand) service.EndpointResolver {
 	t.Helper()
+	return newTestResolverWithAffinity(t, nil, cands...)
+}
+
+// newTestResolverWithAffinity 同 newTestResolver，可注入端点亲和。
+func newTestResolverWithAffinity(t *testing.T, affinity service.EndpointAffinity, cands ...cand) service.EndpointResolver {
+	t.Helper()
 	epRepo := &multiEndpointRepo{byID: map[uint]*aggregate.Endpoint{}}
 	modelRepo := &multiModelRepo{byAlias: map[string][]*aggregate.Model{}}
 	for i, c := range cands {
@@ -105,7 +111,7 @@ func newTestResolver(t *testing.T, cands ...cand) service.EndpointResolver {
 		}
 		modelRepo.byAlias[c.alias] = append(modelRepo.byAlias[c.alias], m)
 	}
-	return service.NewEndpointResolver(epRepo, modelRepo, false)
+	return service.NewEndpointResolver(epRepo, modelRepo, false, affinity)
 }
 
 func TestResolveCandidatesPriorityOrder(t *testing.T) {

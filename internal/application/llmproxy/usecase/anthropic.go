@@ -35,6 +35,7 @@ type anthropicUseCase struct {
 	taskSubmitter    TaskSubmitter
 	triggerChecker   TriggerChecker
 	tokenMetrics     *metrics.TokenUsageCounter
+	affinity         *AffinityStore
 }
 
 func NewAnthropicUseCase(
@@ -46,6 +47,7 @@ func NewAnthropicUseCase(
 	taskSubmitter TaskSubmitter,
 	triggerChecker TriggerChecker,
 	tokenMetrics *metrics.TokenUsageCounter,
+	affinity *AffinityStore,
 ) port.AnthropicUseCase {
 	return &anthropicUseCase{
 		resolver:         resolver,
@@ -56,6 +58,7 @@ func NewAnthropicUseCase(
 		taskSubmitter:    taskSubmitter,
 		triggerChecker:   triggerChecker,
 		tokenMetrics:     tokenMetrics,
+		affinity:         affinity,
 	}
 }
 
@@ -72,7 +75,8 @@ func (u *anthropicUseCase) CreateMessage(ctx context.Context, req *dto.Anthropic
 
 	var compatRoute enum.CompatRoute
 	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
-	cands, err := u.resolver.ResolveCandidates(ctx, userID, vo.EndpointAlias(req.Body.Model), func(ep *aggregate.Endpoint) bool {
+	affKey, _ := AffinityKey(ctx, req.Body.Model, firstUserTextAnthropic(req.Body.Messages))
+	cands, err := u.resolver.ResolveCandidatesWithAffinity(ctx, userID, vo.EndpointAlias(req.Body.Model), affKey, func(ep *aggregate.Endpoint) bool {
 		return SelectCompatRoute(enum.ProxyAPIAnthropicMessage, ep) != enum.CompatRouteUnsupported
 	})
 	if err != nil {
@@ -117,7 +121,11 @@ func (u *anthropicUseCase) CreateMessage(ctx context.Context, req *dto.Anthropic
 	}
 
 	return runWithFallback(ctx, constant.ModuleAnthropicUseCase, req.Body.Model, cands, func(cand service.Candidate) (port.Result, error) {
-		return u.dispatchMessage(ctx, req, cand.Model, cand.Endpoint)
+		result, ferr := u.dispatchMessage(ctx, req, cand.Model, cand.Endpoint)
+		if ferr == nil && affKey != "" && u.affinity != nil {
+			u.affinity.Put(ctx, userID, req.Body.Model, affKey, cand.Endpoint.AggregateID())
+		}
+		return result, ferr
 	})
 }
 

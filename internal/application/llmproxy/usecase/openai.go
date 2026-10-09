@@ -33,6 +33,7 @@ type openAIUseCase struct {
 	taskSubmitter  TaskSubmitter
 	triggerChecker TriggerChecker
 	tokenMetrics   *metrics.TokenUsageCounter
+	affinity       *AffinityStore
 }
 
 func NewOpenAIUseCase(
@@ -43,6 +44,7 @@ func NewOpenAIUseCase(
 	taskSubmitter TaskSubmitter,
 	triggerChecker TriggerChecker,
 	tokenMetrics *metrics.TokenUsageCounter,
+	affinity *AffinityStore,
 ) port.OpenAIUseCase {
 	return &openAIUseCase{
 		resolver:       resolver,
@@ -52,6 +54,7 @@ func NewOpenAIUseCase(
 		taskSubmitter:  taskSubmitter,
 		triggerChecker: triggerChecker,
 		tokenMetrics:   tokenMetrics,
+		affinity:       affinity,
 	}
 }
 
@@ -64,7 +67,8 @@ func (u *openAIUseCase) CreateChatCompletion(ctx context.Context, req *dto.OpenA
 
 	var compatRoute enum.CompatRoute
 	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
-	cands, err := u.resolver.ResolveCandidates(ctx, userID, vo.EndpointAlias(req.Body.Model), func(ep *aggregate.Endpoint) bool {
+	affKey, _ := AffinityKey(ctx, req.Body.Model, firstUserTextOpenAIChat(req.Body.Messages))
+	cands, err := u.resolver.ResolveCandidatesWithAffinity(ctx, userID, vo.EndpointAlias(req.Body.Model), affKey, func(ep *aggregate.Endpoint) bool {
 		return SelectCompatRoute(enum.ProxyAPIOpenAIChat, ep) != enum.CompatRouteUnsupported
 	})
 	if err != nil {
@@ -110,7 +114,11 @@ func (u *openAIUseCase) CreateChatCompletion(ctx context.Context, req *dto.OpenA
 	}
 
 	return runWithFallback(ctx, constant.ModuleOpenAIUseCase, req.Body.Model, cands, func(cand service.Candidate) (port.Result, error) {
-		return u.dispatchChat(ctx, req, cand.Model, cand.Endpoint)
+		result, ferr := u.dispatchChat(ctx, req, cand.Model, cand.Endpoint)
+		if ferr == nil && affKey != "" && u.affinity != nil {
+			u.affinity.Put(ctx, userID, req.Body.Model, affKey, cand.Endpoint.AggregateID())
+		}
+		return result, ferr
 	})
 }
 
@@ -134,7 +142,8 @@ func (u *openAIUseCase) CreateResponse(ctx context.Context, req *dto.OpenAICreat
 	model := lo.FromPtr(req.Body.Model)
 	var compatRoute enum.CompatRoute
 	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
-	cands, err := u.resolver.ResolveCandidates(ctx, userID, vo.EndpointAlias(model), func(ep *aggregate.Endpoint) bool {
+	affKey, _ := AffinityKey(ctx, model, firstUserTextResponse(req.Body.Input))
+	cands, err := u.resolver.ResolveCandidatesWithAffinity(ctx, userID, vo.EndpointAlias(model), affKey, func(ep *aggregate.Endpoint) bool {
 		return SelectCompatRoute(enum.ProxyAPIOpenAIResponse, ep) != enum.CompatRouteUnsupported
 	})
 	if err != nil {
@@ -181,7 +190,11 @@ func (u *openAIUseCase) CreateResponse(ctx context.Context, req *dto.OpenAICreat
 	}
 
 	return runWithFallback(ctx, constant.ModuleOpenAIUseCase, model, cands, func(cand service.Candidate) (port.Result, error) {
-		return u.dispatchResponse(ctx, req, cand.Model, cand.Endpoint)
+		result, ferr := u.dispatchResponse(ctx, req, cand.Model, cand.Endpoint)
+		if ferr == nil && affKey != "" && u.affinity != nil {
+			u.affinity.Put(ctx, userID, model, affKey, cand.Endpoint.AggregateID())
+		}
+		return result, ferr
 	})
 }
 
