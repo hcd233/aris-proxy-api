@@ -28,6 +28,7 @@ type UpstreamEndpointView struct {
 	SupportOpenAIChatCompletion bool
 	SupportOpenAIResponse       bool
 	SupportAnthropicMessage     bool
+	SupportOpenAIDecision       bool
 	CreatedAt                   time.Time
 	UpdatedAt                   time.Time
 }

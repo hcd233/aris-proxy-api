@@ -382,6 +382,7 @@ export interface CreateEndpointReqBody {
   supportOpenAIChatCompletion?: boolean;
   supportOpenAIResponse?: boolean;
   supportAnthropicMessage?: boolean;
+  supportOpenAIDecision?: boolean;
 }
 
 export interface UpdateEndpointReqBody {
@@ -392,6 +393,7 @@ export interface UpdateEndpointReqBody {
   supportOpenAIChatCompletion?: boolean;
   supportOpenAIResponse?: boolean;
   supportAnthropicMessage?: boolean;
+  supportOpenAIDecision?: boolean;
 }
 
 // ─── Upstream (endpoint 分组视图) ─────────────────────────────────────────────
@@ -412,6 +414,7 @@ export interface UpstreamEndpointItem {
   supportOpenAIChatCompletion: boolean;
   supportOpenAIResponse: boolean;
   supportAnthropicMessage: boolean;
+  supportOpenAIDecision: boolean;
   createdAt: string;
   updatedAt: string;
 }

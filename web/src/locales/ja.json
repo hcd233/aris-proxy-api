@@ -177,6 +177,7 @@
   "endpoints.openai_chat_label": "OpenAI Chat Completion",
   "endpoints.openai_response_label": "OpenAI Response API",
   "endpoints.anthropic_messages_label": "Anthropic Messages",
+  "endpoints.openai_decision_label": "OpenAI Decision API",
   "endpoints.update": "更新",
   "models.title": "モデル",
   "filter_bar.applied_count": "{count} 件の条件を適用中",

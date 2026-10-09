@@ -3,6 +3,8 @@ package usecase
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"time"
 
 	"github.com/bytedance/sonic"
 	"github.com/samber/lo"
@@ -60,6 +62,90 @@ func NewOpenAIUseCase(
 
 func (u *openAIUseCase) ListModels(ctx context.Context) (*dto.OpenAIListModelsRsp, error) {
 	return u.modelsQuery.Handle(ctx)
+}
+
+// CreateDecision 处理 OpenAI Decision API 请求（native-only，无流式形态）。
+func (u *openAIUseCase) CreateDecision(ctx context.Context, req *dto.OpenAICreateDecisionRequest) (port.Result, error) {
+	log := logger.WithCtx(ctx)
+
+	model := req.Body.Model
+	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
+	// Decision 无多轮文本，亲和仅会话头维度（指纹退化为空）
+	affKey, _ := AffinityKey(ctx, model, "")
+	cands, err := u.resolver.ResolveCandidatesWithAffinity(ctx, userID, vo.EndpointAlias(model), affKey, func(ep *aggregate.Endpoint) bool {
+		return SelectCompatRoute(enum.ProxyAPIOpenAIDecision, ep) != enum.CompatRouteUnsupported
+	})
+	if err != nil {
+		log.Error("[OpenAIUseCase] Decision API model not found or unsupported", zap.String("model", model), zap.Error(err))
+		return nil, proxyutil.SendOpenAIModelNotFoundError(model)
+	}
+	ep, m := cands[0].Endpoint, cands[0].Model
+
+	if matched := u.checkDecisionContent(req); len(matched) > 0 {
+		_ = u.triggerChecker.IncrementHits(ctx, matched) //nolint:errcheck // best-effort hit counting
+
+		if denyIDs := u.triggerChecker.DenyIDs(matched); len(denyIDs) > 0 {
+			words := u.triggerChecker.MatchedWords(denyIDs)
+			auditTask := &dto.ModelCallAuditTask{
+				Ctx:              util.CopyContextValues(ctx),
+				ModelID:          m.ModelID(),
+				Endpoint:         ep.Name(),
+				UpstreamProtocol: enum.ProtocolOpenAIDecision,
+				APIProtocol:      enum.ProtocolOpenAIDecision,
+				ErrorMessage:     fmt.Sprintf(constant.TriggerAuditRemarkTemplate, formatTriggerWords(words)),
+			}
+			_ = u.taskSubmitter.SubmitModelCallAuditTask(auditTask) //nolint:errcheck // best-effort audit
+			return proxyutil.BuildDecisionRefusalBody(model, req.Body.Questions), nil
+		}
+
+		// capture 短路未实现：Decision 的 input 是待评估文本而非多轮对话，
+		// 不存在「最后一条用户提问」概念（见设计文档 §2.2）。
+		if len(u.triggerChecker.OmitIDs(matched)) > 0 {
+			ctx = context.WithValue(ctx, constant.CtxKeySkipStore, true)
+		}
+	}
+
+	upstream := toTransportEndpoint(m, ep, false)
+	body := proxyutil.MarshalOpenAIDecisionBodyForModel(req.Body, upstream.Model)
+
+	startTime := time.Now()
+	respBody, err := u.openAIProxy.ForwardCreateDecision(ctx, upstream, body)
+	totalMs := time.Since(startTime).Milliseconds()
+	if err != nil {
+		auditFailure(ctx, m, u.taskSubmitter, u.tokenMetrics, model, ep.Name(), enum.ProtocolOpenAIDecision, totalMs, err)
+		return nil, ProxyErrorFromUpstream(err, enum.ProtocolKindOpenAI, openAIInternalErrorBody)
+	}
+
+	replaced := proxyutil.ReplaceModelInBody(respBody, model)
+	if affKey != "" && u.affinity != nil {
+		u.affinity.Put(ctx, userID, model, affKey, ep.AggregateID())
+	}
+	headers := buildPassthroughHeaders(ctx)
+	headers[constant.HTTPHeaderContentType] = constant.HTTPContentTypeJSON
+
+	out := callOutcome{
+		model:               m,
+		endpoint:            ep.Name(),
+		upstreamProtocol:    enum.ProtocolOpenAIDecision,
+		apiProtocol:         enum.ProtocolOpenAIDecision,
+		firstTokenLatencyMs: totalMs,
+		successStatus:       true,
+	}
+	var rsp dto.OpenAIDecisionRsp
+	if parseErr := sonic.Unmarshal(replaced, &rsp); parseErr != nil {
+		log.Debug("[OpenAIUseCase] Failed to parse Decision API response body", zap.Error(parseErr))
+	} else {
+		u.storeDecisionSession(ctx, req, &rsp, m.ModelID())
+		out.usage = decisionTokenUsage{&rsp}
+	}
+	recordModelCall(ctx, u.taskSubmitter, u.tokenMetrics, out)
+
+	return &port.JSONResult{
+		StatusCode: http.StatusOK,
+		Headers:    headers,
+		Body:       replaced,
+		Protocol:   enum.ProtocolKindOpenAI,
+	}, nil
 }
 
 func (u *openAIUseCase) CreateChatCompletion(ctx context.Context, req *dto.OpenAIChatCompletionRequest) (port.Result, error) {

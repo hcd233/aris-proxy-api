@@ -153,6 +153,7 @@
   "endpoints.openai_chat_label": "OpenAI Chat Completion",
   "endpoints.openai_response_label": "OpenAI Response API",
   "endpoints.anthropic_messages_label": "Anthropic Messages",
+  "endpoints.openai_decision_label": "OpenAI Decision API",
   "endpoints.update": "更新",
   "shares.title": "分享记录",
   "filter_bar.applied_count": "已应用 {count} 项条件",

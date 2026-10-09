@@ -22,6 +22,7 @@ const (
 	FieldSupportOpenAIChatCompletion = "support_openai_chat_completion"
 	FieldSupportOpenAIResponse       = "support_openai_response"
 	FieldSupportAnthropicMessage     = "support_anthropic_message"
+	FieldSupportOpenAIDecision       = "support_openai_decision"
 	FieldEndpointID                  = "endpoint_id"
 	FieldLastLogin                   = "last_login"
 	FieldCreatedAt                   = "created_at"
@@ -146,7 +147,7 @@ var (
 	SessionMessageCountBucketEdges = []int{10, 50, 100, 200, 500}
 
 	EndpointRepoFieldsFull = []string{FieldID, FieldUserID, FieldName, FieldOpenaiBaseURL, FieldAnthropicBaseURL, FieldAPIKey,
-		FieldSupportOpenAIChatCompletion, FieldSupportOpenAIResponse, FieldSupportAnthropicMessage,
+		FieldSupportOpenAIChatCompletion, FieldSupportOpenAIResponse, FieldSupportAnthropicMessage, FieldSupportOpenAIDecision,
 		FieldCreatedAt, FieldUpdatedAt}
 
 	ModelRepoFieldsFull  = []string{FieldID, FieldUserID, FieldAlias, FieldModelID, FieldModelUpstreamModel, FieldEndpointID, FieldEnabled, FieldModelPriority, FieldModelWeight, FieldModelContextLength, FieldModelMaxOutputTokens, FieldModelCapabilities, FieldModelPricingRules, FieldPricingCurrency, FieldCreatedAt, FieldUpdatedAt}

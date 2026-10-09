@@ -35,7 +35,7 @@ _Avoid_: jwt token, session token
 ## LLM Proxy（LLM 代理）
 
 **Endpoint（上游端点）**:
-一个上游 LLM 服务连接配置，包含名称、OpenAI 和 Anthropic 两个协议的 Base URL、共享 API Key，以及各接口（OpenAI Chat Completion / OpenAI Response / Anthropic Message）的支持标记。归属某个 User（多租户隔离），通过 `EndpointResolver` 按模型别名在当前用户的配置范围内解析出目标端点。管理后台对所有 user 级用户开放自管；admin 可查看全量并按用户名过滤、代建。
+一个上游 LLM 服务连接配置，包含名称、OpenAI 和 Anthropic 两个协议的 Base URL、共享 API Key，以及各接口（OpenAI Chat Completion / OpenAI Response / Anthropic Message / OpenAI Decision）的支持标记。归属某个 User（多租户隔离），通过 `EndpointResolver` 按模型别名在当前用户的配置范围内解析出目标端点。管理后台对所有 user 级用户开放自管；admin 可查看全量并按用户名过滤、代建。
 _Avoid_: upstream, provider, backend
 
 **Model（模型别名）**:
@@ -52,8 +52,12 @@ _Avoid_: model name, exposed name
 _Avoid_: connection info, auth config
 
 **ProtocolType（协议类型）**:
-网关支持的三种上游 LLM 协议：`openai-chat-completion`（OpenAI Chat Completions）、`openai-response`（OpenAI Response API）、`anthropic-message`（Anthropic Messages）。决定请求的序列化/反序列化方式和传输通道。网关支持跨协议转换（如 OpenAI 接口调用 Anthropic 上游）。
+网关支持的四种上游 LLM 协议：`openai-chat-completion`（OpenAI Chat Completions）、`openai-response`（OpenAI Response API）、`anthropic-message`（Anthropic Messages）、`openai-decision`（OpenAI Decision API）。决定请求的序列化/反序列化方式和传输通道。网关支持跨协议转换（如 OpenAI 接口调用 Anthropic 上游），但 **Decision 仅支持原生转发**：predicate/choice/score 在 Chat/Anthropic 协议中没有等价语义。
 _Avoid_: provider type, api type
+
+**DecisionAPI（决策接口）**:
+OpenAI `POST /v1/decisions`。对同一 `input`（文本，或仅含文本+图片的 user 消息数组，最多 128 张图）批量回答分类/打分问题，按提问顺序返回 `answers`。问题三型：`predicate`（估算陈述为真的概率）/ `choice`（从 2~255 个选项中选择，选项值可为 string 或 bool，同文本的不同类型视为不同选项）/ `score`（按有序等级打分）；答案四态：`predicate` / `choice` / `score` / `refusal`（模型拒答，触发词 deny 拦截时也用它代答）。接口无流式形态，网关走端点声明的 `supportOpenAIDecision` 开关做原生转发，并沿用触发词 deny/omit 语义（capture 不适用）。
+_Avoid_: decision completion, classify api
 
 **EndpointResolver（端点解析器）**:
 按模型别名解析出候选 Endpoint 和 Model 的领域服务。输入 `alias`，查 `model` 表收集所有关联的 `endpoint_id`，过滤 enabled 与协议能力后按 **EndpointScheduling** 排序返回有序候选（`ResolveCandidates`）；`ResolveCandidatesWithAffinity` 额外按 **EndpointAffinity** 把亲和命中的候选提到最前。转发链路（usecase）按候选顺序尝试，失败且可切换时跨端点 fallback。调用方根据请求协议取对应 Base URL 并检查接口支持标记。
@@ -272,7 +276,7 @@ _Avoid_: log scraping, import, sync, ingestion
 _Avoid_: agent plugin, hook parser
 
 **ArisClient（Aris 客户端）**:
-独立编译的 `aris` 二进制，从 `cmd/client` 构建，包含 `init`（huh 交互式配置向导：健康检查 → 选 agent（Codex / Claude Code / Both）→ API Key → 注册对应 hooks：codex 写 `~/.codex/hooks.json`，claude 写 `~/.claude/settings.json`，均幂等去重、保留既有配置、写前 .bak 备份）、`status`（状态面板：连通性、API Key 校验、hooks 注册状态、本地 spool/日志，支持 `--json`）、`trace ingest`（非交互 hook 回调，fail-open）、`model export`（模型配置导出）、`version`（输出构建版本号，release 经 `-ldflags -X main.version` 注入 tag，本地构建回退 `dev`）、`update`（把自身升级到最新 release：`HEAD <releases/latest/download>/aris-<os>-<arch>.tar.gz` 从第一跳重定向地址取 tag，下载归档后校验 sha256，再以同目录临时文件 `0700` + `rename` 原子替换自身；已是最新时只提示不下载）等命令，不链接数据库、Server、lint 或 Web 静态资源。此外客户端带**使用中更新检查**：仅当 stderr 是 TTY、命令不属于 `trace`（hook 每事件调用）/`update`/`version`、且当前版本可解析时，在命令执行期间后台 `HEAD` 解析最新 tag，命令结束后最多等 400ms 在 stderr 提示一行；不做本地缓存（每次实时解析，24 小时内多次发版也能提示到最新）、不自动安装，`ARIS_NO_UPDATE_CHECK` 关闭检查、`ARIS_UPDATE_BASE_URL` 覆盖更新源（镜像/测试）。支持 `darwin/amd64`、`darwin/arm64`、`linux/amd64`、`linux/arm64` 四个平台，产物发布到 GitHub Releases；`GET /install.sh` 返回的自包含脚本负责下载、校验、原子安装，并按 `$SHELL` 将安装目录 `$HOME/.aris/bin` 幂等写入 shell rc（zsh→`~/.zshrc`；bash→`~/.bashrc`，macOS 无 `.bashrc` 时用 `~/.bash_profile`；其他→`~/.profile`，写入失败仅告警不阻塞），末尾 `exec aris init --host <origin>` 进入配置向导。API Key 校验接口为 `GET /api/cli/v1/aris/client/check`（2026-09-06 由 `/trace/client/check` 更名，破坏性变更，旧客户端需重装）。
+独立编译的 `aris` 二进制，从 `cmd/client` 构建，包含 `init`（huh 交互式配置向导：健康检查 → 选 agent（Codex / Claude Code / Both）→ API Key → 注册对应 hooks：codex 写 `~/.codex/hooks.json`，claude 写 `~/.claude/settings.json`，均幂等去重、保留既有配置、写前 .bak 备份）、`status`（状态面板：连通性、API Key 校验、hooks 注册状态、本地 spool/日志，支持 `--json`）、`trace ingest`（非交互 hook 回调，fail-open）、`model export`（模型配置导出：拉取 `GET /api/cli/v1/model/list` 后交互选模型与目标 harness，把启用模型的能力、长度与**基础档定价**（USD/1M tokens，来自服务端 `cost` 字段）写入本地配置——OpenCode 写 `cost{input,output,cache_read,cache_write}`，未计价模型整体省略该字段；Pi 写 `cost{input,output,cacheRead,cacheWrite}`，未计价回落零值（Pi 要求每个模型都有 cost 元数据）；Codex 与 Claude Code 的配置没有成本字段，不写成本。重复导出时服务端列表内的同名模型整体刷新以跟随调价，用户自加的模型保留）、`version`（输出构建版本号，release 经 `-ldflags -X main.version` 注入 tag，本地构建回退 `dev`）、`update`（把自身升级到最新 release：`HEAD <releases/latest/download>/aris-<os>-<arch>.tar.gz` 从第一跳重定向地址取 tag，下载归档后校验 sha256，再以同目录临时文件 `0700` + `rename` 原子替换自身；已是最新时只提示不下载）等命令，不链接数据库、Server、lint 或 Web 静态资源。此外客户端带**使用中更新检查**：仅当 stderr 是 TTY、命令不属于 `trace`（hook 每事件调用）/`update`/`version`、且当前版本可解析时，在命令执行期间后台 `HEAD` 解析最新 tag，命令结束后最多等 400ms 在 stderr 提示一行；不做本地缓存（每次实时解析，24 小时内多次发版也能提示到最新）、不自动安装，`ARIS_NO_UPDATE_CHECK` 关闭检查、`ARIS_UPDATE_BASE_URL` 覆盖更新源（镜像/测试）。支持 `darwin/amd64`、`darwin/arm64`、`linux/amd64`、`linux/arm64` 四个平台，产物发布到 GitHub Releases；`GET /install.sh` 返回的自包含脚本负责下载、校验、原子安装，并按 `$SHELL` 将安装目录 `$HOME/.aris/bin` 幂等写入 shell rc（zsh→`~/.zshrc`；bash→`~/.bashrc`，macOS 无 `.bashrc` 时用 `~/.bash_profile`；其他→`~/.profile`，写入失败仅告警不阻塞），末尾 `exec aris init --host <origin>` 进入配置向导。API Key 校验接口为 `GET /api/cli/v1/aris/client/check`（2026-09-06 由 `/trace/client/check` 更名，破坏性变更，旧客户端需重装）。
 _Avoid_: TraceClient, trace client, trace cli, codex hook script, install script
 
 **TraceSpool（本地 spool）**:

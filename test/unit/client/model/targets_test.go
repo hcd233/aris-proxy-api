@@ -232,14 +232,14 @@ func TestTargets_IncludesAllAgents(t *testing.T) {
 }
 
 // Pi 的 input 仅接受 text/image：pdf/video/audio 必须被过滤，否则 Pi 拒绝加载整份配置；
-// 有定价时基础档单价写入 cost。
+// 有定价时基础档单价写入 cost。未计价（nil）时 Pi 仍要求 cost 元数据，回落零值。
 func TestPiWrite_FiltersUnsupportedModalitiesAndWritesCost(t *testing.T) {
 	t.Parallel()
 	path := filepath.Join(t.TempDir(), "models.json")
 	models := []model.TargetModel{{
 		Alias:        "omni",
 		Capabilities: []string{"text", "image", "pdf", "video", "audio"},
-		Cost:         model.TargetCost{Input: 1.25, Output: 10, CacheRead: 0.125, CacheWrite: 1.5},
+		Cost:         &model.TargetCost{Input: 1.25, Output: 10, CacheRead: 0.125, CacheWrite: 1.5},
 	}, {
 		Alias:        "pdf-only",
 		Capabilities: []string{"text", "pdf"},
@@ -266,6 +266,115 @@ func TestPiWrite_FiltersUnsupportedModalitiesAndWritesCost(t *testing.T) {
 	}
 	if got := entries[1].(map[string]any)["input"].([]any); len(got) != 1 || got[0] != "text" {
 		t.Fatalf("pdf-only must degrade to text, got %v", got)
+	}
+	if cost := entries[1].(map[string]any)["cost"].(map[string]any); cost["input"] != float64(0) {
+		t.Fatalf("unpriced pi model must keep zeroed cost metadata, got %v", cost)
+	}
+}
+
+// OpenCode：有定价时写基础档单价（USD/1M tokens，schema 用下划线 cache_read/cache_write）；
+// 未计价时整个 cost 字段必须省略——写 0 会被 OpenCode 当成真的免费。
+func TestOpenCodeWrite_WritesCostOnlyWhenPriced(t *testing.T) {
+	t.Parallel()
+	path := filepath.Join(t.TempDir(), "opencode.json")
+	models := []model.TargetModel{{
+		Alias: "omni",
+		Cost:  &model.TargetCost{Input: 0.5077, Output: 1.0154, CacheRead: 0.0042},
+	}, {
+		Alias: "unpriced",
+	}}
+	if err := (model.OpenCodeTarget{}).Write(path, "https://aris.example.com", "sk-test", models); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cfg map[string]any
+	if err := sonic.Unmarshal(data, &cfg); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	entries := cfg["provider"].(map[string]any)["aris-proxy"].(map[string]any)["models"].(map[string]any)
+	cost, ok := entries["omni"].(map[string]any)["cost"].(map[string]any)
+	if !ok {
+		t.Fatalf("priced model must carry cost:\n%s", data)
+	}
+	if cost["input"] != 0.5077 || cost["output"] != 1.0154 || cost["cache_read"] != 0.0042 || cost["cache_write"] != float64(0) {
+		t.Fatalf("opencode cost mismatch: %v", cost)
+	}
+	if _, ok := entries["unpriced"].(map[string]any)["cost"]; ok {
+		t.Fatalf("unpriced model must omit cost:\n%s", data)
+	}
+}
+
+// Pi 已存在的同名模型必须被刷新（否则改价后重新导出仍是旧价），用户自加模型继续保留。
+func TestPiWrite_RefreshesExportedModelsAndKeepsUserModels(t *testing.T) {
+	t.Parallel()
+	path := filepath.Join(t.TempDir(), "models.json")
+	existing := `{"providers":{"aris-proxy":{"apiKey":"old","models":[` +
+		`{"id":"gpt-4o","name":"gpt-4o","cost":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0}},` +
+		`{"id":"mine","name":"Mine","cost":{"input":9,"output":9,"cacheRead":1,"cacheWrite":1}}]}}}`
+	if err := os.WriteFile(path, []byte(existing), 0o600); err != nil { //nolint:gosec // test fixture
+		t.Fatal(err)
+	}
+	models := []model.TargetModel{{
+		Alias:         "gpt-4o",
+		ContextLength: 128000,
+		Cost:          &model.TargetCost{Input: 1.25, Output: 10},
+	}}
+	target := model.PiTarget{}
+	if err := target.Write(path, "https://aris.example.com", "sk-test", models); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var root map[string]any
+	if err := sonic.Unmarshal(data, &root); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	entries := root["providers"].(map[string]any)["aris-proxy"].(map[string]any)["models"].([]any)
+	if len(entries) != 2 {
+		t.Fatalf("expected refreshed + user model, got %d:\n%s", len(entries), data)
+	}
+	for _, e := range entries {
+		m := e.(map[string]any)
+		switch m["id"] {
+		case "gpt-4o":
+			cost := m["cost"].(map[string]any)
+			if cost["input"] != 1.25 || cost["output"] != float64(10) {
+				t.Fatalf("stale exported model must be refreshed with new cost: %v", cost)
+			}
+			if m["contextWindow"] != float64(128000) {
+				t.Fatalf("refreshed model must carry metadata: %v", m)
+			}
+		case "mine":
+			cost := m["cost"].(map[string]any)
+			if cost["input"] != float64(9) {
+				t.Fatalf("user-added model must be preserved: %v", cost)
+			}
+		default:
+			t.Fatalf("unexpected model entry: %v", m)
+		}
+	}
+	// 幂等：再写一次不重复追加、也不回退成旧价（passthrough map 的 JSON 键序不保证字节级一致，只比语义）
+	if err := target.Write(path, "https://aris.example.com", "sk-test", models); err != nil {
+		t.Fatal(err)
+	}
+	second, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := sonic.Unmarshal(second, &root); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	entries = root["providers"].(map[string]any)["aris-proxy"].(map[string]any)["models"].([]any)
+	if len(entries) != 2 {
+		t.Fatalf("re-export must not duplicate entries, got %d:\n%s", len(entries), second)
+	}
+	if cost := entries[0].(map[string]any)["cost"].(map[string]any); cost["input"] != 1.25 {
+		t.Fatalf("re-export must keep refreshed cost, got %v", cost)
 	}
 }
 

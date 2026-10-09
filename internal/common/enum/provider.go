@@ -47,4 +47,10 @@ const (
 	//	@author centonhuang
 	//	@update 2026-06-04 10:00:00
 	ProtocolAnthropicMessage ProtocolType = "anthropic-message"
+
+	// ProtocolOpenAIDecision OpenAI Decision API 协议
+	//
+	//	@author centonhuang
+	//	@update 2026-10-09 10:00:00
+	ProtocolOpenAIDecision ProtocolType = "openai-decision"
 )

@@ -97,7 +97,7 @@ func newTestResolverWithAffinity(t *testing.T, affinity service.EndpointAffinity
 	modelRepo := &multiModelRepo{byAlias: map[string][]*aggregate.Model{}}
 	for i, c := range cands {
 		id := uint(i + 1)
-		ep, err := aggregate.CreateEndpoint(id, c.endpoint, "https://o.example.com", "https://a.example.com", "k", true, true, true)
+		ep, err := aggregate.CreateEndpoint(id, c.endpoint, "https://o.example.com", "https://a.example.com", "k", true, true, true, false)
 		if err != nil {
 			t.Fatalf("CreateEndpoint: %v", err)
 		}

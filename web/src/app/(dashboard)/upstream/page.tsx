@@ -329,6 +329,7 @@ export default function UpstreamPage() {
       supportOpenAIChatCompletion: ep.supportOpenAIChatCompletion,
       supportOpenAIResponse: ep.supportOpenAIResponse,
       supportAnthropicMessage: ep.supportAnthropicMessage,
+      supportOpenAIDecision: ep.supportOpenAIDecision,
     });
     setEndpointDialogOpen(true);
   };
@@ -349,6 +350,7 @@ export default function UpstreamPage() {
           supportOpenAIChatCompletion: endpointForm.supportOpenAIChatCompletion,
           supportOpenAIResponse: endpointForm.supportOpenAIResponse,
           supportAnthropicMessage: endpointForm.supportAnthropicMessage,
+          supportOpenAIDecision: endpointForm.supportOpenAIDecision,
         });
         toast.success(t("endpoints.updated_success"));
       } else {
@@ -361,6 +363,7 @@ export default function UpstreamPage() {
           supportOpenAIChatCompletion: endpointForm.supportOpenAIChatCompletion,
           supportOpenAIResponse: endpointForm.supportOpenAIResponse,
           supportAnthropicMessage: endpointForm.supportAnthropicMessage,
+          supportOpenAIDecision: endpointForm.supportOpenAIDecision,
         });
         toast.success(t("endpoints.created_success"));
       }

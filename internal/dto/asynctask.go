@@ -141,6 +141,27 @@ func (t *ModelCallAuditTask) SetTokensFromResponseUsage(rsp *OpenAICreateRespons
 	t.InputTokens = max(t.InputTokens-t.CacheReadInputTokens, 0)
 }
 
+// SetTokensFromDecisionUsage 从 Decision API 响应设置 token 计数。
+//
+// input_tokens_details 下的 cached_tokens / cache_write_tokens 按「input_tokens 的子集」口径处理
+// （与字段自身归属一致），故 InputTokens 落净输入（input − cached − cache_write），
+// 保证「净输入 + 缓存创建 + 缓存读取 = 上游输入总量」的四维互斥不变量。
+//
+//	@receiver t *ModelCallAuditTask
+//	@param rsp *OpenAIDecisionRsp
+func (t *ModelCallAuditTask) SetTokensFromDecisionUsage(rsp *OpenAIDecisionRsp) {
+	if rsp == nil || rsp.Usage == nil {
+		return
+	}
+	t.InputTokens = rsp.Usage.InputTokens
+	t.OutputTokens = rsp.Usage.OutputTokens
+	if details := rsp.Usage.InputTokensDetails; details != nil {
+		t.CacheReadInputTokens = details.CachedTokens
+		t.CacheCreationInputTokens = details.CacheWriteTokens
+	}
+	t.InputTokens = max(t.InputTokens-t.CacheReadInputTokens-t.CacheCreationInputTokens, 0)
+}
+
 // SetErrorFromResponseStatus 将 Response API 终态中的 in-band 失败/未完成原因
 // 注入到审计任务 ErrorMessage。
 //

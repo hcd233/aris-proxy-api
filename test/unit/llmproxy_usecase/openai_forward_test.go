@@ -33,6 +33,11 @@ type mockOpenAIProxy struct {
 	lastChatBody             []byte
 	openChatStreamErr        error
 	openResponseStreamErr    error
+	decisionUnaryCalled      bool
+	lastDecisionCtx          context.Context
+	lastDecisionBody         []byte
+	decisionResp             []byte
+	decisionErr              error
 	// chatStreamClosed 记录上游 body 是否被关闭（验证 port.Stream.Close 兜底路径）
 	chatStreamClosed bool
 }
@@ -108,6 +113,16 @@ func (p *mockOpenAIProxy) ReadCreateResponseStream(_ context.Context, _ io.ReadC
 	return nil
 }
 
+func (p *mockOpenAIProxy) ForwardCreateDecision(ctx context.Context, _ vo.UpstreamEndpoint, body []byte) ([]byte, error) {
+	p.decisionUnaryCalled = true
+	p.lastDecisionCtx = ctx
+	p.lastDecisionBody = append([]byte(nil), body...)
+	if p.decisionErr != nil {
+		return nil, p.decisionErr
+	}
+	return p.decisionResp, nil
+}
+
 var _ usecase.OpenAIProxyPort = (*mockOpenAIProxy)(nil)
 
 // trackedReadCloser 记录底层 body 是否被 Close，用于验证 port.Stream.Close 兜底路径。
@@ -165,7 +180,7 @@ func buildCompatEndpoint(name string, supportChat, supportResponse, supportMessa
 	if supportMessage {
 		anthropicBaseURL = "https://api.anthropic.com"
 	}
-	ep, _ := aggregate.CreateEndpoint(1, name, openaiBaseURL, anthropicBaseURL, "test-api-key", supportChat, supportResponse, supportMessage)
+	ep, _ := aggregate.CreateEndpoint(1, name, openaiBaseURL, anthropicBaseURL, "test-api-key", supportChat, supportResponse, supportMessage, false)
 	return ep
 }
 
@@ -659,5 +674,23 @@ func TestOpenAICreateChatCompletion_ViaAnthropicStream_OpenErrorSkipsRead(t *tes
 	}
 	if anthropicProxy.readMessageStreamCnt != 0 {
 		t.Fatalf("ReadCreateMessageStream must not be called when Open fails; got cnt=%d", anthropicProxy.readMessageStreamCnt)
+	}
+}
+
+func TestSelectCompatRoute_DecisionNativeOnly(t *testing.T) {
+	t.Parallel()
+
+	decisionEp, _ := aggregate.CreateEndpoint(3, "decision-only", "https://api.openai.com", "", "sk-test", false, false, false, true)
+	if route := usecase.SelectCompatRoute(enum.ProxyAPIOpenAIDecision, decisionEp); route != enum.CompatRouteNative {
+		t.Fatalf("decision-only route = %v, want native", route)
+	}
+
+	chatEp, _ := aggregate.CreateEndpoint(4, "chat-only", "https://api.openai.com", "", "sk-test", true, false, false, false)
+	if route := usecase.SelectCompatRoute(enum.ProxyAPIOpenAIDecision, chatEp); route != enum.CompatRouteUnsupported {
+		t.Fatalf("chat-only route = %v, want unsupported", route)
+	}
+
+	if route := usecase.SelectCompatRoute(enum.ProxyAPIOpenAIDecision, nil); route != enum.CompatRouteUnsupported {
+		t.Fatalf("nil endpoint route = %v, want unsupported", route)
 	}
 }

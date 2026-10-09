@@ -122,7 +122,7 @@ func (s *stubEndpointRepo) FindByID(_ context.Context, id uint, _ *uint) (*aggre
 	if id == 0 {
 		return nil, nil
 	}
-	return aggregate.CreateEndpoint(id, "test-endpoint", "https://api.openai.com", "https://api.anthropic.com", "sk-test", true, false, true)
+	return aggregate.CreateEndpoint(id, "test-endpoint", "https://api.openai.com", "https://api.anthropic.com", "sk-test", true, false, true, false)
 }
 
 func (s *stubEndpointRepo) BatchFindByIDs(_ context.Context, _ []uint) (map[uint]*aggregate.Endpoint, error) {
@@ -255,7 +255,7 @@ func TestEndpointResolver_ResolveSkipsDisabledModels(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	alias := vo.EndpointAlias("test-model")
-	ep, _ := aggregate.CreateEndpoint(1, "test-endpoint", "https://api.openai.com", "", "sk-test", true, false, false)
+	ep, _ := aggregate.CreateEndpoint(1, "test-endpoint", "https://api.openai.com", "", "sk-test", true, false, false, false)
 	disabledModel, _ := aggregate.CreateModel(1, alias, "disabled-upstream", 1, false, 128000, 64000, []enum.InputModality{enum.InputModalityText})
 	enabledModel, _ := aggregate.CreateModel(2, alias, "enabled-upstream", 1, true, 128000, 64000, []enum.InputModality{enum.InputModalityText})
 	resolver := service.NewEndpointResolver(
@@ -284,8 +284,8 @@ func TestEndpointResolver_ResolveFiltersUnsupportedEndpoints(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	alias := vo.EndpointAlias("test-model")
-	anthropicOnly, _ := aggregate.CreateEndpoint(1, "anthropic-only", "", "https://api.anthropic.com", "sk-ant", false, false, true)
-	openAIOnly, _ := aggregate.CreateEndpoint(2, "openai-only", "https://api.openai.com", "", "sk-openai", true, false, false)
+	anthropicOnly, _ := aggregate.CreateEndpoint(1, "anthropic-only", "", "https://api.anthropic.com", "sk-ant", false, false, true, false)
+	openAIOnly, _ := aggregate.CreateEndpoint(2, "openai-only", "https://api.openai.com", "", "sk-openai", true, false, false, false)
 	anthropicModel, _ := aggregate.CreateModel(1, alias, "claude-upstream", 1, true, 128000, 64000, []enum.InputModality{enum.InputModalityText})
 	openAIModel, _ := aggregate.CreateModel(2, alias, "gpt-upstream", 2, true, 128000, 64000, []enum.InputModality{enum.InputModalityText})
 	resolver := service.NewEndpointResolver(

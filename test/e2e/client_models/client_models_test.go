@@ -145,11 +145,16 @@ func TestClientModels_E2E(t *testing.T) {
 		Models []struct {
 			Alias        string   `json:"alias"`
 			Capabilities []string `json:"capabilities"`
+			Cost         *struct {
+				Input  float64 `json:"input"`
+				Output float64 `json:"output"`
+			} `json:"cost"`
 		} `json:"models"`
 	}
 	if err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&body); err != nil {
 		t.Fatal(err)
 	}
+	priced := 0
 	for _, m := range body.Models {
 		if m.Alias == "" {
 			t.Fatal("model alias must not be empty")
@@ -163,5 +168,16 @@ func TestClientModels_E2E(t *testing.T) {
 		if !hasText {
 			t.Fatalf("model %q capabilities must contain text: %v", m.Alias, m.Capabilities)
 		}
+		// 定价契约：客户端导出 harness cost 字段完全依赖这一份基础档单价，
+		// 已计价模型的单价必须为正（未计价模型整字段缺省）。
+		if m.Cost != nil {
+			if m.Cost.Input <= 0 || m.Cost.Output <= 0 {
+				t.Fatalf("model %q priced cost must be positive: %+v", m.Alias, m.Cost)
+			}
+			priced++
+		}
+	}
+	if priced == 0 {
+		t.Log("no priced model on this server; cost contract not asserted")
 	}
 }

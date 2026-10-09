@@ -12,6 +12,7 @@ type OpenAIUseCase interface {
 	ListModels(ctx context.Context) (*dto.OpenAIListModelsRsp, error)
 	CreateChatCompletion(ctx context.Context, req *dto.OpenAIChatCompletionRequest) (Result, error)
 	CreateResponse(ctx context.Context, req *dto.OpenAICreateResponseRequest) (Result, error)
+	CreateDecision(ctx context.Context, req *dto.OpenAICreateDecisionRequest) (Result, error)
 }
 
 // ListClientModelsHandler 客户端模型列表用例端口
