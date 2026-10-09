@@ -509,7 +509,7 @@ git commit -m "feat(web): 上游端点支持配置 OpenAI Decision 能力"
   - `dto.OpenAIDecisionRsp{Model string; Answers sonic.NoCopyRawMessage; Usage *OpenAIDecisionUsage}`
   - `dto.OpenAIDecisionUsage.InputOutputTokens() int64`
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 新建 `test/unit/openai_decision_dto/decision_dto_test.go`：
 
@@ -655,12 +655,12 @@ func TestOpenAIDecisionRsp_UsageDetails(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: 运行测试确认失败**
+- [x] **Step 2: 运行测试确认失败**
 
 Run: `go test -count=1 ./test/unit/openai_decision_dto/`
 Expected: 编译失败 —— `undefined: dto.DecisionInput`
 
-- [ ] **Step 3: 实现 DTO**
+- [x] **Step 3: 实现 DTO**
 
 新建 `internal/dto/openai/decision.go`：
 
@@ -839,7 +839,7 @@ func (u *OpenAIDecisionUsage) InputOutputTokens() int64 {
 }
 ```
 
-- [ ] **Step 4: 导出别名**
+- [x] **Step 4: 导出别名**
 
 `internal/dto/aliases.go`：在 `OpenAICreateResponseRequest` 别名附近加：
 
@@ -863,12 +863,12 @@ type DecisionInputTokensDetails = openai.DecisionInputTokensDetails
 type DecisionOutputTokensDetails = openai.DecisionOutputTokensDetails
 ```
 
-- [ ] **Step 5: 运行测试确认通过**
+- [x] **Step 5: 运行测试确认通过**
 
 Run: `go test -count=1 ./test/unit/openai_decision_dto/`
 Expected: PASS（5 个测试）
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add internal/dto test/unit/openai_decision_dto
