@@ -2,7 +2,7 @@
  * Playground 调试页的纯逻辑（无 React；运行时无项目内 import——type import 会被
  * 编译期擦除，因此 vitest 无需路径别名即可直接加载测）。
  */
-import type { ModelCapability } from "@/lib/types";
+import type { ModelCapability, PricingDTO } from "@/lib/types";
 
 /** 调试消息（多轮编辑器的行） */
 export interface PlaygroundMessage {
@@ -140,4 +140,34 @@ export function parseSSELine(line: string): SSEEvent {
   const text = chunk.choices?.[0]?.delta?.content;
   if (typeof text === "string" && text !== "") return { type: "delta", text };
   return { type: "skip" };
+}
+
+/**
+ * 按模型定价的「无条件默认规则」（代表档）估算费用（展示单位）。
+ * 口径：(prompt − cached)×input + cached×cache_read + completion×output，单价为每 1M tokens。
+ * 不做时段/上下文区间匹配（防与审计口径漂移）；未计价或缺默认规则返回 null。
+ */
+export function estimateCost(usage: ChatUsage, pricing?: PricingDTO): number | null {
+  const rule = pricing?.rules?.find(
+    (r) => (!r.time_windows || r.time_windows.length === 0) && !r.context_min && !r.context_max,
+  );
+  if (!pricing?.currency || !rule) return null;
+  const billableInput = Math.max(0, usage.promptTokens - usage.cachedTokens);
+  return (
+    (billableInput * rule.input_price +
+      usage.cachedTokens * rule.cache_read_price +
+      usage.completionTokens * rule.output_price) /
+    1_000_000
+  );
+}
+
+/** 生成可直接执行的 curl 命令（指向网关 OpenAI 兼容端点，Key 用 <API_KEY> 占位） */
+export function buildCurl(body: Record<string, unknown>, origin: string): string {
+  const json = JSON.stringify(body, null, 2);
+  return [
+    `curl ${origin}/api/openai/v1/chat/completions \\`,
+    '  -H "Authorization: Bearer <API_KEY>" \\',
+    '  -H "Content-Type: application/json" \\',
+    `  -d '${json.replace(/'/g, "'\\''")}'`,
+  ].join("\n");
 }

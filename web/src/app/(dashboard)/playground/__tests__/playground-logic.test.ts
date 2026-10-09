@@ -1,11 +1,92 @@
 import { describe, expect, it } from "vitest";
 import {
   buildChatBody,
+  buildCurl,
+  estimateCost,
   fetchAllPages,
   ownedKeys,
   parseSSELine,
   selectableModels,
+  type ChatUsage,
 } from "../playground-logic";
+import type { PricingDTO } from "@/lib/types";
+
+const usage: ChatUsage = { promptTokens: 812, completionTokens: 408, cachedTokens: 512 };
+
+describe("estimateCost", () => {
+  it("按无条件默认规则估算：(prompt-cached)×input + cached×cacheRead + completion×output，单位每 1M", () => {
+    const pricing: PricingDTO = {
+      currency: "USD",
+      rules: [
+        {
+          time_windows: [{ start: "09:00", end: "18:00" }],
+          context_min: 128000,
+          input_price: 99,
+          output_price: 99,
+          cache_creation_price: 99,
+          cache_read_price: 99,
+        },
+        {
+          input_price: 2.5,
+          output_price: 10,
+          cache_creation_price: 3.75,
+          cache_read_price: 0.5,
+        },
+      ],
+    };
+    // (812-512)*2.5 + 512*0.5 + 408*10 = 750 + 256 + 4080 = 5086 / 1e6
+    expect(estimateCost(usage, pricing)).toBeCloseTo(0.005086, 8);
+  });
+
+  it("无条件默认规则缺失时返回 null（不按其他规则猜）", () => {
+    const pricing: PricingDTO = {
+      currency: "USD",
+      rules: [
+        {
+          context_min: 0,
+          context_max: 128000,
+          input_price: 1,
+          output_price: 2,
+          cache_creation_price: 1,
+          cache_read_price: 1,
+        },
+      ],
+    };
+    expect(estimateCost(usage, pricing)).toBeNull();
+  });
+
+  it("未计价（无 currency）或无 pricing 返回 null", () => {
+    expect(estimateCost(usage, undefined)).toBeNull();
+    expect(
+      estimateCost(usage, {
+        rules: [{ input_price: 1, output_price: 1, cache_creation_price: 1, cache_read_price: 1 }],
+      }),
+    ).toBeNull();
+  });
+
+  it("cached 大于 prompt 时负输入按 0 计", () => {
+    const pricing: PricingDTO = {
+      currency: "USD",
+      rules: [{ input_price: 1, output_price: 1, cache_creation_price: 1, cache_read_price: 1 }],
+    };
+    expect(
+      estimateCost({ promptTokens: 10, completionTokens: 0, cachedTokens: 50 }, pricing),
+    ).toBeCloseTo(0.00005, 8);
+  });
+});
+
+describe("buildCurl", () => {
+  it("生成指向 OpenAI 兼容端点的 curl，Key 脱敏占位", () => {
+    const curl = buildCurl(
+      { model: "gpt-4o", messages: [{ role: "user", content: "hi" }] },
+      "https://api.example.com",
+    );
+    expect(curl).toContain("curl https://api.example.com/api/openai/v1/chat/completions");
+    expect(curl).toContain("Authorization: Bearer <API_KEY>");
+    expect(curl).toContain("-d '");
+    expect(curl).toContain('"model": "gpt-4o"');
+  });
+});
 
 describe("buildChatBody", () => {
   it("剔除空消息行并组装基础请求体", () => {
