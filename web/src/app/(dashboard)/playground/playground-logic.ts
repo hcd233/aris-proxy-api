@@ -90,21 +90,54 @@ export function ownedKeys<T extends PlaygroundKeyOption>(keys: T[], userId: numb
   return keys.filter((k) => !k.user || k.user.id === userId);
 }
 
+/** 一次调用的用量（OpenAI usage 子集） */
+export interface ChatUsage {
+  promptTokens: number;
+  completionTokens: number;
+  cachedTokens: number;
+}
+
+/** 一条 SSE 行的解析结果：内容增量 / 用量尾帧 / 结束 / 忽略 */
+export type SSEEvent =
+  | { type: "delta"; text: string }
+  | { type: "usage"; usage: ChatUsage }
+  | { type: "done" }
+  | { type: "skip" };
+
 /**
- * 从 SSE 增量文本中提取 OpenAI chat chunk 的增量内容。
- * 返回空串表示该行不是内容增量（如 [DONE]、role 帧、空行）。
+ * 解析单条 SSE 行。
+ * usage 帧为 OpenAI 流式尾帧（choices 空数组 + usage，需 stream_options.include_usage）。
  */
-export function extractDeltaContent(sseLine: string): string {
-  const line = sseLine.trim();
-  if (!line.startsWith("data:")) return "";
-  const payload = line.slice("data:".length).trim();
-  if (payload === "" || payload === "[DONE]") return "";
-  try {
-    const chunk = JSON.parse(payload) as {
-      choices?: { delta?: { content?: string } }[];
+export function parseSSELine(line: string): SSEEvent {
+  const trimmed = line.trim();
+  if (!trimmed.startsWith("data:")) return { type: "skip" };
+  const payload = trimmed.slice("data:".length).trim();
+  if (payload === "") return { type: "skip" };
+  if (payload === "[DONE]") return { type: "done" };
+  let chunk: {
+    choices?: { delta?: { content?: string } }[];
+    usage?: {
+      prompt_tokens?: number;
+      completion_tokens?: number;
+      prompt_tokens_details?: { cached_tokens?: number };
     };
-    return chunk.choices?.[0]?.delta?.content ?? "";
+  };
+  try {
+    chunk = JSON.parse(payload) as typeof chunk;
   } catch {
-    return "";
+    return { type: "skip" };
   }
+  if (chunk.usage) {
+    return {
+      type: "usage",
+      usage: {
+        promptTokens: chunk.usage.prompt_tokens ?? 0,
+        completionTokens: chunk.usage.completion_tokens ?? 0,
+        cachedTokens: chunk.usage.prompt_tokens_details?.cached_tokens ?? 0,
+      },
+    };
+  }
+  const text = chunk.choices?.[0]?.delta?.content;
+  if (typeof text === "string" && text !== "") return { type: "delta", text };
+  return { type: "skip" };
 }

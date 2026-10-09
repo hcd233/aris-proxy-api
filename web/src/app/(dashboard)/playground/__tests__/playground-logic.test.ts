@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   buildChatBody,
-  extractDeltaContent,
   fetchAllPages,
   ownedKeys,
+  parseSSELine,
   selectableModels,
 } from "../playground-logic";
 
@@ -97,17 +97,46 @@ describe("ownedKeys", () => {
   });
 });
 
-describe("extractDeltaContent", () => {
+describe("parseSSELine", () => {
   it("提取内容增量", () => {
-    expect(extractDeltaContent(`data: {"choices":[{"delta":{"content":"hel"}}]}`)).toBe("hel");
-    expect(extractDeltaContent(`data: {"choices":[{"delta":{"role":"assistant"}}]}`)).toBe("");
+    const line = 'data: {"choices":[{"delta":{"content":"你好"}}]}';
+    expect(parseSSELine(line)).toEqual({ type: "delta", text: "你好" });
   });
 
-  it("忽略 [DONE]、空数据与非 data 行", () => {
-    expect(extractDeltaContent("data: [DONE]")).toBe("");
-    expect(extractDeltaContent("data:")).toBe("");
-    expect(extractDeltaContent("event: message")).toBe("");
-    expect(extractDeltaContent("")).toBe("");
-    expect(extractDeltaContent("data: {not-json")).toBe("");
+  it("识别 usage 尾帧（choices 空 + usage）", () => {
+    const line =
+      'data: {"choices":[],"usage":{"prompt_tokens":812,"completion_tokens":408,"prompt_tokens_details":{"cached_tokens":512}}}';
+    expect(parseSSELine(line)).toEqual({
+      type: "usage",
+      usage: { promptTokens: 812, completionTokens: 408, cachedTokens: 512 },
+    });
+  });
+
+  it("usage 缺 cached_tokens 时归零", () => {
+    const line = 'data: {"choices":[],"usage":{"prompt_tokens":10,"completion_tokens":5}}';
+    expect(parseSSELine(line)).toEqual({
+      type: "usage",
+      usage: { promptTokens: 10, completionTokens: 5, cachedTokens: 0 },
+    });
+  });
+
+  it("[DONE] 与空 data 行分别为 done / skip", () => {
+    expect(parseSSELine("data: [DONE]")).toEqual({ type: "done" });
+    expect(parseSSELine("data:")).toEqual({ type: "skip" });
+  });
+
+  it("role 帧、空行、非 data 行、畸形 JSON 均为 skip", () => {
+    expect(parseSSELine('data: {"choices":[{"delta":{"role":"assistant"}}]}')).toEqual({
+      type: "skip",
+    });
+    expect(parseSSELine("")).toEqual({ type: "skip" });
+    expect(parseSSELine("event: message")).toEqual({ type: "skip" });
+    expect(parseSSELine("data: {not-json")).toEqual({ type: "skip" });
+  });
+
+  it("delta.content 为空串时为 skip", () => {
+    expect(parseSSELine('data: {"choices":[{"delta":{"content":""}}]}')).toEqual({
+      type: "skip",
+    });
   });
 });
