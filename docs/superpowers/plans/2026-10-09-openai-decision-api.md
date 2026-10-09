@@ -887,7 +887,7 @@ git commit -m "feat(dto): 新增 OpenAI Decision API 请求/响应 DTO"
 - Consumes: Task 3 的 `dto.OpenAIDecisionRsp` / `dto.OpenAIDecisionUsage`
 - Produces: `(*dto.ModelCallAuditTask).SetTokensFromDecisionUsage(rsp *dto.OpenAIDecisionRsp)`
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 新建 `test/unit/audit_token_usage/decision_usage_test.go`：
 
@@ -970,12 +970,12 @@ func TestSetTokensFromDecisionUsage_NilSafety(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: 运行测试确认失败**
+- [x] **Step 2: 运行测试确认失败**
 
 Run: `go test -count=1 ./test/unit/audit_token_usage/`
 Expected: 编译失败 —— `task.SetTokensFromDecisionUsage undefined`
 
-- [ ] **Step 3: 实现归一化**
+- [x] **Step 3: 实现归一化**
 
 `internal/dto/asynctask.go`：在 `SetTokensFromResponseUsage` 之后追加：
 
@@ -1002,7 +1002,7 @@ func (t *ModelCallAuditTask) SetTokensFromDecisionUsage(rsp *OpenAIDecisionRsp) 
 }
 ```
 
-- [ ] **Step 4: 审计表列注释同步**
+- [x] **Step 4: 审计表列注释同步**
 
 `internal/infrastructure/database/model/model_call_audit.go`：把 `UpstreamProtocol` 与 `APIProtocol` 两列的
 `comment` 文案补上 `openai-decision`（仅注释文本变化，列类型不变）：
@@ -1012,12 +1012,12 @@ func (t *ModelCallAuditTask) SetTokensFromDecisionUsage(rsp *OpenAIDecisionRsp) 
 	APIProtocol              string    `json:"api_protocol" gorm:"column:api_protocol;not null;default:'';comment:接口层协议(openai-chat-completion/openai-response/anthropic-message/openai-decision)"`
 ```
 
-- [ ] **Step 5: 运行测试确认通过**
+- [x] **Step 5: 运行测试确认通过**
 
 Run: `go test -count=1 ./test/unit/audit_token_usage/`
 Expected: PASS（3 个测试）
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add internal/dto/asynctask.go internal/infrastructure/database/model/model_call_audit.go test/unit/audit_token_usage

@@ -20,8 +20,8 @@ type ModelCallAudit struct {
 	CreatedAt                time.Time `json:"created_at" gorm:"column:created_at;comment:创建时间;index:idx_mca_apikey_created,priority:2,sort:desc;index:idx_mca_model_created,priority:2,sort:desc;index:idx_mca_created_at,sort:desc"`
 	APIKeyID                 uint      `json:"api_key_id" gorm:"column:api_key_id;not null;comment:API密钥ID;index:idx_mca_apikey_created,priority:1"`
 	ModelID                  string    `json:"model_id" gorm:"column:model_id;not null;default:'';comment:业务模型ID(创建默认=alias);index:idx_mca_model_created,priority:1"`
-	UpstreamProtocol         string    `json:"upstream_protocol" gorm:"column:upstream_protocol;not null;default:'';comment:上游协议(openai-chat-completion/openai-response/anthropic-message)"`
-	APIProtocol              string    `json:"api_protocol" gorm:"column:api_protocol;not null;default:'';comment:接口层协议(openai-chat-completion/openai-response/anthropic-message)"`
+	UpstreamProtocol         string    `json:"upstream_protocol" gorm:"column:upstream_protocol;not null;default:'';comment:上游协议(openai-chat-completion/openai-response/anthropic-message/openai-decision)"`
+	APIProtocol              string    `json:"api_protocol" gorm:"column:api_protocol;not null;default:'';comment:接口层协议(openai-chat-completion/openai-response/anthropic-message/openai-decision)"`
 	Endpoint                 string    `json:"endpoint" gorm:"column:endpoint;not null;default:'';comment:调用模型的 Endpoint 名"`
 	InputTokens              int       `json:"input_tokens" gorm:"column:input_tokens;not null;default:0;comment:输入token数"`
 	OutputTokens             int       `json:"output_tokens" gorm:"column:output_tokens;not null;default:0;comment:输出token数"`
