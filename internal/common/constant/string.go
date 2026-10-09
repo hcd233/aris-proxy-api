@@ -14,6 +14,8 @@ const (
 
 	PostgresDSNTemplate = "host=%s user=%s password=%s dbname=%s port=%s sslmode=%s TimeZone=Asia/Shanghai"
 	DataURLTemplate     = "data:%s;base64,%s"
+	// AffinityKeyTemplate 端点亲和映射 Redis key（userID, alias, 亲和键）
+	AffinityKeyTemplate = "affinity:%d:%s:%s"
 
 	TruncateSuffixPrefix  = "...(truncated, total "
 	TruncateSuffixPostfix = " chars)"
