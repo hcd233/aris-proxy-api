@@ -61,22 +61,23 @@ type syncHistoryFixture struct {
 
 // stubSyncHandlers 嵌入接口空结构体：注册期满足方法集、不解引用（cross_tenant 惯例）
 type (
-	stubSyncPingHandler      struct{ handler.PingHandler }
-	stubSyncTraceHandler     struct{ handler.TraceHandler }
-	stubSyncTokenHandler     struct{ handler.TokenHandler }
-	stubSyncOauth2Handler    struct{ handler.Oauth2Handler }
-	stubSyncUserHandler      struct{ handler.UserHandler }
-	stubSyncDemoHandler      struct{ handler.DemoHandler }
-	stubSyncAPIKeyHandler    struct{ handler.APIKeyHandler }
-	stubSyncSessionHandler   struct{ handler.SessionHandler }
-	stubSyncAuditHandler     struct{ handler.AuditHandler }
-	stubSyncCronHandler      struct{ handler.CronHandler }
-	stubSyncTriggerHandler   struct{ handler.TriggerHandler }
-	stubSyncOpenAIHandler    struct{ handler.OpenAIHandler }
-	stubSyncAnthropicHandler struct{ handler.AnthropicHandler }
-	stubSyncMetricsHandler   struct{ handler.MetricsHandler }
-	stubSyncDatasetHandler   struct{ handler.DatasetHandler }
-	stubSyncClientHandler    struct{ handler.ClientHandler }
+	stubSyncPingHandler       struct{ handler.PingHandler }
+	stubSyncTraceHandler      struct{ handler.TraceHandler }
+	stubSyncTokenHandler      struct{ handler.TokenHandler }
+	stubSyncOauth2Handler     struct{ handler.Oauth2Handler }
+	stubSyncUserHandler       struct{ handler.UserHandler }
+	stubSyncDemoHandler       struct{ handler.DemoHandler }
+	stubSyncAPIKeyHandler     struct{ handler.APIKeyHandler }
+	stubSyncSessionHandler    struct{ handler.SessionHandler }
+	stubSyncAuditHandler      struct{ handler.AuditHandler }
+	stubSyncCronHandler       struct{ handler.CronHandler }
+	stubSyncTriggerHandler    struct{ handler.TriggerHandler }
+	stubSyncOpenAIHandler     struct{ handler.OpenAIHandler }
+	stubSyncPlaygroundHandler struct{ handler.PlaygroundHandler }
+	stubSyncAnthropicHandler  struct{ handler.AnthropicHandler }
+	stubSyncMetricsHandler    struct{ handler.MetricsHandler }
+	stubSyncDatasetHandler    struct{ handler.DatasetHandler }
+	stubSyncClientHandler     struct{ handler.ClientHandler }
 )
 
 func newSyncHistoryFixture(t *testing.T) *syncHistoryFixture {
@@ -122,28 +123,29 @@ func newSyncHistoryFixture(t *testing.T) *syncHistoryFixture {
 	app := fiber.New()
 	api := humafiber.New(app, huma.DefaultConfig("sync history", "1.0"))
 	router.RegisterAPIRouter(api, router.APIRouterDependencies{
-		DB:               db,
-		Cache:            rdb,
-		AccessSigner:     jwt.NewAccessTokenSigner(),
-		PingHandler:      &stubSyncPingHandler{},
-		TraceHandler:     &stubSyncTraceHandler{},
-		TokenHandler:     &stubSyncTokenHandler{},
-		Oauth2Handler:    &stubSyncOauth2Handler{},
-		UserHandler:      &stubSyncUserHandler{},
-		DemoHandler:      &stubSyncDemoHandler{},
-		APIKeyHandler:    &stubSyncAPIKeyHandler{},
-		SessionHandler:   &stubSyncSessionHandler{},
-		EndpointHandler:  endpointHandler,
-		ModelHandler:     modelHandler,
-		UpstreamHandler:  upstreamHandler,
-		AuditHandler:     &stubSyncAuditHandler{},
-		CronHandler:      &stubSyncCronHandler{},
-		TriggerHandler:   &stubSyncTriggerHandler{},
-		OpenAIHandler:    &stubSyncOpenAIHandler{},
-		AnthropicHandler: &stubSyncAnthropicHandler{},
-		MetricsHandler:   &stubSyncMetricsHandler{},
-		DatasetHandler:   &stubSyncDatasetHandler{},
-		ClientHandler:    &stubSyncClientHandler{},
+		DB:                db,
+		Cache:             rdb,
+		AccessSigner:      jwt.NewAccessTokenSigner(),
+		PingHandler:       &stubSyncPingHandler{},
+		TraceHandler:      &stubSyncTraceHandler{},
+		TokenHandler:      &stubSyncTokenHandler{},
+		Oauth2Handler:     &stubSyncOauth2Handler{},
+		UserHandler:       &stubSyncUserHandler{},
+		DemoHandler:       &stubSyncDemoHandler{},
+		APIKeyHandler:     &stubSyncAPIKeyHandler{},
+		SessionHandler:    &stubSyncSessionHandler{},
+		EndpointHandler:   endpointHandler,
+		ModelHandler:      modelHandler,
+		UpstreamHandler:   upstreamHandler,
+		AuditHandler:      &stubSyncAuditHandler{},
+		CronHandler:       &stubSyncCronHandler{},
+		TriggerHandler:    &stubSyncTriggerHandler{},
+		OpenAIHandler:     &stubSyncOpenAIHandler{},
+		PlaygroundHandler: &stubSyncPlaygroundHandler{},
+		AnthropicHandler:  &stubSyncAnthropicHandler{},
+		MetricsHandler:    &stubSyncMetricsHandler{},
+		DatasetHandler:    &stubSyncDatasetHandler{},
+		ClientHandler:     &stubSyncClientHandler{},
 	})
 
 	f := &syncHistoryFixture{app: app, db: db, signer: jwt.NewAccessTokenSigner()}

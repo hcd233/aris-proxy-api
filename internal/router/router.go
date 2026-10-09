@@ -47,6 +47,7 @@ type APIRouterDependencies struct {
 	AuditHandler       handler.AuditHandler
 	CronHandler        handler.CronHandler
 	OpenAIHandler      handler.OpenAIHandler
+	PlaygroundHandler  handler.PlaygroundHandler
 	AnthropicHandler   handler.AnthropicHandler
 	TriggerHandler     handler.TriggerHandler
 	MetricsHandler     handler.MetricsHandler
