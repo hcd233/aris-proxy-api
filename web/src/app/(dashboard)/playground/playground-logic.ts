@@ -59,6 +59,37 @@ export function selectableModels(items: PlaygroundModelOption[]): PlaygroundMode
   return out;
 }
 
+/** 后端分页上限（PageParam.pageSize maximum） */
+export const MAX_PAGE_SIZE = 500;
+
+/** 拉取全部分页（下拉选项不允许静默截断）；某页不足 pageSize 或累计达到 total 即停止 */
+export async function fetchAllPages<T>(
+  fetchPage: (page: number, pageSize: number) => Promise<{ items: T[]; total: number }>,
+  pageSize: number = MAX_PAGE_SIZE,
+): Promise<T[]> {
+  const all: T[] = [];
+  for (let page = 1; ; page++) {
+    const { items, total } = await fetchPage(page, pageSize);
+    all.push(...items);
+    if (items.length < pageSize || all.length >= total) return all;
+  }
+}
+
+/** API Key 选项（只需要 ID、名称与归属用户） */
+export interface PlaygroundKeyOption {
+  id: number;
+  name: string;
+  user?: { id: number };
+}
+
+/**
+ * 当前用户名下的 Key：Playground 调用按所选 Key 归属审计，后端只接受本人的 Key。
+ * 管理员的 Key 列表包含全部用户，须按归属过滤；未带 user 的条目即本人列表（非管理员视角）。
+ */
+export function ownedKeys<T extends PlaygroundKeyOption>(keys: T[], userId: number): T[] {
+  return keys.filter((k) => !k.user || k.user.id === userId);
+}
+
 /**
  * 从 SSE 增量文本中提取 OpenAI chat chunk 的增量内容。
  * 返回空串表示该行不是内容增量（如 [DONE]、role 帧、空行）。

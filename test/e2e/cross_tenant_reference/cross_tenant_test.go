@@ -53,22 +53,23 @@ import (
 
 // e2eStubHandlers 嵌入接口空结构体：注册期满足方法集、不解引用（client_route_test.go 惯例）
 type (
-	stubPingHandler      struct{ handler.PingHandler }
-	stubTraceHandler     struct{ handler.TraceHandler }
-	stubTokenHandler     struct{ handler.TokenHandler }
-	stubOauth2Handler    struct{ handler.Oauth2Handler }
-	stubUserHandler      struct{ handler.UserHandler }
-	stubDemoHandler      struct{ handler.DemoHandler }
-	stubAPIKeyHandler    struct{ handler.APIKeyHandler }
-	stubSessionHandler   struct{ handler.SessionHandler }
-	stubAuditHandler     struct{ handler.AuditHandler }
-	stubCronHandler      struct{ handler.CronHandler }
-	stubTriggerHandler   struct{ handler.TriggerHandler }
-	stubOpenAIHandler    struct{ handler.OpenAIHandler }
-	stubAnthropicHandler struct{ handler.AnthropicHandler }
-	stubMetricsHandler   struct{ handler.MetricsHandler }
-	stubDatasetHandler   struct{ handler.DatasetHandler }
-	stubClientHandler    struct{ handler.ClientHandler }
+	stubPingHandler       struct{ handler.PingHandler }
+	stubTraceHandler      struct{ handler.TraceHandler }
+	stubTokenHandler      struct{ handler.TokenHandler }
+	stubOauth2Handler     struct{ handler.Oauth2Handler }
+	stubUserHandler       struct{ handler.UserHandler }
+	stubDemoHandler       struct{ handler.DemoHandler }
+	stubAPIKeyHandler     struct{ handler.APIKeyHandler }
+	stubSessionHandler    struct{ handler.SessionHandler }
+	stubAuditHandler      struct{ handler.AuditHandler }
+	stubCronHandler       struct{ handler.CronHandler }
+	stubTriggerHandler    struct{ handler.TriggerHandler }
+	stubOpenAIHandler     struct{ handler.OpenAIHandler }
+	stubPlaygroundHandler struct{ handler.PlaygroundHandler }
+	stubAnthropicHandler  struct{ handler.AnthropicHandler }
+	stubMetricsHandler    struct{ handler.MetricsHandler }
+	stubDatasetHandler    struct{ handler.DatasetHandler }
+	stubClientHandler     struct{ handler.ClientHandler }
 )
 
 // crossTenantFixture 真实装配：生产路由 + JWT + sqlite 仓储 + miniredis
@@ -148,7 +149,7 @@ func newCrossTenantFixture(t *testing.T) *crossTenantFixture {
 		CronHandler:       &stubCronHandler{},
 		TriggerHandler:    &stubTriggerHandler{},
 		OpenAIHandler:     &stubOpenAIHandler{},
-		PlaygroundHandler: &stubOpenAIHandler{},
+		PlaygroundHandler: &stubPlaygroundHandler{},
 		AnthropicHandler:  &stubAnthropicHandler{},
 		MetricsHandler:    &stubMetricsHandler{},
 		DatasetHandler:    &stubDatasetHandler{},

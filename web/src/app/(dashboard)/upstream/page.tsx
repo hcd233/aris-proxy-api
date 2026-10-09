@@ -130,7 +130,7 @@ export default function UpstreamPage() {
     }
   }, []);
 
-  // 配置缺失筛选（两个视图共有）：选中后 missingOnly=true 参数（仅看未定价/未填规格）
+  // 配置缺失筛选（仅平铺视图：分组接口按 endpoint 分页，不支持模型级 missingOnly 过滤）
   const missingFacet = useMemo<FacetDef[]>(
     () => [
       {
@@ -637,11 +637,7 @@ export default function UpstreamPage() {
                 />
                 <FilterBar
                   {...activeFilterBar}
-                  facets={
-                    view === "grouped"
-                      ? [...missingFacet, ...usernameFacet]
-                      : [...missingFacet, ...flatFacets]
-                  }
+                  facets={view === "grouped" ? usernameFacet : [...missingFacet, ...flatFacets]}
                   placeholder={t("upstream.search_placeholder")}
                 />
               </div>

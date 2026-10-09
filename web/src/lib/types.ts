@@ -431,7 +431,7 @@ export interface UpstreamModelItem {
   capabilities: ModelCapability[];
   pricing?: PricingDTO;
   /** 配置缺失项：pricing(未计价)/spec(未填规格) */
-  config_missing?: string[];
+  configMissing?: ConfigMissing[];
   /** 调度优先级（数字小=优先级高） */
   priority: number;
   /** 同优先级加权随机权重 */
@@ -458,6 +458,9 @@ export interface ListUpstreamRsp extends CommonRsp {
 // ─── Model ─────────────────────────────────────────────────────────────────────
 
 export type ModelCapability = "text" | "image" | "pdf" | "video" | "audio";
+
+/** 模型配置缺失项（enum.ConfigMissing）：pricing=未计价，spec=未填规格 */
+export type ConfigMissing = "pricing" | "spec";
 
 // ─── Pricing（模型定价，wire 展示单位：货币单位/1M tokens） ──────────────────
 
@@ -579,7 +582,7 @@ export interface ModelListItem {
   capabilities: ModelCapability[];
   pricing?: PricingDTO;
   /** 配置缺失项：pricing(未计价)/spec(未填规格) */
-  config_missing?: string[];
+  configMissing?: ConfigMissing[];
   /** 调度优先级（数字小=优先级高） */
   priority: number;
   /** 同优先级加权随机权重 */

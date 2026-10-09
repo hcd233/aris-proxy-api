@@ -72,7 +72,7 @@ func TestOAuth2LoginRouteNotAPIKeyProtected(t *testing.T) {
 		CronHandler:       &stubCronHandler{},
 		TriggerHandler:    &stubTriggerHandler{},
 		OpenAIHandler:     &stubOpenAIHandler{},
-		PlaygroundHandler: &stubOpenAIHandler{},
+		PlaygroundHandler: &stubPlaygroundHandler{},
 		AnthropicHandler:  &stubAnthropicHandler{},
 		MetricsHandler:    &stubMetricsHandler{},
 		DatasetHandler:    &stubDatasetHandler{},

@@ -147,9 +147,14 @@ func newLeakFixture(t *testing.T) *leakFixture {
 
 	openAIUC := usecase.NewOpenAIUseCase(resolver, listModels, openAIProxy, anthropicProxy,
 		noopTaskSubmitter{}, noopTriggerChecker{}, metrics.NewTokenUsageCounter(registry), nil)
+	sseGauge := metrics.NewSSEGauge(registry)
 	openAIHandler := handler.NewOpenAIHandler(handler.OpenAIDependencies{
 		UseCase:  openAIUC,
-		SSEGauge: metrics.NewSSEGauge(registry),
+		SSEGauge: sseGauge,
+	})
+	playgroundHandler := handler.NewPlaygroundHandler(handler.PlaygroundDependencies{
+		UseCase:  openAIUC,
+		SSEGauge: sseGauge,
 	})
 
 	app := fiber.New()
@@ -170,7 +175,7 @@ func newLeakFixture(t *testing.T) *leakFixture {
 		AuditHandler:      &stubAuditHandler{},
 		CronHandler:       &stubCronHandler{},
 		OpenAIHandler:     openAIHandler,
-		PlaygroundHandler: openAIHandler,
+		PlaygroundHandler: playgroundHandler,
 		AnthropicHandler:  &stubAnthropicHandler{},
 		TriggerHandler:    &stubTriggerHandler{},
 		MetricsHandler:    &stubMetricsHandler{},

@@ -22,7 +22,13 @@ import {
 import { useT } from "@/lib/i18n";
 import { formatCost } from "@/lib/money";
 import { cn } from "@/lib/utils";
-import type { ModelCapability, PricingDTO, PricingRuleDTO, UpstreamUser } from "@/lib/types";
+import type {
+  ConfigMissing,
+  ModelCapability,
+  PricingDTO,
+  PricingRuleDTO,
+  UpstreamUser,
+} from "@/lib/types";
 import { isDefaultRule } from "./pricing-rule";
 
 // 模型表单默认规格：新建表单初值、编辑回填空值兜底、输入框占位共用同一口径
@@ -49,7 +55,7 @@ export const emptyPricing: PricingDTO = { currency: "", rules: [] };
 // 无条件默认规则判定见 ./pricing-rule（isDefaultRule）
 
 /** 配置缺失徽标：未定价（pricing）/ 未填规格（spec）；无缺失不渲染 */
-export function ConfigMissingBadges({ missing }: { missing?: string[] }) {
+export function ConfigMissingBadges({ missing }: { missing?: ConfigMissing[] }) {
   const t = useT();
   if (!missing || missing.length === 0) return null;
   return (

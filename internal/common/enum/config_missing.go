@@ -1,6 +1,6 @@
 package enum
 
-// ConfigMissing 模型配置缺失项标识（model/list 与 upstream/list 的 config_missing 成员）。
+// ConfigMissing 模型配置缺失项标识（model/list 与 upstream/list 的 configMissing 成员）。
 type ConfigMissing string
 
 const (

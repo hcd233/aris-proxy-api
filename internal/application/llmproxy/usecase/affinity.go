@@ -4,92 +4,50 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
 	"strings"
-
-	"github.com/redis/go-redis/v9"
-	"go.uber.org/zap"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/service"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 // AffinityKey 组合亲和键：会话头（x-opencode-session / X-Session-Id）优先；
-// 无会话头时回退 sha256(alias + NUL + 首条 user 文本) 指纹（同会话多轮稳定）；
+// 无会话头时回退 alias + NUL + 首条 user 文本的指纹（同会话多轮稳定）；
 // 两者皆空返回 ok=false（不参与亲和，纯 curl 单轮无粘滞等同现状）。
+// 会话头同样取摘要：其长度与内容由客户端控制，不能直接拼进 Redis key。
 //
 //	@param ctx context.Context 请求上下文（读取 CtxKeyPassthroughHeaders 会话头）
 //	@param alias string 模型别名
 //	@param firstUserText string 首条 user 消息文本（多模态取 text parts 拼接，无 text 传空）
-//	@return string 亲和键
+//	@return string 亲和键（16 位十六进制摘要）
 //	@return bool false=无亲和键
 //	@author centonhuang
 //	@update 2026-10-09 10:00:00
 func AffinityKey(ctx context.Context, alias, firstUserText string) (string, bool) {
-	headers := util.GetPassthroughHeaders(ctx)
-	for name, v := range headers {
+	for name, v := range util.GetPassthroughHeaders(ctx) {
 		if (strings.EqualFold(name, constant.HTTPHeaderOpencodeSession) || strings.EqualFold(name, constant.HTTPHeaderSessionID)) && v != "" {
-			return v, true
+			return affinityDigest(v), true
 		}
 	}
 	if firstUserText == "" {
 		return "", false
 	}
-	sum := sha256.Sum256([]byte(alias + "\x00" + firstUserText))
-	return hex.EncodeToString(sum[:8]), true
+	return affinityDigest(alias + "\x00" + firstUserText), true
 }
 
-// AffinityStore 端点亲和映射（Redis，TTL 见 constant.AffinityTTL；读写失败 fail-open 不阻塞转发）。
-type AffinityStore struct {
-	rdb *redis.Client
+func affinityDigest(s string) string {
+	sum := sha256.Sum256([]byte(s))
+	return hex.EncodeToString(sum[:8])
 }
 
-// NewAffinityStore 构造亲和存储
-//
-//	@param rdb *redis.Client
-//	@return *AffinityStore
-//	@author centonhuang
-//	@update 2026-10-09 10:00:00
-func NewAffinityStore(rdb *redis.Client) *AffinityStore {
-	return &AffinityStore{rdb: rdb}
-}
-
-// Get 读取亲和端点 ID；不存在或 Redis 失败返回 false（fail-open）。
-//
-//	@receiver s *AffinityStore
-//	@param ctx context.Context
-//	@param userID uint
-//	@param alias string
-//	@param key string
-//	@return uint 端点 ID
-//	@return bool false=未命中
-//	@author centonhuang
-//	@update 2026-10-09 10:00:00
-func (s *AffinityStore) Get(ctx context.Context, userID uint, alias, key string) (uint, bool) {
-	val, err := s.rdb.Get(ctx, fmt.Sprintf(constant.AffinityKeyTemplate, userID, alias, key)).Uint64()
-	if err != nil {
-		return 0, false
+// rememberAffinity 转发成功后把亲和键映射到实际成功的端点（fallback 换端点后即改写为新端点）。
+func rememberAffinity(ctx context.Context, affinity service.EndpointAffinity, userID uint, alias, key string, endpointID uint) {
+	if key == "" || affinity == nil {
+		return
 	}
-	return uint(val), true
-}
-
-// Put 写入/刷新亲和映射（TTL 随写入刷新）；失败仅告警。
-//
-//	@receiver s *AffinityStore
-//	@param ctx context.Context
-//	@param userID uint
-//	@param alias string
-//	@param key string
-//	@param endpointID uint
-//	@author centonhuang
-//	@update 2026-10-09 10:00:00
-func (s *AffinityStore) Put(ctx context.Context, userID uint, alias, key string, endpointID uint) {
-	if err := s.rdb.Set(ctx, fmt.Sprintf(constant.AffinityKeyTemplate, userID, alias, key), endpointID, constant.AffinityTTL).Err(); err != nil {
-		logger.WithCtx(ctx).Warn("[AffinityStore] Put affinity failed", zap.Error(err))
-	}
+	affinity.Put(ctx, userID, alias, key, endpointID)
 }
 
 // firstUserTextOpenAIChat 提取 chat 请求首条 user 消息文本（多模态取 text parts 拼接，无 text 空串）。

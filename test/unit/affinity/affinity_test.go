@@ -2,6 +2,7 @@ package affinity
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 )
 
 func TestAffinityKeyPrefersSessionHeader(t *testing.T) {
@@ -18,8 +20,28 @@ func TestAffinityKeyPrefersSessionHeader(t *testing.T) {
 		"X-Session-Id": "sess-1",
 	})
 	key, ok := usecase.AffinityKey(ctx, "gpt-4", "hello")
-	if !ok || key != "sess-1" {
-		t.Fatalf("key = %q ok=%v, want sess-1", key, ok)
+	fingerprint, _ := usecase.AffinityKey(context.Background(), "gpt-4", "hello")
+	if !ok || key == "" || key == fingerprint {
+		t.Fatalf("key = %q ok=%v, 应取会话头摘要而非首条消息指纹", key, ok)
+	}
+}
+
+// TestAffinityKeySessionHeaderDigested 会话头由客户端控制，不得原样拼进 Redis key（长度/字符集不可控）。
+func TestAffinityKeySessionHeaderDigested(t *testing.T) {
+	t.Parallel()
+	long := strings.Repeat("x", 4096) + ":*?"
+	ctx := context.WithValue(context.Background(), constant.CtxKeyPassthroughHeaders, map[string]string{
+		"X-Session-Id": long,
+	})
+	key, ok := usecase.AffinityKey(ctx, "gpt-4", "")
+	if !ok || len(key) != 16 || strings.Contains(key, "x") {
+		t.Fatalf("key = %q (len %d), want 16 位十六进制摘要", key, len(key))
+	}
+	other, _ := usecase.AffinityKey(context.WithValue(context.Background(), constant.CtxKeyPassthroughHeaders, map[string]string{
+		"X-Session-Id": "another",
+	}), "gpt-4", "")
+	if other == key {
+		t.Fatal("不同会话头的摘要应不同")
 	}
 }
 
@@ -29,8 +51,11 @@ func TestAffinityKeyOpencodeSessionHeader(t *testing.T) {
 		"x-opencode-session": "oc-9",
 	})
 	key, ok := usecase.AffinityKey(ctx, "gpt-4", "hello")
-	if !ok || key != "oc-9" {
-		t.Fatalf("key = %q ok=%v, want oc-9", key, ok)
+	same, _ := usecase.AffinityKey(context.WithValue(context.Background(), constant.CtxKeyPassthroughHeaders, map[string]string{
+		"X-Opencode-Session": "oc-9",
+	}), "gpt-4", "other text")
+	if !ok || key != same {
+		t.Fatalf("同一会话头应得到同一亲和键（与首条消息无关）: %q vs %q", key, same)
 	}
 }
 
@@ -58,7 +83,7 @@ func TestAffinityStoreGetPut(t *testing.T) {
 	t.Parallel()
 	mr := miniredis.RunT(t)
 	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
-	store := usecase.NewAffinityStore(rdb)
+	store := cache.NewEndpointAffinityCache(rdb)
 	ctx := context.Background()
 
 	if _, ok := store.Get(ctx, 1, "gpt-4", "k1"); ok {

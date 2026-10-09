@@ -35,6 +35,18 @@ func TestSetTokensFromAnthropicUsage5m1h(t *testing.T) {
 			wantTotal: 60,
 			want1h:    30,
 		},
+		{
+			name:      "兼容上游空明细对象不清零总量",
+			usageJSON: `{"input_tokens":100,"output_tokens":10,"cache_creation_input_tokens":80,"cache_creation":{}}`,
+			wantTotal: 80,
+			want1h:    0,
+		},
+		{
+			name:      "兼容上游全零明细对象不清零总量",
+			usageJSON: `{"input_tokens":100,"output_tokens":10,"cache_creation_input_tokens":80,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0}}`,
+			wantTotal: 80,
+			want1h:    0,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -98,13 +98,16 @@ func (t *ModelCallAuditTask) SetTokensFromAnthropicUsage(msg *AnthropicMessage) 
 	}
 	t.InputTokens = msg.Usage.InputTokens
 	t.OutputTokens = msg.Usage.OutputTokens
-	switch {
-	case msg.Usage.CacheCreation != nil:
-		// 新版 cache_creation 对象：总量 = 5m + 1h（对象优先于总量字段）
-		t.CacheCreation1hInputTokens = lo.FromPtr(msg.Usage.CacheCreation.Ephemeral1hInputTokens)
-		t.CacheCreationInputTokens = lo.FromPtr(msg.Usage.CacheCreation.Ephemeral5mInputTokens) + t.CacheCreation1hInputTokens
-	default:
-		// 旧版仅总量字段：全部归 5m 档（1h=0）
+	var detail5m, detail1h int
+	if cc := msg.Usage.CacheCreation; cc != nil {
+		detail5m, detail1h = lo.FromPtr(cc.Ephemeral5mInputTokens), lo.FromPtr(cc.Ephemeral1hInputTokens)
+	}
+	if detail5m+detail1h > 0 {
+		// 新版 cache_creation 明细：总量 = 5m + 1h（明细优先于总量字段）
+		t.CacheCreation1hInputTokens = detail1h
+		t.CacheCreationInputTokens = detail5m + detail1h
+	} else {
+		// 旧版仅总量字段，或兼容上游回了空/全零明细对象：全部归 5m 档（1h=0），不把总量清零
 		t.CacheCreationInputTokens = lo.FromPtr(msg.Usage.CacheCreationInputTokens)
 	}
 	switch {

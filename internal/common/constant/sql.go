@@ -104,8 +104,9 @@ const (
 	// WhereCapabilitiesLike 按输入模态筛选（capabilities 是 text 列 + serializer:json）
 	WhereCapabilitiesLike = "capabilities LIKE ?"
 
-	// WhereModelConfigMissing 仅看配置缺失模型（未计价或未填规格；OR 需括号避免与其他条件错拼）
-	WhereModelConfigMissing = "(pricing_currency = '' OR context_length = 0)"
+	// WhereModelConfigMissing 仅看配置缺失模型（未计价或未填规格；OR 需括号避免与其他条件错拼）。
+	// 判定口径须与 aggregate.Model.MissingConfig 保持一致（列表徽标与筛选同源）。
+	WhereModelConfigMissing = "(" + FieldPricingCurrency + " = '' OR " + FieldModelContextLength + " = 0)"
 )
 
 var (

@@ -4,7 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api, ApiError } from "@/lib/api-client";
 import { showErrorToast } from "@/lib/api-error-handler";
 import { PermissionGuard } from "@/components/permission-guard";
-import type { ModelListItem, ListModelsPageRsp } from "@/lib/types";
+import { useAuth } from "@/lib/auth-context";
+import type { APIKeyItem } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,19 +19,27 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PageHeader } from "@/components/page-header";
-import { Play, Plus, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { Play, Plus, Square, Trash2 } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import {
   buildChatBody,
   extractDeltaContent,
+  fetchAllPages,
+  ownedKeys,
   selectableModels,
   type PlaygroundMessage,
+  type PlaygroundModelOption,
 } from "./playground-logic";
 
 function PlaygroundPage() {
   const t = useT();
-  const [models, setModels] = useState<ModelListItem[]>([]);
+  const { user, isAdmin } = useAuth();
+  const [models, setModels] = useState<PlaygroundModelOption[]>([]);
   const [model, setModel] = useState("");
+  const [keys, setKeys] = useState<APIKeyItem[]>([]);
+  const [keysLoaded, setKeysLoaded] = useState(false);
+  const [apiKeyID, setApiKeyID] = useState<number | null>(null);
   const [messages, setMessages] = useState<PlaygroundMessage[]>([{ role: "user", content: "" }]);
   const [stream, setStream] = useState(true);
   const [temperature, setTemperature] = useState("");
@@ -39,30 +48,59 @@ function PlaygroundPage() {
   const [output, setOutput] = useState("");
   const abortRef = useRef<AbortController | null>(null);
 
+  const userId = user?.id;
+  // 解析按用户租户隔离：管理员的模型列表含全部用户，只列本人名下的别名才能调通
+  const ownerName = isAdmin() ? user?.name : undefined;
+
   useEffect(() => {
+    if (userId === undefined) return;
     let cancelled = false;
     (async () => {
       try {
-        const rsp = await api.listModelsPage({ page: 1, pageSize: 100 });
+        const [modelItems, keyItems] = await Promise.all([
+          fetchAllPages(async (page, pageSize) => {
+            const rsp = await api.listModelsPage({
+              page,
+              pageSize,
+              status: "enabled",
+              username: ownerName,
+            });
+            return { items: rsp.items ?? [], total: rsp.pageInfo?.total ?? 0 };
+          }),
+          fetchAllPages(async (page, pageSize) => {
+            const rsp = await api.listAPIKeys(page, pageSize);
+            return { items: rsp.keys ?? [], total: rsp.pageInfo?.total ?? 0 };
+          }),
+        ]);
         if (cancelled) return;
-        const items = (rsp as ListModelsPageRsp).items ?? [];
-        const opts = selectableModels(items.map((m) => ({ alias: m.alias, enabled: m.enabled })));
-        setModels(items.filter((m) => opts.some((o) => o.alias === m.alias)));
+        setModels(
+          selectableModels(modelItems.map((m) => ({ alias: m.alias, enabled: m.enabled }))),
+        );
+        const mine = ownedKeys(keyItems, userId);
+        setKeys(mine);
+        setApiKeyID((prev) => prev ?? mine[0]?.id ?? null);
       } catch (err) {
-        showErrorToast(err, { title: t("playground.load_models_error") });
+        if (!cancelled) showErrorToast(err, { title: t("playground.load_models_error") });
+      } finally {
+        if (!cancelled) setKeysLoaded(true);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [t]);
+  }, [t, userId, ownerName]);
+
+  // 离开页面时中断进行中的流，避免卸载后继续 setState 与上游空跑
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   const patchMessage = useCallback((idx: number, patch: Partial<PlaygroundMessage>) => {
     setMessages((prev) => prev.map((m, i) => (i === idx ? { ...m, ...patch } : m)));
   }, []);
 
+  const handleStop = useCallback(() => abortRef.current?.abort(), []);
+
   const handleSend = useCallback(async () => {
-    if (!model || sending) return;
+    if (!model || apiKeyID === null || sending) return;
     const temp = temperature.trim() === "" ? undefined : Number(temperature);
     const maxTok = maxTokens.trim() === "" ? undefined : Number(maxTokens);
     const body = buildChatBody(messages, {
@@ -78,6 +116,7 @@ function PlaygroundPage() {
         const controller = new AbortController();
         abortRef.current = controller;
         await api.playgroundChatStream(
+          apiKeyID,
           body,
           (line) => {
             setOutput((prev) => prev + extractDeltaContent(line));
@@ -85,20 +124,21 @@ function PlaygroundPage() {
           controller.signal,
         );
       } else {
-        const rsp = (await api.playgroundChat(body)) as {
+        const rsp = (await api.playgroundChat(apiKeyID, body)) as {
           choices?: { message?: { content?: string } }[];
         };
         setOutput(rsp.choices?.[0]?.message?.content ?? "");
       }
     } catch (err) {
-      if (!(err instanceof ApiError && err.status === 401)) {
+      const aborted = err instanceof DOMException && err.name === "AbortError";
+      if (!aborted && !(err instanceof ApiError && err.status === 401)) {
         showErrorToast(err, { title: t("playground.send_error") });
       }
     } finally {
       setSending(false);
       abortRef.current = null;
     }
-  }, [model, sending, messages, stream, temperature, maxTokens, t]);
+  }, [model, apiKeyID, sending, messages, stream, temperature, maxTokens, t]);
 
   return (
     <div className="space-y-4">
@@ -118,12 +158,41 @@ function PlaygroundPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {models.map((m) => (
-                    <SelectItem key={m.id} value={m.alias}>
+                    <SelectItem key={m.alias} value={m.alias}>
                       {m.alias}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="pg-apikey">{t("playground.api_key")}</Label>
+              {keysLoaded && keys.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  {t("playground.api_key.empty")}{" "}
+                  <Link href="/apikeys/" className="underline underline-offset-2">
+                    {t("playground.api_key.create")}
+                  </Link>
+                </p>
+              ) : (
+                <Select
+                  value={apiKeyID === null ? "" : String(apiKeyID)}
+                  onValueChange={(v) => setApiKeyID(Number(v))}
+                >
+                  <SelectTrigger id="pg-apikey" className="w-full">
+                    <SelectValue placeholder={t("playground.api_key.placeholder")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {keys.map((k) => (
+                      <SelectItem key={k.id} value={String(k.id)}>
+                        {k.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              <p className="text-[11px] text-muted-foreground">{t("playground.api_key.hint")}</p>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
@@ -203,10 +272,21 @@ function PlaygroundPage() {
               </Button>
             </div>
 
-            <Button onClick={handleSend} disabled={!model || sending} className="w-full">
-              <Play className="size-4" />
-              {sending ? t("playground.sending") : t("playground.send")}
-            </Button>
+            {sending && stream ? (
+              <Button onClick={handleStop} variant="outline" className="w-full">
+                <Square className="size-4" />
+                {t("playground.stop")}
+              </Button>
+            ) : (
+              <Button
+                onClick={handleSend}
+                disabled={!model || apiKeyID === null || sending}
+                className="w-full"
+              >
+                <Play className="size-4" />
+                {sending ? t("playground.sending") : t("playground.send")}
+              </Button>
+            )}
           </CardContent>
         </Card>
 

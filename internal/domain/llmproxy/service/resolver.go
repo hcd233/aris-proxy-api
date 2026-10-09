@@ -1,6 +1,7 @@
 package service
 
 import (
+	"cmp"
 	"context"
 	"math"
 	"math/rand/v2"
@@ -19,10 +20,12 @@ type Candidate struct {
 	Model    *aggregate.Model
 }
 
-// EndpointAffinity 端点亲和查询（application 层 AffinityStore 实现，domain 只依赖接口）。
-// 方法签名与 usecase.AffinityStore.Get 一致。
+// EndpointAffinity 端点亲和映射（实现在 infrastructure/cache，读写失败均 fail-open）。
 type EndpointAffinity interface {
+	// Get 读取亲和端点 ID；未命中或读失败返回 false。
 	Get(ctx context.Context, userID uint, alias, key string) (uint, bool)
+	// Put 写入/刷新亲和映射（TTL 随写入刷新）；失败仅告警。
+	Put(ctx context.Context, userID uint, alias, key string, endpointID uint)
 }
 
 // EndpointResolver 模型端点解析领域服务
@@ -72,12 +75,12 @@ func (r *endpointResolver) ResolveCandidatesWithAffinity(ctx context.Context, us
 	if !ok {
 		return cands, nil
 	}
-	for i, c := range cands {
-		if c.Endpoint.AggregateID() == pinnedID {
-			return append([]Candidate{c}, append(cands[:i], cands[i+1:]...)...), nil
-		}
+	i := slices.IndexFunc(cands, func(c Candidate) bool { return c.Endpoint.AggregateID() == pinnedID })
+	if i <= 0 {
+		return cands, nil
 	}
-	return cands, nil
+	pinned := cands[i]
+	return slices.Insert(slices.Delete(cands, i, i+1), 0, pinned), nil
 }
 
 // ResolveCandidates 按 alias 解析出全部可用候选，按调度优先级有序返回。
@@ -164,45 +167,14 @@ func (r *endpointResolver) collectCandidates(ctx context.Context, userID uint, a
 // orderByScheduling 原地按调度优先级排序：priority 升序分档（数字小=优先级高）；
 // 同档内按 weight 做 A-Res 加权洗牌（key = rand^(1/weight)，key 大者在前）。
 func orderByScheduling(cands []Candidate) {
+	keys := make(map[*aggregate.Model]float64, len(cands))
+	for _, c := range cands {
+		keys[c.Model] = math.Pow(rand.Float64(), 1/float64(c.Model.Weight())) //nolint:gosec // 调度洗牌无需加密随机
+	}
 	slices.SortStableFunc(cands, func(a, b Candidate) int {
-		return a.Model.Priority() - b.Model.Priority()
+		return cmp.Or(
+			cmp.Compare(a.Model.Priority(), b.Model.Priority()),
+			cmp.Compare(keys[b.Model], keys[a.Model]),
+		)
 	})
-	for i := 0; i < len(cands); {
-		j := i + 1
-		for j < len(cands) && cands[j].Model.Priority() == cands[i].Model.Priority() {
-			j++
-		}
-		if j-i > 1 {
-			shuffleWeighted(cands[i:j])
-		}
-		i = j
-	}
-}
-
-// shuffleWeighted 对同一优先级档做 A-Res 加权洗牌（无需预展开权重）。
-func shuffleWeighted(group []Candidate) {
-	type keyed struct {
-		idx int
-		key float64
-	}
-	ks := make([]keyed, 0, len(group))
-	for idx, c := range group {
-		w := float64(c.Model.Weight())
-		ks = append(ks, keyed{idx: idx, key: math.Pow(rand.Float64(), 1/w)}) //nolint:gosec // 调度洗牌无需加密随机
-	}
-	slices.SortStableFunc(ks, func(a, b keyed) int {
-		switch {
-		case a.key > b.key:
-			return -1
-		case a.key < b.key:
-			return 1
-		default:
-			return 0
-		}
-	})
-	perm := make([]Candidate, 0, len(group))
-	for _, k := range ks {
-		perm = append(perm, group[k.idx])
-	}
-	copy(group, perm)
 }

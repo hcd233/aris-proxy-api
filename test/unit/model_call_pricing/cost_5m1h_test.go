@@ -69,3 +69,26 @@ func TestPriceModelCall5m1h(t *testing.T) {
 		t.Fatalf("CacheCreateCostMicro = %d, want 50", *task.CacheCreateCostMicro)
 	}
 }
+
+// TestPriceModelCallClamps1hToTotal 上游数据不一致（1h > 总量）时 5m 档不得为负抵扣费用。
+func TestPriceModelCallClamps1hToTotal(t *testing.T) {
+	t.Parallel()
+	pricing, err := vo.NewPricing(enum.CurrencyUSD, []vo.PricingRule{{
+		CacheCreateMicro:   1_250_000,
+		CacheCreate1hMicro: 2_500_000,
+	}})
+	if err != nil {
+		t.Fatalf("NewPricing: %v", err)
+	}
+	task := &dto.ModelCallAuditTask{
+		CacheCreationInputTokens:   10,
+		CacheCreation1hInputTokens: 30,
+		UpstreamStatusCode:         200,
+		CreatedAt:                  time.Now(),
+	}
+	usecase.PriceModelCall(task, pricing)
+	// 1h 钳制为 10：10×2.5 = 25；未钳制时为 (-20)×1.25 + 30×2.5 = 50，且 5m 档为负
+	if task.CacheCreateCostMicro == nil || *task.CacheCreateCostMicro != 25 {
+		t.Fatalf("CacheCreateCostMicro = %v, want 25", task.CacheCreateCostMicro)
+	}
+}

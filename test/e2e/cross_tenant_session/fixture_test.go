@@ -56,23 +56,24 @@ import (
 
 // 嵌入接口空结构体：注册期满足方法集、不解引用（cross_tenant_reference 包惯例）
 type (
-	stubPingHandler      struct{ handler.PingHandler }
-	stubTraceHandler     struct{ handler.TraceHandler }
-	stubTokenHandler     struct{ handler.TokenHandler }
-	stubOauth2Handler    struct{ handler.Oauth2Handler }
-	stubUserHandler      struct{ handler.UserHandler }
-	stubDemoHandler      struct{ handler.DemoHandler }
-	stubAPIKeyHandler    struct{ handler.APIKeyHandler }
-	stubEndpointHandler  struct{ handler.EndpointHandler }
-	stubModelHandler     struct{ handler.ModelHandler }
-	stubUpstreamHandler  struct{ handler.UpstreamHandler }
-	stubAuditHandler     struct{ handler.AuditHandler }
-	stubCronHandler      struct{ handler.CronHandler }
-	stubTriggerHandler   struct{ handler.TriggerHandler }
-	stubOpenAIHandler    struct{ handler.OpenAIHandler }
-	stubAnthropicHandler struct{ handler.AnthropicHandler }
-	stubMetricsHandler   struct{ handler.MetricsHandler }
-	stubClientHandler    struct{ handler.ClientHandler }
+	stubPingHandler       struct{ handler.PingHandler }
+	stubTraceHandler      struct{ handler.TraceHandler }
+	stubTokenHandler      struct{ handler.TokenHandler }
+	stubOauth2Handler     struct{ handler.Oauth2Handler }
+	stubUserHandler       struct{ handler.UserHandler }
+	stubDemoHandler       struct{ handler.DemoHandler }
+	stubAPIKeyHandler     struct{ handler.APIKeyHandler }
+	stubEndpointHandler   struct{ handler.EndpointHandler }
+	stubModelHandler      struct{ handler.ModelHandler }
+	stubUpstreamHandler   struct{ handler.UpstreamHandler }
+	stubAuditHandler      struct{ handler.AuditHandler }
+	stubCronHandler       struct{ handler.CronHandler }
+	stubTriggerHandler    struct{ handler.TriggerHandler }
+	stubOpenAIHandler     struct{ handler.OpenAIHandler }
+	stubPlaygroundHandler struct{ handler.PlaygroundHandler }
+	stubAnthropicHandler  struct{ handler.AnthropicHandler }
+	stubMetricsHandler    struct{ handler.MetricsHandler }
+	stubClientHandler     struct{ handler.ClientHandler }
 )
 
 const e2eHTTPTimeout = 10 * time.Second
@@ -252,7 +253,7 @@ func (f *crossTenantSessionFixture) buildApp(t *testing.T, db *gorm.DB, rdb *red
 		CronHandler:       &stubCronHandler{},
 		TriggerHandler:    &stubTriggerHandler{},
 		OpenAIHandler:     &stubOpenAIHandler{},
-		PlaygroundHandler: &stubOpenAIHandler{},
+		PlaygroundHandler: &stubPlaygroundHandler{},
 		AnthropicHandler:  &stubAnthropicHandler{},
 		MetricsHandler:    &stubMetricsHandler{},
 		DatasetHandler:    datasetHandler,

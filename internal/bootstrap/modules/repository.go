@@ -60,8 +60,7 @@ var RepositoryModule = fx.Module(constant.DigNameRepositoryModule,
 		NewOauth2Platforms,
 		NewStateManager,
 		NewTaskSubmitter,
-		usecase.NewAffinityStore,
-		NewEndpointAffinity,
+		cache.NewEndpointAffinityCache,
 		NewEndpointResolver,
 		NewTriggerRepository,
 		NewTriggerCache,
@@ -175,11 +174,6 @@ func NewEndpointResolver(
 	affinity llmproxyservice.EndpointAffinity,
 ) llmproxyservice.EndpointResolver {
 	return llmproxyservice.NewEndpointResolver(endpointRepo, modelRepo, config.GatewaySharedPoolFallback, affinity)
-}
-
-// NewEndpointAffinity 把亲和存储绑定到 domain 接口（fx 接口绑定须显式，否则注入缺失崩溃）。
-func NewEndpointAffinity(store *usecase.AffinityStore) llmproxyservice.EndpointAffinity {
-	return store
 }
 
 func NewTriggerRepository(db *gorm.DB) trigger.TriggerRepository {

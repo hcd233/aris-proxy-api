@@ -12,6 +12,8 @@ type fakeAffinity struct {
 	byKey map[string]uint
 }
 
+func (f *fakeAffinity) Put(_ context.Context, _ uint, _, _ string, _ uint) {}
+
 func (f *fakeAffinity) Get(_ context.Context, _ uint, alias, key string) (uint, bool) {
 	id, ok := f.byKey[alias+"|"+key]
 	return id, ok

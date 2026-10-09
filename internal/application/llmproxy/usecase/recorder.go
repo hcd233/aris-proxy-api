@@ -187,7 +187,8 @@ func PriceModelCall(task *dto.ModelCallAuditTask, pricing vo.Pricing) {
 	}
 	promptTokens := int64(task.InputTokens) + int64(task.CacheCreationInputTokens) + int64(task.CacheReadInputTokens)
 	rule := pricing.Match(at, promptTokens)
-	cacheCreate1h := int64(task.CacheCreation1hInputTokens)
+	// 1h 是总量的子集；上游数据不一致（1h > 总量）时钳制，避免 5m 档出现负 token 抵扣费用
+	cacheCreate1h := min(int64(task.CacheCreation1hInputTokens), int64(task.CacheCreationInputTokens))
 	cacheCreate5m := int64(task.CacheCreationInputTokens) - cacheCreate1h
 	breakdown := rule.CostBreakdown(
 		int64(task.InputTokens),

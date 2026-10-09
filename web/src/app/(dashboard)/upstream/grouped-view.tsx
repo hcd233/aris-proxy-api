@@ -311,7 +311,7 @@ export function GroupedView({
                             />
                             <CapabilityBadges capabilities={m.capabilities} />
                             <PricingInline pricing={m.pricing} />
-                            <ConfigMissingBadges missing={m.config_missing} />
+                            <ConfigMissingBadges missing={m.configMissing} />
                           </div>
                         </div>
                         <div className="flex shrink-0 flex-col items-end gap-1.5">
@@ -521,7 +521,7 @@ export function GroupedView({
                     </TableCell>
                     <TableCell className={cn(!m.enabled && "opacity-45")}>
                       <PricingInline pricing={m.pricing} />
-                      <ConfigMissingBadges missing={m.config_missing} />
+                      <ConfigMissingBadges missing={m.configMissing} />
                     </TableCell>
                     <TableCell>
                       <Switch

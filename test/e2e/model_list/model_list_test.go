@@ -50,25 +50,26 @@ const (
 // 用「嵌入接口」的空结构体即可满足所有接口；注册期不会解引用，
 // 只有真正请求某条路由时才会 panic。
 type (
-	stubPingHandler      struct{ handler.PingHandler }
-	stubTraceHandler     struct{ handler.TraceHandler }
-	stubTokenHandler     struct{ handler.TokenHandler }
-	stubOauth2Handler    struct{ handler.Oauth2Handler }
-	stubUserHandler      struct{ handler.UserHandler }
-	stubDemoHandler      struct{ handler.DemoHandler }
-	stubAPIKeyHandler    struct{ handler.APIKeyHandler }
-	stubSessionHandler   struct{ handler.SessionHandler }
-	stubEndpointHandler  struct{ handler.EndpointHandler }
-	stubModelHandler     struct{ handler.ModelHandler }
-	stubUpstreamHandler  struct{ handler.UpstreamHandler }
-	stubAuditHandler     struct{ handler.AuditHandler }
-	stubCronHandler      struct{ handler.CronHandler }
-	stubTriggerHandler   struct{ handler.TriggerHandler }
-	stubOpenAIHandler    struct{ handler.OpenAIHandler }
-	stubAnthropicHandler struct{ handler.AnthropicHandler }
-	stubMetricsHandler   struct{ handler.MetricsHandler }
-	stubDatasetHandler   struct{ handler.DatasetHandler }
-	stubClientHandler    struct{ handler.ClientHandler }
+	stubPingHandler       struct{ handler.PingHandler }
+	stubTraceHandler      struct{ handler.TraceHandler }
+	stubTokenHandler      struct{ handler.TokenHandler }
+	stubOauth2Handler     struct{ handler.Oauth2Handler }
+	stubUserHandler       struct{ handler.UserHandler }
+	stubDemoHandler       struct{ handler.DemoHandler }
+	stubAPIKeyHandler     struct{ handler.APIKeyHandler }
+	stubSessionHandler    struct{ handler.SessionHandler }
+	stubEndpointHandler   struct{ handler.EndpointHandler }
+	stubModelHandler      struct{ handler.ModelHandler }
+	stubUpstreamHandler   struct{ handler.UpstreamHandler }
+	stubAuditHandler      struct{ handler.AuditHandler }
+	stubCronHandler       struct{ handler.CronHandler }
+	stubTriggerHandler    struct{ handler.TriggerHandler }
+	stubOpenAIHandler     struct{ handler.OpenAIHandler }
+	stubPlaygroundHandler struct{ handler.PlaygroundHandler }
+	stubAnthropicHandler  struct{ handler.AnthropicHandler }
+	stubMetricsHandler    struct{ handler.MetricsHandler }
+	stubDatasetHandler    struct{ handler.DatasetHandler }
+	stubClientHandler     struct{ handler.ClientHandler }
 )
 
 func newRouteTestDB(t *testing.T) *gorm.DB {
@@ -119,7 +120,7 @@ func TestModelListRouteRegistered(t *testing.T) {
 		CronHandler:       &stubCronHandler{},
 		TriggerHandler:    &stubTriggerHandler{},
 		OpenAIHandler:     &stubOpenAIHandler{},
-		PlaygroundHandler: &stubOpenAIHandler{},
+		PlaygroundHandler: &stubPlaygroundHandler{},
 		AnthropicHandler:  &stubAnthropicHandler{},
 		MetricsHandler:    &stubMetricsHandler{},
 		DatasetHandler:    &stubDatasetHandler{},

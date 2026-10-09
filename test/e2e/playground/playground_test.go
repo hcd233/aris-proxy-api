@@ -4,7 +4,10 @@
 //   - BASE_URL     API 根地址（必填）
 //   - ADMIN_TOKEN  管理员 JWT（必填）
 //   - USER_TOKEN   普通用户 JWT（必填，playground 要求权限 ≥ user）
+//   - USER_API_KEY_ID USER_TOKEN 用户名下的 API Key ID（必填，playground 调用按该 Key 归属审计）
 //   - DEMO_TOKEN   Demo JWT（可选，验证 demo 被拒）
+//
+// 进程内的归属/越权守护见 test/e2e/playground_attribution（无需外部环境）。
 //
 // 假上游由测试进程内 httptest 提供，要求被测服务能访问 127.0.0.1。
 // 用例会真实创建/删除 endpoint 与 model，经 e2eguard 拒绝误打生产。
@@ -35,6 +38,7 @@ type env struct {
 	baseURL    string
 	adminToken string
 	userToken  string
+	userKeyID  string
 	demoToken  string
 }
 
@@ -43,14 +47,16 @@ func mustE2EEnv(t *testing.T) env {
 	baseURL := os.Getenv("BASE_URL")
 	adminToken := os.Getenv("ADMIN_TOKEN")
 	userToken := os.Getenv("USER_TOKEN")
-	if baseURL == "" || adminToken == "" || userToken == "" {
-		t.Skip("BASE_URL, ADMIN_TOKEN and USER_TOKEN are required for e2e test")
+	userKeyID := os.Getenv("USER_API_KEY_ID")
+	if baseURL == "" || adminToken == "" || userToken == "" || userKeyID == "" {
+		t.Skip("BASE_URL, ADMIN_TOKEN, USER_TOKEN and USER_API_KEY_ID are required for e2e test")
 	}
 	e2eguard.GuardLiveTarget(t, baseURL)
 	return env{
 		baseURL:    strings.TrimRight(baseURL, "/"),
 		adminToken: adminToken,
 		userToken:  userToken,
+		userKeyID:  userKeyID,
 		demoToken:  os.Getenv("DEMO_TOKEN"),
 	}
 }
@@ -101,7 +107,7 @@ func TestPlaygroundChat(t *testing.T) {
 
 	// 1. playground 调用成功
 	body := []byte(fmt.Sprintf(`{"model":%q,"messages":[{"role":"user","content":"hi"}],"stream":false}`, alias))
-	code, resp := doJSON(t, client, http.MethodPost, e.baseURL+"/api/web/v1/playground/chat", e.userToken, body)
+	code, resp := doJSON(t, client, http.MethodPost, e.baseURL+"/api/web/v1/playground/chat?apiKeyID="+e.userKeyID, e.userToken, body)
 	if code != http.StatusOK {
 		t.Fatalf("playground chat failed: %d %s", code, resp)
 	}
@@ -129,7 +135,7 @@ func TestPlaygroundChat(t *testing.T) {
 
 	// 4. demo 被拒（权限不足）
 	if e.demoToken != "" {
-		code, _ = doJSON(t, client, http.MethodPost, e.baseURL+"/api/web/v1/playground/chat", e.demoToken, body)
+		code, _ = doJSON(t, client, http.MethodPost, e.baseURL+"/api/web/v1/playground/chat?apiKeyID="+e.userKeyID, e.demoToken, body)
 		if code != http.StatusForbidden && code != http.StatusUnauthorized {
 			t.Fatalf("demo 应被拒绝, got %d", code)
 		}

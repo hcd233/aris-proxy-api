@@ -35,7 +35,7 @@ type openAIUseCase struct {
 	taskSubmitter  TaskSubmitter
 	triggerChecker TriggerChecker
 	tokenMetrics   *metrics.TokenUsageCounter
-	affinity       *AffinityStore
+	affinity       service.EndpointAffinity
 }
 
 func NewOpenAIUseCase(
@@ -46,7 +46,7 @@ func NewOpenAIUseCase(
 	taskSubmitter TaskSubmitter,
 	triggerChecker TriggerChecker,
 	tokenMetrics *metrics.TokenUsageCounter,
-	affinity *AffinityStore,
+	affinity service.EndpointAffinity,
 ) port.OpenAIUseCase {
 	return &openAIUseCase{
 		resolver:       resolver,
@@ -105,6 +105,18 @@ func (u *openAIUseCase) CreateDecision(ctx context.Context, req *dto.OpenAICreat
 		}
 	}
 
+	return runWithFallback(ctx, constant.ModuleOpenAIUseCase, model, cands, func(actx context.Context, cand service.Candidate) (port.Result, error) {
+		result, ferr := u.forwardDecision(actx, req, cand.Model, cand.Endpoint)
+		if ferr == nil {
+			rememberAffinity(actx, u.affinity, userID, model, affKey, cand.Endpoint.AggregateID())
+		}
+		return result, ferr
+	})
+}
+
+// forwardDecision 向单个候选端点转发 Decision 请求（单端点单次尝试）。
+func (u *openAIUseCase) forwardDecision(ctx context.Context, req *dto.OpenAICreateDecisionRequest, m *aggregate.Model, ep *aggregate.Endpoint) (port.Result, error) {
+	model := req.Body.Model
 	upstream := toTransportEndpoint(m, ep, false)
 	body := proxyutil.MarshalOpenAIDecisionBodyForModel(req.Body, upstream.Model)
 
@@ -117,9 +129,6 @@ func (u *openAIUseCase) CreateDecision(ctx context.Context, req *dto.OpenAICreat
 	}
 
 	replaced := proxyutil.ReplaceModelInBody(respBody, model)
-	if affKey != "" && u.affinity != nil {
-		u.affinity.Put(ctx, userID, model, affKey, ep.AggregateID())
-	}
 	headers := buildPassthroughHeaders(ctx)
 	headers[constant.HTTPHeaderContentType] = constant.HTTPContentTypeJSON
 
@@ -133,7 +142,7 @@ func (u *openAIUseCase) CreateDecision(ctx context.Context, req *dto.OpenAICreat
 	}
 	var rsp dto.OpenAIDecisionRsp
 	if parseErr := sonic.Unmarshal(replaced, &rsp); parseErr != nil {
-		log.Debug("[OpenAIUseCase] Failed to parse Decision API response body", zap.Error(parseErr))
+		logger.WithCtx(ctx).Debug("[OpenAIUseCase] Failed to parse Decision API response body", zap.Error(parseErr))
 	} else {
 		u.storeDecisionSession(ctx, req, &rsp, m.ModelID())
 		out.usage = decisionTokenUsage{&rsp}
@@ -199,10 +208,10 @@ func (u *openAIUseCase) CreateChatCompletion(ctx context.Context, req *dto.OpenA
 		}
 	}
 
-	return runWithFallback(ctx, constant.ModuleOpenAIUseCase, req.Body.Model, cands, func(cand service.Candidate) (port.Result, error) {
-		result, ferr := u.dispatchChat(ctx, req, cand.Model, cand.Endpoint)
-		if ferr == nil && affKey != "" && u.affinity != nil {
-			u.affinity.Put(ctx, userID, req.Body.Model, affKey, cand.Endpoint.AggregateID())
+	return runWithFallback(ctx, constant.ModuleOpenAIUseCase, req.Body.Model, cands, func(actx context.Context, cand service.Candidate) (port.Result, error) {
+		result, ferr := u.dispatchChat(actx, req, cand.Model, cand.Endpoint)
+		if ferr == nil {
+			rememberAffinity(actx, u.affinity, userID, req.Body.Model, affKey, cand.Endpoint.AggregateID())
 		}
 		return result, ferr
 	})
@@ -275,10 +284,10 @@ func (u *openAIUseCase) CreateResponse(ctx context.Context, req *dto.OpenAICreat
 		}
 	}
 
-	return runWithFallback(ctx, constant.ModuleOpenAIUseCase, model, cands, func(cand service.Candidate) (port.Result, error) {
-		result, ferr := u.dispatchResponse(ctx, req, cand.Model, cand.Endpoint)
-		if ferr == nil && affKey != "" && u.affinity != nil {
-			u.affinity.Put(ctx, userID, model, affKey, cand.Endpoint.AggregateID())
+	return runWithFallback(ctx, constant.ModuleOpenAIUseCase, model, cands, func(actx context.Context, cand service.Candidate) (port.Result, error) {
+		result, ferr := u.dispatchResponse(actx, req, cand.Model, cand.Endpoint)
+		if ferr == nil {
+			rememberAffinity(actx, u.affinity, userID, model, affKey, cand.Endpoint.AggregateID())
 		}
 		return result, ferr
 	})

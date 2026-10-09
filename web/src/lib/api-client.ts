@@ -611,9 +611,9 @@ class ApiClient {
 
   // ─── Playground（调试链路：审计留痕、不落会话） ──────────────────────────────
 
-  /** Playground 非流式调试调用 */
-  async playgroundChat(body: Record<string, unknown>): Promise<unknown> {
-    return this.request(`${API_PREFIX}/playground/chat`, {
+  /** Playground 非流式调试调用（apiKeyID：调用归属的本人 Key，审计与限流按该 Key 计） */
+  async playgroundChat(apiKeyID: number, body: Record<string, unknown>): Promise<unknown> {
+    return this.request(`${API_PREFIX}/playground/chat?apiKeyID=${apiKeyID}`, {
       method: "POST",
       body: JSON.stringify(body),
     });
@@ -621,12 +621,13 @@ class ApiClient {
 
   /** Playground 流式调试调用：逐 SSE 行回调（"data: ..." 原行），返回最终响应状态 */
   async playgroundChatStream(
+    apiKeyID: number,
     body: Record<string, unknown>,
     onLine: (line: string) => void,
     signal?: AbortSignal,
   ): Promise<void> {
     const doFetch = () =>
-      fetch(`${API_BASE}${API_PREFIX}/playground/chat`, {
+      fetch(`${API_BASE}${API_PREFIX}/playground/chat?apiKeyID=${apiKeyID}`, {
         method: "POST",
         headers: { ...this.getHeaders() },
         body: JSON.stringify({ ...body, stream: true }),

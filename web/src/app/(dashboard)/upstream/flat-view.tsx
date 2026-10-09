@@ -225,7 +225,7 @@ export function FlatView({
               <SpecBadges contextLength={m.contextLength} maxOutputTokens={m.maxOutputTokens} />
               <CapabilityBadges capabilities={m.capabilities} />
               <PricingInline pricing={m.pricing} />
-              <ConfigMissingBadges missing={m.config_missing} />
+              <ConfigMissingBadges missing={m.configMissing} />
             </div>
           </div>
         ))}
@@ -301,7 +301,7 @@ export function FlatView({
             </TableCell>
             <TableCell className={cn(!m.enabled && "opacity-45")}>
               <PricingInline pricing={m.pricing} />
-              <ConfigMissingBadges missing={m.config_missing} />
+              <ConfigMissingBadges missing={m.configMissing} />
             </TableCell>
             <TableCell>
               <Switch

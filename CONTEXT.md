@@ -68,11 +68,11 @@ Model 记录（alias↔endpoint 关联行）上的调度参数：`priority`（in
 _Avoid_: endpoint priority, load balance
 
 **EndpointFallback（跨端点 fallback）**:
-转发失败（流建立前）且 `CanSwitchEndpoint`（连接错误/5xx/429/熔断打开/信号量满载）时切换到下一个候选端点重试；每个端点内部仍走 transport 层同端点指数退避重试（`SendUpstreamWithRetry`）与 Guard 熔断租约。候选耗尽或不可切换返回最后一次错误；流一旦交付给 handler 不再切换。切换日志含 from→to 端点名。审计只记最终结果。
+转发失败（流建立前）且 `CanSwitchEndpoint`（连接错误/5xx/429/熔断打开/信号量满载）时切换到下一个候选端点重试；每个端点内部仍走 transport 层同端点指数退避重试（`SendUpstreamWithRetry`）与 Guard 熔断租约。候选耗尽、不可切换或请求已取消（客户端断开/服务 drain，`ctx.Err() != nil`）时返回最后一次错误；流一旦交付给 handler 不再切换。切换日志含 from→to 端点名。审计只记最终结果：尝试期内的失败审计经 ctx 暂存（`CtxKeyFailureAuditDeferral`），仅终局失败提交，被切换掉的中间失败丢弃。Decision 与 Chat/Response/Messages 同走 fallback。
 _Avoid_: endpoint retry, failover retry
 
 **EndpointAffinity（端点亲和）**:
-组合亲和键：会话头（`x-opencode-session`/`X-Session-Id`）优先，回退 `sha256(alias + NUL + 首条 user 文本)` 指纹（同会话多轮稳定；纯 curl 单轮无粘滞）。Redis 映射 `affinity:{userID}:{alias}:{key}` → endpointID，TTL 5 分钟；转发成功后刷新，fallback 换端点成功后改写。解析时亲和命中候选置顶（不在候选则忽略）；读写失败 fail-open。
+组合亲和键：会话头（`x-opencode-session`/`X-Session-Id`）优先，回退 `alias + NUL + 首条 user 文本` 指纹（同会话多轮稳定；纯 curl 单轮无粘滞）。两种来源都取 sha256 前 8 字节十六进制摘要（会话头由客户端控制，不原样拼进 Redis key）。实现在 `infrastructure/cache`，domain 接口 `EndpointAffinity`（Get/Put）。Redis 映射 `affinity:{userID}:{alias}:{key}` → endpointID，TTL 5 分钟；转发成功后刷新，fallback 换端点成功后改写。解析时亲和命中候选置顶（不在候选则忽略）；读写失败 fail-open。
 _Avoid_: sticky routing, session affinity
 
 **Cross-Protocol Conversion（跨协议转换）**:
@@ -116,7 +116,7 @@ _Avoid_: price import, auto pricing, autofill
 _Avoid_: config health, incomplete model
 
 **Playground（模型调试台）**:
-Web 端内置调试入口（`POST /api/web/v1/playground/chat`，JWT、权限 ≥ user，demo 天然拒绝）：复用 OpenAI Chat 契约走 LLM 转发全链路（别名解析、跨协议转换、Guard、触发词、限流按 userID），**仅落审计不落会话**（注入 `CtxKeySkipStore`，与 Trigger omit 共用同一存储分流机制）。前端 `/playground` 页支持多轮消息编辑、参数（temperature/max_tokens/stream）与 SSE 流式渲染。
+Web 端内置调试入口（`POST /api/web/v1/playground/chat`，JWT、权限 ≥ user，demo 天然拒绝）：复用 OpenAI Chat 契约走 LLM 转发全链路（别名解析、跨协议转换、Guard、触发词），调用须经 query `apiKeyID` 指定**本人名下**的 API Key：审计按该 Key 归属（与 `api_key_id` 口径的审计/成本视图一致），请求数与 token 两个令牌桶与 `/api/openai/v1` 共用该 Key 的配额；**仅落审计不落会话**（注入 `CtxKeySkipStore`，与 Trigger omit 共用同一存储分流机制）。前端 `/playground` 页支持选择计费 Key（无 Key 时引导创建）、多轮消息编辑、参数（temperature/max_tokens/stream）、SSE 流式渲染与中途停止。
 _Avoid_: model tester, debug console
 
 **ClientConfigExport（客户端配置导出）**:

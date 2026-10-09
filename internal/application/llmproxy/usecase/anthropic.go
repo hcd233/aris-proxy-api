@@ -35,7 +35,7 @@ type anthropicUseCase struct {
 	taskSubmitter    TaskSubmitter
 	triggerChecker   TriggerChecker
 	tokenMetrics     *metrics.TokenUsageCounter
-	affinity         *AffinityStore
+	affinity         service.EndpointAffinity
 }
 
 func NewAnthropicUseCase(
@@ -47,7 +47,7 @@ func NewAnthropicUseCase(
 	taskSubmitter TaskSubmitter,
 	triggerChecker TriggerChecker,
 	tokenMetrics *metrics.TokenUsageCounter,
-	affinity *AffinityStore,
+	affinity service.EndpointAffinity,
 ) port.AnthropicUseCase {
 	return &anthropicUseCase{
 		resolver:         resolver,
@@ -120,10 +120,10 @@ func (u *anthropicUseCase) CreateMessage(ctx context.Context, req *dto.Anthropic
 		}
 	}
 
-	return runWithFallback(ctx, constant.ModuleAnthropicUseCase, req.Body.Model, cands, func(cand service.Candidate) (port.Result, error) {
-		result, ferr := u.dispatchMessage(ctx, req, cand.Model, cand.Endpoint)
-		if ferr == nil && affKey != "" && u.affinity != nil {
-			u.affinity.Put(ctx, userID, req.Body.Model, affKey, cand.Endpoint.AggregateID())
+	return runWithFallback(ctx, constant.ModuleAnthropicUseCase, req.Body.Model, cands, func(actx context.Context, cand service.Candidate) (port.Result, error) {
+		result, ferr := u.dispatchMessage(actx, req, cand.Model, cand.Endpoint)
+		if ferr == nil {
+			rememberAffinity(actx, u.affinity, userID, req.Body.Model, affKey, cand.Endpoint.AggregateID())
 		}
 		return result, ferr
 	})
