@@ -24,9 +24,10 @@ import { Play, Plus, Square, Trash2 } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import {
   buildChatBody,
-  extractDeltaContent,
   fetchAllPages,
+  newMessage,
   ownedKeys,
+  parseSSELine,
   selectableModels,
   type PlaygroundMessage,
   type PlaygroundModelOption,
@@ -40,7 +41,7 @@ function PlaygroundPage() {
   const [keys, setKeys] = useState<APIKeyItem[]>([]);
   const [keysLoaded, setKeysLoaded] = useState(false);
   const [apiKeyID, setApiKeyID] = useState<number | null>(null);
-  const [messages, setMessages] = useState<PlaygroundMessage[]>([{ role: "user", content: "" }]);
+  const [messages, setMessages] = useState<PlaygroundMessage[]>([newMessage("user", "")]);
   const [stream, setStream] = useState(true);
   const [temperature, setTemperature] = useState("");
   const [maxTokens, setMaxTokens] = useState("");
@@ -119,7 +120,8 @@ function PlaygroundPage() {
           apiKeyID,
           body,
           (line) => {
-            setOutput((prev) => prev + extractDeltaContent(line));
+            const ev = parseSSELine(line);
+            if (ev.type === "delta") setOutput((prev) => prev + ev.text);
           },
           controller.signal,
         );
@@ -265,7 +267,7 @@ function PlaygroundPage() {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => setMessages((prev) => [...prev, { role: "user", content: "" }])}
+                onClick={() => setMessages((prev) => [...prev, newMessage("user", "")])}
               >
                 <Plus className="size-4" />
                 {t("playground.message.add")}
