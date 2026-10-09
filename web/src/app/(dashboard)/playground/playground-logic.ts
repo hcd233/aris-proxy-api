@@ -4,31 +4,64 @@
  */
 import type { ModelCapability, PricingDTO } from "@/lib/types";
 
-/** 调试消息（多轮编辑器的行） */
-export interface PlaygroundMessage {
-  role: "system" | "user" | "assistant";
-  content: string;
+/** 单轮调试元信息（跟随其所属消息持久化） */
+export interface PlaygroundTurnMeta {
+  model: string;
+  usage?: ChatUsage;
+  firstTokenMs?: number;
+  totalMs: number;
+  cost?: number | null;
+  interrupted?: boolean;
+  requestSnapshot?: Record<string, unknown>;
+  error?: { status?: number; message: string };
 }
 
-/** 调试参数 */
+/** 调试消息（对话流的一条） */
+export interface PlaygroundMessage {
+  id: string;
+  role: "system" | "user" | "assistant";
+  content: string;
+  meta?: PlaygroundTurnMeta;
+}
+
+/** 本地调试会话（localStorage 持久化） */
+export interface PlaygroundSession {
+  id: string;
+  title: string;
+  createdAt: number;
+  updatedAt: number;
+  messages: PlaygroundMessage[];
+}
+
+/** 调试参数（UI 状态，跨会话记忆） */
 export interface PlaygroundParams {
+  model: string;
+  apiKeyID: number | null;
+  temperature: string;
+  maxTokens: string;
+  stream: boolean;
+}
+
+/** 组装请求体的数值参数 */
+export interface BuildChatParams {
   model: string;
   stream: boolean;
   temperature?: number;
   maxTokens?: number;
 }
 
-/** 模型列表项（只需要别名与启用态） */
+/** 模型列表项（只需要别名、启用态与定价） */
 export interface PlaygroundModelOption {
   alias: string;
   enabled: boolean;
   capabilities?: ModelCapability[];
+  pricing?: PricingDTO;
 }
 
 /** 组装 OpenAI Chat 请求体（空消息行剔除；可选参数仅在有效时携带） */
 export function buildChatBody(
-  messages: PlaygroundMessage[],
-  params: PlaygroundParams,
+  messages: Pick<PlaygroundMessage, "role" | "content">[],
+  params: BuildChatParams,
 ): Record<string, unknown> {
   const kept = messages
     .filter((m) => m.content.trim() !== "")
@@ -170,4 +203,85 @@ export function buildCurl(body: Record<string, unknown>, origin: string): string
     '  -H "Content-Type: application/json" \\',
     `  -d '${json.replace(/'/g, "'\\''")}'`,
   ].join("\n");
+}
+
+export const SESSIONS_STORAGE_KEY = "playground.sessions.v1";
+export const PARAMS_STORAGE_KEY = "playground.params.v1";
+/** 会话数量上限，超出淘汰 updatedAt 最旧者 */
+export const MAX_SESSIONS = 50;
+
+function readJSON<T>(key: string): T | null {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** 读取本地会话；损坏或版本不符降级为空数组 */
+export function loadSessions(): PlaygroundSession[] {
+  const parsed = readJSON<{ version?: number; sessions?: PlaygroundSession[] }>(
+    SESSIONS_STORAGE_KEY,
+  );
+  if (!parsed || parsed.version !== 1 || !Array.isArray(parsed.sessions)) return [];
+  return parsed.sessions;
+}
+
+/** 写入本地会话；返回 false 表示写入失败（如配额满） */
+export function saveSessions(sessions: PlaygroundSession[]): boolean {
+  try {
+    localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify({ version: 1, sessions }));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** 更新或插入会话并置顶（updatedAt=now），返回按 updatedAt 降序，超上限淘汰最旧 */
+export function upsertSession(
+  sessions: PlaygroundSession[],
+  session: PlaygroundSession,
+): PlaygroundSession[] {
+  const rest = sessions.filter((s) => s.id !== session.id);
+  return [{ ...session, updatedAt: Date.now() }, ...rest]
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+    .slice(0, MAX_SESSIONS);
+}
+
+/** 会话标题：首条非空 user 消息前 30 字；无则空串（渲染方用 i18n 占位） */
+export function deriveTitle(messages: PlaygroundMessage[]): string {
+  const first = messages.find((m) => m.role === "user" && m.content.trim() !== "");
+  return first ? first.content.trim().slice(0, 30) : "";
+}
+
+export function loadParams(): PlaygroundParams | null {
+  return readJSON<PlaygroundParams>(PARAMS_STORAGE_KEY);
+}
+
+export function saveParams(params: PlaygroundParams): void {
+  try {
+    localStorage.setItem(PARAMS_STORAGE_KEY, JSON.stringify(params));
+  } catch {
+    // 参数丢失可容忍，不阻断调试
+  }
+}
+
+export function newSession(): PlaygroundSession {
+  return {
+    id: crypto.randomUUID(),
+    title: "",
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    messages: [],
+  };
+}
+
+export function newMessage(role: PlaygroundMessage["role"], content: string): PlaygroundMessage {
+  return { id: crypto.randomUUID(), role, content };
+}
+
+/** 保留 [0..index] 区间的消息（编辑保存后截断其后文用） */
+export function truncateAfter(messages: PlaygroundMessage[], index: number): PlaygroundMessage[] {
+  return messages.slice(0, index + 1);
 }

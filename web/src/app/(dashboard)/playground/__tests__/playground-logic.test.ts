@@ -1,13 +1,26 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   buildChatBody,
   buildCurl,
+  deriveTitle,
   estimateCost,
   fetchAllPages,
+  loadParams,
+  loadSessions,
+  MAX_SESSIONS,
+  newMessage,
+  newSession,
   ownedKeys,
+  PARAMS_STORAGE_KEY,
   parseSSELine,
+  saveParams,
+  saveSessions,
   selectableModels,
+  SESSIONS_STORAGE_KEY,
+  truncateAfter,
+  upsertSession,
   type ChatUsage,
+  type PlaygroundMessage,
 } from "../playground-logic";
 import type { PricingDTO } from "@/lib/types";
 
@@ -85,6 +98,92 @@ describe("buildCurl", () => {
     expect(curl).toContain("Authorization: Bearer <API_KEY>");
     expect(curl).toContain("-d '");
     expect(curl).toContain('"model": "gpt-4o"');
+  });
+});
+
+function stubStorage() {
+  const store = new Map<string, string>();
+  vi.stubGlobal("localStorage", {
+    getItem: (k: string) => store.get(k) ?? null,
+    setItem: (k: string, v: string) => void store.set(k, v),
+    removeItem: (k: string) => void store.delete(k),
+  });
+  return store;
+}
+
+function msg(role: PlaygroundMessage["role"], content: string, id = content): PlaygroundMessage {
+  return { id, role, content };
+}
+
+describe("会话存储", () => {
+  it("写读回环；损坏 JSON / 版本不符降级为空", () => {
+    const store = stubStorage();
+    const sessions = [newSession()];
+    expect(saveSessions(sessions)).toBe(true);
+    expect(loadSessions()).toEqual(sessions);
+
+    store.set(SESSIONS_STORAGE_KEY, "{broken");
+    expect(loadSessions()).toEqual([]);
+    store.set(SESSIONS_STORAGE_KEY, JSON.stringify({ version: 99, sessions: [1] }));
+    expect(loadSessions()).toEqual([]);
+    vi.unstubAllGlobals();
+  });
+
+  it("upsertSession 更新置顶、插入新会话并淘汰最旧", () => {
+    const base = Array.from({ length: MAX_SESSIONS }, (_, i) => ({
+      ...newSession(),
+      id: `s${i}`,
+      updatedAt: 1000 + i,
+    }));
+    const inserted = upsertSession(base, { ...newSession(), id: "new" });
+    expect(inserted).toHaveLength(MAX_SESSIONS);
+    expect(inserted[0].id).toBe("new");
+    expect(inserted.map((s) => s.id)).not.toContain("s0");
+
+    const updated = upsertSession(inserted, { ...inserted[5], title: "改" });
+    expect(updated[0].id).toBe(inserted[5].id);
+    expect(updated[0].title).toBe("改");
+  });
+
+  it("deriveTitle 取首条非空 user 消息前 30 字", () => {
+    expect(deriveTitle([msg("system", "sys"), msg("user", "你好".repeat(20))])).toHaveLength(30);
+    expect(deriveTitle([msg("system", "only system")])).toBe("");
+    expect(deriveTitle([])).toBe("");
+  });
+
+  it("truncateAfter 保留 [0..index]", () => {
+    const msgs = [msg("user", "a"), msg("assistant", "b"), msg("user", "c")];
+    expect(truncateAfter(msgs, 0)).toEqual([msgs[0]]);
+    expect(truncateAfter(msgs, 2)).toEqual(msgs);
+  });
+
+  it("newMessage / newSession 生成 id 与时间戳", () => {
+    const m = newMessage("user", "hi");
+    expect(m.role).toBe("user");
+    expect(m.id).not.toBe("");
+    const s = newSession();
+    expect(s.messages).toEqual([]);
+    expect(s.title).toBe("");
+    expect(s.createdAt).toBeGreaterThan(0);
+  });
+});
+
+describe("参数存储", () => {
+  it("写读回环；无数据或损坏返回 null", () => {
+    const store = stubStorage();
+    expect(loadParams()).toBeNull();
+    const params = {
+      model: "gpt-4o",
+      apiKeyID: 7,
+      temperature: "0.7",
+      maxTokens: "",
+      stream: true,
+    };
+    saveParams(params);
+    expect(loadParams()).toEqual(params);
+    store.set(PARAMS_STORAGE_KEY, "{broken");
+    expect(loadParams()).toBeNull();
+    vi.unstubAllGlobals();
   });
 });
 
