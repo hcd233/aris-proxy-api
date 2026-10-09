@@ -61,6 +61,7 @@ function formatProtocol(protocol: string): string {
     "openai-chat-completion": "Chat Completions",
     "openai-response": "Response",
     "anthropic-message": "Messages",
+    "openai-decision": "Decision",
   };
   return labels[protocol] || protocol;
 }

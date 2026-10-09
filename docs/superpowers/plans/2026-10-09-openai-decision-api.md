@@ -328,6 +328,7 @@ git commit -m "feat(endpoint): 新增 support_openai_decision 能力开关"
 
 **Files:**
 - Modify: `web/src/lib/types.ts`
+- Create: `web/src/app/(dashboard)/upstream/endpoint-form.ts`（纯模块：表单类型 + 默认值）
 - Modify: `web/src/app/(dashboard)/upstream/shared.tsx`
 - Modify: `web/src/app/(dashboard)/upstream/endpoint-dialog.tsx`
 - Modify: `web/src/app/(dashboard)/upstream/grouped-view.tsx`
@@ -339,7 +340,7 @@ git commit -m "feat(endpoint): 新增 support_openai_decision 能力开关"
 - Consumes: Task 1 的 `supportOpenAIDecision` 字段（`CreateEndpointReqBody` / `UpdateEndpointReqBody` / `UpstreamEndpointItem`）
 - Produces: 前端表单/列表对 `supportOpenAIDecision` 的完整读写
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 新建 `web/src/app/(dashboard)/upstream/__tests__/endpoint-form-defaults.test.ts`：
 
@@ -360,20 +361,58 @@ describe("emptyEndpointForm", () => {
 });
 ```
 
-- [ ] **Step 2: 运行测试确认失败**
+- [x] **Step 2: 运行测试确认失败**
 
 Run: `cd web && npm run test -- endpoint-form-defaults`
 Expected: FAIL —— `emptyEndpointForm.supportOpenAIDecision` 为 `undefined`
 
-- [ ] **Step 3: types.ts**
+- [x] **Step 3: types.ts**
 
 `web/src/lib/types.ts`：`CreateEndpointReqBody` / `UpdateEndpointReqBody` 各加 `supportOpenAIDecision?: boolean;`；`UpstreamEndpointItem` 加 `supportOpenAIDecision: boolean;`（均紧跟 `supportAnthropicMessage`）。
 
-- [ ] **Step 4: shared.tsx**
+- [x] **Step 4: 表单默认值抽为纯模块**
 
-`web/src/app/(dashboard)/upstream/shared.tsx`：`EndpointForm` 加 `supportOpenAIDecision: boolean;`；`emptyEndpointForm` 加 `supportOpenAIDecision: false,`。
+新建 `web/src/app/(dashboard)/upstream/endpoint-form.ts`（从 `shared.tsx` 迁出 `EndpointForm` / `emptyEndpointForm`，
+并新增 `supportOpenAIDecision: boolean` 字段与 `supportOpenAIDecision: false` 默认值）：
 
-- [ ] **Step 5: endpoint-dialog.tsx 复选框**
+```ts
+// 端点表单的类型与默认值（纯模块）。
+//
+// 独立于此处的 shared.tsx：后者依赖 `@/components/*`，vitest 无法解析 `@/` 别名，
+// 故表单默认值放在无别名依赖的纯模块里，才能被单测直接断言。
+// shared.tsx 继续 re-export 本模块，既有 `./shared` 引用无需改动。
+
+export interface EndpointForm {
+  name: string;
+  openaiBaseURL: string;
+  anthropicBaseURL: string;
+  apiKey: string;
+  supportOpenAIChatCompletion: boolean;
+  supportOpenAIResponse: boolean;
+  supportAnthropicMessage: boolean;
+  supportOpenAIDecision: boolean;
+  ownerUserID?: number;
+}
+
+export const emptyEndpointForm: EndpointForm = {
+  name: "",
+  openaiBaseURL: "",
+  anthropicBaseURL: "",
+  apiKey: "",
+  supportOpenAIChatCompletion: true,
+  supportOpenAIResponse: false,
+  supportAnthropicMessage: false,
+  supportOpenAIDecision: false,
+};
+```
+
+`shared.tsx` 删除这两段定义，改为 re-export：
+
+```ts
+export { emptyEndpointForm, type EndpointForm } from "./endpoint-form";
+```
+
+- [x] **Step 5: endpoint-dialog.tsx 复选框**
 
 在 `supportAnthropicMessage` 复选框之后追加：
 
@@ -391,7 +430,7 @@ Expected: FAIL —— `emptyEndpointForm.supportOpenAIDecision` 为 `undefined`
               </label>
 ```
 
-- [ ] **Step 6: grouped-view.tsx 协议徽标**
+- [x] **Step 6: grouped-view.tsx 协议徽标**
 
 在 `supportAnthropicMessage` 徽标之后追加：
 
@@ -406,7 +445,7 @@ Expected: FAIL —— `emptyEndpointForm.supportOpenAIDecision` 为 `undefined`
 
 `ProviderIcon` 无需改动：`openai-decision` 命中 `openai` 前缀分支。
 
-- [ ] **Step 7: 审计页协议标签**
+- [x] **Step 7: 审计页协议标签**
 
 `web/src/app/(dashboard)/audit/model/page.tsx` 的 `formatProtocol` 标签表补一行：
 
@@ -415,7 +454,7 @@ Expected: FAIL —— `emptyEndpointForm.supportOpenAIDecision` 为 `undefined`
     "openai-decision": "Decision",
 ```
 
-- [ ] **Step 8: page.tsx 三处映射**
+- [x] **Step 8: page.tsx 三处映射**
 
 `openEditEndpoint` 的表单预填、`handleSaveEndpoint` 的 update 与 create 请求体，各在 `supportAnthropicMessage` 之后追加：
 
@@ -429,7 +468,7 @@ Expected: FAIL —— `emptyEndpointForm.supportOpenAIDecision` 为 `undefined`
 
 （update / create 两处均加。）
 
-- [ ] **Step 9: locales**
+- [x] **Step 9: locales**
 
 三个文件在 `endpoints.anthropic_messages_label` 之后追加：
 
@@ -439,12 +478,12 @@ Expected: FAIL —— `emptyEndpointForm.supportOpenAIDecision` 为 `undefined`
 
 （zh 用 `"OpenAI Decision API"`；en 同；ja 同。）
 
-- [ ] **Step 10: 运行前端校验**
+- [x] **Step 10: 运行前端校验**
 
 Run: `cd web && npm run test -- endpoint-form-defaults && npx tsc --noEmit -p tsconfig.json && npm run lint`
 Expected: 测试 PASS、tsc 无错误、lint 无错误
 
-- [ ] **Step 11: Commit**
+- [x] **Step 11: Commit**
 
 ```bash
 git add web/src/lib/types.ts "web/src/app/(dashboard)/upstream" "web/src/app/(dashboard)/audit/model/page.tsx" web/src/locales
