@@ -35,6 +35,7 @@ type openAIUseCase struct {
 	taskSubmitter  TaskSubmitter
 	triggerChecker TriggerChecker
 	tokenMetrics   *metrics.TokenUsageCounter
+	affinity       *AffinityStore
 }
 
 func NewOpenAIUseCase(
@@ -45,6 +46,7 @@ func NewOpenAIUseCase(
 	taskSubmitter TaskSubmitter,
 	triggerChecker TriggerChecker,
 	tokenMetrics *metrics.TokenUsageCounter,
+	affinity *AffinityStore,
 ) port.OpenAIUseCase {
 	return &openAIUseCase{
 		resolver:       resolver,
@@ -54,6 +56,7 @@ func NewOpenAIUseCase(
 		taskSubmitter:  taskSubmitter,
 		triggerChecker: triggerChecker,
 		tokenMetrics:   tokenMetrics,
+		affinity:       affinity,
 	}
 }
 
@@ -66,16 +69,17 @@ func (u *openAIUseCase) CreateDecision(ctx context.Context, req *dto.OpenAICreat
 	log := logger.WithCtx(ctx)
 
 	model := req.Body.Model
-	var compatRoute enum.CompatRoute
 	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
-	ep, m, err := u.resolver.Resolve(ctx, userID, vo.EndpointAlias(model), func(ep *aggregate.Endpoint) bool {
-		compatRoute = SelectCompatRoute(enum.ProxyAPIOpenAIDecision, ep)
-		return compatRoute != enum.CompatRouteUnsupported
+	// Decision 无多轮文本，亲和仅会话头维度（指纹退化为空）
+	affKey, _ := AffinityKey(ctx, model, "")
+	cands, err := u.resolver.ResolveCandidatesWithAffinity(ctx, userID, vo.EndpointAlias(model), affKey, func(ep *aggregate.Endpoint) bool {
+		return SelectCompatRoute(enum.ProxyAPIOpenAIDecision, ep) != enum.CompatRouteUnsupported
 	})
 	if err != nil {
 		log.Error("[OpenAIUseCase] Decision API model not found or unsupported", zap.String("model", model), zap.Error(err))
 		return nil, proxyutil.SendOpenAIModelNotFoundError(model)
 	}
+	ep, m := cands[0].Endpoint, cands[0].Model
 
 	if matched := u.checkDecisionContent(req); len(matched) > 0 {
 		_ = u.triggerChecker.IncrementHits(ctx, matched) //nolint:errcheck // best-effort hit counting
@@ -113,6 +117,9 @@ func (u *openAIUseCase) CreateDecision(ctx context.Context, req *dto.OpenAICreat
 	}
 
 	replaced := proxyutil.ReplaceModelInBody(respBody, model)
+	if affKey != "" && u.affinity != nil {
+		u.affinity.Put(ctx, userID, model, affKey, ep.AggregateID())
+	}
 	headers := buildPassthroughHeaders(ctx)
 	headers[constant.HTTPHeaderContentType] = constant.HTTPContentTypeJSON
 
@@ -146,14 +153,16 @@ func (u *openAIUseCase) CreateChatCompletion(ctx context.Context, req *dto.OpenA
 
 	var compatRoute enum.CompatRoute
 	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
-	ep, m, err := u.resolver.Resolve(ctx, userID, vo.EndpointAlias(req.Body.Model), func(ep *aggregate.Endpoint) bool {
-		compatRoute = SelectCompatRoute(enum.ProxyAPIOpenAIChat, ep)
-		return compatRoute != enum.CompatRouteUnsupported
+	affKey, _ := AffinityKey(ctx, req.Body.Model, firstUserTextOpenAIChat(req.Body.Messages))
+	cands, err := u.resolver.ResolveCandidatesWithAffinity(ctx, userID, vo.EndpointAlias(req.Body.Model), affKey, func(ep *aggregate.Endpoint) bool {
+		return SelectCompatRoute(enum.ProxyAPIOpenAIChat, ep) != enum.CompatRouteUnsupported
 	})
 	if err != nil {
 		log.Error("[OpenAIUseCase] Model not found or unsupported for chat completion", zap.String("model", req.Body.Model), zap.Error(err))
 		return nil, proxyutil.SendOpenAIModelNotFoundError(req.Body.Model)
 	}
+	ep, m := cands[0].Endpoint, cands[0].Model
+	compatRoute = SelectCompatRoute(enum.ProxyAPIOpenAIChat, ep)
 
 	if matched := u.checkContent(req); len(matched) > 0 {
 		_ = u.triggerChecker.IncrementHits(ctx, matched) //nolint:errcheck // best-effort hit counting
@@ -190,7 +199,18 @@ func (u *openAIUseCase) CreateChatCompletion(ctx context.Context, req *dto.OpenA
 		}
 	}
 
-	switch compatRoute {
+	return runWithFallback(ctx, constant.ModuleOpenAIUseCase, req.Body.Model, cands, func(cand service.Candidate) (port.Result, error) {
+		result, ferr := u.dispatchChat(ctx, req, cand.Model, cand.Endpoint)
+		if ferr == nil && affKey != "" && u.affinity != nil {
+			u.affinity.Put(ctx, userID, req.Body.Model, affKey, cand.Endpoint.AggregateID())
+		}
+		return result, ferr
+	})
+}
+
+// dispatchChat 按候选端点的兼容路由分发 chat 转发（单端点单次尝试）。
+func (u *openAIUseCase) dispatchChat(ctx context.Context, req *dto.OpenAIChatCompletionRequest, m *aggregate.Model, ep *aggregate.Endpoint) (port.Result, error) {
+	switch SelectCompatRoute(enum.ProxyAPIOpenAIChat, ep) {
 	case enum.CompatRouteNative:
 		stream := lo.FromPtr(req.Body.Stream)
 		upstream := toTransportEndpoint(m, ep, false)
@@ -198,7 +218,6 @@ func (u *openAIUseCase) CreateChatCompletion(ctx context.Context, req *dto.OpenA
 	case enum.CompatRouteViaAnthropicMessage:
 		return u.forwardChatViaAnthropic(ctx, req, m, ep, req.Body.Model)
 	default:
-		log.Error("[OpenAIUseCase] Unsupported chat compatibility route", zap.String("model", req.Body.Model))
 		return nil, proxyutil.SendOpenAIModelNotFoundError(req.Body.Model)
 	}
 }
@@ -209,14 +228,16 @@ func (u *openAIUseCase) CreateResponse(ctx context.Context, req *dto.OpenAICreat
 	model := lo.FromPtr(req.Body.Model)
 	var compatRoute enum.CompatRoute
 	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
-	ep, m, err := u.resolver.Resolve(ctx, userID, vo.EndpointAlias(model), func(ep *aggregate.Endpoint) bool {
-		compatRoute = SelectCompatRoute(enum.ProxyAPIOpenAIResponse, ep)
-		return compatRoute != enum.CompatRouteUnsupported
+	affKey, _ := AffinityKey(ctx, model, firstUserTextResponse(req.Body.Input))
+	cands, err := u.resolver.ResolveCandidatesWithAffinity(ctx, userID, vo.EndpointAlias(model), affKey, func(ep *aggregate.Endpoint) bool {
+		return SelectCompatRoute(enum.ProxyAPIOpenAIResponse, ep) != enum.CompatRouteUnsupported
 	})
 	if err != nil {
 		log.Error("[OpenAIUseCase] Response API model not found or unsupported", zap.String("model", model), zap.Error(err))
 		return nil, proxyutil.SendOpenAIModelNotFoundError(model)
 	}
+	ep, m := cands[0].Endpoint, cands[0].Model
+	compatRoute = SelectCompatRoute(enum.ProxyAPIOpenAIResponse, ep)
 
 	if matched := u.checkResponseContent(req); len(matched) > 0 {
 		_ = u.triggerChecker.IncrementHits(ctx, matched) //nolint:errcheck // best-effort hit counting
@@ -254,7 +275,19 @@ func (u *openAIUseCase) CreateResponse(ctx context.Context, req *dto.OpenAICreat
 		}
 	}
 
-	switch compatRoute {
+	return runWithFallback(ctx, constant.ModuleOpenAIUseCase, model, cands, func(cand service.Candidate) (port.Result, error) {
+		result, ferr := u.dispatchResponse(ctx, req, cand.Model, cand.Endpoint)
+		if ferr == nil && affKey != "" && u.affinity != nil {
+			u.affinity.Put(ctx, userID, model, affKey, cand.Endpoint.AggregateID())
+		}
+		return result, ferr
+	})
+}
+
+// dispatchResponse 按候选端点的兼容路由分发 response 转发（单端点单次尝试）。
+func (u *openAIUseCase) dispatchResponse(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, ep *aggregate.Endpoint) (port.Result, error) {
+	model := lo.FromPtr(req.Body.Model)
+	switch SelectCompatRoute(enum.ProxyAPIOpenAIResponse, ep) {
 	case enum.CompatRouteNative:
 		stream := lo.FromPtr(req.Body.Stream)
 		upstream := toTransportEndpoint(m, ep, false)
@@ -264,7 +297,6 @@ func (u *openAIUseCase) CreateResponse(ctx context.Context, req *dto.OpenAICreat
 	case enum.CompatRouteViaAnthropicMessage:
 		return u.forwardResponseViaAnthropic(ctx, req, m, ep)
 	default:
-		log.Error("[OpenAIUseCase] Unsupported response compatibility route", zap.String("model", model))
 		return nil, proxyutil.SendOpenAIModelNotFoundError(model)
 	}
 }

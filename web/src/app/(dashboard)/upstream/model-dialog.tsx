@@ -316,6 +316,36 @@ export function ModelDialog({
               </div>
             </div>
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="model-priority">{t("models.priority")}</Label>
+              <Input
+                id="model-priority"
+                type="number"
+                min={-100}
+                max={100}
+                inputMode="numeric"
+                className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                value={form.priority}
+                onChange={(e) => setForm((f) => ({ ...f, priority: Number(e.target.value) || 0 }))}
+              />
+              <p className="text-[11px] text-muted-foreground">{t("models.priority_hint")}</p>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="model-weight">{t("models.weight")}</Label>
+              <Input
+                id="model-weight"
+                type="number"
+                min={1}
+                max={1000}
+                inputMode="numeric"
+                className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                value={form.weight}
+                onChange={(e) => setForm((f) => ({ ...f, weight: Number(e.target.value) || 1 }))}
+              />
+              <p className="text-[11px] text-muted-foreground">{t("models.weight_hint")}</p>
+            </div>
+          </div>
           <div className="space-y-1">
             <Label>{t("models.capabilities")}</Label>
             <div className="flex flex-wrap gap-1.5">

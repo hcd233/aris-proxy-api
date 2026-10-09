@@ -64,6 +64,7 @@ type recordingModelRepo struct {
 	gotOwner    uint
 	gotEndpoint uint
 	gotPricing  vo.Pricing
+	gotModel    *aggregate.Model
 }
 
 func (r *recordingModelRepo) FindByAlias(context.Context, vo.EndpointAlias, *uint) ([]*aggregate.Model, error) {
@@ -76,6 +77,7 @@ func (r *recordingModelRepo) Create(_ context.Context, m *aggregate.Model, owner
 	r.gotOwner = ownerUserID
 	r.gotEndpoint = m.EndpointID()
 	r.gotPricing = m.Pricing()
+	r.gotModel = m
 	return 1, nil
 }
 func (r *recordingModelRepo) Update(context.Context, *aggregate.Model) error { return nil }

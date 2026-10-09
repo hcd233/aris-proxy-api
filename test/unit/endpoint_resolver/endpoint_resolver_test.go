@@ -262,14 +262,16 @@ func TestEndpointResolver_ResolveSkipsDisabledModels(t *testing.T) {
 		&endpointByIDRepo{endpoints: map[uint]*aggregate.Endpoint{1: ep}},
 		&staticModelRepo{models: []*aggregate.Model{disabledModel, enabledModel}},
 		false,
+		nil,
 	)
 
-	_, m, err := resolver.Resolve(ctx, 0, alias, func(ep *aggregate.Endpoint) bool {
+	cands, err := resolver.ResolveCandidates(ctx, 0, alias, func(ep *aggregate.Endpoint) bool {
 		return ep.SupportOpenAIChatCompletion()
 	})
 	if err != nil {
 		t.Fatalf("Resolve() error: %v", err)
 	}
+	m := cands[0].Model
 	if m.UpstreamModel() != "enabled-upstream" {
 		t.Fatalf("upstream model = %q, want %q", m.UpstreamModel(), "enabled-upstream")
 	}
@@ -290,14 +292,16 @@ func TestEndpointResolver_ResolveFiltersUnsupportedEndpoints(t *testing.T) {
 		&endpointByIDRepo{endpoints: map[uint]*aggregate.Endpoint{1: anthropicOnly, 2: openAIOnly}},
 		&staticModelRepo{models: []*aggregate.Model{anthropicModel, openAIModel}},
 		false,
+		nil,
 	)
 
-	ep, m, err := resolver.Resolve(ctx, 0, alias, func(ep *aggregate.Endpoint) bool {
+	cands, err := resolver.ResolveCandidates(ctx, 0, alias, func(ep *aggregate.Endpoint) bool {
 		return ep.SupportOpenAIChatCompletion()
 	})
 	if err != nil {
 		t.Fatalf("Resolve() error: %v", err)
 	}
+	ep, m := cands[0].Endpoint, cands[0].Model
 	if ep.AggregateID() != 2 {
 		t.Fatalf("endpoint id = %d, want 2", ep.AggregateID())
 	}
@@ -316,9 +320,9 @@ func TestEndpointResolver_Resolve(t *testing.T) {
 			t.Parallel()
 			modelRepo := newStubModelRepo(tc.ModelBehavior)
 			endpointRepo := &stubEndpointRepo{}
-			resolver := service.NewEndpointResolver(endpointRepo, modelRepo, false)
+			resolver := service.NewEndpointResolver(endpointRepo, modelRepo, false, nil)
 
-			ep, m, err := resolver.Resolve(ctx, 0, vo.EndpointAlias(tc.Alias), nil)
+			cands, err := resolver.ResolveCandidates(ctx, 0, vo.EndpointAlias(tc.Alias), nil)
 
 			switch tc.ExpectErrKind {
 			case "":
@@ -326,15 +330,15 @@ func TestEndpointResolver_Resolve(t *testing.T) {
 					t.Fatalf("expected success, got err: %v", err)
 				}
 				if !tc.ExpectResolved {
-					if ep != nil || m != nil {
-						t.Fatal("expected nil endpoint and model, got non-nil")
+					if len(cands) != 0 {
+						t.Fatalf("expected empty candidates, got %d", len(cands))
 					}
 				} else {
-					if ep == nil || m == nil {
-						t.Fatal("expected endpoint and model resolved, got nil")
+					if len(cands) == 0 {
+						t.Fatal("expected candidates resolved, got empty")
 					}
-					if m.Alias().String() != tc.Alias {
-						t.Errorf("alias = %q, want %q", m.Alias().String(), tc.Alias)
+					if cands[0].Model.Alias().String() != tc.Alias {
+						t.Errorf("alias = %q, want %q", cands[0].Model.Alias().String(), tc.Alias)
 					}
 				}
 			case "validation":
@@ -404,16 +408,17 @@ func TestEndpointResolver_UserIsolation(t *testing.T) {
 		&stubEndpointRepo{},
 		&ownedModelRepo{ownerUserID: 101, alias: "gpt-x"},
 		false,
+		nil,
 	)
 
 	// 归属用户解析成功
-	_, _, err := resolver.Resolve(context.Background(), 101, vo.EndpointAlias("gpt-x"), nil)
+	_, err := resolver.ResolveCandidates(context.Background(), 101, vo.EndpointAlias("gpt-x"), nil)
 	if err != nil {
 		t.Fatalf("owner resolve should succeed: %v", err)
 	}
 
 	// 非归属用户 → 数据不存在（不泄露他人配置存在性）
-	_, _, err = resolver.Resolve(context.Background(), 202, vo.EndpointAlias("gpt-x"), nil)
+	_, err = resolver.ResolveCandidates(context.Background(), 202, vo.EndpointAlias("gpt-x"), nil)
 	if !errors.Is(err, ierr.ErrDataNotExists) {
 		t.Fatalf("non-owner resolve should be ErrDataNotExists, got %v", err)
 	}
@@ -465,17 +470,17 @@ func TestEndpointResolver_SharedPoolFallback(t *testing.T) {
 	alias := vo.EndpointAlias("gpt-shared")
 	endpointRepo := &stubEndpointRepo{}
 
-	resolverOn := service.NewEndpointResolver(endpointRepo, &sharedPoolModelRepo{alias: alias.String()}, true)
-	ep, m, err := resolverOn.Resolve(ctx, 101, alias, nil)
+	resolverOn := service.NewEndpointResolver(endpointRepo, &sharedPoolModelRepo{alias: alias.String()}, true, nil)
+	cands, err := resolverOn.ResolveCandidates(ctx, 101, alias, nil)
 	if err != nil {
 		t.Fatalf("fallback resolve should succeed: %v", err)
 	}
-	if ep == nil || m == nil {
-		t.Fatal("expected endpoint and model resolved from shared pool")
+	if len(cands) == 0 {
+		t.Fatal("expected candidates resolved from shared pool")
 	}
 
-	resolverOff := service.NewEndpointResolver(endpointRepo, &sharedPoolModelRepo{alias: alias.String()}, false)
-	_, _, err = resolverOff.Resolve(ctx, 101, alias, nil)
+	resolverOff := service.NewEndpointResolver(endpointRepo, &sharedPoolModelRepo{alias: alias.String()}, false, nil)
+	_, err = resolverOff.ResolveCandidates(ctx, 101, alias, nil)
 	if !errors.Is(err, ierr.ErrDataNotExists) {
 		t.Fatalf("fallback disabled must be ErrDataNotExists, got %v", err)
 	}

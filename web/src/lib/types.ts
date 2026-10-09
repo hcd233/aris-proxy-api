@@ -430,6 +430,12 @@ export interface UpstreamModelItem {
   maxOutputTokens: number;
   capabilities: ModelCapability[];
   pricing?: PricingDTO;
+  /** 配置缺失项：pricing(未计价)/spec(未填规格) */
+  config_missing?: string[];
+  /** 调度优先级（数字小=优先级高） */
+  priority: number;
+  /** 同优先级加权随机权重 */
+  weight: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -475,6 +481,8 @@ export interface PricingRuleDTO {
   input_price: number;
   output_price: number;
   cache_creation_price: number;
+  /** 1h 缓存创建单价（可选；0/缺省=回落 5m 档 cache_creation_price） */
+  cache_creation_1h_price?: number;
   cache_read_price: number;
 }
 
@@ -518,6 +526,10 @@ export interface CreateModelReqBody {
   capabilities?: ModelCapability[];
   /** 定价（缺省=未计价） */
   pricing?: PricingDTO;
+  /** 调度优先级（数字小=优先级高，缺省 0） */
+  priority?: number;
+  /** 同优先级加权随机权重（缺省 1） */
+  weight?: number;
 }
 
 export interface UpdateModelReqBody {
@@ -533,6 +545,10 @@ export interface UpdateModelReqBody {
   capabilities?: ModelCapability[];
   /** 定价（缺省=不修改；currency 与 rules 均置空=清空为未计价） */
   pricing?: PricingDTO;
+  /** 调度优先级（数字小=优先级高） */
+  priority?: number;
+  /** 同优先级加权随机权重 */
+  weight?: number;
 }
 
 /** 更新模型响应：历史同步的各表影响行数（未同步时全 0） */
@@ -562,6 +578,12 @@ export interface ModelListItem {
   maxOutputTokens: number;
   capabilities: ModelCapability[];
   pricing?: PricingDTO;
+  /** 配置缺失项：pricing(未计价)/spec(未填规格) */
+  config_missing?: string[];
+  /** 调度优先级（数字小=优先级高） */
+  priority: number;
+  /** 同优先级加权随机权重 */
+  weight: number;
   createdAt: string;
   updatedAt: string;
 }

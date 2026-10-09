@@ -90,10 +90,13 @@ type UpstreamModelItem struct {
 	ModelID         string               `json:"modelId" doc:"业务模型ID"`
 	UpstreamModel   string               `json:"upstreamModel" doc:"上游实际模型名"`
 	Enabled         bool                 `json:"enabled" doc:"是否启用"`
+	Priority        int                  `json:"priority" doc:"调度优先级（数字小=优先级高）"`
+	Weight          int                  `json:"weight" doc:"同优先级加权随机权重"`
 	ContextLength   int                  `json:"contextLength" doc:"上下文窗口长度（tokens）"`
 	MaxOutputTokens int                  `json:"maxOutputTokens" doc:"最大输出长度（tokens）"`
 	Capabilities    []enum.InputModality `json:"capabilities" doc:"模型能力（输入模态集合）"`
 	Pricing         *PricingDTO          `json:"pricing,omitempty" doc:"定价（未计价缺省）"`
+	ConfigMissing   []enum.ConfigMissing `json:"config_missing,omitempty" enum:"pricing,spec" doc:"配置缺失项: pricing(未计价)/spec(未填规格)"`
 	CreatedAt       time.Time            `json:"createdAt" doc:"创建时间"`
 	UpdatedAt       time.Time            `json:"updatedAt" doc:"更新时间"`
 }

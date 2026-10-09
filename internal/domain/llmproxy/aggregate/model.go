@@ -28,6 +28,8 @@ type Model struct {
 	maxOutputTokens int
 	capabilities    []enum.InputModality
 	pricing         vo.Pricing
+	priority        int // 调度优先级（数字小=优先级高）
+	weight          int // 同优先级加权随机权重（>=1）
 	createdAt       time.Time
 	updatedAt       time.Time
 }
@@ -95,6 +97,19 @@ func (m *Model) Capabilities() []enum.InputModality {
 // Pricing 模型定价（币种 + 规则表；未计价时 IsPriced 为 false）
 func (m *Model) Pricing() vo.Pricing { return m.pricing }
 
+// MissingConfig 计算模型配置缺失项：pricing=未计价（currency 空），spec=未填规格（context_length=0）。
+// 免费模型（currency=USD 且四价全 0）不算缺失。
+func (m *Model) MissingConfig() []enum.ConfigMissing {
+	var missing []enum.ConfigMissing
+	if !m.pricing.IsPriced() {
+		missing = append(missing, enum.ConfigMissingPricing)
+	}
+	if m.contextLength == 0 {
+		missing = append(missing, enum.ConfigMissingSpec)
+	}
+	return missing
+}
+
 func (m *Model) CreatedAt() time.Time { return m.createdAt }
 func (m *Model) UpdatedAt() time.Time { return m.updatedAt }
 
@@ -108,6 +123,26 @@ func (m *Model) UpdatePricing(pricing vo.Pricing) {
 func (m *Model) SetUserID(userID uint) { m.userID = userID }
 
 func (m *Model) SetModelID(modelID string) { m.modelID = modelID }
+
+// SetScheduling 设置调度参数（创建命令与仓储恢复共用）。
+// weight < 0 拒绝（ErrValidation）；weight == 0 归一为 1（未指定语义）。
+func (m *Model) SetScheduling(priority, weight int) error {
+	if weight < 0 {
+		return ierr.New(ierr.ErrValidation, "model weight must be positive")
+	}
+	if weight == 0 {
+		weight = 1
+	}
+	m.priority = priority
+	m.weight = weight
+	return nil
+}
+
+// Priority 返回调度优先级（数字小=优先级高）
+func (m *Model) Priority() int { return m.priority }
+
+// Weight 返回同优先级加权随机权重（>=1）
+func (m *Model) Weight() int { return m.weight }
 
 func (m *Model) SetTimestamps(createdAt, updatedAt time.Time) {
 	m.createdAt = createdAt

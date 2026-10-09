@@ -187,10 +187,13 @@ func PriceModelCall(task *dto.ModelCallAuditTask, pricing vo.Pricing) {
 	}
 	promptTokens := int64(task.InputTokens) + int64(task.CacheCreationInputTokens) + int64(task.CacheReadInputTokens)
 	rule := pricing.Match(at, promptTokens)
+	cacheCreate1h := int64(task.CacheCreation1hInputTokens)
+	cacheCreate5m := int64(task.CacheCreationInputTokens) - cacheCreate1h
 	breakdown := rule.CostBreakdown(
 		int64(task.InputTokens),
 		int64(task.OutputTokens),
-		int64(task.CacheCreationInputTokens),
+		cacheCreate5m,
+		cacheCreate1h,
 		int64(task.CacheReadInputTokens),
 	)
 	total := breakdown.Total()

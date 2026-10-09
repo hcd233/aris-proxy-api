@@ -17,7 +17,7 @@ import { Plus, Trash2, ArrowUp, ArrowDown } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import type { PricingDTO, PricingRuleDTO, TimeWindowDTO } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { isDefaultRule } from "./shared";
+import { isDefaultRule, emptyPricingRule } from "./pricing-rule";
 
 export interface PricingEditorProps {
   value: PricingDTO;
@@ -35,15 +35,7 @@ const DEFAULT_WINDOW = (): TimeWindowDTO => ({
   timezone: "UTC",
 });
 
-const emptyRule = (): PricingRuleDTO => ({
-  time_windows: [],
-  context_min: 0,
-  context_max: 0,
-  input_price: 0,
-  output_price: 0,
-  cache_creation_price: 0,
-  cache_read_price: 0,
-});
+const emptyRule = (): PricingRuleDTO => emptyPricingRule();
 
 const timeEnabled = (r: PricingRuleDTO): boolean => (r.time_windows ?? []).length > 0;
 const contextEnabled = (r: PricingRuleDTO): boolean =>
@@ -358,6 +350,7 @@ export function PricingEditor({ value, onChange }: PricingEditorProps) {
                     ["upstream.pricing.inputPrice", "input_price"],
                     ["upstream.pricing.outputPrice", "output_price"],
                     ["upstream.pricing.cacheCreationPrice", "cache_creation_price"],
+                    ["upstream.pricing.cacheCreation1hPrice", "cache_creation_1h_price"],
                     ["upstream.pricing.cacheReadPrice", "cache_read_price"],
                   ] as const
                 ).map(([labelKey, field]) => (

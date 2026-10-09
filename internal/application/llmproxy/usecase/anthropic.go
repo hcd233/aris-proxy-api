@@ -35,6 +35,7 @@ type anthropicUseCase struct {
 	taskSubmitter    TaskSubmitter
 	triggerChecker   TriggerChecker
 	tokenMetrics     *metrics.TokenUsageCounter
+	affinity         *AffinityStore
 }
 
 func NewAnthropicUseCase(
@@ -46,6 +47,7 @@ func NewAnthropicUseCase(
 	taskSubmitter TaskSubmitter,
 	triggerChecker TriggerChecker,
 	tokenMetrics *metrics.TokenUsageCounter,
+	affinity *AffinityStore,
 ) port.AnthropicUseCase {
 	return &anthropicUseCase{
 		resolver:         resolver,
@@ -56,6 +58,7 @@ func NewAnthropicUseCase(
 		taskSubmitter:    taskSubmitter,
 		triggerChecker:   triggerChecker,
 		tokenMetrics:     tokenMetrics,
+		affinity:         affinity,
 	}
 }
 
@@ -72,14 +75,16 @@ func (u *anthropicUseCase) CreateMessage(ctx context.Context, req *dto.Anthropic
 
 	var compatRoute enum.CompatRoute
 	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
-	ep, m, err := u.resolver.Resolve(ctx, userID, vo.EndpointAlias(req.Body.Model), func(ep *aggregate.Endpoint) bool {
-		compatRoute = SelectCompatRoute(enum.ProxyAPIAnthropicMessage, ep)
-		return compatRoute != enum.CompatRouteUnsupported
+	affKey, _ := AffinityKey(ctx, req.Body.Model, firstUserTextAnthropic(req.Body.Messages))
+	cands, err := u.resolver.ResolveCandidatesWithAffinity(ctx, userID, vo.EndpointAlias(req.Body.Model), affKey, func(ep *aggregate.Endpoint) bool {
+		return SelectCompatRoute(enum.ProxyAPIAnthropicMessage, ep) != enum.CompatRouteUnsupported
 	})
 	if err != nil {
 		log.Error("[AnthropicUseCase] Model not found or unsupported for messages API", zap.String("model", req.Body.Model), zap.Error(err))
 		return nil, proxyutil.SendAnthropicModelNotFoundError(req.Body.Model)
 	}
+	ep, m := cands[0].Endpoint, cands[0].Model
+	compatRoute = SelectCompatRoute(enum.ProxyAPIAnthropicMessage, ep)
 
 	if matched := u.checkContent(req); len(matched) > 0 {
 		_ = u.triggerChecker.IncrementHits(ctx, matched) //nolint:errcheck // best-effort hit counting
@@ -115,8 +120,19 @@ func (u *anthropicUseCase) CreateMessage(ctx context.Context, req *dto.Anthropic
 		}
 	}
 
+	return runWithFallback(ctx, constant.ModuleAnthropicUseCase, req.Body.Model, cands, func(cand service.Candidate) (port.Result, error) {
+		result, ferr := u.dispatchMessage(ctx, req, cand.Model, cand.Endpoint)
+		if ferr == nil && affKey != "" && u.affinity != nil {
+			u.affinity.Put(ctx, userID, req.Body.Model, affKey, cand.Endpoint.AggregateID())
+		}
+		return result, ferr
+	})
+}
+
+// dispatchMessage 按候选端点的兼容路由分发 messages 转发（单端点单次尝试）。
+func (u *anthropicUseCase) dispatchMessage(ctx context.Context, req *dto.AnthropicCreateMessageRequest, m *aggregate.Model, ep *aggregate.Endpoint) (port.Result, error) {
 	exposedModel := req.Body.Model
-	switch compatRoute {
+	switch SelectCompatRoute(enum.ProxyAPIAnthropicMessage, ep) {
 	case enum.CompatRouteNative:
 		stream := req.Body.Stream != nil && *req.Body.Stream
 		upstream := toTransportEndpoint(m, ep, true)
@@ -124,7 +140,6 @@ func (u *anthropicUseCase) CreateMessage(ctx context.Context, req *dto.Anthropic
 	case enum.CompatRouteViaOpenAIChat:
 		return u.forwardMessageViaChat(ctx, req, m, ep, exposedModel)
 	default:
-		log.Error("[AnthropicUseCase] Unsupported messages compatibility route", zap.String("model", req.Body.Model))
 		return nil, proxyutil.SendAnthropicModelNotFoundError(req.Body.Model)
 	}
 }

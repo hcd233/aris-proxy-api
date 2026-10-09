@@ -18,6 +18,30 @@ describe("buildModelListParams", () => {
     const p = buildModelListParams({
       page: 1,
       pageSize: 10,
+      freeText: "",
+      params: { missingOnly: "true" },
+      sortField: "created_at",
+      sort: "desc",
+    });
+    expect(p.missingOnly).toBe(true);
+  });
+
+  it("omits missingOnly unless explicitly true", () => {
+    const p = buildModelListParams({
+      page: 1,
+      pageSize: 10,
+      freeText: "",
+      params: {},
+      sortField: "created_at",
+      sort: "desc",
+    });
+    expect("missingOnly" in p).toBe(false);
+  });
+
+  it("maps other facet params to api params", () => {
+    const p = buildModelListParams({
+      page: 1,
+      pageSize: 10,
       freeText: "gpt",
       params: { status: "disabled", capability: "image", username: "alice" },
       sortField: "alias",

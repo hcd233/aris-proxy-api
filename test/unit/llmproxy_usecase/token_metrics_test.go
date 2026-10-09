@@ -22,7 +22,7 @@ func TestRecordModelCall_ReportsTokenUsageToCounter(t *testing.T) {
 
 	proxy := &mockOpenAIProxy{} // ForwardChatCompletion 返回 Usage{PromptTokens: 1, CompletionTokens: 1}
 	resolver := &mockResolver{resolveEndpoint: buildTestEndpoint(), resolveModel: buildTestModel()}
-	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{}, nil, tokenMetrics)
+	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{}, nil, tokenMetrics, nil)
 
 	req := &dto.OpenAIChatCompletionRequest{Body: &dto.OpenAIChatCompletionReq{
 		Model: "test-alias",

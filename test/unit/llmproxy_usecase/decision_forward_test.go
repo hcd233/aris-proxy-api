@@ -95,7 +95,7 @@ func newDecisionRequest() *dto.OpenAICreateDecisionRequest {
 
 func newDecisionUseCase(proxy *mockOpenAIProxy, submitter *decisionTaskSubmitter) port.OpenAIUseCase {
 	resolver := &mockResolver{resolveEndpoint: buildDecisionEndpoint(), resolveModel: buildTestModel()}
-	return usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, submitter, nil, nil)
+	return usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, submitter, nil, nil, nil)
 }
 
 func TestCreateDecision_NativeForwardRewritesModelAndStoresSession(t *testing.T) {
@@ -215,7 +215,7 @@ func TestCreateDecision_ModelNotSupported(t *testing.T) {
 	proxy := &mockOpenAIProxy{}
 	submitter := &decisionTaskSubmitter{}
 	resolver := &mockResolver{resolveEndpoint: buildCompatEndpoint("chat-only", true, false, false), resolveModel: buildTestModel()}
-	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, submitter, nil, nil)
+	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, submitter, nil, nil, nil)
 
 	_, err := uc.CreateDecision(t.Context(), newDecisionRequest())
 	if err == nil {
@@ -307,7 +307,7 @@ var _ usecase.TriggerChecker = (*stubTriggerChecker)(nil)
 
 func newInterceptDecisionUseCase(proxy *mockOpenAIProxy, submitter *decisionTaskSubmitter, checker *stubTriggerChecker) port.OpenAIUseCase {
 	resolver := &mockResolver{resolveEndpoint: buildDecisionEndpoint(), resolveModel: buildTestModel()}
-	return usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, submitter, checker, nil)
+	return usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, submitter, checker, nil, nil)
 }
 
 func TestCreateDecision_DenyReturnsRefusalPerQuestion(t *testing.T) {

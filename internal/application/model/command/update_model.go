@@ -8,6 +8,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/application/model/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
+	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
@@ -68,6 +69,9 @@ func (h *updateModelHandler) Handle(ctx context.Context, cmd port.UpdateModelCom
 	if cmd.PricingSet {
 		m.UpdatePricing(cmd.Pricing)
 	}
+	if serr := applyScheduling(m, cmd); serr != nil {
+		return llmproxy.ModelIDSyncCounts{}, serr
+	}
 
 	// 改名路径（syncHistory 且 modelId 实际变化）：模型更新与历史替换必须走
 	// UpdateWithHistorySync 单事务原子完成。若分两步，替换失败时模型本体已改名，
@@ -96,4 +100,20 @@ func (h *updateModelHandler) Handle(ctx context.Context, cmd port.UpdateModelCom
 
 	log.Info("[ModelCommand] Update model success", zap.Uint("id", cmd.ID))
 	return result, nil
+}
+
+// applyScheduling 应用调度参数更新（priority/weight 均为 nil 时不动）。
+// weight=0 归 1、负数拒绝，归一化与校验统一在聚合 SetScheduling。
+func applyScheduling(m *aggregate.Model, cmd port.UpdateModelCommand) error {
+	if cmd.Priority == nil && cmd.Weight == nil {
+		return nil
+	}
+	priority, weight := m.Priority(), m.Weight()
+	if cmd.Priority != nil {
+		priority = *cmd.Priority
+	}
+	if cmd.Weight != nil {
+		weight = *cmd.Weight
+	}
+	return m.SetScheduling(priority, weight)
 }

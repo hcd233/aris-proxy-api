@@ -103,6 +103,9 @@ const (
 	WhereEndpointIDEquals = "endpoint_id = ?"
 	// WhereCapabilitiesLike 按输入模态筛选（capabilities 是 text 列 + serializer:json）
 	WhereCapabilitiesLike = "capabilities LIKE ?"
+
+	// WhereModelConfigMissing 仅看配置缺失模型（未计价或未填规格；OR 需括号避免与其他条件错拼）
+	WhereModelConfigMissing = "(pricing_currency = '' OR context_length = 0)"
 )
 
 var (
@@ -147,7 +150,7 @@ var (
 		FieldSupportOpenAIChatCompletion, FieldSupportOpenAIResponse, FieldSupportAnthropicMessage, FieldSupportOpenAIDecision,
 		FieldCreatedAt, FieldUpdatedAt}
 
-	ModelRepoFieldsFull  = []string{FieldID, FieldUserID, FieldAlias, FieldModelID, FieldModelUpstreamModel, FieldEndpointID, FieldEnabled, FieldModelContextLength, FieldModelMaxOutputTokens, FieldModelCapabilities, FieldModelPricingRules, FieldPricingCurrency, FieldCreatedAt, FieldUpdatedAt}
+	ModelRepoFieldsFull  = []string{FieldID, FieldUserID, FieldAlias, FieldModelID, FieldModelUpstreamModel, FieldEndpointID, FieldEnabled, FieldModelPriority, FieldModelWeight, FieldModelContextLength, FieldModelMaxOutputTokens, FieldModelCapabilities, FieldModelPricingRules, FieldPricingCurrency, FieldCreatedAt, FieldUpdatedAt}
 	ModelRepoFieldsAlias = []string{FieldAlias}
 
 	ProxyAPIKeyRepoFieldsFull = []string{FieldID, FieldUserID, FieldName, FieldKey, FieldCreatedAt}
