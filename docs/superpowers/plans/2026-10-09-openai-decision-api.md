@@ -1296,7 +1296,7 @@ git commit -m "feat(transport): 新增 Decision API 上游转发与请求体序�
   - `port.OpenAIUseCase.CreateDecision(ctx context.Context, req *dto.OpenAICreateDecisionRequest) (Result, error)`
   - `decisionTokenUsage{ rsp *dto.OpenAIDecisionRsp }`（`tokenUsage` 实现）
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 在 `test/unit/llmproxy_usecase/decision_forward_test.go` 追加（该文件 import 需补齐为：`context`、`errors`、`net/http`、`testing`、`github.com/bytedance/sonic`、`github.com/samber/lo`、`application/llmproxy/port`、`application/llmproxy/usecase`、`common/enum`、`common/model`、`domain/llmproxy/aggregate`、`internal/dto`）：
 
@@ -1528,12 +1528,12 @@ func TestCreateDecision_UnparsableBodyStillPassesThrough(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: 运行测试确认失败**
+- [x] **Step 2: 运行测试确认失败**
 
 Run: `go test -count=1 -run TestCreateDecision ./test/unit/llmproxy_usecase/`
 Expected: 编译失败 —— `uc.CreateDecision undefined`
 
-- [ ] **Step 3: 端口与用例编排**
+- [x] **Step 3: 端口与用例编排**
 
 `internal/application/llmproxy/port/handler.go` 的 `OpenAIUseCase` 追加：
 
@@ -1603,7 +1603,7 @@ func (u *openAIUseCase) CreateDecision(ctx context.Context, req *dto.OpenAICreat
 
 `internal/application/llmproxy/usecase/openai.go` 需补 import：`net/http`、`time`、`github.com/bytedance/sonic`（`zap`/`constant`/`enum`/`aggregate`/`vo`/`dto`/`proxyutil`/`port`/`util`/`logger` 已存在）。
 
-- [ ] **Step 4: 会话存储与 usage 适配器**
+- [x] **Step 4: 会话存储与 usage 适配器**
 
 新建 `internal/application/llmproxy/usecase/openai_decision.go`：
 
@@ -1677,12 +1677,29 @@ func buildDecisionInputMessage(input dto.DecisionInput) *commonvo.UnifiedMessage
 			if part == nil {
 				continue
 			}
-			parts = append(parts, &commonvo.UnifiedContentPart{
-				Type:        enum.ContentPartType(part.Type),
-				Text:        lo.FromPtr(part.Text),
-				ImageURL:    lo.FromPtr(part.ImageURL),
-				ImageDetail: lo.FromPtr(part.Detail),
-			})
+			// Decision 与 Response API 共用内容块类型，归一为统一词汇
+			// （input_text/input_image/input_file → text/image_url/file），
+			// 与 dto.FromResponseAPIMessage 的口径保持一致。
+			switch part.Type {
+			case enum.ResponseContentTypeInputText:
+				parts = append(parts, &commonvo.UnifiedContentPart{
+					Type: enum.ContentPartTypeText,
+					Text: lo.FromPtr(part.Text),
+				})
+			case enum.ResponseContentTypeInputImage:
+				parts = append(parts, &commonvo.UnifiedContentPart{
+					Type:        enum.ContentPartTypeImageURL,
+					ImageURL:    lo.FromPtr(part.ImageURL),
+					ImageDetail: lo.FromPtr(part.Detail),
+				})
+			case enum.ResponseContentTypeInputFile:
+				parts = append(parts, &commonvo.UnifiedContentPart{
+					Type:     enum.ContentPartTypeFile,
+					FileData: lo.FromPtr(part.FileData),
+					FileID:   lo.FromPtr(part.FileID),
+					Filename: lo.FromPtr(part.Filename),
+				})
+			}
 		}
 	}
 	return &commonvo.UnifiedMessage{Role: enum.RoleUser, Content: &commonvo.UnifiedContent{Parts: parts}}
@@ -1706,12 +1723,12 @@ func (u decisionTokenUsage) reportable() int64 {
 }
 ```
 
-- [ ] **Step 5: 运行测试确认通过**
+- [x] **Step 5: 运行测试确认通过**
 
 Run: `go test -count=1 -run TestCreateDecision ./test/unit/llmproxy_usecase/ && go test -count=1 ./test/unit/llmproxy_usecase/`
 Expected: PASS（5 个新增用例 + 既有用例全绿）
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add internal/application/llmproxy
