@@ -64,14 +64,15 @@ func (u *openAIUseCase) CreateChatCompletion(ctx context.Context, req *dto.OpenA
 
 	var compatRoute enum.CompatRoute
 	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
-	ep, m, err := u.resolver.Resolve(ctx, userID, vo.EndpointAlias(req.Body.Model), func(ep *aggregate.Endpoint) bool {
-		compatRoute = SelectCompatRoute(enum.ProxyAPIOpenAIChat, ep)
-		return compatRoute != enum.CompatRouteUnsupported
+	cands, err := u.resolver.ResolveCandidates(ctx, userID, vo.EndpointAlias(req.Body.Model), func(ep *aggregate.Endpoint) bool {
+		return SelectCompatRoute(enum.ProxyAPIOpenAIChat, ep) != enum.CompatRouteUnsupported
 	})
 	if err != nil {
 		log.Error("[OpenAIUseCase] Model not found or unsupported for chat completion", zap.String("model", req.Body.Model), zap.Error(err))
 		return nil, proxyutil.SendOpenAIModelNotFoundError(req.Body.Model)
 	}
+	ep, m := cands[0].Endpoint, cands[0].Model
+	compatRoute = SelectCompatRoute(enum.ProxyAPIOpenAIChat, ep)
 
 	if matched := u.checkContent(req); len(matched) > 0 {
 		_ = u.triggerChecker.IncrementHits(ctx, matched) //nolint:errcheck // best-effort hit counting
@@ -127,14 +128,15 @@ func (u *openAIUseCase) CreateResponse(ctx context.Context, req *dto.OpenAICreat
 	model := lo.FromPtr(req.Body.Model)
 	var compatRoute enum.CompatRoute
 	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
-	ep, m, err := u.resolver.Resolve(ctx, userID, vo.EndpointAlias(model), func(ep *aggregate.Endpoint) bool {
-		compatRoute = SelectCompatRoute(enum.ProxyAPIOpenAIResponse, ep)
-		return compatRoute != enum.CompatRouteUnsupported
+	cands, err := u.resolver.ResolveCandidates(ctx, userID, vo.EndpointAlias(model), func(ep *aggregate.Endpoint) bool {
+		return SelectCompatRoute(enum.ProxyAPIOpenAIResponse, ep) != enum.CompatRouteUnsupported
 	})
 	if err != nil {
 		log.Error("[OpenAIUseCase] Response API model not found or unsupported", zap.String("model", model), zap.Error(err))
 		return nil, proxyutil.SendOpenAIModelNotFoundError(model)
 	}
+	ep, m := cands[0].Endpoint, cands[0].Model
+	compatRoute = SelectCompatRoute(enum.ProxyAPIOpenAIResponse, ep)
 
 	if matched := u.checkResponseContent(req); len(matched) > 0 {
 		_ = u.triggerChecker.IncrementHits(ctx, matched) //nolint:errcheck // best-effort hit counting

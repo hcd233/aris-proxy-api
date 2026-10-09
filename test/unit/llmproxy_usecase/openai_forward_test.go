@@ -16,6 +16,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
+	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 )
@@ -126,14 +127,17 @@ type mockResolver struct {
 	resolveErr      error
 }
 
-func (r *mockResolver) Resolve(_ context.Context, _ uint, _ vo.EndpointAlias, matcher func(*aggregate.Endpoint) bool) (*aggregate.Endpoint, *aggregate.Model, error) {
-	if r.resolveErr != nil || r.resolveEndpoint == nil {
-		return r.resolveEndpoint, r.resolveModel, r.resolveErr
+func (r *mockResolver) ResolveCandidates(_ context.Context, _ uint, _ vo.EndpointAlias, matcher func(*aggregate.Endpoint) bool) ([]service.Candidate, error) {
+	if r.resolveErr != nil {
+		return nil, r.resolveErr
+	}
+	if r.resolveEndpoint == nil {
+		return nil, ierr.New(ierr.ErrDataNotExists, "no candidate")
 	}
 	if matcher != nil && !matcher(r.resolveEndpoint) {
-		return nil, nil, ierr.New(ierr.ErrInternal, "endpoint unsupported")
+		return nil, ierr.New(ierr.ErrInternal, "endpoint unsupported")
 	}
-	return r.resolveEndpoint, r.resolveModel, nil
+	return []service.Candidate{{Endpoint: r.resolveEndpoint, Model: r.resolveModel}}, nil
 }
 
 type mockListModels struct{}

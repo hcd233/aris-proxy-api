@@ -72,14 +72,15 @@ func (u *anthropicUseCase) CreateMessage(ctx context.Context, req *dto.Anthropic
 
 	var compatRoute enum.CompatRoute
 	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
-	ep, m, err := u.resolver.Resolve(ctx, userID, vo.EndpointAlias(req.Body.Model), func(ep *aggregate.Endpoint) bool {
-		compatRoute = SelectCompatRoute(enum.ProxyAPIAnthropicMessage, ep)
-		return compatRoute != enum.CompatRouteUnsupported
+	cands, err := u.resolver.ResolveCandidates(ctx, userID, vo.EndpointAlias(req.Body.Model), func(ep *aggregate.Endpoint) bool {
+		return SelectCompatRoute(enum.ProxyAPIAnthropicMessage, ep) != enum.CompatRouteUnsupported
 	})
 	if err != nil {
 		log.Error("[AnthropicUseCase] Model not found or unsupported for messages API", zap.String("model", req.Body.Model), zap.Error(err))
 		return nil, proxyutil.SendAnthropicModelNotFoundError(req.Body.Model)
 	}
+	ep, m := cands[0].Endpoint, cands[0].Model
+	compatRoute = SelectCompatRoute(enum.ProxyAPIAnthropicMessage, ep)
 
 	if matched := u.checkContent(req); len(matched) > 0 {
 		_ = u.triggerChecker.IncrementHits(ctx, matched) //nolint:errcheck // best-effort hit counting
