@@ -1041,7 +1041,7 @@ git commit -m "feat(dto): Decision usage 归一化为四维互斥 token 口径"
   - `enum.ProtocolOpenAIDecision enum.ProtocolType = "openai-decision"`
   - `SelectCompatRoute(enum.ProxyAPIOpenAIDecision, ep)` → `CompatRouteNative`（端点支持）或 `CompatRouteUnsupported`
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 在 `test/unit/llmproxy_usecase/openai_forward_test.go` 末尾追加：
 
@@ -1065,12 +1065,12 @@ func TestSelectCompatRoute_DecisionNativeOnly(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: 运行测试确认失败**
+- [x] **Step 2: 运行测试确认失败**
 
 Run: `go test -count=1 -run TestSelectCompatRoute_DecisionNativeOnly ./test/unit/llmproxy_usecase/`
 Expected: 编译失败 —— `undefined: enum.ProxyAPIOpenAIDecision`
 
-- [ ] **Step 3: 枚举与路线**
+- [x] **Step 3: 枚举与路线**
 
 `internal/common/enum/llmproxy_compat.go`：
 
@@ -1099,12 +1099,12 @@ const (
 		}
 ```
 
-- [ ] **Step 4: 运行测试确认通过**
+- [x] **Step 4: 运行测试确认通过**
 
 Run: `go test -count=1 -run TestSelectCompatRoute ./test/unit/llmproxy_usecase/`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add internal/common/enum internal/application/llmproxy/usecase/compat_route.go test/unit/llmproxy_usecase/openai_forward_test.go

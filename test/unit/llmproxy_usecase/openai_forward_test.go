@@ -653,3 +653,21 @@ func TestOpenAICreateChatCompletion_ViaAnthropicStream_OpenErrorSkipsRead(t *tes
 		t.Fatalf("ReadCreateMessageStream must not be called when Open fails; got cnt=%d", anthropicProxy.readMessageStreamCnt)
 	}
 }
+
+func TestSelectCompatRoute_DecisionNativeOnly(t *testing.T) {
+	t.Parallel()
+
+	decisionEp, _ := aggregate.CreateEndpoint(3, "decision-only", "https://api.openai.com", "", "sk-test", false, false, false, true)
+	if route := usecase.SelectCompatRoute(enum.ProxyAPIOpenAIDecision, decisionEp); route != enum.CompatRouteNative {
+		t.Fatalf("decision-only route = %v, want native", route)
+	}
+
+	chatEp, _ := aggregate.CreateEndpoint(4, "chat-only", "https://api.openai.com", "", "sk-test", true, false, false, false)
+	if route := usecase.SelectCompatRoute(enum.ProxyAPIOpenAIDecision, chatEp); route != enum.CompatRouteUnsupported {
+		t.Fatalf("chat-only route = %v, want unsupported", route)
+	}
+
+	if route := usecase.SelectCompatRoute(enum.ProxyAPIOpenAIDecision, nil); route != enum.CompatRouteUnsupported {
+		t.Fatalf("nil endpoint route = %v, want unsupported", route)
+	}
+}
