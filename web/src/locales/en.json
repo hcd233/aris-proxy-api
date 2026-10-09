@@ -848,6 +848,7 @@
   "upstream.pricing.inputPrice": "Input price",
   "upstream.pricing.outputPrice": "Output price",
   "upstream.pricing.cacheCreationPrice": "Cache write price",
+  "upstream.pricing.cacheCreation1hPrice": "Cache write 1h price",
   "upstream.pricing.cacheReadPrice": "Cache read price",
   "audit.cost.column": "Cost",
   "audit.cost.unpriced": "No priced data",

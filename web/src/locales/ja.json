@@ -848,6 +848,7 @@
   "upstream.pricing.inputPrice": "入力単価",
   "upstream.pricing.outputPrice": "出力単価",
   "upstream.pricing.cacheCreationPrice": "キャッシュ作成単価",
+  "upstream.pricing.cacheCreation1hPrice": "1h キャッシュ作成単価",
   "upstream.pricing.cacheReadPrice": "キャッシュ読み取り単価",
   "audit.cost.column": "費用",
   "audit.cost.unpriced": "価格設定済みのデータなし",

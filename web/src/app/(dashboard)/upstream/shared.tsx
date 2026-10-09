@@ -23,6 +23,7 @@ import { useT } from "@/lib/i18n";
 import { formatCost } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import type { ModelCapability, PricingDTO, PricingRuleDTO, UpstreamUser } from "@/lib/types";
+import { isDefaultRule } from "./pricing-rule";
 
 // 模型表单默认规格：新建表单初值、编辑回填空值兜底、输入框占位共用同一口径
 export const DEFAULT_CONTEXT_LENGTH = 256000;
@@ -45,9 +46,7 @@ export function formatTokens(n: number): string {
 // 未计价表单/展示的初值：currency 为空 ⇔ rules 为空 ⇔ 未计价
 export const emptyPricing: PricingDTO = { currency: "", rules: [] };
 
-// 无条件默认规则：既无时段窗口也无上下文区间，是「这个模型多少钱」的代表档
-export const isDefaultRule = (r: PricingRuleDTO): boolean =>
-  (r.time_windows ?? []).length === 0 && !r.context_min && !r.context_max;
+// 无条件默认规则判定见 ./pricing-rule（isDefaultRule）
 
 // 归属用户展示单元：头像 + 用户名；user 缺省显示占位 —（恒定短占位不加 tooltip）
 export function OwnerCell({ user }: { user?: UpstreamUser }) {

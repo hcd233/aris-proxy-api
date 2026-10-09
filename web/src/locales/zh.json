@@ -848,6 +848,7 @@
   "upstream.pricing.inputPrice": "输入单价",
   "upstream.pricing.outputPrice": "输出单价",
   "upstream.pricing.cacheCreationPrice": "缓存创建单价",
+  "upstream.pricing.cacheCreation1hPrice": "1h 缓存创建价",
   "upstream.pricing.cacheReadPrice": "缓存读取单价",
   "audit.cost.column": "费用",
   "audit.cost.unpriced": "暂无计价数据",

@@ -472,6 +472,8 @@ export interface PricingRuleDTO {
   input_price: number;
   output_price: number;
   cache_creation_price: number;
+  /** 1h 缓存创建单价（可选；0/缺省=回落 5m 档 cache_creation_price） */
+  cache_creation_1h_price?: number;
   cache_read_price: number;
 }
 
