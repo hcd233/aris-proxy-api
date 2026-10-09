@@ -77,6 +77,30 @@ func (u *openAIUseCase) CreateDecision(ctx context.Context, req *dto.OpenAICreat
 		return nil, proxyutil.SendOpenAIModelNotFoundError(model)
 	}
 
+	if matched := u.checkDecisionContent(req); len(matched) > 0 {
+		_ = u.triggerChecker.IncrementHits(ctx, matched) //nolint:errcheck // best-effort hit counting
+
+		if denyIDs := u.triggerChecker.DenyIDs(matched); len(denyIDs) > 0 {
+			words := u.triggerChecker.MatchedWords(denyIDs)
+			auditTask := &dto.ModelCallAuditTask{
+				Ctx:              util.CopyContextValues(ctx),
+				ModelID:          m.ModelID(),
+				Endpoint:         ep.Name(),
+				UpstreamProtocol: enum.ProtocolOpenAIDecision,
+				APIProtocol:      enum.ProtocolOpenAIDecision,
+				ErrorMessage:     fmt.Sprintf(constant.TriggerAuditRemarkTemplate, formatTriggerWords(words)),
+			}
+			_ = u.taskSubmitter.SubmitModelCallAuditTask(auditTask) //nolint:errcheck // best-effort audit
+			return proxyutil.BuildDecisionRefusalBody(model, req.Body.Questions), nil
+		}
+
+		// capture 短路未实现：Decision 的 input 是待评估文本而非多轮对话，
+		// 不存在「最后一条用户提问」概念（见设计文档 §2.2）。
+		if len(u.triggerChecker.OmitIDs(matched)) > 0 {
+			ctx = context.WithValue(ctx, constant.CtxKeySkipStore, true)
+		}
+	}
+
 	upstream := toTransportEndpoint(m, ep, false)
 	body := proxyutil.MarshalOpenAIDecisionBodyForModel(req.Body, upstream.Model)
 

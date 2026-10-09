@@ -1,6 +1,7 @@
 package llmproxy_usecase
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"testing"
@@ -276,6 +277,109 @@ func TestCreateDecision_UnparsableBodyStillPassesThrough(t *testing.T) {
 	}
 	if len(submitter.storeTasks) != 0 {
 		t.Fatalf("store tasks = %d, want 0", len(submitter.storeTasks))
+	}
+	if len(submitter.auditTasks) != 1 {
+		t.Fatalf("audit tasks = %d, want 1", len(submitter.auditTasks))
+	}
+}
+
+// stubTriggerChecker 以固定命中结果驱动 Decision 拦截分支。
+type stubTriggerChecker struct {
+	matched []uint
+	words   []string
+	denyIDs []uint
+	omitIDs []uint
+}
+
+func (s *stubTriggerChecker) Check(string) []uint { return s.matched }
+
+func (s *stubTriggerChecker) MatchedWords([]uint) []string { return s.words }
+
+func (s *stubTriggerChecker) DenyIDs([]uint) []uint { return s.denyIDs }
+
+func (s *stubTriggerChecker) OmitIDs([]uint) []uint { return s.omitIDs }
+
+func (s *stubTriggerChecker) CaptureIDs([]uint) []uint { return nil }
+
+func (s *stubTriggerChecker) IncrementHits(context.Context, []uint) error { return nil }
+
+var _ usecase.TriggerChecker = (*stubTriggerChecker)(nil)
+
+func newInterceptDecisionUseCase(proxy *mockOpenAIProxy, submitter *decisionTaskSubmitter, checker *stubTriggerChecker) port.OpenAIUseCase {
+	resolver := &mockResolver{resolveEndpoint: buildDecisionEndpoint(), resolveModel: buildTestModel()}
+	return usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, submitter, checker, nil)
+}
+
+func TestCreateDecision_DenyReturnsRefusalPerQuestion(t *testing.T) {
+	t.Parallel()
+
+	proxy := &mockOpenAIProxy{}
+	submitter := &decisionTaskSubmitter{}
+	checker := &stubTriggerChecker{matched: []uint{1}, words: []string{"blocked"}, denyIDs: []uint{1}}
+	uc := newInterceptDecisionUseCase(proxy, submitter, checker)
+
+	result, err := uc.CreateDecision(t.Context(), newDecisionRequest())
+	if err != nil {
+		t.Fatalf("CreateDecision() error: %v", err)
+	}
+	jsonResult, ok := result.(*port.JSONResult)
+	if !ok {
+		t.Fatalf("result = %T, want *port.JSONResult", result)
+	}
+	if proxy.decisionUnaryCalled {
+		t.Fatal("upstream must not be called on deny")
+	}
+
+	var body struct {
+		Model   string `json:"model"`
+		Answers []struct {
+			Type string  `json:"type"`
+			Name *string `json:"name"`
+		} `json:"answers"`
+		Usage map[string]any `json:"usage"`
+	}
+	if err := sonic.Unmarshal(jsonResult.Body, &body); err != nil {
+		t.Fatalf("unmarshal refusal body: %v", err)
+	}
+	if body.Model != "test-alias" {
+		t.Fatalf("model = %s, want test-alias", body.Model)
+	}
+	if len(body.Answers) != 1 || body.Answers[0].Type != "refusal" {
+		t.Fatalf("answers = %+v, want 1 refusal", body.Answers)
+	}
+	if body.Answers[0].Name == nil || *body.Answers[0].Name != "damaged" {
+		t.Fatalf("refusal name = %v, want damaged", body.Answers[0].Name)
+	}
+	if body.Usage == nil {
+		t.Fatal("usage must be present")
+	}
+	if len(submitter.auditTasks) != 1 {
+		t.Fatalf("audit tasks = %d, want 1", len(submitter.auditTasks))
+	}
+	if submitter.auditTasks[0].ErrorMessage == "" {
+		t.Fatal("deny audit must carry trigger word remark")
+	}
+	if len(submitter.storeTasks) != 0 {
+		t.Fatalf("store tasks = %d, want 0", len(submitter.storeTasks))
+	}
+}
+
+func TestCreateDecision_OmitSkipsSessionStore(t *testing.T) {
+	t.Parallel()
+
+	proxy := &mockOpenAIProxy{decisionResp: decisionResponse(`[{"type":"predicate","name":"damaged","probability":0.9}]`)}
+	submitter := &decisionTaskSubmitter{}
+	checker := &stubTriggerChecker{matched: []uint{2}, words: []string{"private"}, omitIDs: []uint{2}}
+	uc := newInterceptDecisionUseCase(proxy, submitter, checker)
+
+	if _, err := uc.CreateDecision(t.Context(), newDecisionRequest()); err != nil {
+		t.Fatalf("CreateDecision() error: %v", err)
+	}
+	if !proxy.decisionUnaryCalled {
+		t.Fatal("upstream must be called when only omit matches")
+	}
+	if len(submitter.storeTasks) != 0 {
+		t.Fatalf("store tasks = %d, want 0 (omit)", len(submitter.storeTasks))
 	}
 	if len(submitter.auditTasks) != 1 {
 		t.Fatalf("audit tasks = %d, want 1", len(submitter.auditTasks))

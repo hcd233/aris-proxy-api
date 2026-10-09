@@ -1740,6 +1740,7 @@ git commit -m "feat(llmproxy): Decision API 核心转发、会话存储与审计
 ### Task 8: 触发词拦截（deny → refusal，omit → 跳过存储）
 
 **Files:**
+- Modify: `internal/common/enum/decision.go`（新建，`DecisionAnswerTypeRefusal`）
 - Modify: `internal/application/llmproxy/usecase/trigger_check.go`（`extractDecisionText`、`checkDecisionContent`）
 - Modify: `internal/application/llmproxy/usecase/openai.go`（`CreateDecision` 前置拦截分支）
 - Modify: `internal/application/llmproxy/util/trigger_content_filter.go`（`BuildDecisionRefusalBody`）
@@ -1751,7 +1752,7 @@ git commit -m "feat(llmproxy): Decision API 核心转发、会话存储与审计
   - `(*openAIUseCase).checkDecisionContent(req *dto.OpenAICreateDecisionRequest) []uint`
   - `proxyutil.BuildDecisionRefusalBody(model string, questions []*dto.DecisionQuestion) port.Result`
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 在 `test/unit/llmproxy_usecase/decision_forward_test.go` 追加：
 
@@ -1855,12 +1856,12 @@ func TestCreateDecision_OmitSkipsSessionStore(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: 运行测试确认失败**
+- [x] **Step 2: 运行测试确认失败**
 
 Run: `go test -count=1 -run 'TestCreateDecision_Deny|TestCreateDecision_Omit' ./test/unit/llmproxy_usecase/`
 Expected: FAIL —— deny 用例实际调用了上游 / omit 用例提交了存储任务
 
-- [ ] **Step 3: 文本提取**
+- [x] **Step 3: 文本提取**
 
 `internal/application/llmproxy/usecase/trigger_check.go`：在 `extractOpenAIResponseText` 之后追加：
 
@@ -1868,14 +1869,29 @@ Expected: FAIL —— deny 用例实际调用了上游 / omit 用例提交了存
 // extractDecisionText 提取 Decision API 请求中的全部用户可控文本。
 //
 // 覆盖：input（字符串或消息 content 的文本/parts）、questions[].instructions、
-// choices[].description、levels[].label/description。
+// choices[].description/value、levels[].label/description。
 func extractDecisionText(req *dto.OpenAICreateDecisionRequest) string {
 	var buf strings.Builder
 
-	if req.Body.Input.Text != nil {
-		buf.WriteString(*req.Body.Input.Text)
+	buf.WriteString(extractDecisionInputText(req.Body.Input))
+	for _, q := range req.Body.Questions {
+		if q == nil {
+			continue
+		}
+		buf.WriteString(extractDecisionQuestionText(q))
 	}
-	for _, msg := range req.Body.Input.Messages {
+
+	return buf.String()
+}
+
+// extractDecisionInputText 提取 Decision input（字符串或消息 content）中的文本。
+func extractDecisionInputText(input dto.DecisionInput) string {
+	var buf strings.Builder
+
+	if input.Text != nil {
+		buf.WriteString(*input.Text)
+	}
+	for _, msg := range input.Messages {
 		if msg == nil {
 			continue
 		}
@@ -1887,25 +1903,27 @@ func extractDecisionText(req *dto.OpenAICreateDecisionRequest) string {
 		}
 	}
 
-	for _, q := range req.Body.Questions {
-		if q == nil {
+	return buf.String()
+}
+
+// extractDecisionQuestionText 提取单个 question 的指令、选项与等级文本。
+func extractDecisionQuestionText(q *dto.DecisionQuestion) string {
+	var buf strings.Builder
+
+	buf.WriteString(q.Instructions)
+	for _, choice := range q.Choices {
+		if choice == nil {
 			continue
 		}
-		buf.WriteString(q.Instructions)
-		for _, choice := range q.Choices {
-			if choice != nil {
-				buf.WriteString(lo.FromPtr(choice.Description))
-				if choice.Value.StringValue != nil {
-					buf.WriteString(*choice.Value.StringValue)
-				}
-			}
+		buf.WriteString(lo.FromPtr(choice.Description))
+		buf.WriteString(lo.FromPtr(choice.Value.StringValue))
+	}
+	for _, level := range q.Levels {
+		if level == nil {
+			continue
 		}
-		for _, level := range q.Levels {
-			if level != nil {
-				buf.WriteString(level.Label)
-				buf.WriteString(lo.FromPtr(level.Description))
-			}
-		}
+		buf.WriteString(level.Label)
+		buf.WriteString(lo.FromPtr(level.Description))
 	}
 
 	return buf.String()
@@ -1919,7 +1937,9 @@ func (u *openAIUseCase) checkDecisionContent(req *dto.OpenAICreateDecisionReques
 }
 ```
 
-- [ ] **Step 4: 拒绝响应构造**
+（拆分出两个子提取函数是为了把 `gocognit` 降到 25 以下：单函数版本认知复杂度 26 被静态检查拦下。）
+
+- [x] **Step 4: 拒绝响应构造**
 
 `internal/application/llmproxy/util/trigger_content_filter.go`：追加：
 
@@ -1963,7 +1983,7 @@ type decisionRefusalBody struct {
 func BuildDecisionRefusalBody(model string, questions []*dto.DecisionQuestion) port.Result {
 	answers := make([]decisionRefusalAnswer, 0, len(questions))
 	for _, q := range questions {
-		answer := decisionRefusalAnswer{Type: "refusal"}
+		answer := decisionRefusalAnswer{Type: enum.DecisionAnswerTypeRefusal}
 		if q != nil {
 			answer.Name = q.Name
 		}
@@ -1985,7 +2005,7 @@ func BuildDecisionRefusalBody(model string, questions []*dto.DecisionQuestion) p
 
 注意：`util` 包不能引用 `enum.ProtocolOpenAIDecision` 作为答案 type 字面量？可以，但此处用字面量 `"refusal"` 即可（协议字段值，非项目枚举）。
 
-- [ ] **Step 5: 接入拦截分支**
+- [x] **Step 5: 接入拦截分支**
 
 `internal/application/llmproxy/usecase/openai.go` 的 `CreateDecision`：在 resolve 成功之后、`upstream := ...` 之前插入：
 
@@ -2017,12 +2037,12 @@ func BuildDecisionRefusalBody(model string, questions []*dto.DecisionQuestion) p
 
 `fmt` 已在 `openai.go` 的 import 中。
 
-- [ ] **Step 6: 运行测试确认通过**
+- [x] **Step 6: 运行测试确认通过**
 
 Run: `go test -count=1 ./test/unit/llmproxy_usecase/`
 Expected: PASS（全部）
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add internal/application/llmproxy test/unit/llmproxy_usecase
