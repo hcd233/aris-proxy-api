@@ -63,9 +63,8 @@ OpenAI Decision API（`POST /v1/decisions`）用于「对同一份输入批量�
 | DB | `internal/infrastructure/database/model/endpoint.go` | `SupportOpenAIDecision bool`，`gorm:"column:support_openai_decision;not null;default:false;comment:支持/decisions"` |
 | 常量 | `internal/common/constant/string.go` | `FieldEndpointSupportOpenAIDecision = "support_openai_decision"` |
 | 常量 | `internal/common/constant/sql.go` | `FieldSupportOpenAIDecision`；加入 `EndpointRepoFieldsFull` |
-| 领域 | `internal/domain/llmproxy/aggregate/endpoint.go` | 字段 + `CreateEndpoint` 参数 + `Update` 可变参数 + `SupportOpenAIDecision()` getter |
-| 领域 | `internal/domain/llmproxy/repository.go` | `EndpointProjection` 新增字段 |
-| 仓储 | `internal/infrastructure/repository/endpoint_repository.go` | `toEndpointAggregate` / `toEndpointModel` / `Update` 的 updates map / `toEndpointProjection` |
+| 领域 | `internal/domain/llmproxy/aggregate/endpoint.go` | 字段 + `CreateEndpoint` 参数 + `Update` 可变参数 + `SupportOpenAIDecision()` getter；能力校验与「OpenAI baseURL 非空」校验均纳入新开关 |
+| 仓储 | `internal/infrastructure/repository/endpoint_repository.go` | `toEndpointAggregate` / `toEndpointModel` / `Update` 的 updates map |
 | 应用层 | `internal/application/endpoint/port/handler.go` | `CreateEndpointCommand` / `UpdateEndpointCommand` 新增字段 |
 | 应用层 | `internal/application/endpoint/command/{create,update}_endpoint.go` | 透传字段 |
 | 应用层 | `internal/application/upstream/port/handler.go` + `query/list_upstream.go` | `UpstreamEndpointView` 新增字段并赋值 |
@@ -74,6 +73,10 @@ OpenAI Decision API（`POST /v1/decisions`）用于「对同一份输入批量�
 | Handler | `internal/handler/endpoint.go` / `upstream.go` | 透传字段 |
 
 迁移：`cmd/server database migrate`（`AutoMigrate` 自动加列，无需手工 SQL）。
+
+**不加 `EndpointProjection.SupportOpenAIDecision`**：该只读投影只被 Anthropic `count_tokens` 路径
+（`usecase/query.go` 的 `FindEndpointByAlias` matcher）消费，Decision 走的是聚合根 matcher 路径，
+新增字段会成为死字段（YAGNI）。
 
 ### 4.2 路由与兼容路线（native-only）
 
@@ -263,9 +266,15 @@ CreateDecision(ctx, req):
 ### 4.6 审计与计费
 
 - `internal/dto/asynctask.go`：`SetTokensFromDecisionUsage(rsp *OpenAIDecisionRsp)`——
-  `input_tokens` 含 `cached_tokens`，故 `InputTokens = input_tokens − cached_tokens`（净输入），
+  `input_tokens_details` 下的 `cached_tokens` / `cache_write_tokens` 按**子集口径**处理
+  （都落在 `input_tokens` 内，与其字段归属一致）：
+  `InputTokens = input_tokens − cached_tokens − cache_write_tokens`（下限 0），
   `CacheReadInputTokens = cached_tokens`，`CacheCreationInputTokens = cache_write_tokens`，
-  `OutputTokens = output_tokens`；与 `SetTokensFromResponseUsage` 同口径。
+  `OutputTokens = output_tokens`；从而满足「净输入 + 缓存创建 + 缓存读取 = 上游输入总量」的四维互斥不变量。
+  > 官方文档未定义 `cache_write_tokens` 与 `input_tokens` 的包含关系；此处按字段自身归属
+  > （`input_tokens_details` 的子字段）判定为子集。E2E 阶段需用真实上游 usage 复核该假设。
+- `OpenAIDecisionUsage.InputOutputTokens()`：`input_tokens + output_tokens`（原始口径，供限流上报），
+  与 `OpenAICompletionUsage.InputOutputTokens()` 对齐。
 - `internal/application/llmproxy/usecase/recorder.go`：新增 `decisionTokenUsage` 适配器
   （`apply` → `SetTokensFromDecisionUsage`；`reportable` → `InputOutputTokens()`）。
 - `internal/infrastructure/database/model/model_call_audit.go`：列注释补 `openai-decision`（仅注释文本）。
@@ -400,7 +409,6 @@ Security:    apiKeyAuth
 - `internal/common/constant/{sql.go,string.go,upstream.go}`
 - `internal/common/enum/{llmproxy_compat.go,provider.go}`
 - `internal/domain/llmproxy/aggregate/endpoint.go`
-- `internal/domain/llmproxy/repository.go`
 - `internal/infrastructure/database/model/{endpoint.go,model_call_audit.go}`
 - `internal/infrastructure/repository/endpoint_repository.go`
 - `internal/infrastructure/transport/openai.go`
