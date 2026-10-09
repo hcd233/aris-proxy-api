@@ -2141,7 +2141,7 @@ git commit -m "feat(router): 注册 POST /api/openai/v1/decisions 代理路由"
 - Consumes: Task 9 的路由；环境变量 `BASE_URL`、`API_KEY`、`DECISION_MODEL`（可选，缺省用 fixture 内模型名）
 - Produces: CLI 可跑的 E2E 断言
 
-- [ ] **Step 1: 写 fixture**
+- [x] **Step 1: 写 fixture**
 
 `test/e2e/openai_decision/fixtures/requests/predicate.json`：
 
@@ -2201,7 +2201,7 @@ git commit -m "feat(router): 注册 POST /api/openai/v1/decisions 代理路由"
 }
 ```
 
-- [ ] **Step 2: 写 E2E 测试**
+- [x] **Step 2: 写 E2E 测试**
 
 `test/e2e/openai_decision/openai_decision_test.go`：
 
@@ -2356,12 +2356,17 @@ func TestCreateDecision_UnknownModelReturnsError(t *testing.T) {
 }
 ```
 
-- [ ] **Step 3: 离线跑通 skip 路径与构建**
+（实现差异：`bodyclose` linter 要求持有 `*http.Response` 的函数在同一函数内 `Close`。因此
+`postDecisions` 改为读完后关闭 body、返回 `(status int, respBody []byte)`；
+`assertDecisionResponse` 相应接收这两个值而非 `*http.Response`。
+同时用 `sonic.NoCopyRawMessage` 代替 `any` 承载 `choice` 字段。）
+
+- [x] **Step 3: 离线跑通 skip 路径与构建**
 
 Run: `go test -count=1 -v ./test/e2e/openai_decision/`
 Expected: 全部 `SKIP`（无 `BASE_URL`/`API_KEY`/`DECISION_MODEL`），无编译错误
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add test/e2e/openai_decision

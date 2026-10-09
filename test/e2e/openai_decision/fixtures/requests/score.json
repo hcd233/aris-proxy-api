@@ -1,0 +1,16 @@
+{
+  "model": "REPLACE_WITH_DECISION_MODEL",
+  "input": "The package arrived with a broken screen.",
+  "questions": [
+    {
+      "type": "score",
+      "name": "severity",
+      "instructions": "Rate the complaint severity.",
+      "levels": [
+        { "label": "low" },
+        { "label": "medium" },
+        { "label": "high", "description": "requires refund" }
+      ]
+    }
+  ]
+}
