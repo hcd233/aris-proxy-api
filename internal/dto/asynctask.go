@@ -34,26 +34,27 @@ type MessageStoreTask struct {
 //	@author centonhuang
 //	@update 2026-04-29 10:00:00
 type ModelCallAuditTask struct {
-	Ctx                      context.Context
-	ModelID                  string
-	UpstreamProtocol         string
-	APIProtocol              string
-	Endpoint                 string
-	InputTokens              int
-	OutputTokens             int
-	CacheCreationInputTokens int
-	CacheReadInputTokens     int
-	FirstTokenLatencyMs      int64
-	StreamDurationMs         int64
-	UpstreamStatusCode       int
-	ErrorMessage             string
-	CostMicro                *int64
-	InputCostMicro           *int64
-	OutputCostMicro          *int64
-	CacheCreateCostMicro     *int64
-	CacheReadCostMicro       *int64
-	PricingCurrency          string
-	CreatedAt                time.Time
+	Ctx                        context.Context
+	ModelID                    string
+	UpstreamProtocol           string
+	APIProtocol                string
+	Endpoint                   string
+	InputTokens                int
+	OutputTokens               int
+	CacheCreationInputTokens   int
+	CacheCreation1hInputTokens int
+	CacheReadInputTokens       int
+	FirstTokenLatencyMs        int64
+	StreamDurationMs           int64
+	UpstreamStatusCode         int
+	ErrorMessage               string
+	CostMicro                  *int64
+	InputCostMicro             *int64
+	OutputCostMicro            *int64
+	CacheCreateCostMicro       *int64
+	CacheReadCostMicro         *int64
+	PricingCurrency            string
+	CreatedAt                  time.Time
 }
 
 // SetTokensFromOpenAIUsage 从 OpenAI Usage 设置 token 计数。
@@ -97,7 +98,15 @@ func (t *ModelCallAuditTask) SetTokensFromAnthropicUsage(msg *AnthropicMessage) 
 	}
 	t.InputTokens = msg.Usage.InputTokens
 	t.OutputTokens = msg.Usage.OutputTokens
-	t.CacheCreationInputTokens = lo.FromPtr(msg.Usage.CacheCreationInputTokens)
+	switch {
+	case msg.Usage.CacheCreation != nil:
+		// 新版 cache_creation 对象：总量 = 5m + 1h（对象优先于总量字段）
+		t.CacheCreation1hInputTokens = lo.FromPtr(msg.Usage.CacheCreation.Ephemeral1hInputTokens)
+		t.CacheCreationInputTokens = lo.FromPtr(msg.Usage.CacheCreation.Ephemeral5mInputTokens) + t.CacheCreation1hInputTokens
+	default:
+		// 旧版仅总量字段：全部归 5m 档（1h=0）
+		t.CacheCreationInputTokens = lo.FromPtr(msg.Usage.CacheCreationInputTokens)
+	}
 	switch {
 	case msg.Usage.PromptCacheHitTokens != nil && *msg.Usage.PromptCacheHitTokens > 0:
 		t.CacheReadInputTokens = *msg.Usage.PromptCacheHitTokens
