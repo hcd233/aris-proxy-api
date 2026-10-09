@@ -100,6 +100,13 @@ func (e *UpstreamError) Error() string {
 	return fmt.Sprintf(constant.UpstreamErrorTemplate, e.StatusCode)
 }
 
+// Retryable 判断该上游错误是否可重试/可切换端点：
+// 5xx（>= UpstreamRetryableStatusThreshold）瞬时错误与 429（限流）可重试；
+// 其他 4xx（客户端错误）不可重试。
+func (e *UpstreamError) Retryable() bool {
+	return e.StatusCode >= constant.UpstreamRetryableStatusThreshold || e.StatusCode == http.StatusTooManyRequests
+}
+
 // UpstreamConnectionError 上游连接错误（网络层错误，无法获取 HTTP 状态码）
 //
 //	@author centonhuang
@@ -119,6 +126,11 @@ func (e *UpstreamConnectionError) Error() string {
 // （优雅退出 soft deadline 广播取消上游连接时，读循环据此识别断流原因）。
 func (e *UpstreamConnectionError) Unwrap() error {
 	return e.Cause
+}
+
+// Retryable 网络层错误一律可重试/可切换端点。
+func (e *UpstreamConnectionError) Retryable() bool {
+	return true
 }
 
 // CircuitOpenError 熔断器打开导致的快速失败错误。

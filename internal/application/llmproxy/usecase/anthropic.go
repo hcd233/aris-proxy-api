@@ -116,8 +116,15 @@ func (u *anthropicUseCase) CreateMessage(ctx context.Context, req *dto.Anthropic
 		}
 	}
 
+	return runWithFallback(ctx, constant.ModuleAnthropicUseCase, req.Body.Model, cands, func(cand service.Candidate) (port.Result, error) {
+		return u.dispatchMessage(ctx, req, cand.Model, cand.Endpoint)
+	})
+}
+
+// dispatchMessage 按候选端点的兼容路由分发 messages 转发（单端点单次尝试）。
+func (u *anthropicUseCase) dispatchMessage(ctx context.Context, req *dto.AnthropicCreateMessageRequest, m *aggregate.Model, ep *aggregate.Endpoint) (port.Result, error) {
 	exposedModel := req.Body.Model
-	switch compatRoute {
+	switch SelectCompatRoute(enum.ProxyAPIAnthropicMessage, ep) {
 	case enum.CompatRouteNative:
 		stream := req.Body.Stream != nil && *req.Body.Stream
 		upstream := toTransportEndpoint(m, ep, true)
@@ -125,7 +132,6 @@ func (u *anthropicUseCase) CreateMessage(ctx context.Context, req *dto.Anthropic
 	case enum.CompatRouteViaOpenAIChat:
 		return u.forwardMessageViaChat(ctx, req, m, ep, exposedModel)
 	default:
-		log.Error("[AnthropicUseCase] Unsupported messages compatibility route", zap.String("model", req.Body.Model))
 		return nil, proxyutil.SendAnthropicModelNotFoundError(req.Body.Model)
 	}
 }

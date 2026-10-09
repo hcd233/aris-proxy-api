@@ -16,6 +16,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/common/ratelimit"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
+	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/service"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/metrics"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
@@ -150,4 +151,63 @@ func reportTokenUsage(ctx context.Context, tokens int64) {
 		return
 	}
 	reporter.Report(ctx, tokens)
+}
+
+// CanSwitchEndpoint 判断转发失败是否可切换到下一个候选端点。
+//
+// 可切换：连接错误 / 5xx / 429（common/model 的 Retryable()，与 transport 层
+// IsRetryableError 共用一份判定），以及 Guard 熔断打开、信号量满载
+// （端点熔断正是换端点的时机）。errors.As 穿透 ProxyError.Cause 后判定。
+func CanSwitchEndpoint(err error) bool {
+	if err == nil {
+		return false
+	}
+	var connErr *model.UpstreamConnectionError
+	if errors.As(err, &connErr) {
+		return connErr.Retryable()
+	}
+	var upstreamErr *model.UpstreamError
+	if errors.As(err, &upstreamErr) {
+		return upstreamErr.Retryable()
+	}
+	var circuitErr *model.CircuitOpenError
+	if errors.As(err, &circuitErr) {
+		return true
+	}
+	var bulkheadErr *model.BulkheadFullError
+	if errors.As(err, &bulkheadErr) {
+		return true
+	}
+	var proxyErr *port.ProxyError
+	if errors.As(err, &proxyErr) && proxyErr.Cause != nil {
+		return CanSwitchEndpoint(proxyErr.Cause)
+	}
+	return false
+}
+
+// runWithFallback 按候选顺序转发，失败且 CanSwitchEndpoint 时切换到下一个端点。
+//
+// dispatch 内部仍走 transport 层同端点重试（SendUpstreamWithRetry）与 Guard 熔断租约；
+// 仅在流建立前的失败可切换——流一旦交付给 handler 即为终局。
+// 候选耗尽或不可切换时返回最后一次错误。
+func runWithFallback(ctx context.Context, module, modelName string, cands []service.Candidate, attempt func(service.Candidate) (port.Result, error)) (port.Result, error) {
+	log := logger.WithCtx(ctx)
+	var lastErr error
+	for i := range cands {
+		result, fwdErr := attempt(cands[i])
+		if fwdErr == nil {
+			return result, nil
+		}
+		lastErr = fwdErr
+		if i == len(cands)-1 || !CanSwitchEndpoint(fwdErr) {
+			return nil, fwdErr
+		}
+		log.Warn("["+module+"] Upstream failed, switching endpoint",
+			zap.String("model", modelName),
+			zap.String("from", cands[i].Endpoint.Name()),
+			zap.String("to", cands[i+1].Endpoint.Name()),
+			zap.Error(fwdErr),
+		)
+	}
+	return nil, lastErr
 }

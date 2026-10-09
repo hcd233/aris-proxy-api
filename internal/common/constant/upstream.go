@@ -75,6 +75,10 @@ const (
 	ModuleOpenAIProxy = "OpenAIProxy"
 	// ModuleAnthropicProxy Anthropic 代理模块名（用于日志前缀和重试模块标识）
 	ModuleAnthropicProxy = "AnthropicProxy"
+	// ModuleOpenAIUseCase OpenAI 用例模块名（用于日志前缀）
+	ModuleOpenAIUseCase = "OpenAIUseCase"
+	// ModuleAnthropicUseCase Anthropic 用例模块名（用于日志前缀）
+	ModuleAnthropicUseCase = "AnthropicUseCase"
 
 	ResponseFailedAuditReason             = "response.failed"
 	ResponseFailedAuditReasonTemplate     = "response.failed: %s"

@@ -109,7 +109,14 @@ func (u *openAIUseCase) CreateChatCompletion(ctx context.Context, req *dto.OpenA
 		}
 	}
 
-	switch compatRoute {
+	return runWithFallback(ctx, constant.ModuleOpenAIUseCase, req.Body.Model, cands, func(cand service.Candidate) (port.Result, error) {
+		return u.dispatchChat(ctx, req, cand.Model, cand.Endpoint)
+	})
+}
+
+// dispatchChat 按候选端点的兼容路由分发 chat 转发（单端点单次尝试）。
+func (u *openAIUseCase) dispatchChat(ctx context.Context, req *dto.OpenAIChatCompletionRequest, m *aggregate.Model, ep *aggregate.Endpoint) (port.Result, error) {
+	switch SelectCompatRoute(enum.ProxyAPIOpenAIChat, ep) {
 	case enum.CompatRouteNative:
 		stream := lo.FromPtr(req.Body.Stream)
 		upstream := toTransportEndpoint(m, ep, false)
@@ -117,7 +124,6 @@ func (u *openAIUseCase) CreateChatCompletion(ctx context.Context, req *dto.OpenA
 	case enum.CompatRouteViaAnthropicMessage:
 		return u.forwardChatViaAnthropic(ctx, req, m, ep, req.Body.Model)
 	default:
-		log.Error("[OpenAIUseCase] Unsupported chat compatibility route", zap.String("model", req.Body.Model))
 		return nil, proxyutil.SendOpenAIModelNotFoundError(req.Body.Model)
 	}
 }
@@ -174,7 +180,15 @@ func (u *openAIUseCase) CreateResponse(ctx context.Context, req *dto.OpenAICreat
 		}
 	}
 
-	switch compatRoute {
+	return runWithFallback(ctx, constant.ModuleOpenAIUseCase, model, cands, func(cand service.Candidate) (port.Result, error) {
+		return u.dispatchResponse(ctx, req, cand.Model, cand.Endpoint)
+	})
+}
+
+// dispatchResponse 按候选端点的兼容路由分发 response 转发（单端点单次尝试）。
+func (u *openAIUseCase) dispatchResponse(ctx context.Context, req *dto.OpenAICreateResponseRequest, m *aggregate.Model, ep *aggregate.Endpoint) (port.Result, error) {
+	model := lo.FromPtr(req.Body.Model)
+	switch SelectCompatRoute(enum.ProxyAPIOpenAIResponse, ep) {
 	case enum.CompatRouteNative:
 		stream := lo.FromPtr(req.Body.Stream)
 		upstream := toTransportEndpoint(m, ep, false)
@@ -184,7 +198,6 @@ func (u *openAIUseCase) CreateResponse(ctx context.Context, req *dto.OpenAICreat
 	case enum.CompatRouteViaAnthropicMessage:
 		return u.forwardResponseViaAnthropic(ctx, req, m, ep)
 	default:
-		log.Error("[OpenAIUseCase] Unsupported response compatibility route", zap.String("model", model))
 		return nil, proxyutil.SendOpenAIModelNotFoundError(model)
 	}
 }
