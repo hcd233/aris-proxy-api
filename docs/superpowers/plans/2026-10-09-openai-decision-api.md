@@ -2061,7 +2061,7 @@ git commit -m "feat(llmproxy): Decision API 触发词拦截（deny 回 refusal�
 - Consumes: Task 7 的 `port.OpenAIUseCase.CreateDecision`
 - Produces: `POST /api/openai/v1/decisions` 路由（API Key 鉴权 + 双限流 + body 上限）
 
-- [ ] **Step 1: Handler 方法**
+- [x] **Step 1: Handler 方法**
 
 `internal/handler/openai.go`：`OpenAIHandler` 接口追加：
 
@@ -2087,7 +2087,7 @@ func (h *openAIHandler) HandleCreateDecision(ctx context.Context, req *dto.OpenA
 
 说明：Decision 无流式形态，**不挂** `WithStreamLifecycle`（该回调只在 adapter 真实写 SSE 时触发，unary 路径挂载即死代码）。
 
-- [ ] **Step 2: 路由注册**
+- [x] **Step 2: 路由注册**
 
 `internal/router/openai.go`：`/responses` 之后追加：
 
@@ -2110,17 +2110,17 @@ func (h *openAIHandler) HandleCreateDecision(ctx context.Context, req *dto.OpenA
 	}, openaiHandler.HandleCreateDecision)
 ```
 
-- [ ] **Step 3: 构建与 lint**
+- [x] **Step 3: 构建与 lint**
 
 Run: `go build ./... && make lint`
 Expected: 构建成功；conv + static 全绿
 
-- [ ] **Step 4: 确认 OpenAPI 路由已注册**
+- [x] **Step 4: 确认 OpenAPI 路由已注册**
 
 Run: `grep -rn '"/decisions"' internal/router/openai.go`
 Expected: 命中 `Path: "/decisions",`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add internal/handler/openai.go internal/router/openai.go

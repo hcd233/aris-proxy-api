@@ -64,4 +64,21 @@ func initOpenAIRouter(openaiGroup huma.API, openaiHandler handler.OpenAIHandler,
 			{constant.SecuritySchemeAPIKey: {}},
 		},
 	}, openaiHandler.HandleCreateResponse)
+
+	huma.Register(openaiGroup, huma.Operation{
+		OperationID:  "createDecision",
+		Method:       http.MethodPost,
+		Path:         "/decisions",
+		Summary:      "Create decision",
+		Description:  "Answers classification or scoring questions about the same input.",
+		Tags:         []string{constant.TagOpenAI},
+		MaxBodyBytes: constant.MaxLLMProxyBodyBytes,
+		Middlewares: huma.Middlewares{
+			middleware.TokenBucketRateLimiterMiddleware(cache, "callProxyLLM", constant.CtxKeyAPIKeyID, constant.PeriodCallProxyLLM, constant.LimitCallProxyLLM),
+			middleware.TokenBucketTokenRateLimiterMiddleware(cache, "callProxyLLMToken", constant.CtxKeyAPIKeyID, constant.PeriodCallProxyLLMToken, constant.LimitCallProxyLLMToken),
+		},
+		Security: []map[string][]string{
+			{constant.SecuritySchemeAPIKey: {}},
+		},
+	}, openaiHandler.HandleCreateDecision)
 }
