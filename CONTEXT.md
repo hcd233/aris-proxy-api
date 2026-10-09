@@ -116,7 +116,7 @@ _Avoid_: price import, auto pricing, autofill
 _Avoid_: config health, incomplete model
 
 **Playground（模型调试台）**:
-Web 端内置调试入口（`POST /api/web/v1/playground/chat`，JWT、权限 ≥ user，demo 天然拒绝）：复用 OpenAI Chat 契约走 LLM 转发全链路（别名解析、跨协议转换、Guard、触发词），调用须经 query `apiKeyID` 指定**本人名下**的 API Key：审计按该 Key 归属（与 `api_key_id` 口径的审计/成本视图一致），请求数与 token 两个令牌桶与 `/api/openai/v1` 共用该 Key 的配额；**仅落审计不落会话**（注入 `CtxKeySkipStore`，与 Trigger omit 共用同一存储分流机制）。前端 `/playground` 页支持选择计费 Key（无 Key 时引导创建）、多轮消息编辑、参数（temperature/max_tokens/stream）、SSE 流式渲染与中途停止。
+Web 端内置调试入口（`POST /api/web/v1/playground/chat`，JWT、权限 ≥ user，demo 天然拒绝）：复用 OpenAI Chat 契约走 LLM 转发全链路（别名解析、跨协议转换、Guard、触发词），调用须经 query `apiKeyID` 指定**本人名下**的 API Key：审计按该 Key 归属（与 `api_key_id` 口径的审计/成本视图一致），请求数与 token 两个令牌桶与 `/api/openai/v1` 共用该 Key 的配额；**仅落审计不落会话**（注入 `CtxKeySkipStore`，与 Trigger omit 共用同一存储分流机制）。前端 `/playground` 页把**模型别名与计费 Key 的选择放进输入区**（不设参数侧栏；无 Key 时引导创建），采样参数固定不暴露（temperature 0.7、max_tokens 64834、stream 恒为真），支持多轮消息编辑、SSE 流式渲染（助手消息带模型 icon 与模型名，并折叠展示上游思考内容 `reasoning_content`）与中途停止。
 _Avoid_: model tester, debug console
 
 **ClientConfigExport（客户端配置导出）**:

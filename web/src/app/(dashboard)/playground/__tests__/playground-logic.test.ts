@@ -5,6 +5,8 @@ import {
   deriveTitle,
   estimateCost,
   fetchAllPages,
+  FIXED_MAX_TOKENS,
+  FIXED_TEMPERATURE,
   loadParams,
   loadSessions,
   MAX_SESSIONS,
@@ -172,30 +174,40 @@ describe("参数存储", () => {
   it("写读回环；无数据或损坏返回 null", () => {
     const store = stubStorage();
     expect(loadParams()).toBeNull();
-    const params = {
-      model: "gpt-4o",
-      apiKeyID: 7,
-      temperature: "0.7",
-      maxTokens: "",
-      stream: true,
-    };
+    const params = { model: "gpt-4o", apiKeyID: 7 };
     saveParams(params);
     expect(loadParams()).toEqual(params);
     store.set(PARAMS_STORAGE_KEY, "{broken");
     expect(loadParams()).toBeNull();
     vi.unstubAllGlobals();
   });
+
+  it("丢弃历史版本遗留字段（已下线的采样参数）", () => {
+    const store = stubStorage();
+    store.set(
+      PARAMS_STORAGE_KEY,
+      JSON.stringify({
+        model: "claude-sonnet-4-5",
+        apiKeyID: 3,
+        temperature: "0.2",
+        maxTokens: "1024",
+        stream: false,
+      }),
+    );
+    expect(loadParams()).toEqual({ model: "claude-sonnet-4-5", apiKeyID: 3 });
+    vi.unstubAllGlobals();
+  });
 });
 
 describe("buildChatBody", () => {
-  it("剔除空消息行并组装基础请求体", () => {
+  it("剔除空消息行，采样参数与流式开关取固定值", () => {
     const body = buildChatBody(
       [
         { role: "user", content: "hi" },
         { role: "user", content: "   " },
         { role: "assistant", content: "hello" },
       ],
-      { model: "gpt-4", stream: false },
+      "gpt-4",
     );
     expect(body).toEqual({
       model: "gpt-4",
@@ -203,28 +215,15 @@ describe("buildChatBody", () => {
         { role: "user", content: "hi" },
         { role: "assistant", content: "hello" },
       ],
-      stream: false,
+      stream: true,
+      temperature: FIXED_TEMPERATURE,
+      max_tokens: FIXED_MAX_TOKENS,
     });
   });
 
-  it("可选参数仅在有效时携带", () => {
-    const withParams = buildChatBody([{ role: "user", content: "hi" }], {
-      model: "gpt-4",
-      stream: true,
-      temperature: 0.7,
-      maxTokens: 100,
-    });
-    expect(withParams.temperature).toBe(0.7);
-    expect(withParams.max_tokens).toBe(100);
-
-    const without = buildChatBody([{ role: "user", content: "hi" }], {
-      model: "gpt-4",
-      stream: false,
-      temperature: undefined,
-      maxTokens: 0,
-    });
-    expect("temperature" in without).toBe(false);
-    expect("max_tokens" in without).toBe(false);
+  it("固定采样参数为 0.7 / 64834", () => {
+    expect(FIXED_TEMPERATURE).toBe(0.7);
+    expect(FIXED_MAX_TOKENS).toBe(64834);
   });
 });
 
@@ -281,6 +280,14 @@ describe("parseSSELine", () => {
   it("提取内容增量", () => {
     const line = 'data: {"choices":[{"delta":{"content":"你好"}}]}';
     expect(parseSSELine(line)).toEqual({ type: "delta", text: "你好" });
+  });
+
+  it("提取思考增量（reasoning_content，Anthropic thinking 转译后）", () => {
+    const line = 'data: {"choices":[{"delta":{"reasoning_content":"先想一下"}}]}';
+    expect(parseSSELine(line)).toEqual({ type: "reasoning", text: "先想一下" });
+    expect(parseSSELine('data: {"choices":[{"delta":{"reasoning_content":""}}]}')).toEqual({
+      type: "skip",
+    });
   });
 
   it("识别 usage 尾帧（choices 空 + usage）", () => {

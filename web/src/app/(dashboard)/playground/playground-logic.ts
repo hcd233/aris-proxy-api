@@ -21,6 +21,8 @@ export interface PlaygroundMessage {
   id: string;
   role: "system" | "user" | "assistant";
   content: string;
+  /** 上游返回的思考内容（reasoning_content），仅展示不入请求体 */
+  reasoning?: string;
   meta?: PlaygroundTurnMeta;
 }
 
@@ -33,22 +35,15 @@ export interface PlaygroundSession {
   messages: PlaygroundMessage[];
 }
 
-/** 调试参数（UI 状态，跨会话记忆） */
+/** 调试参数（UI 状态，跨会话记忆）：采样参数固定，只记忆模型与计费 Key */
 export interface PlaygroundParams {
   model: string;
   apiKeyID: number | null;
-  temperature: string;
-  maxTokens: string;
-  stream: boolean;
 }
 
-/** 组装请求体的数值参数 */
-export interface BuildChatParams {
-  model: string;
-  stream: boolean;
-  temperature?: number;
-  maxTokens?: number;
-}
+/** 固定采样参数（UI 不暴露；max_tokens 取上游默认上限口径） */
+export const FIXED_TEMPERATURE = 0.7;
+export const FIXED_MAX_TOKENS = 64834;
 
 /** 模型列表项（只需要别名、启用态与定价） */
 export interface PlaygroundModelOption {
@@ -57,26 +52,21 @@ export interface PlaygroundModelOption {
   pricing?: PricingDTO;
 }
 
-/** 组装 OpenAI Chat 请求体（空消息行剔除；可选参数仅在有效时携带） */
+/** 组装 OpenAI Chat 请求体（空消息行剔除；采样参数与流式开关均为固定值） */
 export function buildChatBody(
   messages: Pick<PlaygroundMessage, "role" | "content">[],
-  params: BuildChatParams,
+  model: string,
 ): Record<string, unknown> {
   const kept = messages
     .filter((m) => m.content.trim() !== "")
     .map((m) => ({ role: m.role, content: m.content }));
-  const body: Record<string, unknown> = {
-    model: params.model,
+  return {
+    model,
     messages: kept,
-    stream: params.stream,
+    stream: true,
+    temperature: FIXED_TEMPERATURE,
+    max_tokens: FIXED_MAX_TOKENS,
   };
-  if (params.temperature !== undefined && Number.isFinite(params.temperature)) {
-    body.temperature = params.temperature;
-  }
-  if (params.maxTokens !== undefined && params.maxTokens > 0) {
-    body.max_tokens = params.maxTokens;
-  }
-  return body;
 }
 
 /** 可选模型：仅 enabled 项，按 alias 去重 */
@@ -129,16 +119,18 @@ export interface ChatUsage {
   cachedTokens: number;
 }
 
-/** 一条 SSE 行的解析结果：内容增量 / 用量尾帧 / 结束 / 忽略 */
+/** 一条 SSE 行的解析结果：内容增量 / 思考增量 / 用量尾帧 / 结束 / 忽略 */
 export type SSEEvent =
   | { type: "delta"; text: string }
+  | { type: "reasoning"; text: string }
   | { type: "usage"; usage: ChatUsage }
   | { type: "done" }
   | { type: "skip" };
 
 /**
  * 解析单条 SSE 行。
- * usage 帧为 OpenAI 流式尾帧（choices 空数组 + usage，需 stream_options.include_usage）。
+ * usage 帧为 OpenAI 流式尾帧（choices 空数组 + usage，需 stream_options.include_usage）；
+ * 思考内容走上游转译后的 reasoning_content 增量（Anthropic thinking → OpenAI 协议）。
  */
 export function parseSSELine(line: string): SSEEvent {
   const trimmed = line.trim();
@@ -147,7 +139,7 @@ export function parseSSELine(line: string): SSEEvent {
   if (payload === "") return { type: "skip" };
   if (payload === "[DONE]") return { type: "done" };
   let chunk: {
-    choices?: { delta?: { content?: string } }[];
+    choices?: { delta?: { content?: string; reasoning_content?: string } }[];
     usage?: {
       prompt_tokens?: number;
       completion_tokens?: number;
@@ -169,8 +161,13 @@ export function parseSSELine(line: string): SSEEvent {
       },
     };
   }
-  const text = chunk.choices?.[0]?.delta?.content;
-  if (typeof text === "string" && text !== "") return { type: "delta", text };
+  const delta = chunk.choices?.[0]?.delta;
+  if (typeof delta?.content === "string" && delta.content !== "") {
+    return { type: "delta", text: delta.content };
+  }
+  if (typeof delta?.reasoning_content === "string" && delta.reasoning_content !== "") {
+    return { type: "reasoning", text: delta.reasoning_content };
+  }
   return { type: "skip" };
 }
 
@@ -254,8 +251,14 @@ export function deriveTitle(messages: PlaygroundMessage[]): string {
   return first ? first.content.trim().slice(0, 30) : "";
 }
 
+/** 读取本地参数；只保留仍受支持的字段（历史版本存过已下线的采样参数） */
 export function loadParams(): PlaygroundParams | null {
-  return readJSON<PlaygroundParams>(PARAMS_STORAGE_KEY);
+  const raw = readJSON<Partial<PlaygroundParams>>(PARAMS_STORAGE_KEY);
+  if (!raw) return null;
+  return {
+    model: typeof raw.model === "string" ? raw.model : "",
+    apiKeyID: typeof raw.apiKeyID === "number" ? raw.apiKeyID : null,
+  };
 }
 
 export function saveParams(params: PlaygroundParams): void {

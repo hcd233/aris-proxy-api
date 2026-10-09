@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { ChatTurn } from "./chat-turn";
+import { Sparkles } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import type { PlaygroundMessage } from "@/app/(dashboard)/playground/playground-logic";
 
@@ -35,7 +36,7 @@ export function ConversationView({
   return (
     <div
       ref={scrollRef}
-      className="flex-1 space-y-5 overflow-y-auto px-1 py-4"
+      className="flex-1 space-y-6 overflow-y-auto px-1 py-6"
       aria-live="polite"
       onScroll={() => {
         const el = scrollRef.current;
@@ -44,9 +45,13 @@ export function ConversationView({
       }}
     >
       {messages.length === 0 ? (
-        <p className="pt-16 text-center text-sm text-muted-foreground">
-          {t("playground.session.empty_hint")}
-        </p>
+        <div className="flex h-full flex-col items-center justify-center gap-2.5 px-6 text-center">
+          <Sparkles className="size-5 text-primary/70" />
+          <h2 className="font-heading text-xl text-foreground">{t("playground.empty.title")}</h2>
+          <p className="max-w-sm text-[13px] leading-[1.6] text-muted-foreground">
+            {t("playground.empty.hint")}
+          </p>
+        </div>
       ) : (
         messages.map((m, i) => (
           <ChatTurn

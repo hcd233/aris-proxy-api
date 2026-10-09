@@ -37,15 +37,11 @@ import {
 } from "./playground-logic";
 import { Composer } from "@/components/playground/composer";
 import { ConversationView } from "@/components/playground/conversation-view";
-import { ParamsDrawer } from "@/components/playground/params-drawer";
 import { SessionSidebar } from "@/components/playground/session-sidebar";
 
 const DEFAULT_PARAMS: PlaygroundParams = {
   model: "",
   apiKeyID: null,
-  temperature: "",
-  maxTokens: "",
-  stream: true,
 };
 
 function PlaygroundPage() {
@@ -62,7 +58,6 @@ function PlaygroundPage() {
   const [keys, setKeys] = useState<APIKeyItem[]>([]);
   const [keysLoaded, setKeysLoaded] = useState(false);
   const [sending, setSending] = useState(false);
-  const [paramsOpen, setParamsOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -151,15 +146,8 @@ function PlaygroundPage() {
     async (context: PlaygroundMessage[]) => {
       if (!params.model || params.apiKeyID === null) return;
       const pricing = models.find((m) => m.alias === params.model)?.pricing;
-      const temp = params.temperature.trim() === "" ? undefined : Number(params.temperature);
-      const maxTok = params.maxTokens.trim() === "" ? undefined : Number(params.maxTokens);
       const body = {
-        ...buildChatBody(context, {
-          model: params.model,
-          stream: params.stream,
-          temperature: temp,
-          maxTokens: maxTok,
-        }),
+        ...buildChatBody(context, params.model),
         stream_options: { include_usage: true },
       };
 
@@ -172,13 +160,17 @@ function PlaygroundPage() {
       let firstTokenMs: number | undefined;
       let usage: ChatUsage | undefined;
       let pending = "";
+      let pendingReasoning = "";
       let raf = 0;
       const flush = () => {
         raf = 0;
         const text = pending;
+        const reasoning = pendingReasoning;
         patchActive((s) => ({
           ...s,
-          messages: s.messages.map((m) => (m.id === placeholder.id ? { ...m, content: text } : m)),
+          messages: s.messages.map((m) =>
+            m.id === placeholder.id ? { ...m, content: text, reasoning } : m,
+          ),
         }));
       };
       const finalize = (extra: Partial<PlaygroundTurnMeta>) => {
@@ -198,7 +190,9 @@ function PlaygroundPage() {
               ? {
                   ...s,
                   messages: s.messages.map((m) =>
-                    m.id === placeholder.id ? { ...m, content: pending, meta } : m,
+                    m.id === placeholder.id
+                      ? { ...m, content: pending, reasoning: pendingReasoning || undefined, meta }
+                      : m,
                   ),
                 }
               : s,
@@ -211,44 +205,25 @@ function PlaygroundPage() {
       };
 
       try {
-        if (params.stream) {
-          const controller = new AbortController();
-          abortRef.current = controller;
-          await api.playgroundChatStream(
-            params.apiKeyID,
-            body,
-            (line) => {
-              const ev = parseSSELine(line);
-              if (ev.type === "delta") {
-                if (firstTokenMs === undefined) firstTokenMs = Date.now() - startAt;
-                pending += ev.text;
-                if (!raf) raf = requestAnimationFrame(flush);
-              } else if (ev.type === "usage") {
-                usage = ev.usage;
-              }
-            },
-            controller.signal,
-          );
-          finalize({});
-        } else {
-          const rsp = (await api.playgroundChat(params.apiKeyID, body)) as {
-            choices?: { message?: { content?: string } }[];
-            usage?: {
-              prompt_tokens?: number;
-              completion_tokens?: number;
-              prompt_tokens_details?: { cached_tokens?: number };
-            };
-          };
-          pending = rsp.choices?.[0]?.message?.content ?? "";
-          if (rsp.usage) {
-            usage = {
-              promptTokens: rsp.usage.prompt_tokens ?? 0,
-              completionTokens: rsp.usage.completion_tokens ?? 0,
-              cachedTokens: rsp.usage.prompt_tokens_details?.cached_tokens ?? 0,
-            };
-          }
-          finalize({});
-        }
+        const controller = new AbortController();
+        abortRef.current = controller;
+        await api.playgroundChatStream(
+          params.apiKeyID,
+          body,
+          (line) => {
+            const ev = parseSSELine(line);
+            if (ev.type === "delta" || ev.type === "reasoning") {
+              if (firstTokenMs === undefined) firstTokenMs = Date.now() - startAt;
+              if (ev.type === "delta") pending += ev.text;
+              else pendingReasoning += ev.text;
+              if (!raf) raf = requestAnimationFrame(flush);
+            } else if (ev.type === "usage") {
+              usage = ev.usage;
+            }
+          },
+          controller.signal,
+        );
+        finalize({});
       } catch (err) {
         // 401 交给 api-client 全局刷新不展示；AbortError 标中断；其余内联错误卡
         const aborted = err instanceof DOMException && err.name === "AbortError";
@@ -289,7 +264,7 @@ function PlaygroundPage() {
       const session = sessions.find((s) => s.id === activeId);
       if (!session) return;
       const edited = truncateAfter(session.messages, index).map((m, i) =>
-        i === index ? { ...m, content, meta: undefined } : m,
+        i === index ? { ...m, content, reasoning: undefined, meta: undefined } : m,
       );
       const next = sessions.map((s) =>
         s.id === activeId ? { ...s, messages: edited, title: deriveTitle(edited) } : s,
@@ -394,47 +369,42 @@ function PlaygroundPage() {
               onDelete={handleDeleteSession}
             />
           </aside>
-          {/* 对话主区 */}
-          <div className="flex min-w-0 flex-1 flex-col">
-            <div className="flex items-center gap-2 lg:hidden">
-              <Button
-                variant="outline"
-                size="icon-sm"
-                aria-label={t("playground.session.open")}
-                onClick={() => setSidebarOpen(true)}
-              >
-                <PanelLeft className="size-4" />
-              </Button>
+          {/* 对话主区：与输入区同宽居中，保持单栏可读宽度 */}
+          <div className="flex min-w-0 flex-1 justify-center">
+            <div className="flex h-full w-full max-w-3xl flex-col">
+              <div className="flex items-center gap-2 lg:hidden">
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  aria-label={t("playground.session.open")}
+                  onClick={() => setSidebarOpen(true)}
+                >
+                  <PanelLeft className="size-4" />
+                </Button>
+              </div>
+              <ConversationView
+                messages={active.messages}
+                sending={sending}
+                onEditSave={handleEditSave}
+                onDelete={handleDelete}
+                onRerun={handleRerun}
+                onRetry={handleRetry}
+              />
+              <Composer
+                models={models}
+                keys={keys}
+                keysLoaded={keysLoaded}
+                params={params}
+                onParamsChange={patchParams}
+                sending={sending}
+                disabled={!params.model || params.apiKeyID === null}
+                onSend={handleSend}
+                onStop={() => abortRef.current?.abort()}
+                onInsertRole={handleInsertRole}
+              />
             </div>
-            <ConversationView
-              messages={active.messages}
-              sending={sending}
-              onEditSave={handleEditSave}
-              onDelete={handleDelete}
-              onRerun={handleRerun}
-              onRetry={handleRetry}
-            />
-            <Composer
-              model={params.model}
-              stream={params.stream}
-              sending={sending}
-              disabled={!params.model || params.apiKeyID === null}
-              onSend={handleSend}
-              onStop={() => abortRef.current?.abort()}
-              onInsertRole={handleInsertRole}
-              onOpenParams={() => setParamsOpen(true)}
-            />
           </div>
         </div>
-        <ParamsDrawer
-          open={paramsOpen}
-          onOpenChange={setParamsOpen}
-          models={models}
-          keys={keys}
-          keysLoaded={keysLoaded}
-          params={params}
-          onParamsChange={patchParams}
-        />
         {/* < lg 会话抽屉 */}
         <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
           <SheetContent side="left" className="w-60 sm:max-w-[15rem]">
