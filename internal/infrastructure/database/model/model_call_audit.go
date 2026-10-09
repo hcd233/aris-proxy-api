@@ -17,26 +17,27 @@ import "time"
 //     idx_mca_apikey_created / idx_mca_model_created 覆盖按 api_key_id/model_id 过滤 + 时间倒序及趋势聚合。
 type ModelCallAudit struct {
 	BaseModel
-	CreatedAt                time.Time `json:"created_at" gorm:"column:created_at;comment:创建时间;index:idx_mca_apikey_created,priority:2,sort:desc;index:idx_mca_model_created,priority:2,sort:desc;index:idx_mca_created_at,sort:desc"`
-	APIKeyID                 uint      `json:"api_key_id" gorm:"column:api_key_id;not null;comment:API密钥ID;index:idx_mca_apikey_created,priority:1"`
-	ModelID                  string    `json:"model_id" gorm:"column:model_id;not null;default:'';comment:业务模型ID(创建默认=alias);index:idx_mca_model_created,priority:1"`
-	UpstreamProtocol         string    `json:"upstream_protocol" gorm:"column:upstream_protocol;not null;default:'';comment:上游协议(openai-chat-completion/openai-response/anthropic-message)"`
-	APIProtocol              string    `json:"api_protocol" gorm:"column:api_protocol;not null;default:'';comment:接口层协议(openai-chat-completion/openai-response/anthropic-message)"`
-	Endpoint                 string    `json:"endpoint" gorm:"column:endpoint;not null;default:'';comment:调用模型的 Endpoint 名"`
-	InputTokens              int       `json:"input_tokens" gorm:"column:input_tokens;not null;default:0;comment:输入token数"`
-	OutputTokens             int       `json:"output_tokens" gorm:"column:output_tokens;not null;default:0;comment:输出token数"`
-	CacheCreationInputTokens int       `json:"cache_creation_input_tokens" gorm:"column:cache_creation_input_tokens;not null;default:0;comment:缓存写入token数"`
-	CacheReadInputTokens     int       `json:"cache_read_input_tokens" gorm:"column:cache_read_input_tokens;not null;default:0;comment:缓存命中token数"`
-	FirstTokenLatencyMs      int64     `json:"first_token_latency_ms" gorm:"column:first_token_latency_ms;not null;default:0;comment:首token延迟(ms)，非流式为总延迟"`
-	StreamDurationMs         int64     `json:"stream_duration_ms" gorm:"column:stream_duration_ms;not null;default:0;comment:流式传输持续时间(ms)，非流式为0"`
-	UserAgent                string    `json:"user_agent" gorm:"column:user_agent;not null;default:'';comment:请求客户端User-Agent"`
-	UpstreamStatusCode       int       `json:"upstream_status_code" gorm:"column:upstream_status_code;not null;default:0;comment:上游HTTP状态码：200成功，>0为上游返回码，-1为连接错误，0为未知错误"`
-	ErrorMessage             string    `json:"error_message" gorm:"column:error_message;not null;default:'';comment:错误信息，成功时为空"`
-	TraceID                  string    `json:"trace_id" gorm:"column:trace_id;not null;default:'';comment:请求追踪ID;index"`
-	CostMicro                *int64    `json:"cost_micro" gorm:"column:cost_micro;comment:估算费用(微单位,NULL=未计价)"`
-	InputCostMicro           *int64    `json:"input_cost_micro" gorm:"column:input_cost_micro;comment:输入费用(微单位,NULL=无拆分)"`
-	OutputCostMicro          *int64    `json:"output_cost_micro" gorm:"column:output_cost_micro;comment:输出费用(微单位,NULL=无拆分)"`
-	CacheCreationCostMicro   *int64    `json:"cache_creation_cost_micro" gorm:"column:cache_creation_cost_micro;comment:缓存创建费用(微单位,NULL=无拆分)"`
-	CacheReadCostMicro       *int64    `json:"cache_read_cost_micro" gorm:"column:cache_read_cost_micro;comment:缓存读取费用(微单位,NULL=无拆分)"`
-	PricingCurrency          string    `json:"pricing_currency" gorm:"column:pricing_currency;not null;default:'';comment:计价币种快照(''/USD)"`
+	CreatedAt                  time.Time `json:"created_at" gorm:"column:created_at;comment:创建时间;index:idx_mca_apikey_created,priority:2,sort:desc;index:idx_mca_model_created,priority:2,sort:desc;index:idx_mca_created_at,sort:desc"`
+	APIKeyID                   uint      `json:"api_key_id" gorm:"column:api_key_id;not null;comment:API密钥ID;index:idx_mca_apikey_created,priority:1"`
+	ModelID                    string    `json:"model_id" gorm:"column:model_id;not null;default:'';comment:业务模型ID(创建默认=alias);index:idx_mca_model_created,priority:1"`
+	UpstreamProtocol           string    `json:"upstream_protocol" gorm:"column:upstream_protocol;not null;default:'';comment:上游协议(openai-chat-completion/openai-response/anthropic-message)"`
+	APIProtocol                string    `json:"api_protocol" gorm:"column:api_protocol;not null;default:'';comment:接口层协议(openai-chat-completion/openai-response/anthropic-message)"`
+	Endpoint                   string    `json:"endpoint" gorm:"column:endpoint;not null;default:'';comment:调用模型的 Endpoint 名"`
+	InputTokens                int       `json:"input_tokens" gorm:"column:input_tokens;not null;default:0;comment:输入token数"`
+	OutputTokens               int       `json:"output_tokens" gorm:"column:output_tokens;not null;default:0;comment:输出token数"`
+	CacheCreationInputTokens   int       `json:"cache_creation_input_tokens" gorm:"column:cache_creation_input_tokens;not null;default:0;comment:缓存写入token数(总量=5m+1h)"`
+	CacheCreation1hInputTokens int       `json:"cache_creation_1h_input_tokens" gorm:"column:cache_creation_1h_input_tokens;not null;default:0;comment:1h缓存写入token数(存量=0,5m=总量-1h)"`
+	CacheReadInputTokens       int       `json:"cache_read_input_tokens" gorm:"column:cache_read_input_tokens;not null;default:0;comment:缓存命中token数"`
+	FirstTokenLatencyMs        int64     `json:"first_token_latency_ms" gorm:"column:first_token_latency_ms;not null;default:0;comment:首token延迟(ms)，非流式为总延迟"`
+	StreamDurationMs           int64     `json:"stream_duration_ms" gorm:"column:stream_duration_ms;not null;default:0;comment:流式传输持续时间(ms)，非流式为0"`
+	UserAgent                  string    `json:"user_agent" gorm:"column:user_agent;not null;default:'';comment:请求客户端User-Agent"`
+	UpstreamStatusCode         int       `json:"upstream_status_code" gorm:"column:upstream_status_code;not null;default:0;comment:上游HTTP状态码：200成功，>0为上游返回码，-1为连接错误，0为未知错误"`
+	ErrorMessage               string    `json:"error_message" gorm:"column:error_message;not null;default:'';comment:错误信息，成功时为空"`
+	TraceID                    string    `json:"trace_id" gorm:"column:trace_id;not null;default:'';comment:请求追踪ID;index"`
+	CostMicro                  *int64    `json:"cost_micro" gorm:"column:cost_micro;comment:估算费用(微单位,NULL=未计价)"`
+	InputCostMicro             *int64    `json:"input_cost_micro" gorm:"column:input_cost_micro;comment:输入费用(微单位,NULL=无拆分)"`
+	OutputCostMicro            *int64    `json:"output_cost_micro" gorm:"column:output_cost_micro;comment:输出费用(微单位,NULL=无拆分)"`
+	CacheCreationCostMicro     *int64    `json:"cache_creation_cost_micro" gorm:"column:cache_creation_cost_micro;comment:缓存创建费用(微单位,NULL=无拆分)"`
+	CacheReadCostMicro         *int64    `json:"cache_read_cost_micro" gorm:"column:cache_read_cost_micro;comment:缓存读取费用(微单位,NULL=无拆分)"`
+	PricingCurrency            string    `json:"pricing_currency" gorm:"column:pricing_currency;not null;default:'';comment:计价币种快照(''/USD)"`
 }

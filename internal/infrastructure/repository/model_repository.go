@@ -89,12 +89,13 @@ func pricingFromDB(modelID uint, rules []dbmodel.ModelPricingRule, currency stri
 			TimeWindows: lo.Map(r.TimeWindows, func(w dbmodel.ModelTimeWindow, _ int) vo.TimeWindow {
 				return vo.TimeWindow{Days: w.Days, Start: w.Start, End: w.End, Timezone: w.Timezone}
 			}),
-			ContextMin:       r.ContextMin,
-			ContextMax:       r.ContextMax,
-			InputMicro:       r.InputPriceMicro,
-			OutputMicro:      r.OutputPriceMicro,
-			CacheCreateMicro: r.CacheCreationPriceMicro,
-			CacheReadMicro:   r.CacheReadPriceMicro,
+			ContextMin:         r.ContextMin,
+			ContextMax:         r.ContextMax,
+			InputMicro:         r.InputPriceMicro,
+			OutputMicro:        r.OutputPriceMicro,
+			CacheCreateMicro:   r.CacheCreationPriceMicro,
+			CacheCreate1hMicro: r.CacheCreation1hPriceMicro,
+			CacheReadMicro:     r.CacheReadPriceMicro,
 		}
 	})
 	p, err := vo.NewPricing(enum.Currency(currency), vr)
@@ -113,12 +114,13 @@ func pricingToDB(p vo.Pricing) []dbmodel.ModelPricingRule {
 			TimeWindows: lo.Map(r.TimeWindows, func(w vo.TimeWindow, _ int) dbmodel.ModelTimeWindow {
 				return dbmodel.ModelTimeWindow{Days: w.Days, Start: w.Start, End: w.End, Timezone: w.Timezone}
 			}),
-			ContextMin:              r.ContextMin,
-			ContextMax:              r.ContextMax,
-			InputPriceMicro:         r.InputMicro,
-			OutputPriceMicro:        r.OutputMicro,
-			CacheCreationPriceMicro: r.CacheCreateMicro,
-			CacheReadPriceMicro:     r.CacheReadMicro,
+			ContextMin:                r.ContextMin,
+			ContextMax:                r.ContextMax,
+			InputPriceMicro:           r.InputMicro,
+			OutputPriceMicro:          r.OutputMicro,
+			CacheCreationPriceMicro:   r.CacheCreateMicro,
+			CacheCreation1hPriceMicro: r.CacheCreate1hMicro,
+			CacheReadPriceMicro:       r.CacheReadMicro,
 		}
 	})
 }

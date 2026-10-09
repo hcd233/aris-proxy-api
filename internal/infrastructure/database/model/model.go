@@ -32,11 +32,12 @@ type ModelTimeWindow struct {
 
 // ModelPricingRule 定价规则 DB 形态（四价：微单位/1M tokens）
 type ModelPricingRule struct {
-	TimeWindows             []ModelTimeWindow `json:"time_windows"`
-	ContextMin              int64             `json:"context_min"`
-	ContextMax              int64             `json:"context_max"`
-	InputPriceMicro         int64             `json:"input_price_micro"`
-	OutputPriceMicro        int64             `json:"output_price_micro"`
-	CacheCreationPriceMicro int64             `json:"cache_creation_price_micro"`
-	CacheReadPriceMicro     int64             `json:"cache_read_price_micro"`
+	TimeWindows               []ModelTimeWindow `json:"time_windows"`
+	ContextMin                int64             `json:"context_min"`
+	ContextMax                int64             `json:"context_max"`
+	InputPriceMicro           int64             `json:"input_price_micro"`
+	OutputPriceMicro          int64             `json:"output_price_micro"`
+	CacheCreationPriceMicro   int64             `json:"cache_creation_price_micro"`
+	CacheCreation1hPriceMicro int64             `json:"cache_creation_1h_price_micro"`
+	CacheReadPriceMicro       int64             `json:"cache_read_price_micro"`
 }
