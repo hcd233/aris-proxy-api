@@ -353,7 +353,7 @@ func (r *auditRepository) paginate(db *gorm.DB, param model.CommonParam, startTi
 			UpstreamProtocol: rec.UpstreamProtocol,
 			APIProtocol:      rec.APIProtocol,
 			Endpoint:         rec.Endpoint,
-			Tokens:           vo.NewTokenBreakdown(rec.InputTokens, rec.OutputTokens, rec.CacheCreationInputTokens, rec.CacheReadInputTokens),
+			Tokens:           vo.NewTokenBreakdown(rec.InputTokens, rec.OutputTokens, rec.CacheCreationInputTokens, 0, rec.CacheReadInputTokens),
 			Latency:          vo.NewCallLatency(time.Duration(rec.FirstTokenLatencyMs)*time.Millisecond, time.Duration(rec.StreamDurationMs)*time.Millisecond),
 			Status:           vo.NewCallStatus(rec.UpstreamStatusCode, rec.ErrorMessage),
 			UserAgent:        rec.UserAgent,

@@ -72,7 +72,7 @@ func TestAuditService_DemoListLogsMasksIdentityAndConnection(t *testing.T) {
 		UpstreamProtocol: enum.ProtocolOpenAIChatCompletion,
 		APIProtocol:      enum.ProtocolOpenAIChatCompletion,
 		Endpoint:         "openai-chat-completions",
-		Tokens:           vo.NewTokenBreakdown(10, 20, 0, 0),
+		Tokens:           vo.NewTokenBreakdown(10, 20, 0, 0, 0),
 		Latency:          vo.NewCallLatency(time.Second, time.Second),
 		Status:           vo.NewCallStatus(200, ""),
 		UserAgent:        "Mozilla/5.0",
