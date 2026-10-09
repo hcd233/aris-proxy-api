@@ -1130,7 +1130,7 @@ git commit -m "feat(llmproxy): Decision API 协议枚举与 native-only 兼容�
   - `OpenAIProxyPort.ForwardCreateDecision(ctx context.Context, ep vo.UpstreamEndpoint, body []byte) ([]byte, error)`
   - `proxyutil.MarshalOpenAIDecisionBodyForModel(req *dto.OpenAICreateDecisionReq, modelName string) []byte`
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 新建 `test/unit/llmproxy_usecase/decision_forward_test.go`：
 
@@ -1184,12 +1184,12 @@ func TestMarshalOpenAIDecisionBodyForModel_RewritesModelOnly(t *testing.T) {
 
 （本文件顶部 import 需包含 `"github.com/samber/lo"`。）
 
-- [ ] **Step 2: 运行测试确认失败**
+- [x] **Step 2: 运行测试确认失败**
 
 Run: `go test -count=1 -run TestMarshalOpenAIDecisionBodyForModel ./test/unit/llmproxy_usecase/`
 Expected: 编译失败 —— `undefined: proxyutil.MarshalOpenAIDecisionBodyForModel`
 
-- [ ] **Step 3: 序列化 helper**
+- [x] **Step 3: 序列化 helper**
 
 `internal/application/llmproxy/util/model.go`：在 `MarshalOpenAIResponseBodyForModel` 之后追加：
 
@@ -1202,7 +1202,7 @@ func MarshalOpenAIDecisionBodyForModel(req *dto.OpenAICreateDecisionReq, modelNa
 }
 ```
 
-- [ ] **Step 4: 上游路径常量与端口方法**
+- [x] **Step 4: 上游路径常量与端口方法**
 
 `internal/common/constant/upstream.go`：
 
@@ -1216,7 +1216,7 @@ func MarshalOpenAIDecisionBodyForModel(req *dto.OpenAICreateDecisionReq, modelNa
 	ForwardCreateDecision(ctx context.Context, ep vo.UpstreamEndpoint, body []byte) ([]byte, error)
 ```
 
-- [ ] **Step 5: 传输层实现**
+- [x] **Step 5: 传输层实现**
 
 `internal/infrastructure/transport/openai.go`：在 `ForwardCreateResponse` 之后追加：
 
@@ -1241,7 +1241,7 @@ func (p *openAIProxy) ForwardCreateDecision(ctx context.Context, ep vo.UpstreamE
 }
 ```
 
-- [ ] **Step 6: 补 mock 方法**
+- [x] **Step 6: 补 mock 方法**
 
 `test/unit/llmproxy_usecase/openai_forward_test.go` 的 `mockOpenAIProxy` 结构体加字段：
 
@@ -1267,12 +1267,12 @@ func (p *mockOpenAIProxy) ForwardCreateDecision(ctx context.Context, _ vo.Upstre
 }
 ```
 
-- [ ] **Step 7: 运行测试与构建**
+- [x] **Step 7: 运行测试与构建**
 
 Run: `go test -count=1 -run TestMarshalOpenAIDecisionBodyForModel ./test/unit/llmproxy_usecase/ && go build ./...`
 Expected: PASS + 构建成功
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add internal/common/constant/upstream.go internal/application/llmproxy test/unit/llmproxy_usecase

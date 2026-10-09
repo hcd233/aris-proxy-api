@@ -32,6 +32,11 @@ type mockOpenAIProxy struct {
 	lastChatBody             []byte
 	openChatStreamErr        error
 	openResponseStreamErr    error
+	decisionUnaryCalled      bool
+	lastDecisionCtx          context.Context
+	lastDecisionBody         []byte
+	decisionResp             []byte
+	decisionErr              error
 	// chatStreamClosed 记录上游 body 是否被关闭（验证 port.Stream.Close 兜底路径）
 	chatStreamClosed bool
 }
@@ -105,6 +110,16 @@ func (p *mockOpenAIProxy) ReadCreateResponseStream(_ context.Context, _ io.ReadC
 		_ = onEvent("response.completed", []byte(`{"type":"response.completed","response":{"id":"resp_test","status":"completed","output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"ok"}]}],"usage":{"input_tokens":1,"output_tokens":1,"total_tokens":2}}}`))
 	}
 	return nil
+}
+
+func (p *mockOpenAIProxy) ForwardCreateDecision(ctx context.Context, _ vo.UpstreamEndpoint, body []byte) ([]byte, error) {
+	p.decisionUnaryCalled = true
+	p.lastDecisionCtx = ctx
+	p.lastDecisionBody = append([]byte(nil), body...)
+	if p.decisionErr != nil {
+		return nil, p.decisionErr
+	}
+	return p.decisionResp, nil
 }
 
 var _ usecase.OpenAIProxyPort = (*mockOpenAIProxy)(nil)
