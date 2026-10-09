@@ -13,21 +13,21 @@ description: 查询生产 CLS 日志并做 RCA 根因定位。当用户遇到线
 
 ### 日志主题查找
 
-每次排障开始时，先用 `mcp__cls-mcp-server__GetTopicInfoByName` 按名称查找日志主题 ID：
+每次排障开始时，先用 `mcp__cls_mcp_server__DescribeTopics` 按名称查找日志主题 ID：
 
 ```go
 // 参数
 Region: "ap-guangzhou"
-searchText: "{项目名称}"
+TopicName: "{项目名称}"
 ```
 
 记录返回的 TopicId 供后续查询使用。
 
 ### 时间范围确定
 
-用 `mcp__cls-mcp-server__ConvertTimestampToTimeString` 获取当前时间（不传 timestamp 参数），让用户确认报错的大致时间范围。如果用户不确定，默认回看最近 15 分钟。
+用 `mcp__cls_mcp_server__ConvertTimestampToTimeString` 获取当前时间（不传 timestamp 参数），让用户确认报错的大致时间范围。如果用户不确定，默认回看最近 15 分钟。
 
-然后用 `mcp__cls-mcp-server__ConvertTimeStringToTimestamp` 计算出 From/To 的毫秒级时间戳。
+然后用 `mcp__cls_mcp_server__ConvertTimeStringToTimestamp` 计算出 From/To 的毫秒级时间戳。
 
 ---
 
@@ -50,17 +50,17 @@ searchText: "{项目名称}"
 
 ### 1.2 生成 CQL 查询语句
 
-用 `mcp__cls-mcp-server__TextToSearchLogQuery` 将自然语言查询描述转为 CQL：
+用 `mcp__cls_mcp_server__TextToSearchLogQuery` 将自然语言查询描述转为 CQL：
 
 ```
 Region: "ap-guangzhou"
-TopicId: <从 GetTopicInfoByName 获取>
+TopicId: <从 DescribeTopics 获取>
 Text: "查询最近15分钟 ERROR 级别的日志，包含 <模块> 和 <关键词>"
 ```
 
 ### 1.3 执行日志搜索
 
-用 `mcp__cls-mcp-server__SearchLog` 查询日志：
+用 `mcp__cls_mcp_server__SearchLog` 查询日志：
 
 ```
 Region: "ap-guangzhou"
@@ -175,7 +175,7 @@ Limit: 100
 
 | 工具 | 用途 | 在本 skill 中的典型调用时机 |
 |------|------|---------------------------|
-| `GetTopicInfoByName` | 按名称查找日志主题 ID | Step 1 开始时 |
+| `DescribeTopics` | 按名称查找日志主题 ID | Step 1 开始时 |
 | `ConvertTimestampToTimeString` | 获取/转换时间字符串 | 确定时间范围 |
 | `ConvertTimeStringToTimestamp` | 时间字符串 → 时间戳 | 计算 From/To 参数 |
 | `TextToSearchLogQuery` | 自然语言 → CQL | Step 1.2 |

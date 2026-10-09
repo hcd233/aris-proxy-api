@@ -23,14 +23,14 @@ chrome-devtools MCP 必须已连接。首次调用页面列表工具确认连接
 浏览器里没有该站点标签页时：
 
 ```
-chrome_devtools_new_page { "url": "https://api.lvlvko.top/web/" }
+mcp__chrome_devtools__new_page { "url": "https://api.lvlvko.top/web/" }
 ```
 
-已有标签页则优先 `chrome_devtools_select_page` 复用。
+已有标签页则优先 `mcp__chrome_devtools__select_page` 复用。
 
 ### 2. 判断登录状态
 
-用 `chrome_devtools_take_snapshot` 拿页面 a11y 快照，按特征判断：
+用 `mcp__chrome_devtools__take_snapshot` 拿页面 a11y 快照，按特征判断：
 
 - **已登录**：URL 是 `/web/` 或 `/web/<页面>`；快照里有左侧 `navigation`（Dashboard、Sessions、API Keys、Models、Cron Audit 等链接）和顶部用户信息（头像、用户名、角色、Logout 按钮）。
 - **未登录**：URL 被重定向到 `/web/login/`；快照里只有 "Aris Proxy" 品牌区 + 两个登录按钮（GitHub / Google），没有侧边栏。
@@ -39,25 +39,25 @@ chrome_devtools_new_page { "url": "https://api.lvlvko.top/web/" }
 
 1. 从最新快照找到 GitHub 或 Google 登录按钮的 uid，点击：
    ```
-   chrome_devtools_click { "uid": "<登录按钮uid>" }
+   mcp__chrome_devtools__click { "uid": "<登录按钮uid>" }
    ```
 2. 浏览器跳到 GitHub/Google 的 OAuth2 授权页。**这一步必须由真人完成**——授权页要用户输账号或选账号，AI 代替不了。
 3. **明确提示用户**在浏览器里完成授权（如"请在打开的浏览器窗口中用 GitHub 完成登录"），然后停下等用户确认。
 4. 用户授权后，授权页带 code/state 跳回 `/web/login/`，前端自动换 token 并跳到 `/web/`。
-5. 重新 `chrome_devtools_take_snapshot` 确认已进入 Dashboard（出现侧边栏即成功）。
+5. 重新 `mcp__chrome_devtools__take_snapshot` 确认已进入 Dashboard（出现侧边栏即成功）。
 
 ### 4. 已登录 → 浏览
 
-- 想看某个页面：从**最新快照**找到对应导航链接的 uid → `chrome_devtools_click { "uid": ... }` → `chrome_devtools_take_snapshot` 看结果。
-- 页面加载确认：`chrome_devtools_wait_for { "text": ["..."] }` 等关键文本出现再快照。
-- 视觉确认：`chrome_devtools_take_screenshot`（默认视口；`"fullPage": true` 整页）。
+- 想看某个页面：从**最新快照**找到对应导航链接的 uid → `mcp__chrome_devtools__click { "uid": ... }` → `mcp__chrome_devtools__take_snapshot` 看结果。
+- 页面加载确认：`mcp__chrome_devtools__wait_for { "text": ["..."] }` 等关键文本出现再快照。
+- 视觉确认：`mcp__chrome_devtools__take_screenshot`（默认视口；`"fullPage": true` 整页）。
 
 ## 关键机制（为什么这么做）
 
 - **uid 每次快照都会重新分配**：a11y 树重建后 uid 不保证稳定，必须走"最新快照 → 拿 uid → 点击 → 再快照"循环，别复用旧 uid。
 - **优先 take_snapshot 而非 take_screenshot**：快照是文本 a11y 树，自带可点击元素的 uid，token 开销远小于截图；截图只用于需要看视觉的场合。
 - **登录必须真人操作**：OAuth2 授权页涉及账号密码/账号选择，agent 无法代替，所以"提示用户登录 + 等待确认"是流程一部分，不是可跳过步骤。
-- **click 后可带 `"includeSnapshot": true`**：`chrome_devtools_click` 能在响应里直接带回新快照，省一次调用；不确定时显式 `take_snapshot` 更稳。
+- **click 后可带 `"includeSnapshot": true`**：`mcp__chrome_devtools__click` 能在响应里直接带回新快照，省一次调用；不确定时显式 `take_snapshot` 更稳。
 
 ## 常见页面（侧边栏导航，2026-08 实测）
 

@@ -8,14 +8,14 @@ CodeGraph 是代码知识图谱工具，负责建立项目结构、符号和调�
 
 ### 工具选择
 
-- `codegraph_codegraph_explore`：代码理解的首选入口。接受自然语言问题或一组符号/文件名，一次调用返回相关符号的带行号源码、它们之间的调用路径（含回调、动态分发跳转）和影响范围；通常一次调用即可回答整个问题。
-- `codegraph_codegraph_search`：按名称搜索函数、方法、类、接口、类型、变量、路由或组件。
-- `codegraph_codegraph_node`：查看单个符号的定义、源码及调用者/被调用者轨迹；也可按文件返回带行号源码和依赖方。
-- `codegraph_codegraph_callers`：查找调用指定符号的函数或方法。
-- `codegraph_codegraph_callees`：查找指定符号调用的函数或方法。
-- `codegraph_codegraph_impact`：分析修改指定符号的潜在影响范围。
-- `codegraph_codegraph_files`：查看项目文件树；探索目录结构时优先使用。
-- `codegraph_codegraph_status`：检查索引状态。
+- `mcp__codegraph__codegraph_explore`：代码理解的首选入口。接受自然语言问题或一组符号/文件名，一次调用返回相关符号的带行号源码、它们之间的调用路径（含回调、动态分发跳转）和影响范围；通常一次调用即可回答整个问题。
+- `mcp__codegraph__codegraph_search`：按名称搜索函数、方法、类、接口、类型、变量、路由或组件。
+- `mcp__codegraph__codegraph_node`：查看单个符号的定义、源码及调用者/被调用者轨迹；也可按文件返回带行号源码和依赖方。
+- `mcp__codegraph__codegraph_callers`：查找调用指定符号的函数或方法。
+- `mcp__codegraph__codegraph_callees`：查找指定符号调用的函数或方法。
+- `mcp__codegraph__codegraph_impact`：分析修改指定符号的潜在影响范围。
+- `mcp__codegraph__codegraph_files`：查看项目文件树；探索目录结构时优先使用。
+- `mcp__codegraph__codegraph_status`：检查索引状态。
 
 > 索引维护使用命令行：`codegraph index`（全量重建）与 `codegraph sync`（增量同步）。codegraph 1.6 自带运行时，不依赖宿主机 Node 版本。
 
@@ -24,7 +24,7 @@ CodeGraph 是代码知识图谱工具，负责建立项目结构、符号和调�
 - 代码搜索必须使用 CodeGraph，尤其是符号、调用关系和影响范围搜索。
 - 不得用 `grep`、`rg` 或 `find` 替代 CodeGraph 的代码搜索。
 - 命令行搜索仅用于 CodeGraph 不覆盖的非代码文件、配置文本、日志或已知字符串的精确检查。
-- 推荐顺序：`codegraph_explore` → 必要时 `search` / `node` / `callers` / `callees` / `impact` → Serena 精确修改。拿到 `explore` 返回的源码后视为已读取，不要再用 grep/read 复验。
+- 推荐顺序：`mcp__codegraph__codegraph_explore` → 必要时 `mcp__codegraph__codegraph_search` / `mcp__codegraph__codegraph_node` / `mcp__codegraph__codegraph_callers` / `mcp__codegraph__codegraph_callees` / `mcp__codegraph__codegraph_impact` → Serena 精确修改。拿到 `explore` 返回的源码后视为已读取，不要再用 grep/read 复验。
 
 ## Serena：语义级编辑与工程记忆
 
@@ -32,29 +32,29 @@ Serena 是基于语言服务的代码浏览、诊断和语义编辑工具。
 
 ### 工具选择
 
-- `serena_list_memories`、`serena_read_memory`：读取已有工程经验。
-- `serena_get_symbols_overview`、`serena_find_symbol`、`serena_find_declaration`：按文件或符号定位代码。
-- `serena_find_referencing_symbols`、`serena_find_implementations`：查找引用和接口实现。
-- `serena_rename_symbol`：跨文件语义重命名并更新引用。
-- `serena_replace_symbol_body`：替换已确认符号的实现体。
-- `serena_replace_in_files`：跨文件批量替换；有潜在误替换风险时先使用 `dry_run=true`。
-- `serena_insert_before_symbol`、`serena_insert_after_symbol`：围绕符号插入代码。
-- `serena_safe_delete_symbol`：确认无引用后删除符号。
-- `serena_get_diagnostics_for_file`：检查语法、类型和语言服务诊断。
-- `serena_write_memory`：沉淀可复用的工程经验。
+- `mcp__serena__list_memories`、`mcp__serena__read_memory`：读取已有工程经验。
+- `mcp__serena__get_symbols_overview`、`mcp__serena__find_symbol`、`mcp__serena__find_declaration`：按文件或符号定位代码。
+- `mcp__serena__find_referencing_symbols`、`mcp__serena__find_implementations`：查找引用和接口实现。
+- `mcp__serena__rename_symbol`：跨文件语义重命名并更新引用。
+- `mcp__serena__replace_symbol_body`：替换已确认符号的实现体。
+- `mcp__serena__replace_in_files`：跨文件批量替换；有潜在误替换风险时先使用 `dry_run=true`。
+- `mcp__serena__insert_before_symbol`、`mcp__serena__insert_after_symbol`：围绕符号插入代码。
+- `mcp__serena__safe_delete_symbol`：确认无引用后删除符号。
+- `mcp__serena__get_diagnostics_for_file`：检查语法、类型和语言服务诊断。
+- `mcp__serena__write_memory`：沉淀可复用的工程经验。
 
 ### 强制使用规则
 
 - 跨文件代码或符号重构必须使用 Serena，不得通过手工逐文件替换规避语义工具。
-- 开发、排障或重构开始前，必须先使用 `serena_list_memories`，再用相关的 `serena_read_memory` 读取历史经验。
-- 准备提交代码前，必须使用 `serena_write_memory` 沉淀稳定、可复用的经验，包括架构决策、约束、坑点、验证方式或排障结论。
+- 开发、排障或重构开始前，必须先使用 `mcp__serena__list_memories`，再用相关的 `mcp__serena__read_memory` 读取历史经验。
+- 准备提交代码前，必须使用 `mcp__serena__write_memory` 沉淀稳定、可复用的经验，包括架构决策、约束、坑点、验证方式或排障结论。
 - 没有相关历史经验时可以继续工作，但任务完成前应判断是否产生了值得沉淀的新经验。
 - 不得把凭据、个人信息、生产敏感数据或仅对当前临时状态有用的内容写入 memory。
 
 ## 推荐工作流
 
 ```text
-serena_list_memories / serena_read_memory
+mcp__serena__list_memories / mcp__serena__read_memory
     ↓
 CodeGraph 搜索并理解代码
     ↓
@@ -64,7 +64,7 @@ Serena 执行跨文件重构
     ↓
 测试、lint 和诊断验证
     ↓
-serena_write_memory 沉淀工程经验
+mcp__serena__write_memory 沉淀工程经验
     ↓
 提交代码
 ```
