@@ -1,0 +1,234 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import { api, ApiError } from "@/lib/api-client";
+import { showErrorToast } from "@/lib/api-error-handler";
+import { PermissionGuard } from "@/components/permission-guard";
+import type { ModelListItem, ListModelsPageRsp } from "@/lib/types";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { PageHeader } from "@/components/page-header";
+import { Play, Plus, Trash2 } from "lucide-react";
+import { useT } from "@/lib/i18n";
+import {
+  buildChatBody,
+  extractDeltaContent,
+  selectableModels,
+  type PlaygroundMessage,
+} from "./playground-logic";
+
+function PlaygroundPage() {
+  const t = useT();
+  const [models, setModels] = useState<ModelListItem[]>([]);
+  const [model, setModel] = useState("");
+  const [messages, setMessages] = useState<PlaygroundMessage[]>([{ role: "user", content: "" }]);
+  const [stream, setStream] = useState(true);
+  const [temperature, setTemperature] = useState("");
+  const [maxTokens, setMaxTokens] = useState("");
+  const [sending, setSending] = useState(false);
+  const [output, setOutput] = useState("");
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const rsp = await api.listModelsPage({ page: 1, pageSize: 100 });
+        if (cancelled) return;
+        const items = (rsp as ListModelsPageRsp).items ?? [];
+        const opts = selectableModels(items.map((m) => ({ alias: m.alias, enabled: m.enabled })));
+        setModels(items.filter((m) => opts.some((o) => o.alias === m.alias)));
+      } catch (err) {
+        showErrorToast(err, { title: t("playground.load_models_error") });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [t]);
+
+  const patchMessage = useCallback((idx: number, patch: Partial<PlaygroundMessage>) => {
+    setMessages((prev) => prev.map((m, i) => (i === idx ? { ...m, ...patch } : m)));
+  }, []);
+
+  const handleSend = useCallback(async () => {
+    if (!model || sending) return;
+    const temp = temperature.trim() === "" ? undefined : Number(temperature);
+    const maxTok = maxTokens.trim() === "" ? undefined : Number(maxTokens);
+    const body = buildChatBody(messages, {
+      model,
+      stream,
+      temperature: temp,
+      maxTokens: maxTok,
+    });
+    setSending(true);
+    setOutput("");
+    try {
+      if (stream) {
+        const controller = new AbortController();
+        abortRef.current = controller;
+        await api.playgroundChatStream(
+          body,
+          (line) => {
+            setOutput((prev) => prev + extractDeltaContent(line));
+          },
+          controller.signal,
+        );
+      } else {
+        const rsp = (await api.playgroundChat(body)) as {
+          choices?: { message?: { content?: string } }[];
+        };
+        setOutput(rsp.choices?.[0]?.message?.content ?? "");
+      }
+    } catch (err) {
+      if (!(err instanceof ApiError && err.status === 401)) {
+        showErrorToast(err, { title: t("playground.send_error") });
+      }
+    } finally {
+      setSending(false);
+      abortRef.current = null;
+    }
+  }, [model, sending, messages, stream, temperature, maxTokens, t]);
+
+  return (
+    <div className="space-y-4">
+      <PageHeader title={t("playground.title")} description={t("playground.description")} />
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">{t("playground.request")}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="space-y-1">
+              <Label htmlFor="pg-model">{t("playground.model")}</Label>
+              <Select value={model} onValueChange={(v) => setModel(String(v))}>
+                <SelectTrigger id="pg-model" className="w-full">
+                  <SelectValue placeholder={t("playground.model.placeholder")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {models.map((m) => (
+                    <SelectItem key={m.id} value={m.alias}>
+                      {m.alias}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <Label htmlFor="pg-temperature">{t("playground.temperature")}</Label>
+                <Input
+                  id="pg-temperature"
+                  type="number"
+                  min={0}
+                  max={2}
+                  step={0.1}
+                  value={temperature}
+                  onChange={(e) => setTemperature(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="pg-max-tokens">{t("playground.max_tokens")}</Label>
+                <Input
+                  id="pg-max-tokens"
+                  type="number"
+                  min={1}
+                  value={maxTokens}
+                  onChange={(e) => setMaxTokens(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Switch checked={stream} onCheckedChange={setStream} id="pg-stream" />
+              <Label htmlFor="pg-stream">{t("playground.stream")}</Label>
+            </div>
+
+            <div className="space-y-2">
+              <Label>{t("playground.messages")}</Label>
+              {messages.map((m, idx) => (
+                <div key={idx} className="flex items-start gap-1.5">
+                  <Select
+                    value={m.role}
+                    onValueChange={(v) =>
+                      patchMessage(idx, { role: v as PlaygroundMessage["role"] })
+                    }
+                  >
+                    <SelectTrigger className="w-28 shrink-0">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="system">system</SelectItem>
+                      <SelectItem value="user">user</SelectItem>
+                      <SelectItem value="assistant">assistant</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    value={m.content}
+                    placeholder={t("playground.message.placeholder")}
+                    onChange={(e) => patchMessage(idx, { content: e.target.value })}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={t("playground.message.delete")}
+                    disabled={messages.length === 1}
+                    onClick={() => setMessages((prev) => prev.filter((_, i) => i !== idx))}
+                  >
+                    <Trash2 className="size-3.5 text-muted-foreground" />
+                  </Button>
+                </div>
+              ))}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setMessages((prev) => [...prev, { role: "user", content: "" }])}
+              >
+                <Plus className="size-4" />
+                {t("playground.message.add")}
+              </Button>
+            </div>
+
+            <Button onClick={handleSend} disabled={!model || sending} className="w-full">
+              <Play className="size-4" />
+              {sending ? t("playground.sending") : t("playground.send")}
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">{t("playground.output")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <pre className="min-h-40 whitespace-pre-wrap rounded-md bg-muted p-3 font-mono text-sm">
+              {output || t("playground.output.placeholder")}
+            </pre>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+export default function PlaygroundPageGuarded() {
+  return (
+    <PermissionGuard>
+      <PlaygroundPage />
+    </PermissionGuard>
+  );
+}
