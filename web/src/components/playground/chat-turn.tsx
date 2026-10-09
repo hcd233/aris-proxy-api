@@ -35,6 +35,20 @@ function formatDuration(ms?: number): string {
   return ms < 1000 ? `${Math.round(ms)}ms` : `${(ms / 1000).toFixed(1)}s`;
 }
 
+function DetailCopyButton({ label, value }: { label: string; value: string }) {
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      onClick={() => void copyTextToClipboard(value)}
+    >
+      <Copy className="size-3.5" />
+      {label}
+    </Button>
+  );
+}
+
 export function ChatTurn({
   message,
   index,
@@ -234,30 +248,14 @@ export function ChatTurn({
                 </div>
                 <div className="mt-1">{t("playground.metrics.estimate_hint")}</div>
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      void copyTextToClipboard(JSON.stringify(meta.requestSnapshot ?? {}, null, 2))
-                    }
-                  >
-                    <Copy className="size-3.5" />
-                    {t("playground.metrics.request_json")}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      void copyTextToClipboard(
-                        buildCurl(meta.requestSnapshot ?? {}, window.location.origin),
-                      )
-                    }
-                  >
-                    <Copy className="size-3.5" />
-                    {t("playground.metrics.copy_curl")}
-                  </Button>
+                  <DetailCopyButton
+                    label={t("playground.metrics.request_json")}
+                    value={JSON.stringify(meta.requestSnapshot ?? {}, null, 2)}
+                  />
+                  <DetailCopyButton
+                    label={t("playground.metrics.copy_curl")}
+                    value={buildCurl(meta.requestSnapshot ?? {}, window.location.origin)}
+                  />
                 </div>
               </div>
             )}

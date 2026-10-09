@@ -2,7 +2,7 @@
  * Playground 调试页的纯逻辑（无 React；运行时无项目内 import——type import 会被
  * 编译期擦除，因此 vitest 无需路径别名即可直接加载测）。
  */
-import type { ModelCapability, PricingDTO } from "@/lib/types";
+import type { PricingDTO } from "@/lib/types";
 
 /** 单轮调试元信息（跟随其所属消息持久化） */
 export interface PlaygroundTurnMeta {
@@ -54,7 +54,6 @@ export interface BuildChatParams {
 export interface PlaygroundModelOption {
   alias: string;
   enabled: boolean;
-  capabilities?: ModelCapability[];
   pricing?: PricingDTO;
 }
 

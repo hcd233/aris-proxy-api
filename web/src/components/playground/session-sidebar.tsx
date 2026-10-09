@@ -35,6 +35,11 @@ export function SessionSidebar({
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
 
+  const commitRename = (id: string) => {
+    onRename(id, draft.trim());
+    setRenamingId(null);
+  };
+
   return (
     <div className="flex h-full flex-col">
       <Button type="button" size="sm" className="mb-3" onClick={onNew}>
@@ -60,15 +65,9 @@ export function SessionSidebar({
                   className="h-7 flex-1"
                   onChange={(e) => setDraft(e.target.value)}
                   onClick={(e) => e.stopPropagation()}
-                  onBlur={() => {
-                    onRename(s.id, draft.trim());
-                    setRenamingId(null);
-                  }}
+                  onBlur={() => commitRename(s.id)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      onRename(s.id, draft.trim());
-                      setRenamingId(null);
-                    }
+                    if (e.key === "Enter") commitRename(s.id);
                     if (e.key === "Escape") setRenamingId(null);
                   }}
                 />
