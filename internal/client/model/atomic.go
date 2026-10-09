@@ -15,7 +15,7 @@ type TargetModel struct {
 	ContextLength   int
 	MaxOutputTokens int
 	Capabilities    []string
-	Cost            TargetCost // 基础档单价（USD/1M tokens），未计价为零值
+	Cost            *TargetCost // 基础档单价（USD/1M tokens）；nil 表示服务端未计价
 }
 
 // TargetCost 模型基础档单价（USD/1M tokens）

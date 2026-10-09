@@ -101,7 +101,7 @@ func RunExport(ctx context.Context, opts ExportOptions) error {
 				ContextLength:   m.ContextLength,
 				MaxOutputTokens: m.MaxOutputTokens,
 				Capabilities:    m.Capabilities,
-				Cost:            TargetCost(m.Cost),
+				Cost:            toTargetCost(m.Cost),
 			})
 		}
 	}
@@ -153,6 +153,20 @@ func RunExport(ctx context.Context, opts ExportOptions) error {
 		constant.ClientModelExportBackupHint,
 	))
 	return nil
+}
+
+// toTargetCost 服务端基础档单价 → 写入目标单价；未计价（nil）保持 nil，
+// 由各目标决定是省略成本字段（OpenCode）还是回落零值（Pi 要求 cost 元数据）。
+func toTargetCost(c *api.ClientModelCost) *TargetCost {
+	if c == nil {
+		return nil
+	}
+	return &TargetCost{
+		Input:      c.Input,
+		Output:     c.Output,
+		CacheRead:  c.CacheRead,
+		CacheWrite: c.CacheWrite,
+	}
 }
 
 func printLine(out io.Writer, lines ...string) {

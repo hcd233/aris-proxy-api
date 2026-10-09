@@ -20,9 +20,32 @@ type opencodeModel struct {
 	Name        string          `json:"name"`
 	Attachment  bool            `json:"attachment,omitempty"`
 	Modalities  *modalitiesSpec `json:"modalities,omitempty"`
+	Cost        *opencodeCost   `json:"cost,omitempty"`
 	Limit       limitSpec       `json:"limit"`
 	Temperature bool            `json:"temperature"`
 	ToolCall    bool            `json:"tool_call"`
+}
+
+// opencodeCost OpenCode 模型单价（USD/1M tokens，schema 字段带下划线）
+type opencodeCost struct {
+	Input      float64 `json:"input"`
+	Output     float64 `json:"output"`
+	CacheRead  float64 `json:"cache_read"`
+	CacheWrite float64 `json:"cache_write"`
+}
+
+// toOpenCodeCost 服务端基础档单价 → OpenCode cost；未计价返回 nil 让字段整体省略，
+// 写零会把未计价模型显现成“真的免费”。
+func toOpenCodeCost(c *TargetCost) *opencodeCost {
+	if c == nil {
+		return nil
+	}
+	return &opencodeCost{
+		Input:      c.Input,
+		Output:     c.Output,
+		CacheRead:  c.CacheRead,
+		CacheWrite: c.CacheWrite,
+	}
 }
 
 type modalitiesSpec struct {
@@ -113,6 +136,7 @@ func (OpenCodeTarget) Write(path, host, apiKey string, models []TargetModel) err
 		entry := opencodeModel{
 			Name:        upperFirst(m.Alias),
 			Modalities:  &modalitiesSpec{Input: caps, Output: []string{enum.InputModalityText}},
+			Cost:        toOpenCodeCost(m.Cost),
 			Limit:       limitSpec{Context: contextLen, Output: outputLen},
 			Temperature: true,
 			ToolCall:    true,
@@ -193,53 +217,30 @@ func (PiTarget) Write(path, host, apiKey string, models []TargetModel) error {
 		providers[constant.ClientModelProviderID] = provider
 	}
 	// baseUrl 与 apiKey 由本工具管理，每次导出覆盖：保留旧值会让存量配置永远停在错误地址。
-	// models 保持 merge 语义，保留用户手工添加的模型。
+	// models 保持 merge 语义：服务端列表内的同名条目整体刷新（否则调价后仍是旧价），
+	// 用户自己添加的模型（不在服务端列表内）原样保留。
 	provider[constant.ClientModelKeyBaseUrl] = host + constant.OpenAIProxyPrefix
 	provider[constant.ClientModelKeyAPIKey] = apiKey
 	provider[constant.ClientModelKeyAPI] = constant.ClientModelAPIOpenAI
 	rawModels, _ := provider[constant.ClientModelKeyModels].([]any)
-	byID := map[string]bool{}
-	for _, rm := range rawModels {
-		if m, ok := rm.(map[string]any); ok {
-			if id, ok := m[constant.ClientModelKeyID].(string); ok {
-				byID[id] = true
-			}
+	// 服务端列表内的同名条目原地刷新（否则调价后重导出仍是旧价），其余条目（用户自加）不动。
+	index := make(map[string]int, len(rawModels))
+	for i, rm := range rawModels {
+		obj, ok := rm.(map[string]any)
+		if !ok {
+			continue
+		}
+		if id, ok := obj[constant.ClientModelKeyID].(string); ok {
+			index[id] = i
 		}
 	}
 	for _, m := range models {
-		if byID[m.Alias] {
+		entry := newPiModel(m)
+		if i, ok := index[m.Alias]; ok {
+			rawModels[i] = entry
 			continue
 		}
-		// Pi 的 input 只接受 text/image：pdf/video/audio 写入会让 Pi 拒绝加载整份配置
-		caps := lo.Filter(m.Capabilities, func(c string, _ int) bool {
-			return slices.Contains(constant.ClientModelPiInputModalities, c)
-		})
-		if len(caps) == 0 {
-			caps = defaultCapabilities()
-		}
-		contextLen := m.ContextLength
-		if contextLen <= 0 {
-			contextLen = constant.ClientModelDefaultContext
-		}
-		maxTokens := m.MaxOutputTokens
-		if maxTokens <= 0 {
-			maxTokens = constant.ClientModelPiDefaultMaxTokens
-		}
-		rawModels = append(rawModels, piModel{
-			ID:            m.Alias,
-			Name:          m.Alias,
-			Reasoning:     true,
-			Input:         caps,
-			ContextWindow: contextLen,
-			MaxTokens:     maxTokens,
-			Cost: piCost{
-				Input:      m.Cost.Input,
-				Output:     m.Cost.Output,
-				CacheRead:  m.Cost.CacheRead,
-				CacheWrite: m.Cost.CacheWrite,
-			},
-		})
-		byID[m.Alias] = true
+		rawModels = append(rawModels, entry)
 	}
 	provider[constant.ClientModelKeyModels] = rawModels
 
@@ -251,6 +252,44 @@ func (PiTarget) Write(path, host, apiKey string, models []TargetModel) error {
 		return err
 	}
 	return secureDefaultDir(path)
+}
+
+// newPiModel 生成 Pi 单模型配置：Pi 的 input 只接受 text/image（pdf/video/audio
+// 写入会让 Pi 拒绝加载整份配置），长度缺失时回落默认值。
+// Pi 要求每个模型都带 cost 元数据，未计价（nil）时回落零值。
+func newPiModel(m TargetModel) piModel {
+	caps := lo.Filter(m.Capabilities, func(c string, _ int) bool {
+		return slices.Contains(constant.ClientModelPiInputModalities, c)
+	})
+	if len(caps) == 0 {
+		caps = defaultCapabilities()
+	}
+	contextLen := m.ContextLength
+	if contextLen <= 0 {
+		contextLen = constant.ClientModelDefaultContext
+	}
+	maxTokens := m.MaxOutputTokens
+	if maxTokens <= 0 {
+		maxTokens = constant.ClientModelPiDefaultMaxTokens
+	}
+	cost := m.Cost
+	if cost == nil {
+		cost = &TargetCost{}
+	}
+	return piModel{
+		ID:            m.Alias,
+		Name:          m.Alias,
+		Reasoning:     true,
+		Input:         caps,
+		ContextWindow: contextLen,
+		MaxTokens:     maxTokens,
+		Cost: piCost{
+			Input:      cost.Input,
+			Output:     cost.Output,
+			CacheRead:  cost.CacheRead,
+			CacheWrite: cost.CacheWrite,
+		},
+	}
 }
 
 // ─── 共享工具 ───
