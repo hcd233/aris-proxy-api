@@ -178,6 +178,7 @@ func toEndpointView(ep *llmagg.Endpoint, usersByID map[uint]*identityaggregate.U
 		SupportOpenAIChatCompletion: ep.SupportOpenAIChatCompletion(),
 		SupportOpenAIResponse:       ep.SupportOpenAIResponse(),
 		SupportAnthropicMessage:     ep.SupportAnthropicMessage(),
+		SupportOpenAIDecision:       ep.SupportOpenAIDecision(),
 		CreatedAt:                   ep.CreatedAt(),
 		UpdatedAt:                   ep.UpdatedAt(),
 	}

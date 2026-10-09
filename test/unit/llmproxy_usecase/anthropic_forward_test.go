@@ -80,7 +80,7 @@ func (m *mockAnthropicCountTokens) Handle(_ context.Context, _ *dto.AnthropicCou
 var _ usecase.CountTokens = (*mockAnthropicCountTokens)(nil)
 
 func buildAnthropicTestEndpoint() *aggregate.Endpoint {
-	ep, _ := aggregate.CreateEndpoint(2, "anthropic-endpoint", "https://api.openai.com", "https://api.anthropic.com", "sk-ant-test-api-key", false, false, true)
+	ep, _ := aggregate.CreateEndpoint(2, "anthropic-endpoint", "https://api.openai.com", "https://api.anthropic.com", "sk-ant-test-api-key", false, false, true, false)
 	return ep
 }
 

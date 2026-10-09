@@ -42,7 +42,7 @@ func (h *createEndpointHandler) Handle(ctx context.Context, cmd port.CreateEndpo
 		}
 	}
 
-	ep, err := aggregate.CreateEndpoint(0, cmd.Name, cmd.OpenaiBaseURL, cmd.AnthropicBaseURL, cmd.APIKey, cmd.SupportOpenAIChatCompletion, cmd.SupportOpenAIResponse, cmd.SupportAnthropicMessage)
+	ep, err := aggregate.CreateEndpoint(0, cmd.Name, cmd.OpenaiBaseURL, cmd.AnthropicBaseURL, cmd.APIKey, cmd.SupportOpenAIChatCompletion, cmd.SupportOpenAIResponse, cmd.SupportAnthropicMessage, cmd.SupportOpenAIDecision)
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrValidation, err, "validate endpoint")
 	}

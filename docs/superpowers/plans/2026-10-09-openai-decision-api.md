@@ -56,7 +56,7 @@
   - `dto.CreateEndpointReqBody.SupportOpenAIDecision *bool`、`dto.UpdateEndpointReqBody.SupportOpenAIDecision *bool`、`dto.UpstreamEndpointItem.SupportOpenAIDecision bool`
   - `upstreamport.UpstreamEndpointView.SupportOpenAIDecision bool`
 
-- [ ] **Step 1: 写失败测试（能力校验）**
+- [x] **Step 1: 写失败测试（能力校验）**
 
 编辑 `test/unit/domain_llmproxy/endpoint_test.go`：两个表驱动结构体各加一行字段 `supportOpenAIDecision bool`，`CreateEndpoint` 调用加第 9 个实参，并补 decision 用例。
 
@@ -109,12 +109,12 @@
 	)
 ```
 
-- [ ] **Step 2: 运行测试确认失败**
+- [x] **Step 2: 运行测试确认失败**
 
 Run: `go test -count=1 -run TestCreateEndpoint ./test/unit/domain_llmproxy/`
 Expected: 编译失败 —— `too many arguments in call to aggregate.CreateEndpoint`
 
-- [ ] **Step 3: 领域聚合根改造**
+- [x] **Step 3: 领域聚合根改造**
 
 `internal/domain/llmproxy/aggregate/endpoint.go`：结构体加字段（`supportAnthropicMessage` 之后）：
 
@@ -185,7 +185,7 @@ func (e *Endpoint) Update(name, openaiBaseURL, anthropicBaseURL, apiKey *string,
 	}
 ```
 
-- [ ] **Step 4: 常量与仓储**
+- [x] **Step 4: 常量与仓储**
 
 `internal/common/constant/string.go`（`FieldEndpointSupportAnthropicMessage` 之后）：
 
@@ -237,7 +237,7 @@ func (e *Endpoint) Update(name, openaiBaseURL, anthropicBaseURL, apiKey *string,
 		constant.FieldEndpointSupportOpenAIDecision:       ep.SupportOpenAIDecision(),
 ```
 
-- [ ] **Step 5: 应用层命令与 DTO 透传**
+- [x] **Step 5: 应用层命令与 DTO 透传**
 
 `internal/application/endpoint/port/handler.go`：`CreateEndpointCommand` 加 `SupportOpenAIDecision bool`；`UpdateEndpointCommand` 加 `SupportOpenAIDecision *bool`（均紧跟 `SupportAnthropicMessage` 字段）。
 
@@ -290,7 +290,7 @@ func (e *Endpoint) Update(name, openaiBaseURL, anthropicBaseURL, apiKey *string,
 		SupportOpenAIDecision:       v.SupportOpenAIDecision,
 ```
 
-- [ ] **Step 6: 同步既有测试调用点**
+- [x] **Step 6: 同步既有测试调用点**
 
 各文件在 `aggregate.CreateEndpoint(...)` 实参末尾追加一个 `false`（Decision 无关用例）：
 
@@ -298,18 +298,24 @@ func (e *Endpoint) Update(name, openaiBaseURL, anthropicBaseURL, apiKey *string,
 - `test/unit/llmproxy_repo_scope/endpoint_repository_scope_test.go:63`
 - `test/unit/llmproxy_usecase/anthropic_forward_test.go:83`
 - `test/unit/llmproxy_usecase/openai_forward_test.go` 的 `buildCompatEndpoint`：`aggregate.CreateEndpoint(1, name, openaiBaseURL, anthropicBaseURL, "test-api-key", supportChat, supportResponse, supportMessage, false)`
+- `test/unit/model_command/create_model_scope_test.go:30-31`
+- `test/unit/model_list_query/list_model_test.go:110`
+- `test/unit/upstream_query/list_upstream_test.go:170`
+- `test/unit/upstream_query/list_upstream_demo_mask_test.go:31`
 
-- [ ] **Step 7: 运行聚焦测试**
+（前 4 条是首轮列举：提交钩子的 `go vet ./...` 才暴露了后 4 条，全部已在本次同步。）
+
+- [x] **Step 7: 运行聚焦测试**
 
 Run: `go test -count=1 ./test/unit/domain_llmproxy/ ./test/unit/endpoint_resolver/ ./test/unit/endpoint_command/ ./test/unit/llmproxy_usecase/ ./test/unit/llmproxy_repo_scope/`
 Expected: 全部 PASS
 
-- [ ] **Step 8: 全量构建与 lint**
+- [x] **Step 8: 全量构建与 lint**
 
 Run: `go build ./... && make lint-conv`
 Expected: 无输出 / `ok`
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add internal/common internal/domain internal/infrastructure internal/application/endpoint internal/application/upstream internal/dto internal/handler test/unit

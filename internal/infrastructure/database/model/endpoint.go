@@ -12,5 +12,6 @@ type Endpoint struct {
 	SupportOpenAIChatCompletion bool   `json:"support_openai_chat_completion" gorm:"column:support_openai_chat_completion;not null;default:true;comment:支持/chat/completions"`
 	SupportOpenAIResponse       bool   `json:"support_openai_response" gorm:"column:support_openai_response;not null;default:false;comment:支持/responses"`
 	SupportAnthropicMessage     bool   `json:"support_anthropic_message" gorm:"column:support_anthropic_message;not null;default:false;comment:支持/messages"`
+	SupportOpenAIDecision       bool   `json:"support_openai_decision" gorm:"column:support_openai_decision;not null;default:false;comment:支持/decisions"`
 	DeletedAt                   int64  `json:"deleted_at" gorm:"column:deleted_at;default:0;uniqueIndex:idx_endpoint_name_deleted,priority:3;comment:删除时间"`
 }

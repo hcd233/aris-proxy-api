@@ -60,7 +60,7 @@ func seed(t *testing.T, db *gorm.DB) (epA, epB, epShared *dbmodel.Endpoint, mA *
 
 func mustAggregateEndpoint(t *testing.T) *aggregate.Endpoint {
 	t.Helper()
-	ep, err := aggregate.CreateEndpoint(0, "ep-new", "https://o.example.com", "https://a.example.com", "sk-k", true, false, false)
+	ep, err := aggregate.CreateEndpoint(0, "ep-new", "https://o.example.com", "https://a.example.com", "sk-k", true, false, false, false)
 	if err != nil {
 		t.Fatalf("aggregate endpoint: %v", err)
 	}

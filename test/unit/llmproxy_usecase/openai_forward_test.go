@@ -157,7 +157,7 @@ func buildCompatEndpoint(name string, supportChat, supportResponse, supportMessa
 	if supportMessage {
 		anthropicBaseURL = "https://api.anthropic.com"
 	}
-	ep, _ := aggregate.CreateEndpoint(1, name, openaiBaseURL, anthropicBaseURL, "test-api-key", supportChat, supportResponse, supportMessage)
+	ep, _ := aggregate.CreateEndpoint(1, name, openaiBaseURL, anthropicBaseURL, "test-api-key", supportChat, supportResponse, supportMessage, false)
 	return ep
 }
 

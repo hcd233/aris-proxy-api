@@ -167,7 +167,7 @@ const (
 
 func mustEndpoint(t *testing.T, id, userID uint, name string) *llmagg.Endpoint {
 	t.Helper()
-	ep, err := llmagg.CreateEndpoint(id, name, "https://o.example.com", "https://a.example.com", "sk-secret", true, false, false)
+	ep, err := llmagg.CreateEndpoint(id, name, "https://o.example.com", "https://a.example.com", "sk-secret", true, false, false, false)
 	if err != nil {
 		t.Fatalf("CreateEndpoint(%d): %v", id, err)
 	}

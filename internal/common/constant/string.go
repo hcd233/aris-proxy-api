@@ -141,6 +141,7 @@ const (
 	FieldEndpointSupportOpenAIChatCompletion = "support_openai_chat_completion"
 	FieldEndpointSupportOpenAIResponse       = "support_openai_response"
 	FieldEndpointSupportAnthropicMessage     = "support_anthropic_message"
+	FieldEndpointSupportOpenAIDecision       = "support_openai_decision"
 	FieldModelAlias                          = "alias"
 	FieldModelUpstreamModel                  = "upstream_model"
 	FieldModelEndpointID                     = "endpoint_id"
