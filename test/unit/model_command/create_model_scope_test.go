@@ -27,8 +27,8 @@ type scopedEndpointRepo struct {
 }
 
 func newScopedEndpointRepo() *scopedEndpointRepo {
-	epA, _ := aggregate.CreateEndpoint(1, "ep-a", "https://o.example.com", "https://a.example.com", "k", true, false, false)
-	epB, _ := aggregate.CreateEndpoint(2, "ep-b", "https://o.example.com", "https://a.example.com", "k", true, false, false)
+	epA, _ := aggregate.CreateEndpoint(1, "ep-a", "https://o.example.com", "https://a.example.com", "k", true, false, false, false)
+	epB, _ := aggregate.CreateEndpoint(2, "ep-b", "https://o.example.com", "https://a.example.com", "k", true, false, false, false)
 	epA.SetUserID(101)
 	epB.SetUserID(202)
 	return &scopedEndpointRepo{byID: map[uint]*aggregate.Endpoint{1: epA, 2: epB}}

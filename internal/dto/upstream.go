@@ -72,6 +72,7 @@ type UpstreamEndpointItem struct {
 	SupportOpenAIChatCompletion bool              `json:"supportOpenAIChatCompletion" doc:"是否支持 OpenAI Chat Completion"`
 	SupportOpenAIResponse       bool              `json:"supportOpenAIResponse" doc:"是否支持 OpenAI Response"`
 	SupportAnthropicMessage     bool              `json:"supportAnthropicMessage" doc:"是否支持 Anthropic Message"`
+	SupportOpenAIDecision       bool              `json:"supportOpenAIDecision" doc:"是否支持 OpenAI Decision"`
 	CreatedAt                   time.Time         `json:"createdAt" doc:"创建时间"`
 	UpdatedAt                   time.Time         `json:"updatedAt" doc:"更新时间"`
 }

@@ -157,6 +157,7 @@
   "endpoints.openai_chat_label": "OpenAI Chat Completion",
   "endpoints.openai_response_label": "OpenAI Response API",
   "endpoints.anthropic_messages_label": "Anthropic Messages",
+  "endpoints.openai_decision_label": "OpenAI Decision API",
   "endpoints.update": "Update",
   "models.title": "Models",
   "filter_bar.applied_count": "{count} filters applied",

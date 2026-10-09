@@ -233,6 +233,25 @@ func (p *openAIProxy) OpenCreateResponseStream(ctx context.Context, ep vo.Upstre
 	return resp.Body, nil
 }
 
+// ForwardCreateDecision 转发 OpenAI Decision API 请求（unary，仅 /decisions）。
+func (p *openAIProxy) ForwardCreateDecision(ctx context.Context, ep vo.UpstreamEndpoint, body []byte) ([]byte, error) {
+	log := logger.WithCtx(ctx)
+
+	resp, err := p.doUpstreamRequest(ctx, ep, body, constant.UpstreamPathOpenAIDecisions)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = resp.Body.Close() }() //nolint:errcheck // ensure body closed on return
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Error("[OpenAIProxy] Read decision upstream response error", zap.Error(err))
+		return nil, &model.UpstreamConnectionError{Cause: err}
+	}
+
+	return respBody, nil
+}
+
 func (p *openAIProxy) ReadCreateResponseStream(ctx context.Context, stream io.ReadCloser, onEvent func(event string, data []byte) error) error {
 	log := logger.WithCtx(ctx)
 	defer func() { _ = stream.Close() }() //nolint:errcheck // ensure stream closed on return

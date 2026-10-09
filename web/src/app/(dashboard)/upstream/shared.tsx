@@ -351,16 +351,7 @@ export function ModelActionsCell({
   );
 }
 
-export interface EndpointForm {
-  name: string;
-  openaiBaseURL: string;
-  anthropicBaseURL: string;
-  apiKey: string;
-  supportOpenAIChatCompletion: boolean;
-  supportOpenAIResponse: boolean;
-  supportAnthropicMessage: boolean;
-  ownerUserID?: number;
-}
+export { emptyEndpointForm, type EndpointForm } from "./endpoint-form";
 
 export interface ModelForm {
   alias: string;
@@ -370,16 +361,6 @@ export interface ModelForm {
   maxOutputTokens: number;
   capabilities: ModelCapability[];
 }
-
-export const emptyEndpointForm: EndpointForm = {
-  name: "",
-  openaiBaseURL: "",
-  anthropicBaseURL: "",
-  apiKey: "",
-  supportOpenAIChatCompletion: true,
-  supportOpenAIResponse: false,
-  supportAnthropicMessage: false,
-};
 
 export const emptyModelForm: ModelForm = {
   alias: "",

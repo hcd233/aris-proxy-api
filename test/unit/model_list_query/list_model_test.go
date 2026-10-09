@@ -107,7 +107,7 @@ func mustModel(t *testing.T, id, epID, userID uint, alias, upstream string) *llm
 
 func mustEndpoint(t *testing.T, id uint, name string) *llmagg.Endpoint {
 	t.Helper()
-	ep, err := llmagg.CreateEndpoint(id, name, "https://o.example.com", "https://a.example.com", "sk-secret", true, false, false)
+	ep, err := llmagg.CreateEndpoint(id, name, "https://o.example.com", "https://a.example.com", "sk-secret", true, false, false, false)
 	if err != nil {
 		t.Fatalf("create endpoint aggregate: %v", err)
 	}

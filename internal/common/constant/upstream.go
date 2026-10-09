@@ -3,6 +3,7 @@ package constant
 const (
 	UpstreamPathOpenAIChatCompletions = "/chat/completions"
 	UpstreamPathOpenAIResponses       = "/responses"
+	UpstreamPathOpenAIDecisions       = "/decisions"
 	UpstreamPathAnthropicMessages     = "/messages"
 	UpstreamPathAnthropicCountTokens  = "/messages/count_tokens"
 

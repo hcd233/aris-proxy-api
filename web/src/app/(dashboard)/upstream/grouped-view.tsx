@@ -437,6 +437,12 @@ export function GroupedView({
                             label={t("endpoints.anthropic_messages_label")}
                           />
                         )}
+                        {ep.supportOpenAIDecision && (
+                          <ProtocolBadge
+                            protocol="openai-decision"
+                            label={t("endpoints.openai_decision_label")}
+                          />
+                        )}
                       </span>
                       <EndpointDetailPopover endpoint={ep} />
                       {group.truncated && (

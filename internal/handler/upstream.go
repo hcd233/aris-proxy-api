@@ -103,6 +103,7 @@ func toUpstreamEndpointItem(v *upstreamport.UpstreamEndpointView) *dto.UpstreamE
 		SupportOpenAIChatCompletion: v.SupportOpenAIChatCompletion,
 		SupportOpenAIResponse:       v.SupportOpenAIResponse,
 		SupportAnthropicMessage:     v.SupportAnthropicMessage,
+		SupportOpenAIDecision:       v.SupportOpenAIDecision,
 		CreatedAt:                   v.CreatedAt,
 		UpdatedAt:                   v.UpdatedAt,
 	}

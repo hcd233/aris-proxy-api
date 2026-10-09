@@ -57,6 +57,7 @@ func (h *endpointHandler) HandleCreateEndpoint(ctx context.Context, req *dto.Cre
 		SupportOpenAIChatCompletion: lo.FromPtr(req.Body.SupportOpenAIChatCompletion),
 		SupportOpenAIResponse:       lo.FromPtr(req.Body.SupportOpenAIResponse),
 		SupportAnthropicMessage:     lo.FromPtr(req.Body.SupportAnthropicMessage),
+		SupportOpenAIDecision:       lo.FromPtr(req.Body.SupportOpenAIDecision),
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[EndpointHandler] Create endpoint failed", zap.Error(err))
@@ -85,6 +86,7 @@ func (h *endpointHandler) HandleUpdateEndpoint(ctx context.Context, req *dto.Upd
 		SupportOpenAIChatCompletion: req.Body.SupportOpenAIChatCompletion,
 		SupportOpenAIResponse:       req.Body.SupportOpenAIResponse,
 		SupportAnthropicMessage:     req.Body.SupportAnthropicMessage,
+		SupportOpenAIDecision:       req.Body.SupportOpenAIDecision,
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[EndpointHandler] Update endpoint failed", zap.Error(err))

@@ -7,6 +7,7 @@ const (
 	ProxyAPIOpenAIChat ProxyAPI = iota
 	ProxyAPIOpenAIResponse
 	ProxyAPIAnthropicMessage
+	ProxyAPIOpenAIDecision
 )
 
 // CompatRoute 表示 endpoint 能力匹配后的实际上游调用路线。

@@ -91,6 +91,19 @@ func (u responseTokenUsage) reportable() int64 {
 	return u.rsp.Usage.InputOutputTokens()
 }
 
+type decisionTokenUsage struct{ rsp *dto.OpenAIDecisionRsp }
+
+func (u decisionTokenUsage) apply(task *dto.ModelCallAuditTask) {
+	task.SetTokensFromDecisionUsage(u.rsp)
+}
+
+func (u decisionTokenUsage) reportable() int64 {
+	if u.rsp == nil || u.rsp.Usage == nil {
+		return 0
+	}
+	return u.rsp.Usage.InputOutputTokens()
+}
+
 // callOutcome 描述一次模型调用收尾所需的全部信息——审计任务组装、token 上报、
 // 上游状态/错误归一化的统一入参。
 //
