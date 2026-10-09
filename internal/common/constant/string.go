@@ -145,6 +145,8 @@ const (
 	FieldModelUpstreamModel                  = "upstream_model"
 	FieldModelEndpointID                     = "endpoint_id"
 	FieldModelEnabled                        = "enabled"
+	FieldModelPriority                       = "priority"
+	FieldModelWeight                         = "weight"
 	FieldModelContextLength                  = "context_length"
 	FieldModelMaxOutputTokens                = "max_output_tokens"
 	FieldModelCapabilities                   = "capabilities"

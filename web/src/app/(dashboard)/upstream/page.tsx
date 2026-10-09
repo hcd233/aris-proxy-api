@@ -405,6 +405,8 @@ export default function UpstreamPage() {
       maxOutputTokens: number;
       capabilities?: string[];
       pricing?: PricingDTO;
+      priority?: number;
+      weight?: number;
     },
     ep: UpstreamEndpointItem,
   ) => {
@@ -422,6 +424,8 @@ export default function UpstreamPage() {
       capabilities: (model.capabilities?.length
         ? [...model.capabilities]
         : ["text"]) as ModelCapability[],
+      priority: model.priority ?? 0,
+      weight: model.weight ?? 1,
     });
     setModelDialogOpen(true);
   };
@@ -453,6 +457,8 @@ export default function UpstreamPage() {
           contextLength: modelForm.contextLength,
           maxOutputTokens: modelForm.maxOutputTokens,
           capabilities,
+          priority: modelForm.priority,
+          weight: modelForm.weight,
         });
         if (showSyncHistory && syncHistory) {
           toast.success(
@@ -470,6 +476,8 @@ export default function UpstreamPage() {
           contextLength: modelForm.contextLength,
           maxOutputTokens: modelForm.maxOutputTokens,
           capabilities,
+          priority: modelForm.priority,
+          weight: modelForm.weight,
         });
         toast.success(t("models.created_success"));
       }
@@ -574,6 +582,8 @@ export default function UpstreamPage() {
       contextLength: m.contextLength || DEFAULT_CONTEXT_LENGTH,
       maxOutputTokens: m.maxOutputTokens || DEFAULT_MAX_OUTPUT,
       capabilities: (m.capabilities?.length ? [...m.capabilities] : ["text"]) as ModelCapability[],
+      priority: m.priority ?? 0,
+      weight: m.weight ?? 1,
     });
     setModelDialogOpen(true);
   };

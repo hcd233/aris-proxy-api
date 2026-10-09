@@ -42,6 +42,8 @@ type ListModelView struct {
 	ModelID         string
 	UpstreamModel   string // demo 权限下已脱敏
 	Enabled         bool
+	Priority        int
+	Weight          int
 	ContextLength   int
 	MaxOutputTokens int
 	Capabilities    []enum.InputModality

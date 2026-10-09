@@ -62,6 +62,9 @@ func (h *createModelHandler) Handle(ctx context.Context, cmd port.CreateModelCom
 		m.SetModelID(*cmd.ModelID)
 	}
 	m.UpdatePricing(cmd.Pricing)
+	if err := m.SetScheduling(cmd.Priority, cmd.Weight); err != nil {
+		return nil, err
+	}
 
 	id, err := h.modelRepo.Create(ctx, m, ep.UserID())
 	if err != nil {

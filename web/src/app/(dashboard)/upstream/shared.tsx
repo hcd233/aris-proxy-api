@@ -386,6 +386,10 @@ export interface ModelForm {
   contextLength: number;
   maxOutputTokens: number;
   capabilities: ModelCapability[];
+  /** 调度优先级（数字小=优先级高） */
+  priority: number;
+  /** 同优先级加权随机权重 */
+  weight: number;
 }
 
 export const emptyEndpointForm: EndpointForm = {
@@ -405,4 +409,6 @@ export const emptyModelForm: ModelForm = {
   contextLength: DEFAULT_CONTEXT_LENGTH,
   maxOutputTokens: DEFAULT_MAX_OUTPUT,
   capabilities: ["text"],
+  priority: 0,
+  weight: 1,
 };

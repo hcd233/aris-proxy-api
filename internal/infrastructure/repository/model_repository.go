@@ -58,6 +58,9 @@ func toModelAggregate(m *dbmodel.Model) (*aggregate.Model, error) {
 	model.SetUserID(m.UserID)
 	model.SetModelID(m.ModelID)
 	model.UpdatePricing(pricingFromDB(m.ID, m.PricingRules, m.PricingCurrency))
+	if serr := model.SetScheduling(m.Priority, m.Weight); serr != nil {
+		return nil, serr
+	}
 	model.SetTimestamps(m.CreatedAt, m.UpdatedAt)
 	return model, nil
 }
@@ -73,6 +76,8 @@ func toModelDBModel(m *aggregate.Model) *dbmodel.Model {
 		ContextLength:   m.ContextLength(),
 		MaxOutputTokens: m.MaxOutputTokens(),
 		Capabilities:    m.Capabilities(),
+		Priority:        m.Priority(),
+		Weight:          m.Weight(),
 		PricingRules:    pricingToDB(m.Pricing()),
 		PricingCurrency: string(m.Pricing().Currency()),
 	}
@@ -174,6 +179,8 @@ func updateModelTx(tx *gorm.DB, m *aggregate.Model, expectedModelID string) (int
 		constant.FieldModelUpstreamModel:   m.UpstreamModel(),
 		constant.FieldModelEndpointID:      m.EndpointID(),
 		constant.FieldModelEnabled:         m.Enabled(),
+		constant.FieldModelPriority:        m.Priority(),
+		constant.FieldModelWeight:          m.Weight(),
 		constant.FieldModelContextLength:   m.ContextLength(),
 		constant.FieldModelMaxOutputTokens: m.MaxOutputTokens(),
 		constant.FieldModelCapabilities:    string(capJSON),

@@ -116,6 +116,8 @@ func toUpstreamModelItem(v *upstreamport.UpstreamModelView) *dto.UpstreamModelIt
 		ModelID:         v.ModelID,
 		UpstreamModel:   v.UpstreamModel,
 		Enabled:         v.Enabled,
+		Priority:        v.Priority,
+		Weight:          v.Weight,
 		ContextLength:   v.ContextLength,
 		MaxOutputTokens: v.MaxOutputTokens,
 		Capabilities:    v.Capabilities,

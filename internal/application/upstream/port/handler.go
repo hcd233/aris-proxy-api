@@ -40,6 +40,8 @@ type UpstreamModelView struct {
 	ModelID         string
 	UpstreamModel   string
 	Enabled         bool
+	Priority        int
+	Weight          int
 	ContextLength   int
 	MaxOutputTokens int
 	Capabilities    []enum.InputModality

@@ -23,6 +23,8 @@ type CreateModelReqBody struct {
 	MaxOutputTokens int                  `json:"maxOutputTokens,omitempty" minimum:"0" default:"64000" doc:"最大输出长度（tokens）"`
 	Capabilities    []enum.InputModality `json:"capabilities,omitempty" doc:"模型能力（输入模态集合；合法值 text/image/pdf/video/audio；必须包含 text；缺省为 [text]）"`
 	Pricing         *PricingDTO          `json:"pricing,omitempty" doc:"定价（缺省=未计价）"`
+	Priority        int                  `json:"priority,omitempty" minimum:"-100" maximum:"100" doc:"调度优先级（数字小=优先级高，缺省 0）"`
+	Weight          int                  `json:"weight,omitempty" minimum:"0" maximum:"1000" doc:"同优先级加权随机权重（缺省 1，0 归 1，负数拒绝）"`
 }
 
 // UpdateModelReq 更新 Model 请求
@@ -43,6 +45,8 @@ type UpdateModelReqBody struct {
 	MaxOutputTokens *int                  `json:"maxOutputTokens,omitempty" minimum:"0" doc:"最大输出长度（tokens）"`
 	Capabilities    *[]enum.InputModality `json:"capabilities,omitempty" doc:"模型能力（输入模态集合；合法值 text/image/pdf/video/audio；必须包含 text）"`
 	Pricing         *PricingDTO           `json:"pricing,omitempty" doc:"定价（缺省=不修改；currency 与 rules 均置空=清空为未计价）"`
+	Priority        *int                  `json:"priority,omitempty" minimum:"-100" maximum:"100" doc:"调度优先级（数字小=优先级高）"`
+	Weight          *int                  `json:"weight,omitempty" minimum:"0" maximum:"1000" doc:"同优先级加权随机权重（0 归 1，负数拒绝）"`
 }
 
 // ModelUpdateRsp 更新 Model 响应
@@ -116,6 +120,8 @@ type ModelListItem struct {
 	ModelID         string                 `json:"modelId" doc:"业务模型ID"`
 	UpstreamModel   string                 `json:"upstreamModel" doc:"上游实际模型名（demo 权限下已脱敏）"`
 	Enabled         bool                   `json:"enabled" doc:"是否启用"`
+	Priority        int                    `json:"priority" doc:"调度优先级（数字小=优先级高）"`
+	Weight          int                    `json:"weight" doc:"同优先级加权随机权重"`
 	ContextLength   int                    `json:"contextLength" doc:"上下文窗口长度（tokens）"`
 	MaxOutputTokens int                    `json:"maxOutputTokens" doc:"最大输出长度（tokens）"`
 	Capabilities    []enum.InputModality   `json:"capabilities" doc:"模型能力（输入模态集合）"`

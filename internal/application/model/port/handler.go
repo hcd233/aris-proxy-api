@@ -23,6 +23,8 @@ type CreateModelCommand struct {
 	MaxOutputTokens int
 	Capabilities    []enum.InputModality
 	Pricing         vo.Pricing
+	Priority        int // 调度优先级（数字小=优先级高）
+	Weight          int // 同优先级加权随机权重（0=默认 1，负数拒绝）
 }
 
 // CreateModelResult 创建命令结果
@@ -52,6 +54,8 @@ type UpdateModelCommand struct {
 	SyncHistory     *bool      // 为 true 且 ModelID 实际变化时，同步替换归属 user 的历史数据
 	Pricing         vo.Pricing // 定价（PricingSet 为 true 时生效）
 	PricingSet      bool       // true=本次更新定价
+	Priority        *int       // 调度优先级（nil=不修改）
+	Weight          *int       // 同优先级加权随机权重（nil=不修改；0=归 1；负数拒绝）
 }
 
 // UpdateModelHandler 更新命令处理器
