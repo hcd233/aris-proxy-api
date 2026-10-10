@@ -63,6 +63,9 @@ func RegisterWebAPIRoutes(webRoot huma.API, deps APIRouterDependencies) {
 	upstreamGroup := huma.NewGroup(jwtGroup, "/upstream")
 	initUpstreamRouter(upstreamGroup, deps.UpstreamHandler, deps.Cache, deps.DemoModuleAccessor, deps.DemoAuditSubmitter)
 
+	playgroundGroup := huma.NewGroup(jwtGroup, "/playground")
+	initPlaygroundRouter(playgroundGroup, deps.PlaygroundHandler, deps.DB, deps.Cache)
+
 	auditGroup := huma.NewGroup(jwtGroup, "/audit")
 	initAuditRouter(auditGroup, deps.AuditHandler, deps.CronHandler, deps.DemoModuleAccessor, deps.DemoAuditSubmitter)
 

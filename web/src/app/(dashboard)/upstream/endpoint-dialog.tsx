@@ -155,6 +155,17 @@ export function EndpointDialog({
                 />
                 {t("endpoints.anthropic_messages_label")}
               </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={form.supportOpenAIDecision}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, supportOpenAIDecision: e.target.checked }))
+                  }
+                  className="rounded"
+                />
+                {t("endpoints.openai_decision_label")}
+              </label>
             </div>
           </div>
         </div>

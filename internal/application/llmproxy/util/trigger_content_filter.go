@@ -330,3 +330,46 @@ func buildAnthropicContentFilterStream(model string) *port.StreamResult {
 	}
 	return presetStreamResult(events, enum.ProtocolKindAnthropic)
 }
+
+// decisionRefusalAnswer 触发词拦截时逐问代替模型给出的 refusal 答案。
+type decisionRefusalAnswer struct {
+	Type string  `json:"type"`
+	Name *string `json:"name"`
+}
+
+type decisionRefusalBody struct {
+	Model   string                  `json:"model"`
+	Answers []decisionRefusalAnswer `json:"answers"`
+	Usage   dto.OpenAIDecisionUsage `json:"usage"`
+}
+
+// BuildDecisionRefusalBody 构造触发词 deny 命中的 Decision 响应：HTTP 200，
+// 每个 question 回一条协议原生的 refusal 答案，不调用上游。
+//
+//	@param model string 响应中暴露的模型名（请求模型别名）
+//	@param questions []*dto.DecisionQuestion 请求中的问题列表
+//	@return port.Result
+func BuildDecisionRefusalBody(model string, questions []*dto.DecisionQuestion) port.Result {
+	answers := make([]decisionRefusalAnswer, 0, len(questions))
+	for _, q := range questions {
+		answer := decisionRefusalAnswer{Type: enum.DecisionAnswerTypeRefusal}
+		if q != nil {
+			answer.Name = q.Name
+		}
+		answers = append(answers, answer)
+	}
+	body := lo.Must1(sonic.Marshal(&decisionRefusalBody{
+		Model:   model,
+		Answers: answers,
+		// usage 契约要求该对象存在，且明细两维也需是零值对象而非缺省。
+		Usage: dto.OpenAIDecisionUsage{
+			InputTokensDetails: &dto.DecisionInputTokensDetails{},
+		},
+	}))
+	return &port.JSONResult{
+		StatusCode: http.StatusOK,
+		Headers:    map[string]string{constant.HTTPHeaderContentType: constant.HTTPContentTypeJSON},
+		Body:       body,
+		Protocol:   enum.ProtocolKindOpenAI,
+	}
+}

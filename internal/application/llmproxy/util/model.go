@@ -86,6 +86,13 @@ func normalizeResponseInputItemForUpstream(item *dto.ResponseInputItem) *dto.Res
 	return &copied
 }
 
+// MarshalOpenAIDecisionBodyForModel 使用上游模型名序列化 Decision API 请求体，且不修改原请求。
+func MarshalOpenAIDecisionBodyForModel(req *dto.OpenAICreateDecisionReq, modelName string) []byte {
+	body := *req
+	body.Model = modelName
+	return lo.Must1(MarshalUpstreamBody(&body))
+}
+
 // MarshalAnthropicMessageBodyForModel 使用上游模型名序列化 Anthropic Message 请求体，且不修改原请求。
 func MarshalAnthropicMessageBodyForModel(req *dto.AnthropicCreateMessageReq, modelName string) []byte {
 	body := *req

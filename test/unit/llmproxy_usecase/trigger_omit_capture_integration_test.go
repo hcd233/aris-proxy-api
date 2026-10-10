@@ -72,7 +72,7 @@ func TestRealService_OmitAndCapture_LastMessage(t *testing.T) {
 	proxy := &mockOpenAIProxy{}
 	submitter := &captureTaskSubmitter{}
 	resolver := &mockResolver{resolveEndpoint: buildTestEndpoint(), resolveModel: buildTestModel()}
-	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, submitter, newRealTriggerService(t), nil)
+	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, submitter, newRealTriggerService(t), nil, nil)
 
 	req := &dto.OpenAIChatCompletionRequest{Body: &dto.OpenAIChatCompletionReq{
 		Model: "test-alias",
@@ -106,7 +106,7 @@ func TestRealService_OmitAndCapture_SameMessage(t *testing.T) {
 	proxy := &mockOpenAIProxy{}
 	submitter := &captureTaskSubmitter{}
 	resolver := &mockResolver{resolveEndpoint: buildTestEndpoint(), resolveModel: buildTestModel()}
-	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, submitter, newRealTriggerService(t), nil)
+	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, submitter, newRealTriggerService(t), nil, nil)
 
 	req := &dto.OpenAIChatCompletionRequest{Body: &dto.OpenAIChatCompletionReq{
 		Model: "test-alias",
@@ -141,7 +141,7 @@ func TestRealService_OmitAndCapture_CaptureInHistory(t *testing.T) {
 	proxy := &mockOpenAIProxy{}
 	submitter := &captureTaskSubmitter{}
 	resolver := &mockResolver{resolveEndpoint: buildTestEndpoint(), resolveModel: buildTestModel()}
-	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, submitter, newRealTriggerService(t), nil)
+	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, submitter, newRealTriggerService(t), nil, nil)
 
 	req := &dto.OpenAIChatCompletionRequest{Body: &dto.OpenAIChatCompletionReq{
 		Model: "test-alias",
@@ -184,7 +184,7 @@ func TestRealService_OmitAndCapture_Anthropic(t *testing.T) {
 	proxy := &mockAnthropicProxyForAnthropic{}
 	submitter := &captureTaskSubmitter{}
 	resolver := &mockResolver{resolveEndpoint: buildAnthropicTestEndpoint(), resolveModel: buildTestModel()}
-	uc := usecase.NewAnthropicUseCase(resolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, proxy, &mockOpenAIProxy{}, submitter, newRealTriggerService(t), nil)
+	uc := usecase.NewAnthropicUseCase(resolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, proxy, &mockOpenAIProxy{}, submitter, newRealTriggerService(t), nil, nil)
 
 	req := &dto.AnthropicCreateMessageRequest{Body: &dto.AnthropicCreateMessageReq{
 		Model: "test-alias",
@@ -222,7 +222,7 @@ func TestRealService_OmitAndCapture_Response(t *testing.T) {
 	proxy := &mockOpenAIProxy{}
 	submitter := &captureTaskSubmitter{}
 	resolver := &mockResolver{resolveEndpoint: buildCompatEndpoint("test-endpoint", true, true, false), resolveModel: buildTestModel()}
-	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, submitter, newRealTriggerService(t), nil)
+	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, submitter, newRealTriggerService(t), nil, nil)
 
 	req := &dto.OpenAICreateResponseRequest{Body: &dto.OpenAICreateResponseReq{
 		Model: lo.ToPtr("test-alias"),

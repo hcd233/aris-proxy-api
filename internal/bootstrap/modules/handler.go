@@ -53,6 +53,8 @@ var HandlerModule = fx.Module(constant.DigNameHandlerModule,
 		handler.NewCronHandler,
 		handler.NewOpenAIHandler,
 		handler.NewAnthropicHandler,
+		NewPlaygroundDependencies,
+		handler.NewPlaygroundHandler,
 		NewTriggerDependencies,
 		handler.NewTriggerHandler,
 		NewMetricsDependencies,
@@ -155,6 +157,10 @@ func NewOpenAIDependencies(useCase llmproxyport.OpenAIUseCase, sseGauge *metrics
 
 func NewAnthropicDependencies(useCase llmproxyport.AnthropicUseCase, sseGauge *metrics.SSEGauge) handler.AnthropicDependencies {
 	return handler.AnthropicDependencies{UseCase: useCase, SSEGauge: sseGauge}
+}
+
+func NewPlaygroundDependencies(useCase llmproxyport.OpenAIUseCase, sseGauge *metrics.SSEGauge) handler.PlaygroundDependencies {
+	return handler.PlaygroundDependencies{UseCase: useCase, SSEGauge: sseGauge}
 }
 
 func NewClientDependencies(list llmproxyport.ListClientModelsHandler) handler.ClientDependencies {

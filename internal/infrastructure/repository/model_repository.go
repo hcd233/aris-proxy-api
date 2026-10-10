@@ -58,6 +58,9 @@ func toModelAggregate(m *dbmodel.Model) (*aggregate.Model, error) {
 	model.SetUserID(m.UserID)
 	model.SetModelID(m.ModelID)
 	model.UpdatePricing(pricingFromDB(m.ID, m.PricingRules, m.PricingCurrency))
+	if serr := model.SetScheduling(m.Priority, m.Weight); serr != nil {
+		return nil, serr
+	}
 	model.SetTimestamps(m.CreatedAt, m.UpdatedAt)
 	return model, nil
 }
@@ -73,6 +76,8 @@ func toModelDBModel(m *aggregate.Model) *dbmodel.Model {
 		ContextLength:   m.ContextLength(),
 		MaxOutputTokens: m.MaxOutputTokens(),
 		Capabilities:    m.Capabilities(),
+		Priority:        m.Priority(),
+		Weight:          m.Weight(),
 		PricingRules:    pricingToDB(m.Pricing()),
 		PricingCurrency: string(m.Pricing().Currency()),
 	}
@@ -89,12 +94,13 @@ func pricingFromDB(modelID uint, rules []dbmodel.ModelPricingRule, currency stri
 			TimeWindows: lo.Map(r.TimeWindows, func(w dbmodel.ModelTimeWindow, _ int) vo.TimeWindow {
 				return vo.TimeWindow{Days: w.Days, Start: w.Start, End: w.End, Timezone: w.Timezone}
 			}),
-			ContextMin:       r.ContextMin,
-			ContextMax:       r.ContextMax,
-			InputMicro:       r.InputPriceMicro,
-			OutputMicro:      r.OutputPriceMicro,
-			CacheCreateMicro: r.CacheCreationPriceMicro,
-			CacheReadMicro:   r.CacheReadPriceMicro,
+			ContextMin:         r.ContextMin,
+			ContextMax:         r.ContextMax,
+			InputMicro:         r.InputPriceMicro,
+			OutputMicro:        r.OutputPriceMicro,
+			CacheCreateMicro:   r.CacheCreationPriceMicro,
+			CacheCreate1hMicro: r.CacheCreation1hPriceMicro,
+			CacheReadMicro:     r.CacheReadPriceMicro,
 		}
 	})
 	p, err := vo.NewPricing(enum.Currency(currency), vr)
@@ -113,12 +119,13 @@ func pricingToDB(p vo.Pricing) []dbmodel.ModelPricingRule {
 			TimeWindows: lo.Map(r.TimeWindows, func(w vo.TimeWindow, _ int) dbmodel.ModelTimeWindow {
 				return dbmodel.ModelTimeWindow{Days: w.Days, Start: w.Start, End: w.End, Timezone: w.Timezone}
 			}),
-			ContextMin:              r.ContextMin,
-			ContextMax:              r.ContextMax,
-			InputPriceMicro:         r.InputMicro,
-			OutputPriceMicro:        r.OutputMicro,
-			CacheCreationPriceMicro: r.CacheCreateMicro,
-			CacheReadPriceMicro:     r.CacheReadMicro,
+			ContextMin:                r.ContextMin,
+			ContextMax:                r.ContextMax,
+			InputPriceMicro:           r.InputMicro,
+			OutputPriceMicro:          r.OutputMicro,
+			CacheCreationPriceMicro:   r.CacheCreateMicro,
+			CacheCreation1hPriceMicro: r.CacheCreate1hMicro,
+			CacheReadPriceMicro:       r.CacheReadMicro,
 		}
 	})
 }
@@ -172,6 +179,8 @@ func updateModelTx(tx *gorm.DB, m *aggregate.Model, expectedModelID string) (int
 		constant.FieldModelUpstreamModel:   m.UpstreamModel(),
 		constant.FieldModelEndpointID:      m.EndpointID(),
 		constant.FieldModelEnabled:         m.Enabled(),
+		constant.FieldModelPriority:        m.Priority(),
+		constant.FieldModelWeight:          m.Weight(),
 		constant.FieldModelContextLength:   m.ContextLength(),
 		constant.FieldModelMaxOutputTokens: m.MaxOutputTokens(),
 		constant.FieldModelCapabilities:    string(capJSON),
@@ -283,6 +292,9 @@ func (r *modelRepository) PaginateWithFilter(ctx context.Context, param model.Co
 	// 未知能力值视为不过滤，避免前端拼错参数导致整页空白
 	if lo.Contains(enum.InputModalities, filter.Capability) {
 		db = db.Where(constant.WhereCapabilitiesLike, `%"`+filter.Capability+`"%`)
+	}
+	if filter.MissingOnly {
+		db = db.Where(constant.WhereModelConfigMissing)
 	}
 	// 白名单外回退默认列但保留调用方排序方向，不报错（避免前端拼错导致整页 500）
 	if !lo.Contains(constant.ModelListSortFields, param.SortField) {

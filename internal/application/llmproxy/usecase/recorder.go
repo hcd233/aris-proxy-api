@@ -91,6 +91,19 @@ func (u responseTokenUsage) reportable() int64 {
 	return u.rsp.Usage.InputOutputTokens()
 }
 
+type decisionTokenUsage struct{ rsp *dto.OpenAIDecisionRsp }
+
+func (u decisionTokenUsage) apply(task *dto.ModelCallAuditTask) {
+	task.SetTokensFromDecisionUsage(u.rsp)
+}
+
+func (u decisionTokenUsage) reportable() int64 {
+	if u.rsp == nil || u.rsp.Usage == nil {
+		return 0
+	}
+	return u.rsp.Usage.InputOutputTokens()
+}
+
 // callOutcome 描述一次模型调用收尾所需的全部信息——审计任务组装、token 上报、
 // 上游状态/错误归一化的统一入参。
 //
@@ -174,10 +187,14 @@ func PriceModelCall(task *dto.ModelCallAuditTask, pricing vo.Pricing) {
 	}
 	promptTokens := int64(task.InputTokens) + int64(task.CacheCreationInputTokens) + int64(task.CacheReadInputTokens)
 	rule := pricing.Match(at, promptTokens)
+	// 1h 是总量的子集；上游数据不一致（1h > 总量）时钳制，避免 5m 档出现负 token 抵扣费用
+	cacheCreate1h := min(int64(task.CacheCreation1hInputTokens), int64(task.CacheCreationInputTokens))
+	cacheCreate5m := int64(task.CacheCreationInputTokens) - cacheCreate1h
 	breakdown := rule.CostBreakdown(
 		int64(task.InputTokens),
 		int64(task.OutputTokens),
-		int64(task.CacheCreationInputTokens),
+		cacheCreate5m,
+		cacheCreate1h,
 		int64(task.CacheReadInputTokens),
 	)
 	total := breakdown.Total()

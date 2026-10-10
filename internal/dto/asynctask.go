@@ -34,26 +34,27 @@ type MessageStoreTask struct {
 //	@author centonhuang
 //	@update 2026-04-29 10:00:00
 type ModelCallAuditTask struct {
-	Ctx                      context.Context
-	ModelID                  string
-	UpstreamProtocol         string
-	APIProtocol              string
-	Endpoint                 string
-	InputTokens              int
-	OutputTokens             int
-	CacheCreationInputTokens int
-	CacheReadInputTokens     int
-	FirstTokenLatencyMs      int64
-	StreamDurationMs         int64
-	UpstreamStatusCode       int
-	ErrorMessage             string
-	CostMicro                *int64
-	InputCostMicro           *int64
-	OutputCostMicro          *int64
-	CacheCreateCostMicro     *int64
-	CacheReadCostMicro       *int64
-	PricingCurrency          string
-	CreatedAt                time.Time
+	Ctx                        context.Context
+	ModelID                    string
+	UpstreamProtocol           string
+	APIProtocol                string
+	Endpoint                   string
+	InputTokens                int
+	OutputTokens               int
+	CacheCreationInputTokens   int
+	CacheCreation1hInputTokens int
+	CacheReadInputTokens       int
+	FirstTokenLatencyMs        int64
+	StreamDurationMs           int64
+	UpstreamStatusCode         int
+	ErrorMessage               string
+	CostMicro                  *int64
+	InputCostMicro             *int64
+	OutputCostMicro            *int64
+	CacheCreateCostMicro       *int64
+	CacheReadCostMicro         *int64
+	PricingCurrency            string
+	CreatedAt                  time.Time
 }
 
 // SetTokensFromOpenAIUsage 从 OpenAI Usage 设置 token 计数。
@@ -97,7 +98,18 @@ func (t *ModelCallAuditTask) SetTokensFromAnthropicUsage(msg *AnthropicMessage) 
 	}
 	t.InputTokens = msg.Usage.InputTokens
 	t.OutputTokens = msg.Usage.OutputTokens
-	t.CacheCreationInputTokens = lo.FromPtr(msg.Usage.CacheCreationInputTokens)
+	var detail5m, detail1h int
+	if cc := msg.Usage.CacheCreation; cc != nil {
+		detail5m, detail1h = lo.FromPtr(cc.Ephemeral5mInputTokens), lo.FromPtr(cc.Ephemeral1hInputTokens)
+	}
+	if detail5m+detail1h > 0 {
+		// 新版 cache_creation 明细：总量 = 5m + 1h（明细优先于总量字段）
+		t.CacheCreation1hInputTokens = detail1h
+		t.CacheCreationInputTokens = detail5m + detail1h
+	} else {
+		// 旧版仅总量字段，或兼容上游回了空/全零明细对象：全部归 5m 档（1h=0），不把总量清零
+		t.CacheCreationInputTokens = lo.FromPtr(msg.Usage.CacheCreationInputTokens)
+	}
 	switch {
 	case msg.Usage.PromptCacheHitTokens != nil && *msg.Usage.PromptCacheHitTokens > 0:
 		t.CacheReadInputTokens = *msg.Usage.PromptCacheHitTokens
@@ -130,6 +142,27 @@ func (t *ModelCallAuditTask) SetTokensFromResponseUsage(rsp *OpenAICreateRespons
 		t.CacheReadInputTokens = rsp.Usage.InputTokensDetails.CachedTokens
 	}
 	t.InputTokens = max(t.InputTokens-t.CacheReadInputTokens, 0)
+}
+
+// SetTokensFromDecisionUsage 从 Decision API 响应设置 token 计数。
+//
+// input_tokens_details 下的 cached_tokens / cache_write_tokens 按「input_tokens 的子集」口径处理
+// （与字段自身归属一致），故 InputTokens 落净输入（input − cached − cache_write），
+// 保证「净输入 + 缓存创建 + 缓存读取 = 上游输入总量」的四维互斥不变量。
+//
+//	@receiver t *ModelCallAuditTask
+//	@param rsp *OpenAIDecisionRsp
+func (t *ModelCallAuditTask) SetTokensFromDecisionUsage(rsp *OpenAIDecisionRsp) {
+	if rsp == nil || rsp.Usage == nil {
+		return
+	}
+	t.InputTokens = rsp.Usage.InputTokens
+	t.OutputTokens = rsp.Usage.OutputTokens
+	if details := rsp.Usage.InputTokensDetails; details != nil {
+		t.CacheReadInputTokens = details.CachedTokens
+		t.CacheCreationInputTokens = details.CacheWriteTokens
+	}
+	t.InputTokens = max(t.InputTokens-t.CacheReadInputTokens-t.CacheCreationInputTokens, 0)
 }
 
 // SetErrorFromResponseStatus 将 Response API 终态中的 in-band 失败/未完成原因

@@ -26,14 +26,16 @@ type TimeWindow struct {
 
 // PricingRule 定价规则。四价单位：微单位/1M tokens。
 // 区间命中：ContextMin ≤ promptTokens < ContextMax（ContextMax==0 表无上限）。
+// CacheCreateMicro 为 5m 档缓存创建价；CacheCreate1hMicro 为 1h 档价，0=回落 5m 档。
 type PricingRule struct {
-	TimeWindows      []TimeWindow
-	ContextMin       int64
-	ContextMax       int64
-	InputMicro       int64
-	OutputMicro      int64
-	CacheCreateMicro int64
-	CacheReadMicro   int64
+	TimeWindows        []TimeWindow
+	ContextMin         int64
+	ContextMax         int64
+	InputMicro         int64
+	OutputMicro        int64
+	CacheCreateMicro   int64
+	CacheCreate1hMicro int64
+	CacheReadMicro     int64
 }
 
 // Pricing 模型定价：币种 + 规则表（顺序=匹配优先级）。
@@ -203,20 +205,27 @@ func (b CostBreakdown) Total() int64 {
 }
 
 // CostBreakdown 按本规则单价计算四维费用拆分（微单位）；整段跳档由调用方 Match 选档。
+// 缓存创建按 5m/1h 分档计价：CacheCreate1hMicro==0 时 1h 回落 5m 价；
+// CacheCreateMicro 保持合计语义（5m 费用 + 1h 费用）。
 //
 //	@receiver r PricingRule
 //	@param input int64 输入 token
 //	@param output int64 输出 token
-//	@param cacheCreate int64 缓存创建 token
+//	@param cacheCreate5m int64 5m 缓存创建 token
+//	@param cacheCreate1h int64 1h 缓存创建 token
 //	@param cacheRead int64 缓存读取 token
 //	@return CostBreakdown
 //	@author centonhuang
-//	@update 2026-10-08 10:00:00
-func (r PricingRule) CostBreakdown(input, output, cacheCreate, cacheRead int64) CostBreakdown {
+//	@update 2026-10-09 10:00:00
+func (r PricingRule) CostBreakdown(input, output, cacheCreate5m, cacheCreate1h, cacheRead int64) CostBreakdown {
+	price1h := r.CacheCreate1hMicro
+	if price1h == 0 {
+		price1h = r.CacheCreateMicro
+	}
 	return CostBreakdown{
 		InputMicro:       roundCost(r.InputMicro, input),
 		OutputMicro:      roundCost(r.OutputMicro, output),
-		CacheCreateMicro: roundCost(r.CacheCreateMicro, cacheCreate),
+		CacheCreateMicro: roundCost(r.CacheCreateMicro, cacheCreate5m) + roundCost(price1h, cacheCreate1h),
 		CacheReadMicro:   roundCost(r.CacheReadMicro, cacheRead),
 	}
 }

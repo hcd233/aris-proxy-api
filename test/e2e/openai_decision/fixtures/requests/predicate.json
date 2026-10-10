@@ -1,0 +1,11 @@
+{
+  "model": "REPLACE_WITH_DECISION_MODEL",
+  "input": "The package arrived with a broken screen.",
+  "questions": [
+    {
+      "type": "predicate",
+      "name": "damaged",
+      "instructions": "Does the customer report a damaged item?"
+    }
+  ]
+}

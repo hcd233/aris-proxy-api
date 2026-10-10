@@ -58,6 +58,69 @@ func extractOpenAIResponseText(req *dto.OpenAICreateResponseRequest) string {
 	return buf.String()
 }
 
+// extractDecisionText 提取 Decision API 请求中的全部用户可控文本。
+//
+// 覆盖：input（字符串或消息 content 的文本/parts）、questions[].instructions、
+// choices[].description/value、levels[].label/description。
+func extractDecisionText(req *dto.OpenAICreateDecisionRequest) string {
+	var buf strings.Builder
+
+	buf.WriteString(extractDecisionInputText(req.Body.Input))
+	for _, q := range req.Body.Questions {
+		if q == nil {
+			continue
+		}
+		buf.WriteString(extractDecisionQuestionText(q))
+	}
+
+	return buf.String()
+}
+
+// extractDecisionInputText 提取 Decision input（字符串或消息 content）中的文本。
+func extractDecisionInputText(input dto.DecisionInput) string {
+	var buf strings.Builder
+
+	if input.Text != nil {
+		buf.WriteString(*input.Text)
+	}
+	for _, msg := range input.Messages {
+		if msg == nil {
+			continue
+		}
+		buf.WriteString(msg.Content.Text)
+		for _, part := range msg.Content.Parts {
+			if part != nil && part.Text != nil {
+				buf.WriteString(*part.Text)
+			}
+		}
+	}
+
+	return buf.String()
+}
+
+// extractDecisionQuestionText 提取单个 question 的指令、选项与等级文本。
+func extractDecisionQuestionText(q *dto.DecisionQuestion) string {
+	var buf strings.Builder
+
+	buf.WriteString(q.Instructions)
+	for _, choice := range q.Choices {
+		if choice == nil {
+			continue
+		}
+		buf.WriteString(lo.FromPtr(choice.Description))
+		buf.WriteString(lo.FromPtr(choice.Value.StringValue))
+	}
+	for _, level := range q.Levels {
+		if level == nil {
+			continue
+		}
+		buf.WriteString(level.Label)
+		buf.WriteString(lo.FromPtr(level.Description))
+	}
+
+	return buf.String()
+}
+
 func extractResponseInputItemText(buf *strings.Builder, item *dto.ResponseInputItem) {
 	if item == nil {
 		return
@@ -149,6 +212,13 @@ func (u *openAIUseCase) checkResponseContent(req *dto.OpenAICreateResponseReques
 	}
 	content := extractOpenAIResponseText(req)
 	return u.triggerChecker.Check(content)
+}
+
+func (u *openAIUseCase) checkDecisionContent(req *dto.OpenAICreateDecisionRequest) []uint {
+	if u.triggerChecker == nil {
+		return nil
+	}
+	return u.triggerChecker.Check(extractDecisionText(req))
 }
 
 func (u *anthropicUseCase) checkContent(req *dto.AnthropicCreateMessageRequest) []uint {

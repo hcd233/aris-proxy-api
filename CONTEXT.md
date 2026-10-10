@@ -35,7 +35,7 @@ _Avoid_: jwt token, session token
 ## LLM Proxy（LLM 代理）
 
 **Endpoint（上游端点）**:
-一个上游 LLM 服务连接配置，包含名称、OpenAI 和 Anthropic 两个协议的 Base URL、共享 API Key，以及各接口（OpenAI Chat Completion / OpenAI Response / Anthropic Message）的支持标记。归属某个 User（多租户隔离），通过 `EndpointResolver` 按模型别名在当前用户的配置范围内解析出目标端点。管理后台对所有 user 级用户开放自管；admin 可查看全量并按用户名过滤、代建。
+一个上游 LLM 服务连接配置，包含名称、OpenAI 和 Anthropic 两个协议的 Base URL、共享 API Key，以及各接口（OpenAI Chat Completion / OpenAI Response / Anthropic Message / OpenAI Decision）的支持标记。归属某个 User（多租户隔离），通过 `EndpointResolver` 按模型别名在当前用户的配置范围内解析出目标端点。管理后台对所有 user 级用户开放自管；admin 可查看全量并按用户名过滤、代建。
 _Avoid_: upstream, provider, backend
 
 **Model（模型别名）**:
@@ -52,12 +52,28 @@ _Avoid_: model name, exposed name
 _Avoid_: connection info, auth config
 
 **ProtocolType（协议类型）**:
-网关支持的三种上游 LLM 协议：`openai-chat-completion`（OpenAI Chat Completions）、`openai-response`（OpenAI Response API）、`anthropic-message`（Anthropic Messages）。决定请求的序列化/反序列化方式和传输通道。网关支持跨协议转换（如 OpenAI 接口调用 Anthropic 上游）。
+网关支持的四种上游 LLM 协议：`openai-chat-completion`（OpenAI Chat Completions）、`openai-response`（OpenAI Response API）、`anthropic-message`（Anthropic Messages）、`openai-decision`（OpenAI Decision API）。决定请求的序列化/反序列化方式和传输通道。网关支持跨协议转换（如 OpenAI 接口调用 Anthropic 上游），但 **Decision 仅支持原生转发**：predicate/choice/score 在 Chat/Anthropic 协议中没有等价语义。
 _Avoid_: provider type, api type
 
+**DecisionAPI（决策接口）**:
+OpenAI `POST /v1/decisions`。对同一 `input`（文本，或仅含文本+图片的 user 消息数组，最多 128 张图）批量回答分类/打分问题，按提问顺序返回 `answers`。问题三型：`predicate`（估算陈述为真的概率）/ `choice`（从 2~255 个选项中选择，选项值可为 string 或 bool，同文本的不同类型视为不同选项）/ `score`（按有序等级打分）；答案四态：`predicate` / `choice` / `score` / `refusal`（模型拒答，触发词 deny 拦截时也用它代答）。接口无流式形态，网关走端点声明的 `supportOpenAIDecision` 开关做原生转发，并沿用触发词 deny/omit 语义（capture 不适用）。
+_Avoid_: decision completion, classify api
+
 **EndpointResolver（端点解析器）**:
-按模型别名解析出目标 Endpoint 和 Model 的领域服务。输入 `alias`，查 `model` 表收集所有关联的 `endpoint_id`，随机选一个，再查 `endpoint` 表组装 `UpstreamCreds`。调用方根据请求协议取对应 Base URL 并检查接口支持标记。
+按模型别名解析出候选 Endpoint 和 Model 的领域服务。输入 `alias`，查 `model` 表收集所有关联的 `endpoint_id`，过滤 enabled 与协议能力后按 **EndpointScheduling** 排序返回有序候选（`ResolveCandidates`）；`ResolveCandidatesWithAffinity` 额外按 **EndpointAffinity** 把亲和命中的候选提到最前。转发链路（usecase）按候选顺序尝试，失败且可切换时跨端点 fallback。调用方根据请求协议取对应 Base URL 并检查接口支持标记。
 _Avoid_: model router, endpoint lookup
+
+**EndpointScheduling（端点调度）**:
+Model 记录（alias↔endpoint 关联行）上的调度参数：`priority`（int，数字小=优先级高，同值归同档）与 `weight`（int，>=1，同档内权重）。候选排序 = priority 升序分档 + 档内 A-Res 加权洗牌（key = rand^(1/weight)，key 大者在前）。创建时 weight=0 归 1、负数拒绝（`SetScheduling`）。
+_Avoid_: endpoint priority, load balance
+
+**EndpointFallback（跨端点 fallback）**:
+转发失败（流建立前）且 `CanSwitchEndpoint`（连接错误/5xx/429/熔断打开/信号量满载）时切换到下一个候选端点重试；每个端点内部仍走 transport 层同端点指数退避重试（`SendUpstreamWithRetry`）与 Guard 熔断租约。候选耗尽、不可切换或请求已取消（客户端断开/服务 drain，`ctx.Err() != nil`）时返回最后一次错误；流一旦交付给 handler 不再切换。切换日志含 from→to 端点名。审计只记最终结果：尝试期内的失败审计经 ctx 暂存（`CtxKeyFailureAuditDeferral`），仅终局失败提交，被切换掉的中间失败丢弃。Decision 与 Chat/Response/Messages 同走 fallback。
+_Avoid_: endpoint retry, failover retry
+
+**EndpointAffinity（端点亲和）**:
+组合亲和键：会话头（`x-opencode-session`/`X-Session-Id`）优先，回退 `alias + NUL + 首条 user 文本` 指纹（同会话多轮稳定；纯 curl 单轮无粘滞）。两种来源都取 sha256 前 8 字节十六进制摘要（会话头由客户端控制，不原样拼进 Redis key）。实现在 `infrastructure/cache`，domain 接口 `EndpointAffinity`（Get/Put）。Redis 映射 `affinity:{userID}:{alias}:{key}` → endpointID，TTL 5 分钟；转发成功后刷新，fallback 换端点成功后改写。解析时亲和命中候选置顶（不在候选则忽略）；读写失败 fail-open。
+_Avoid_: sticky routing, session affinity
 
 **Cross-Protocol Conversion（跨协议转换）**:
 网关的核心能力：客户端使用 OpenAI 协议，网关可将其转换为 Anthropic 协议再转发，反之亦然。覆盖 7 条转发路径（OpenAI Chat native、Chat→Anthropic、Response native、Response→Chat、Response→Anthropic、Anthropic Message native、Message→Chat）。
@@ -72,7 +88,7 @@ _Avoid_: model features, model flags
 _Avoid_: price config, billing config, rate card
 
 **PricingRule（定价规则）**:
-一条「可选时段条件 + 可选上下文区间条件 + 四类单价（输入/输出/缓存创建/缓存读取）」的计价规则，多条组成规则表，**数组顺序 = 匹配优先级（第一命中）**，且任意 prompt 有价可依：要么恰含一条无条件默认规则，要么无时段规则的上下文区间从 0 连续覆盖（末档可有界，上界=模型上下文）。计价按整段跳档：命中哪条规则，全部 token 按该规则单价计。
+一条「可选时段条件 + 可选上下文区间条件 + 四类单价（输入/输出/缓存创建/缓存读取）」的计价规则。缓存创建分 5m/1h 两档（Anthropic 双 TTL）：`cache_creation_price` 为 5m 档价兼作 1h 未配置时的回落价，`cache_creation_1h_price` 可选（0=回落 5m 档）；存量规则零迁移，多条组成规则表，**数组顺序 = 匹配优先级（第一命中）**，且任意 prompt 有价可依：要么恰含一条无条件默认规则，要么无时段规则的上下文区间从 0 连续覆盖（末档可有界，上界=模型上下文）。计价按整段跳档：命中哪条规则，全部 token 按该规则单价计。
 _Avoid_: price tier, rate rule
 
 **TimeWindow（时段窗口）**:
@@ -84,16 +100,24 @@ _Avoid_: schedule, time slot
 _Avoid_: context pricing, token bracket
 
 **TokenAccounting（Token 入账口径）**:
-审计行与计费用的四维 token 一律**互斥**：输入（净输入，不含命中缓存的量）/输出/缓存创建/缓存读取，满足「净输入 + 缓存创建 + 缓存读取 = 上游口径的输入总量」。usage 入账时按上游协议归一化：OpenAI Chat 的 `prompt_tokens` 与 Response 的 `input_tokens` 都含 `cached_tokens`（输入维 = 总量 − 命中量）；Anthropic 官方 `input_tokens` 本身不含缓存两维；DeepSeek 风格 `prompt_cache_hit_tokens` 与 `prompt_cache_miss_tokens` 成对出现时按包含关系扣减。2026-10-08 之前的存量行为未归一化的旧口径（输入维含缓存命中量）。
+审计行与计费用的四维 token 一律**互斥**：输入（净输入，不含命中缓存的量）/输出/缓存创建/缓存读取，满足「净输入 + 缓存创建 + 缓存读取 = 上游口径的输入总量」。缓存创建总量（`cache_creation_input_tokens`）另带 1h 明细列（`cache_creation_1h_input_tokens`，5m = 总量 − 1h；旧版 usage 无分档时 1h=0 全归 5m）。usage 入账时按上游协议归一化：OpenAI Chat 的 `prompt_tokens` 与 Response 的 `input_tokens` 都含 `cached_tokens`（输入维 = 总量 − 命中量）；Anthropic 官方 `input_tokens` 本身不含缓存两维；DeepSeek 风格 `prompt_cache_hit_tokens` 与 `prompt_cache_miss_tokens` 成对出现时按包含关系扣减。2026-10-08 之前的存量行为未归一化的旧口径（输入维含缓存命中量）。
 _Avoid_: token fields, usage mapping
 
 **EstimatedCost（估算费用）**:
-一次模型调用的费用估算（`model_call_audits.cost_micro`，微单位，NULL=未计价），按调用时刻与 prompt 总 token 匹配定价规则后计算：四项分别「单价 × tokens / 1e6 四舍五入」求和（token 四维互斥，见 **TokenAccounting**）。请求时计算并落库（不随改价漂移），同时快照 `pricing_currency`。统计聚合按币种分组，不做汇率换算。
+一次模型调用的费用估算（`model_call_audits.cost_micro`，微单位，NULL=未计价），按调用时刻与 prompt 总 token 匹配定价规则后计算：四项分别「单价 × tokens / 1e6 四舍五入」求和（token 四维互斥，见 **TokenAccounting**；缓存创建按 5m/1h 分档各自计价求和，见 **PricingRule**）。请求时计算并落库（不随改价漂移），同时快照 `pricing_currency`。统计聚合按币种分组，不做汇率换算。
 _Avoid_: cost, billing amount, charge
 
 **SpecPrefill（模型规格导入）**:
 从 models.dev 公开规格按 `upstream_model` 精确匹配（trim 后、区分大小写）查询模型规格与定价（`GET /model/spec/prefill`，返回上下文/最大输出/输入模态/定价四件套），由**显式按钮**触发且只有一个消费方负责一段：模型弹窗的「从 models.dev 获取规格」填规格三件套（上下文/最大输出/输入模态），定价弹窗的「从 models.dev 获取定价」整体替换规则表（导入的上下文分档区间平铺 `[0, models.dev 上下文)`，末档上界取规格自身的 contextLength，不追加默认规则；models.dev 无时段窗口数据，需手填）。命中即覆盖、未命中或上游不可达只给内联提示（无 toast、不弹全局错误），**永不自动改价**。
 _Avoid_: price import, auto pricing, autofill
+
+**ConfigMissing（配置缺失检测）**:
+模型配置健康标记（聚合方法 `MissingConfig`）：`pricing`（未计价，`pricing_currency` 为空；免费模型不算）与 `spec`（未填规格，`context_length` 为 0）。`model/list` 与 `upstream/list` 响应项携带 `config_missing` 数组，前端以徽标展示并可「仅看缺失」筛选（`missingOnly` query 参数，SQL 级过滤保分页语义）。补齐动作复用 SpecPrefill 按钮与定价弹窗。
+_Avoid_: config health, incomplete model
+
+**Playground（模型调试台）**:
+Web 端内置调试入口（`POST /api/web/v1/playground/chat`，JWT、权限 ≥ user，demo 天然拒绝）：复用 OpenAI Chat 契约走 LLM 转发全链路（别名解析、跨协议转换、Guard、触发词），调用须经 query `apiKeyID` 指定**本人名下**的 API Key：审计按该 Key 归属（与 `api_key_id` 口径的审计/成本视图一致），请求数与 token 两个令牌桶与 `/api/openai/v1` 共用该 Key 的配额；**仅落审计不落会话**（注入 `CtxKeySkipStore`，与 Trigger omit 共用同一存储分流机制）。前端 `/playground` 页把**模型别名与计费 Key 的选择放进输入区**（不设参数侧栏；无 Key 时引导创建），采样参数固定不暴露（temperature 0.7、max_tokens 64834、stream 恒为真），支持多轮消息编辑、SSE 流式渲染（助手消息带模型 icon 与模型名，并折叠展示上游思考内容 `reasoning_content`）与中途停止。
+_Avoid_: model tester, debug console
 
 **ClientConfigExport（客户端配置导出）**:
 管理后台从模型列表一键生成「让外部 Agentic 客户端接入本网关」的安装脚本的纯前端能力（无后端接口）。当前支持四种目标：OpenCode（在 provider 字典里注册多个模型，patch `~/.config/opencode/opencode.json`）、Claude Code（按 opus/sonnet/haiku 三档别名映射 `ANTHROPIC_DEFAULT_*_MODEL` 环境变量、用 `ANTHROPIC_AUTH_TOKEN` 认证、指向 `/api/anthropic/v1`，patch `~/.claude/settings.json` 的 env 块）、Codex（注册自定义 `model_providers`、设置默认 `model` 与 `model_context_window`，并同步 `[memories]` 的 `extract_model` / `consolidation_model`，patch `~/.codex/config.toml`）与 Pi（生成 provider 和模型数组，patch `~/.pi/agent/models.json`）。Pi 模型使用 `alias` 作为 ID，脚本合并 provider/model、备份 `.bak`，以 `0600` 保存凭证配置并使用同目录临时文件原子替换。生成的 bash 脚本内嵌 Python 做幂等 patch。OpenCode 模型条目含 `modalities` 字段（且图片输入模型附 `attachment: true`），Pi 模型含 `input` 数组，两者均由 **ModelCapabilities** 生成。

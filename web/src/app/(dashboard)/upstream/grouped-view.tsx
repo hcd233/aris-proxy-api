@@ -32,6 +32,7 @@ import { cn } from "@/lib/utils";
 import type { UpstreamGroupItem, UpstreamModelItem, UpstreamEndpointItem } from "@/lib/types";
 import {
   CapabilityBadges,
+  ConfigMissingBadges,
   ModelActionsCell,
   ModelAliasCell,
   ModelIdCell,
@@ -310,6 +311,7 @@ export function GroupedView({
                             />
                             <CapabilityBadges capabilities={m.capabilities} />
                             <PricingInline pricing={m.pricing} />
+                            <ConfigMissingBadges missing={m.configMissing} />
                           </div>
                         </div>
                         <div className="flex shrink-0 flex-col items-end gap-1.5">
@@ -437,6 +439,12 @@ export function GroupedView({
                             label={t("endpoints.anthropic_messages_label")}
                           />
                         )}
+                        {ep.supportOpenAIDecision && (
+                          <ProtocolBadge
+                            protocol="openai-decision"
+                            label={t("endpoints.openai_decision_label")}
+                          />
+                        )}
                       </span>
                       <EndpointDetailPopover endpoint={ep} />
                       {group.truncated && (
@@ -513,6 +521,7 @@ export function GroupedView({
                     </TableCell>
                     <TableCell className={cn(!m.enabled && "opacity-45")}>
                       <PricingInline pricing={m.pricing} />
+                      <ConfigMissingBadges missing={m.configMissing} />
                     </TableCell>
                     <TableCell>
                       <Switch

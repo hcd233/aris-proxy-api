@@ -177,20 +177,20 @@ func TestPricingRuleCostBreakdown(t *testing.T) {
 	}
 	// 1000 in + 500 out + 0 + 250 cacheRead
 	// 800000*1000/1e6=800; 4000000*500/1e6=2000; 80000*250/1e6=20 → 2820
-	b := rule.CostBreakdown(1000, 500, 0, 250)
+	b := rule.CostBreakdown(1000, 500, 0, 0, 250)
 	if b.InputMicro != 800 || b.OutputMicro != 2000 || b.CacheCreateMicro != 0 || b.CacheReadMicro != 20 || b.Total() != 2820 {
 		t.Fatalf("CostBreakdown = %+v total=%d, want 800/2000/0/20 total 2820", b, b.Total())
 	}
 	// 半入：500000 tokens × 1 微单位/1M = 0.5 → 1
-	if got := (vo.PricingRule{InputMicro: 1}).CostBreakdown(500_000, 0, 0, 0).Total(); got != 1 {
+	if got := (vo.PricingRule{InputMicro: 1}).CostBreakdown(500_000, 0, 0, 0, 0).Total(); got != 1 {
 		t.Fatalf("round half = %d, want 1", got)
 	}
 	// 免费规则
-	if got := (vo.PricingRule{}).CostBreakdown(1_000_000, 1_000_000, 1_000_000, 1_000_000).Total(); got != 0 {
+	if got := (vo.PricingRule{}).CostBreakdown(1_000_000, 1_000_000, 1_000_000, 0, 1_000_000).Total(); got != 0 {
 		t.Fatalf("free rule = %d, want 0", got)
 	}
 	// 大数不溢出：1e12 微单位 × 1e9 tokens / 1e6 = 1e15
-	if got := (vo.PricingRule{InputMicro: constant.PricingMaxPriceMicro}).CostBreakdown(1_000_000_000, 0, 0, 0).Total(); got != 1_000_000_000_000_000 {
+	if got := (vo.PricingRule{InputMicro: constant.PricingMaxPriceMicro}).CostBreakdown(1_000_000_000, 0, 0, 0, 0).Total(); got != 1_000_000_000_000_000 {
 		t.Fatalf("big = %d", got)
 	}
 }

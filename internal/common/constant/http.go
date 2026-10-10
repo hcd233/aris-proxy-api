@@ -67,6 +67,9 @@ const (
 	HTTPSchemeHTTP  = "http"
 	HTTPSchemeHTTPS = "https"
 
+	// QueryParamAPIKeyID Playground 调用归属的 API Key ID（query 参数名）
+	QueryParamAPIKeyID = "apiKeyID"
+
 	// SSRF 防护主机名黑名单（util.ValidateEndpointBaseURL）：localhost 与云元数据域名。
 	HostnameLocalhost              = "localhost"
 	HostnameLocalhostSuffix        = ".localhost"

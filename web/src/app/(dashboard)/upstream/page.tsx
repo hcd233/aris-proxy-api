@@ -130,6 +130,23 @@ export default function UpstreamPage() {
     }
   }, []);
 
+  // 配置缺失筛选（仅平铺视图：分组接口按 endpoint 分页，不支持模型级 missingOnly 过滤）
+  const missingFacet = useMemo<FacetDef[]>(
+    () => [
+      {
+        key: "missingOnly",
+        label: t("upstream.filter_config_missing"),
+        options: ["true"],
+        formatValue: () => t("upstream.filter_config_missing_value"),
+        target: "param",
+        single: true,
+      },
+    ],
+    // locale 必须在依赖里：t 引用已稳定（见 lib/i18n.tsx），翻译文本刷新只能靠 locale 驱动重算
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [locale],
+  );
+
   const usernameFacet = useMemo<FacetDef[]>(
     () =>
       isAdmin()
@@ -312,6 +329,7 @@ export default function UpstreamPage() {
       supportOpenAIChatCompletion: ep.supportOpenAIChatCompletion,
       supportOpenAIResponse: ep.supportOpenAIResponse,
       supportAnthropicMessage: ep.supportAnthropicMessage,
+      supportOpenAIDecision: ep.supportOpenAIDecision,
     });
     setEndpointDialogOpen(true);
   };
@@ -332,6 +350,7 @@ export default function UpstreamPage() {
           supportOpenAIChatCompletion: endpointForm.supportOpenAIChatCompletion,
           supportOpenAIResponse: endpointForm.supportOpenAIResponse,
           supportAnthropicMessage: endpointForm.supportAnthropicMessage,
+          supportOpenAIDecision: endpointForm.supportOpenAIDecision,
         });
         toast.success(t("endpoints.updated_success"));
       } else {
@@ -344,6 +363,7 @@ export default function UpstreamPage() {
           supportOpenAIChatCompletion: endpointForm.supportOpenAIChatCompletion,
           supportOpenAIResponse: endpointForm.supportOpenAIResponse,
           supportAnthropicMessage: endpointForm.supportAnthropicMessage,
+          supportOpenAIDecision: endpointForm.supportOpenAIDecision,
         });
         toast.success(t("endpoints.created_success"));
       }
@@ -388,6 +408,8 @@ export default function UpstreamPage() {
       maxOutputTokens: number;
       capabilities?: string[];
       pricing?: PricingDTO;
+      priority?: number;
+      weight?: number;
     },
     ep: UpstreamEndpointItem,
   ) => {
@@ -405,6 +427,8 @@ export default function UpstreamPage() {
       capabilities: (model.capabilities?.length
         ? [...model.capabilities]
         : ["text"]) as ModelCapability[],
+      priority: model.priority ?? 0,
+      weight: model.weight ?? 1,
     });
     setModelDialogOpen(true);
   };
@@ -436,6 +460,8 @@ export default function UpstreamPage() {
           contextLength: modelForm.contextLength,
           maxOutputTokens: modelForm.maxOutputTokens,
           capabilities,
+          priority: modelForm.priority,
+          weight: modelForm.weight,
         });
         if (showSyncHistory && syncHistory) {
           toast.success(
@@ -453,6 +479,8 @@ export default function UpstreamPage() {
           contextLength: modelForm.contextLength,
           maxOutputTokens: modelForm.maxOutputTokens,
           capabilities,
+          priority: modelForm.priority,
+          weight: modelForm.weight,
         });
         toast.success(t("models.created_success"));
       }
@@ -557,6 +585,8 @@ export default function UpstreamPage() {
       contextLength: m.contextLength || DEFAULT_CONTEXT_LENGTH,
       maxOutputTokens: m.maxOutputTokens || DEFAULT_MAX_OUTPUT,
       capabilities: (m.capabilities?.length ? [...m.capabilities] : ["text"]) as ModelCapability[],
+      priority: m.priority ?? 0,
+      weight: m.weight ?? 1,
     });
     setModelDialogOpen(true);
   };
@@ -607,7 +637,7 @@ export default function UpstreamPage() {
                 />
                 <FilterBar
                   {...activeFilterBar}
-                  facets={view === "grouped" ? usernameFacet : flatFacets}
+                  facets={view === "grouped" ? usernameFacet : [...missingFacet, ...flatFacets]}
                   placeholder={t("upstream.search_placeholder")}
                 />
               </div>

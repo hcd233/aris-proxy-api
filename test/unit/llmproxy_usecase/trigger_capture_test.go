@@ -116,7 +116,7 @@ func TestAnthropicCreateMessage_CaptureWithHistory(t *testing.T) {
 	submitter := &captureTaskSubmitter{}
 	checker := &lastUserTextCaptureChecker{captureWord: "/save"}
 	resolver := &mockResolver{resolveEndpoint: buildAnthropicTestEndpoint(), resolveModel: buildTestModel()}
-	uc := usecase.NewAnthropicUseCase(resolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, proxy, &mockOpenAIProxy{}, submitter, checker, nil)
+	uc := usecase.NewAnthropicUseCase(resolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, proxy, &mockOpenAIProxy{}, submitter, checker, nil, nil)
 
 	req := &dto.AnthropicCreateMessageRequest{Body: &dto.AnthropicCreateMessageReq{
 		Model: "test-alias",
@@ -166,7 +166,7 @@ func TestAnthropicCreateMessage_CaptureWithoutHistory(t *testing.T) {
 	submitter := &captureTaskSubmitter{}
 	checker := &lastUserTextCaptureChecker{captureWord: "/save"}
 	resolver := &mockResolver{resolveEndpoint: buildAnthropicTestEndpoint(), resolveModel: buildTestModel()}
-	uc := usecase.NewAnthropicUseCase(resolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, proxy, &mockOpenAIProxy{}, submitter, checker, nil)
+	uc := usecase.NewAnthropicUseCase(resolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, proxy, &mockOpenAIProxy{}, submitter, checker, nil, nil)
 
 	req := &dto.AnthropicCreateMessageRequest{Body: &dto.AnthropicCreateMessageReq{
 		Model:    "test-alias",
@@ -196,7 +196,7 @@ func TestAnthropicCreateMessage_CaptureWordOnlyInHistory(t *testing.T) {
 	submitter := &captureTaskSubmitter{}
 	checker := &lastUserTextCaptureChecker{captureWord: "/save"}
 	resolver := &mockResolver{resolveEndpoint: buildAnthropicTestEndpoint(), resolveModel: buildTestModel()}
-	uc := usecase.NewAnthropicUseCase(resolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, proxy, &mockOpenAIProxy{}, submitter, checker, nil)
+	uc := usecase.NewAnthropicUseCase(resolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, proxy, &mockOpenAIProxy{}, submitter, checker, nil, nil)
 
 	req := &dto.AnthropicCreateMessageRequest{Body: &dto.AnthropicCreateMessageReq{
 		Model: "test-alias",
@@ -230,7 +230,7 @@ func TestAnthropicCreateMessage_CaptureSkipsToolResult(t *testing.T) {
 	submitter := &captureTaskSubmitter{}
 	checker := &lastUserTextCaptureChecker{captureWord: "/save"}
 	resolver := &mockResolver{resolveEndpoint: buildAnthropicTestEndpoint(), resolveModel: buildTestModel()}
-	uc := usecase.NewAnthropicUseCase(resolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, proxy, &mockOpenAIProxy{}, submitter, checker, nil)
+	uc := usecase.NewAnthropicUseCase(resolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, proxy, &mockOpenAIProxy{}, submitter, checker, nil, nil)
 
 	req := &dto.AnthropicCreateMessageRequest{Body: &dto.AnthropicCreateMessageReq{
 		Model: "test-alias",
@@ -276,7 +276,7 @@ func TestAnthropicCreateMessage_DenyWinsOverCapture(t *testing.T) {
 	submitter := &captureTaskSubmitter{}
 	checker := &denyAndCaptureChecker{captureWord: "/save", denyWord: "badword"}
 	resolver := &mockResolver{resolveEndpoint: buildAnthropicTestEndpoint(), resolveModel: buildTestModel()}
-	uc := usecase.NewAnthropicUseCase(resolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, proxy, &mockOpenAIProxy{}, submitter, checker, nil)
+	uc := usecase.NewAnthropicUseCase(resolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, proxy, &mockOpenAIProxy{}, submitter, checker, nil, nil)
 
 	req := &dto.AnthropicCreateMessageRequest{Body: &dto.AnthropicCreateMessageReq{
 		Model: "test-alias",
@@ -312,7 +312,7 @@ func TestAnthropicCreateMessage_CaptureStream(t *testing.T) {
 	submitter := &captureTaskSubmitter{}
 	checker := &lastUserTextCaptureChecker{captureWord: "/save"}
 	resolver := &mockResolver{resolveEndpoint: buildAnthropicTestEndpoint(), resolveModel: buildTestModel()}
-	uc := usecase.NewAnthropicUseCase(resolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, proxy, &mockOpenAIProxy{}, submitter, checker, nil)
+	uc := usecase.NewAnthropicUseCase(resolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, proxy, &mockOpenAIProxy{}, submitter, checker, nil, nil)
 
 	stream := true
 	req := &dto.AnthropicCreateMessageRequest{Body: &dto.AnthropicCreateMessageReq{
@@ -359,7 +359,7 @@ func TestOpenAICreateChatCompletion_CaptureWithHistory(t *testing.T) {
 	submitter := &captureTaskSubmitter{}
 	checker := &lastUserTextCaptureChecker{captureWord: "/save"}
 	resolver := &mockResolver{resolveEndpoint: buildTestEndpoint(), resolveModel: buildTestModel()}
-	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, submitter, checker, nil)
+	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, submitter, checker, nil, nil)
 
 	req := &dto.OpenAIChatCompletionRequest{Body: &dto.OpenAIChatCompletionReq{
 		Model: "test-alias",
@@ -392,7 +392,7 @@ func TestOpenAICreateChatCompletion_CaptureWordOnlyInHistoryKeepsStore(t *testin
 	submitter := &captureTaskSubmitter{}
 	checker := &lastUserTextCaptureChecker{captureWord: "/save"}
 	resolver := &mockResolver{resolveEndpoint: buildTestEndpoint(), resolveModel: buildTestModel()}
-	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, submitter, checker, nil)
+	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, submitter, checker, nil, nil)
 
 	req := &dto.OpenAIChatCompletionRequest{Body: &dto.OpenAIChatCompletionReq{
 		Model: "test-alias",
@@ -421,7 +421,7 @@ func TestOpenAICreateChatCompletion_CaptureSkipsToolResultUser(t *testing.T) {
 	submitter := &captureTaskSubmitter{}
 	checker := &lastUserTextCaptureChecker{captureWord: "/save"}
 	resolver := &mockResolver{resolveEndpoint: buildTestEndpoint(), resolveModel: buildTestModel()}
-	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, submitter, checker, nil)
+	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, submitter, checker, nil, nil)
 
 	req := &dto.OpenAIChatCompletionRequest{Body: &dto.OpenAIChatCompletionReq{
 		Model: "test-alias",
@@ -448,7 +448,7 @@ func TestOpenAICreateResponse_CaptureWithHistory(t *testing.T) {
 	submitter := &captureTaskSubmitter{}
 	checker := &lastUserTextCaptureChecker{captureWord: "/save"}
 	resolver := &mockResolver{resolveEndpoint: buildCompatEndpoint("test-endpoint", true, true, false), resolveModel: buildTestModel()}
-	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, submitter, checker, nil)
+	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, submitter, checker, nil, nil)
 
 	req := &dto.OpenAICreateResponseRequest{Body: &dto.OpenAICreateResponseReq{
 		Model: lo.ToPtr("test-alias"),
@@ -483,7 +483,7 @@ func TestOpenAICreateResponse_CaptureWordOnlyInHistoryKeepsStore(t *testing.T) {
 	submitter := &captureTaskSubmitter{}
 	checker := &lastUserTextCaptureChecker{captureWord: "/save"}
 	resolver := &mockResolver{resolveEndpoint: buildCompatEndpoint("test-endpoint", true, true, false), resolveModel: buildTestModel()}
-	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, submitter, checker, nil)
+	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, submitter, checker, nil, nil)
 
 	req := &dto.OpenAICreateResponseRequest{Body: &dto.OpenAICreateResponseReq{
 		Model: lo.ToPtr("test-alias"),
@@ -514,7 +514,7 @@ func TestOpenAICreateResponse_CaptureStringInputNoHistory(t *testing.T) {
 	submitter := &captureTaskSubmitter{}
 	checker := &lastUserTextCaptureChecker{captureWord: "/save"}
 	resolver := &mockResolver{resolveEndpoint: buildCompatEndpoint("test-endpoint", true, true, false), resolveModel: buildTestModel()}
-	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, submitter, checker, nil)
+	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, submitter, checker, nil, nil)
 
 	req := &dto.OpenAICreateResponseRequest{Body: &dto.OpenAICreateResponseReq{
 		Model: lo.ToPtr("test-alias"),
@@ -541,7 +541,7 @@ func TestOpenAICreateResponse_CaptureStream(t *testing.T) {
 	submitter := &captureTaskSubmitter{}
 	checker := &lastUserTextCaptureChecker{captureWord: "/save"}
 	resolver := &mockResolver{resolveEndpoint: buildCompatEndpoint("test-endpoint", true, true, false), resolveModel: buildTestModel()}
-	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, submitter, checker, nil)
+	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, submitter, checker, nil, nil)
 
 	stream := true
 	req := &dto.OpenAICreateResponseRequest{Body: &dto.OpenAICreateResponseReq{

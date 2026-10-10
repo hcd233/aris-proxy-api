@@ -29,6 +29,7 @@ type OpenAIHandler interface {
 	HandleListModels(ctx context.Context, req *dto.EmptyReq) (*dto.HTTPResponse[*dto.OpenAIListModelsRsp], error)
 	HandleChatCompletion(ctx context.Context, req *dto.OpenAIChatCompletionRequest) (*huma.StreamResponse, error)
 	HandleCreateResponse(ctx context.Context, req *dto.OpenAICreateResponseRequest) (*huma.StreamResponse, error)
+	HandleCreateDecision(ctx context.Context, req *dto.OpenAICreateDecisionRequest) (*huma.StreamResponse, error)
 }
 
 // OpenAIDependencies OpenAIHandler 依赖项（用于依赖注入）
@@ -104,5 +105,19 @@ func (h *openAIHandler) HandleCreateResponse(ctx context.Context, req *dto.OpenA
 		func() { h.sseGauge.Dec(constant.SSEProviderOpenAI) },
 	)
 	result, err := h.uc.CreateResponse(ctx, req)
+	return apiutil.AdaptProxyResult(ctx, result, err, openAIInternalFallbackBody)
+}
+
+// HandleCreateDecision 处理 Decision API 请求。
+//
+// Decision 无流式形态，故不挂 WithStreamLifecycle（该回调只在 adapter 真实写 SSE 时触发）。
+//
+//	@receiver h *openAIHandler
+//	@param ctx context.Context
+//	@param req *dto.OpenAICreateDecisionRequest
+//	@return *huma.StreamResponse
+//	@return error
+func (h *openAIHandler) HandleCreateDecision(ctx context.Context, req *dto.OpenAICreateDecisionRequest) (*huma.StreamResponse, error) {
+	result, err := h.uc.CreateDecision(ctx, req)
 	return apiutil.AdaptProxyResult(ctx, result, err, openAIInternalFallbackBody)
 }

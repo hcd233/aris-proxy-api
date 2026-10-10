@@ -28,7 +28,7 @@ const (
 // newDemoMaskFixture 单端点单模型：密钥类字段全部使用可辨识的明文常量
 func newDemoMaskFixture(t *testing.T) port.ListUpstreamHandler {
 	t.Helper()
-	ep, err := llmagg.CreateEndpoint(epA, "ep-demo", demoMaskOpenaiBaseURL, demoMaskAnthropicBaseURL, demoMaskAPIKey, true, true, true)
+	ep, err := llmagg.CreateEndpoint(epA, "ep-demo", demoMaskOpenaiBaseURL, demoMaskAnthropicBaseURL, demoMaskAPIKey, true, true, true, false)
 	if err != nil {
 		t.Fatalf("CreateEndpoint: %v", err)
 	}

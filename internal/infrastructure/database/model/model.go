@@ -13,6 +13,8 @@ type Model struct {
 	UpstreamModel   string             `json:"upstream_model" gorm:"column:upstream_model;not null;default:'';comment:上游实际模型名"`
 	EndpointID      uint               `json:"endpoint_id" gorm:"column:endpoint_id;not null;uniqueIndex:idx_model_alias_endpoint_deleted,priority:3;comment:逻辑外键→endpoint.id"`
 	Enabled         bool               `json:"enabled" gorm:"column:enabled;default:true;comment:是否启用"`
+	Priority        int                `json:"priority" gorm:"column:priority;not null;default:0;comment:调度优先级,数字小=优先级高"`
+	Weight          int                `json:"weight" gorm:"column:weight;not null;default:1;comment:同优先级加权随机权重(>0)"`
 	ContextLength   int                `json:"context_length" gorm:"column:context_length;default:0;comment:上下文窗口长度(tokens)"`
 	MaxOutputTokens int                `json:"max_output_tokens" gorm:"column:max_output_tokens;default:0;comment:最大输出长度(tokens)"`
 	Capabilities    []string           `json:"capabilities" gorm:"column:capabilities;not null;default:'[\"text\"]';comment:模型能力（输入模态集合，如 text/image）;serializer:json"`
@@ -32,11 +34,12 @@ type ModelTimeWindow struct {
 
 // ModelPricingRule 定价规则 DB 形态（四价：微单位/1M tokens）
 type ModelPricingRule struct {
-	TimeWindows             []ModelTimeWindow `json:"time_windows"`
-	ContextMin              int64             `json:"context_min"`
-	ContextMax              int64             `json:"context_max"`
-	InputPriceMicro         int64             `json:"input_price_micro"`
-	OutputPriceMicro        int64             `json:"output_price_micro"`
-	CacheCreationPriceMicro int64             `json:"cache_creation_price_micro"`
-	CacheReadPriceMicro     int64             `json:"cache_read_price_micro"`
+	TimeWindows               []ModelTimeWindow `json:"time_windows"`
+	ContextMin                int64             `json:"context_min"`
+	ContextMax                int64             `json:"context_max"`
+	InputPriceMicro           int64             `json:"input_price_micro"`
+	OutputPriceMicro          int64             `json:"output_price_micro"`
+	CacheCreationPriceMicro   int64             `json:"cache_creation_price_micro"`
+	CacheCreation1hPriceMicro int64             `json:"cache_creation_1h_price_micro"`
+	CacheReadPriceMicro       int64             `json:"cache_read_price_micro"`
 }

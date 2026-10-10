@@ -79,6 +79,8 @@ type ModelListFilter struct {
 	Status     string
 	EndpointID uint
 	Capability string
+	// MissingOnly 仅保留配置缺失（未计价或未填规格）的模型。
+	MissingOnly bool
 }
 
 // ==================== CQRS 读模型 ====================

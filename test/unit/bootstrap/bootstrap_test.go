@@ -1,6 +1,9 @@
 package bootstrap
 
 import (
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"os"
 	"strings"
 	"testing"
@@ -53,6 +56,89 @@ func readFile(t *testing.T, path string) string {
 		t.Fatalf("ReadFile(%s) error = %v", path, err)
 	}
 	return string(data)
+}
+
+// TestRouteParamsCoverAPIRouterDependencies 守护 bootstrap 路由装配的字段同步。
+//
+// 背景：#189 新增 APIRouterDependencies.PlaygroundHandler 但 routeParams 与
+// registerRoutes 漏同步，生产启动时 initPlaygroundRouter 对 nil handler 解引用
+// panic（CrashLoopBackOff）。fx.ValidateApp 不执行 Invoke，编译期也发现不了
+// （结构体字面量允许缺字段），故按源码 AST 断言：APIRouterDependencies 的每个
+// 字段都必须同时出现在 routeParams 字段与 registerRoutes 的字面量键中。
+func TestRouteParamsCoverAPIRouterDependencies(t *testing.T) {
+	t.Parallel()
+	depFields := structFieldNames(t, "../../../internal/router/router.go", "APIRouterDependencies")
+	paramFields := structFieldNames(t, "../../../internal/bootstrap/router.go", "routeParams")
+	literalKeys := compositeLiteralKeys(t, "../../../internal/bootstrap/router.go", "APIRouterDependencies")
+	for name := range depFields {
+		if !paramFields[name] {
+			t.Errorf("routeParams 缺少字段 %s（fx 不会注入，路由注册时为 nil）", name)
+		}
+		if !literalKeys[name] {
+			t.Errorf("registerRoutes 未把 %s 传入 router.APIRouterDependencies", name)
+		}
+	}
+}
+
+func parseGoFile(t *testing.T, path string) *ast.File {
+	t.Helper()
+	f, err := parser.ParseFile(token.NewFileSet(), path, nil, parser.SkipObjectResolution)
+	if err != nil {
+		t.Fatalf("ParseFile(%s) error = %v", path, err)
+	}
+	return f
+}
+
+func structFieldNames(t *testing.T, path, typeName string) map[string]bool {
+	t.Helper()
+	names := map[string]bool{}
+	ast.Inspect(parseGoFile(t, path), func(n ast.Node) bool {
+		spec, ok := n.(*ast.TypeSpec)
+		if !ok || spec.Name.Name != typeName {
+			return true
+		}
+		st, ok := spec.Type.(*ast.StructType)
+		if !ok {
+			return false
+		}
+		for _, field := range st.Fields.List {
+			for _, ident := range field.Names {
+				names[ident.Name] = true
+			}
+		}
+		return false
+	})
+	if len(names) == 0 {
+		t.Fatalf("struct %s not found in %s", typeName, path)
+	}
+	return names
+}
+
+func compositeLiteralKeys(t *testing.T, path, typeName string) map[string]bool {
+	t.Helper()
+	keys := map[string]bool{}
+	ast.Inspect(parseGoFile(t, path), func(n ast.Node) bool {
+		lit, ok := n.(*ast.CompositeLit)
+		if !ok {
+			return true
+		}
+		sel, ok := lit.Type.(*ast.SelectorExpr)
+		if !ok || sel.Sel.Name != typeName {
+			return true
+		}
+		for _, elt := range lit.Elts {
+			if kv, ok := elt.(*ast.KeyValueExpr); ok {
+				if ident, ok := kv.Key.(*ast.Ident); ok {
+					keys[ident.Name] = true
+				}
+			}
+		}
+		return false
+	})
+	if len(keys) == 0 {
+		t.Fatalf("composite literal %s not found in %s", typeName, path)
+	}
+	return keys
 }
 
 // TestFxAppDependencyGraphValidates 静态校验 fx 依赖图（CR I4/R2）。

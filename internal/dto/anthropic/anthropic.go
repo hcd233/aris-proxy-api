@@ -461,17 +461,27 @@ type AnthropicRefusalStopDetails struct {
 	Explanation *string `json:"explanation"`
 }
 
+// AnthropicCacheCreation 缓存创建明细（新版 usage.cache_creation 对象）
+//
+//	@author centonhuang
+//	@update 2026-10-09 10:00:00
+type AnthropicCacheCreation struct {
+	Ephemeral5mInputTokens *int `json:"ephemeral_5m_input_tokens,omitempty"`
+	Ephemeral1hInputTokens *int `json:"ephemeral_1h_input_tokens,omitempty"`
+}
+
 // AnthropicUsage Anthropic Token 用量统计
 //
 //	@author centonhuang
 //	@update 2026-03-17 10:00:00
 type AnthropicUsage struct {
-	InputTokens              int  `json:"input_tokens"`
-	OutputTokens             int  `json:"output_tokens"`
-	CacheCreationInputTokens *int `json:"cache_creation_input_tokens,omitempty"`
-	CacheReadInputTokens     *int `json:"cache_read_input_tokens,omitempty"`
-	PromptCacheHitTokens     *int `json:"prompt_cache_hit_tokens,omitempty"`
-	PromptCacheMissTokens    *int `json:"prompt_cache_miss_tokens,omitempty"`
+	InputTokens              int                     `json:"input_tokens"`
+	OutputTokens             int                     `json:"output_tokens"`
+	CacheCreationInputTokens *int                    `json:"cache_creation_input_tokens,omitempty"`
+	CacheCreation            *AnthropicCacheCreation `json:"cache_creation,omitempty"`
+	CacheReadInputTokens     *int                    `json:"cache_read_input_tokens,omitempty"`
+	PromptCacheHitTokens     *int                    `json:"prompt_cache_hit_tokens,omitempty"`
+	PromptCacheMissTokens    *int                    `json:"prompt_cache_miss_tokens,omitempty"`
 }
 
 // InputOutputTokens 返回 input + output token 总数，不包含 cache。

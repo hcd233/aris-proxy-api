@@ -107,3 +107,17 @@ _Avoid_: spending card
 **formatCost（金额格式化）**:
 金额展示统一入口：去尾零、小数位上限 6，规避浮点尾差直出（`0.30000000000000004`）；null/undefined 渲染 `—`。
 _Avoid_: money format
+
+## Playground（模型调试台）
+
+**Playground Session（调试会话）**:
+Playground 页的本地多会话单元（localStorage `playground.sessions.v1`，上限 50 淘汰最旧）。调试流量走后端 `SkipStore` 不沉淀会话数据集，会话仅存在浏览器本地。
+_Avoid_: chat session, local chat
+
+**Turn Meta（轮次元信息）**:
+跟随 assistant 消息持久化的调试指标：usage（输入/输出/缓存 tokens）、首字延迟、总耗时、估算费用、请求体快照、中断/错误标记。指标行折叠展示。
+_Avoid_: message metadata, debug info
+
+**估算费用（Estimated Cost）**:
+按模型 pricing 的「无条件默认规则（代表档）」估算的单轮费用：`(prompt−cached)×input + cached×cacheRead + completion×output`，单价每 1M tokens。不做时段/上下文区间匹配，精确值以审计为准。
+_Avoid_: cost, billing amount

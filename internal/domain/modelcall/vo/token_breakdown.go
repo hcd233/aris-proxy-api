@@ -8,23 +8,25 @@ package vo
 //	@author centonhuang
 //	@update 2026-04-26 10:00:00
 type TokenBreakdown struct {
-	input         int
-	output        int
-	cacheCreation int
-	cacheRead     int
+	input           int
+	output          int
+	cacheCreation   int // 总量（5m + 1h）
+	cacheCreation1h int // 1h 档明细（旧格式/无分档时为 0）
+	cacheRead       int
 }
 
 // NewTokenBreakdown 构造 Token 统计值对象
 //
 //	@param input int
 //	@param output int
-//	@param cacheCreation int
+//	@param cacheCreation int 缓存创建总量（5m + 1h）
+//	@param cacheCreation1h int 1h 档缓存创建（无分档时为 0）
 //	@param cacheRead int
 //	@return TokenBreakdown
 //	@author centonhuang
-//	@update 2026-04-26 10:00:00
-func NewTokenBreakdown(input, output, cacheCreation, cacheRead int) TokenBreakdown {
-	return TokenBreakdown{input: input, output: output, cacheCreation: cacheCreation, cacheRead: cacheRead}
+//	@update 2026-10-09 10:00:00
+func NewTokenBreakdown(input, output, cacheCreation, cacheCreation1h, cacheRead int) TokenBreakdown {
+	return TokenBreakdown{input: input, output: output, cacheCreation: cacheCreation, cacheCreation1h: cacheCreation1h, cacheRead: cacheRead}
 }
 
 // Input 返回输入 token 数
@@ -43,13 +45,21 @@ func (t TokenBreakdown) Input() int { return t.input }
 //	@update 2026-04-26 10:00:00
 func (t TokenBreakdown) Output() int { return t.output }
 
-// CacheCreation 返回缓存创建 token 数
+// CacheCreation 返回缓存创建 token 数（总量 = 5m + 1h）
 //
 //	@receiver t TokenBreakdown
 //	@return int
 //	@author centonhuang
 //	@update 2026-04-26 10:00:00
 func (t TokenBreakdown) CacheCreation() int { return t.cacheCreation }
+
+// CacheCreation1h 返回 1h 档缓存创建 token 数（无分档时为 0）
+//
+//	@receiver t TokenBreakdown
+//	@return int
+//	@author centonhuang
+//	@update 2026-10-09 10:00:00
+func (t TokenBreakdown) CacheCreation1h() int { return t.cacheCreation1h }
 
 // CacheRead 返回缓存读取 token 数
 //
@@ -66,5 +76,5 @@ func (t TokenBreakdown) CacheRead() int { return t.cacheRead }
 //	@author centonhuang
 //	@update 2026-04-26 10:00:00
 func (t TokenBreakdown) IsZero() bool {
-	return t.input == 0 && t.output == 0 && t.cacheCreation == 0 && t.cacheRead == 0
+	return t.input == 0 && t.output == 0 && t.cacheCreation == 0 && t.cacheCreation1h == 0 && t.cacheRead == 0
 }

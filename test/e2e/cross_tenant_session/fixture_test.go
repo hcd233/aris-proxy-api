@@ -56,23 +56,24 @@ import (
 
 // 嵌入接口空结构体：注册期满足方法集、不解引用（cross_tenant_reference 包惯例）
 type (
-	stubPingHandler      struct{ handler.PingHandler }
-	stubTraceHandler     struct{ handler.TraceHandler }
-	stubTokenHandler     struct{ handler.TokenHandler }
-	stubOauth2Handler    struct{ handler.Oauth2Handler }
-	stubUserHandler      struct{ handler.UserHandler }
-	stubDemoHandler      struct{ handler.DemoHandler }
-	stubAPIKeyHandler    struct{ handler.APIKeyHandler }
-	stubEndpointHandler  struct{ handler.EndpointHandler }
-	stubModelHandler     struct{ handler.ModelHandler }
-	stubUpstreamHandler  struct{ handler.UpstreamHandler }
-	stubAuditHandler     struct{ handler.AuditHandler }
-	stubCronHandler      struct{ handler.CronHandler }
-	stubTriggerHandler   struct{ handler.TriggerHandler }
-	stubOpenAIHandler    struct{ handler.OpenAIHandler }
-	stubAnthropicHandler struct{ handler.AnthropicHandler }
-	stubMetricsHandler   struct{ handler.MetricsHandler }
-	stubClientHandler    struct{ handler.ClientHandler }
+	stubPingHandler       struct{ handler.PingHandler }
+	stubTraceHandler      struct{ handler.TraceHandler }
+	stubTokenHandler      struct{ handler.TokenHandler }
+	stubOauth2Handler     struct{ handler.Oauth2Handler }
+	stubUserHandler       struct{ handler.UserHandler }
+	stubDemoHandler       struct{ handler.DemoHandler }
+	stubAPIKeyHandler     struct{ handler.APIKeyHandler }
+	stubEndpointHandler   struct{ handler.EndpointHandler }
+	stubModelHandler      struct{ handler.ModelHandler }
+	stubUpstreamHandler   struct{ handler.UpstreamHandler }
+	stubAuditHandler      struct{ handler.AuditHandler }
+	stubCronHandler       struct{ handler.CronHandler }
+	stubTriggerHandler    struct{ handler.TriggerHandler }
+	stubOpenAIHandler     struct{ handler.OpenAIHandler }
+	stubPlaygroundHandler struct{ handler.PlaygroundHandler }
+	stubAnthropicHandler  struct{ handler.AnthropicHandler }
+	stubMetricsHandler    struct{ handler.MetricsHandler }
+	stubClientHandler     struct{ handler.ClientHandler }
 )
 
 const e2eHTTPTimeout = 10 * time.Second
@@ -234,28 +235,29 @@ func (f *crossTenantSessionFixture) buildApp(t *testing.T, db *gorm.DB, rdb *red
 	app := fiber.New()
 	api := humafiber.New(app, huma.DefaultConfig("cross tenant session", "1.0"))
 	router.RegisterAPIRouter(api, router.APIRouterDependencies{
-		DB:               db,
-		Cache:            rdb,
-		AccessSigner:     jwt.NewAccessTokenSigner(),
-		PingHandler:      &stubPingHandler{},
-		TraceHandler:     &stubTraceHandler{},
-		TokenHandler:     &stubTokenHandler{},
-		Oauth2Handler:    &stubOauth2Handler{},
-		UserHandler:      &stubUserHandler{},
-		DemoHandler:      &stubDemoHandler{},
-		APIKeyHandler:    &stubAPIKeyHandler{},
-		SessionHandler:   sessionHandler,
-		EndpointHandler:  &stubEndpointHandler{},
-		ModelHandler:     &stubModelHandler{},
-		UpstreamHandler:  &stubUpstreamHandler{},
-		AuditHandler:     &stubAuditHandler{},
-		CronHandler:      &stubCronHandler{},
-		TriggerHandler:   &stubTriggerHandler{},
-		OpenAIHandler:    &stubOpenAIHandler{},
-		AnthropicHandler: &stubAnthropicHandler{},
-		MetricsHandler:   &stubMetricsHandler{},
-		DatasetHandler:   datasetHandler,
-		ClientHandler:    &stubClientHandler{},
+		DB:                db,
+		Cache:             rdb,
+		AccessSigner:      jwt.NewAccessTokenSigner(),
+		PingHandler:       &stubPingHandler{},
+		TraceHandler:      &stubTraceHandler{},
+		TokenHandler:      &stubTokenHandler{},
+		Oauth2Handler:     &stubOauth2Handler{},
+		UserHandler:       &stubUserHandler{},
+		DemoHandler:       &stubDemoHandler{},
+		APIKeyHandler:     &stubAPIKeyHandler{},
+		SessionHandler:    sessionHandler,
+		EndpointHandler:   &stubEndpointHandler{},
+		ModelHandler:      &stubModelHandler{},
+		UpstreamHandler:   &stubUpstreamHandler{},
+		AuditHandler:      &stubAuditHandler{},
+		CronHandler:       &stubCronHandler{},
+		TriggerHandler:    &stubTriggerHandler{},
+		OpenAIHandler:     &stubOpenAIHandler{},
+		PlaygroundHandler: &stubPlaygroundHandler{},
+		AnthropicHandler:  &stubAnthropicHandler{},
+		MetricsHandler:    &stubMetricsHandler{},
+		DatasetHandler:    datasetHandler,
+		ClientHandler:     &stubClientHandler{},
 	})
 	f.app = app
 }
