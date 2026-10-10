@@ -109,16 +109,16 @@ func NewDemoSessionRepository(db *gorm.DB) demoport.DemoSessionRepository {
 	return repository.NewDemoSessionRepository(db)
 }
 
-func NewEndpointRepository(db *gorm.DB) llmproxy.EndpointRepository {
-	return repository.NewEndpointRepository(db)
+func NewEndpointRepository(db *gorm.DB, readCache *cache.ReadCache) llmproxy.EndpointRepository {
+	return repository.NewCachedEndpointRepository(db, readCache)
 }
 
-func NewModelRepository(db *gorm.DB) llmproxy.ModelRepository {
-	return repository.NewModelRepository(db)
+func NewModelRepository(db *gorm.DB, readCache *cache.ReadCache) llmproxy.ModelRepository {
+	return repository.NewCachedModelRepository(db, readCache)
 }
 
-func NewEndpointReadRepository(db *gorm.DB) llmproxy.EndpointReadRepository {
-	return repository.NewEndpointReadRepository(db)
+func NewEndpointReadRepository(db *gorm.DB, readCache *cache.ReadCache) llmproxy.EndpointReadRepository {
+	return repository.NewCachedEndpointReadRepository(db, readCache)
 }
 
 func NewAudioDirCreator() oauthport.ObjectStorageDirCreator {

@@ -8,6 +8,7 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/samber/lo"
+	"github.com/samber/mo"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 
@@ -18,6 +19,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
@@ -26,13 +28,21 @@ import (
 
 // modelRepository ModelRepository 的 GORM 实现
 type modelRepository struct {
-	dao *dao.ModelDAO
-	db  *gorm.DB
+	dao   *dao.ModelDAO
+	db    *gorm.DB
+	cache *cache.ReadCache // nil = 不带读缓存
 }
 
 // NewModelRepository 构造 ModelRepository
 func NewModelRepository(db *gorm.DB) llmproxy.ModelRepository {
 	return &modelRepository{dao: dao.GetModelDAO(), db: db}
+}
+
+// NewCachedModelRepository 构造带 Redis 读缓存的 ModelRepository
+//
+// PaginateWithFilter 的分页行走读缓存；写路径成功后清空读缓存防脏读。
+func NewCachedModelRepository(db *gorm.DB, readCache *cache.ReadCache) llmproxy.ModelRepository {
+	return &modelRepository{dao: dao.GetModelDAO(), db: db, cache: readCache}
 }
 
 // FindByAlias 按 alias 查询指定用户的所有关联模型记录（网关解析专用）
@@ -144,13 +154,17 @@ func (r *modelRepository) Create(ctx context.Context, m *aggregate.Model, ownerU
 	if err := db.Create(mdl).Error; err != nil {
 		return 0, ierr.Wrap(ierr.ErrDBCreate, err, "create model")
 	}
+	r.cache.InvalidateAll(ctx)
 	return mdl.ID, nil
 }
 
 // Update 更新模型（仅更新非零值字段）
 func (r *modelRepository) Update(ctx context.Context, m *aggregate.Model) error {
-	_, err := updateModelTx(r.db.WithContext(ctx), m, "")
-	return err
+	if _, err := updateModelTx(r.db.WithContext(ctx), m, ""); err != nil {
+		return err
+	}
+	r.cache.InvalidateAll(ctx)
+	return nil
 }
 
 // updateModelTx 更新模型行（仅更新非零值字段），可在事务内复用。
@@ -195,6 +209,7 @@ func (r *modelRepository) Delete(ctx context.Context, id uint, scopeUserID *uint
 	if err := r.dao.Delete(db, &dbmodel.Model{ID: id}); err != nil {
 		return ierr.Wrap(ierr.ErrDBDelete, err, "delete model")
 	}
+	r.cache.InvalidateAll(ctx)
 	return nil
 }
 
@@ -204,6 +219,7 @@ func (r *modelRepository) DeleteByEndpointID(ctx context.Context, endpointID uin
 	if err := r.dao.BatchDeleteByField(db, constant.FieldEndpointID, []uint{endpointID}); err != nil {
 		return ierr.Wrap(ierr.ErrDBDelete, err, "delete models by endpoint id")
 	}
+	r.cache.InvalidateAll(ctx)
 	return nil
 }
 
@@ -267,6 +283,35 @@ func (r *modelRepository) Paginate(ctx context.Context, param model.CommonParam,
 // 排序列走显式白名单：不能用 util.SafeSortField 代替（它只校验字符集，
 // api_key 之类敏感列同样放行），白名单外取值回退默认列而非报错。
 func (r *modelRepository) PaginateWithFilter(ctx context.Context, param model.CommonParam, filter llmproxy.ModelListFilter, scopeUserID *uint) ([]*aggregate.Model, *model.PageInfo, error) {
+	// 白名单外回退默认列但保留调用方排序方向，不报错（避免前端拼错导致整页 500）。
+	// 必须先于缓存键计算：等价参数归一到同一个键
+	if !lo.Contains(constant.ModelListSortFields, param.SortField) {
+		param.SortField = constant.ModelListDefaultSortField
+	}
+
+	key := modelListCacheKey(param, filter, scopeUserID)
+	cached, err := cache.GetOrLoad(ctx, r.cache, key, func(ctx context.Context) (mo.Option[modelPageCache], error) {
+		return r.loadModelPage(ctx, param, filter, scopeUserID)
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+	page, found := cached.Get()
+	if !found {
+		// 空值标记命中：查无此物（防缓存穿透），直接返回空页
+		return []*aggregate.Model{}, &model.PageInfo{Page: param.Page, PageSize: param.PageSize}, nil
+	}
+	out, convErr := util.MapErr(page.Records, func(m *dbmodel.Model, _ int) (*aggregate.Model, error) {
+		return toModelAggregate(m)
+	})
+	if convErr != nil {
+		return nil, nil, convErr
+	}
+	return out, page.PageInfo, nil
+}
+
+// loadModelPage 回源查询模型分页行；空结果返回 mo.None（由缓存层写空值标记防缓存穿透）
+func (r *modelRepository) loadModelPage(ctx context.Context, param model.CommonParam, filter llmproxy.ModelListFilter, scopeUserID *uint) (mo.Option[modelPageCache], error) {
 	db := r.db.WithContext(ctx)
 	if scopeUserID != nil {
 		db = db.Where(constant.FieldUserID+" = ?", *scopeUserID)
@@ -284,10 +329,6 @@ func (r *modelRepository) PaginateWithFilter(ctx context.Context, param model.Co
 	if lo.Contains(enum.InputModalities, filter.Capability) {
 		db = db.Where(constant.WhereCapabilitiesLike, `%"`+filter.Capability+`"%`)
 	}
-	// 白名单外回退默认列但保留调用方排序方向，不报错（避免前端拼错导致整页 500）
-	if !lo.Contains(constant.ModelListSortFields, param.SortField) {
-		param.SortField = constant.ModelListDefaultSortField
-	}
 
 	records, pageInfo, err := r.dao.Paginate(
 		db,
@@ -300,15 +341,12 @@ func (r *modelRepository) PaginateWithFilter(ctx context.Context, param model.Co
 		},
 	)
 	if err != nil {
-		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "paginate models with filter")
+		return mo.None[modelPageCache](), ierr.Wrap(ierr.ErrDBQuery, err, "paginate models with filter")
 	}
-	out, convErr := util.MapErr(records, func(m *dbmodel.Model, _ int) (*aggregate.Model, error) {
-		return toModelAggregate(m)
-	})
-	if convErr != nil {
-		return nil, nil, convErr
+	if len(records) == 0 {
+		return mo.None[modelPageCache](), nil
 	}
-	return out, pageInfo, nil
+	return mo.Some(modelPageCache{Records: records, PageInfo: pageInfo}), nil
 }
 
 // ListByEndpointIDs 按 endpoint ID 集合批量拉取模型聚合（id 升序）
@@ -355,6 +393,7 @@ func (r *modelRepository) UpdateWithHistorySync(ctx context.Context, m *aggregat
 	if err != nil {
 		return llmproxy.ModelIDSyncCounts{}, err
 	}
+	r.cache.InvalidateAll(ctx)
 	return counts, nil
 }
 

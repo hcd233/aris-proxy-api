@@ -3,9 +3,11 @@ package repository
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math/rand"
 
 	"github.com/samber/lo"
+	"github.com/samber/mo"
 	"gorm.io/gorm"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
@@ -13,6 +15,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"github.com/hcd233/aris-proxy-api/internal/util"
@@ -23,11 +26,20 @@ type endpointRepository struct {
 	endpointDAO *dao.EndpointDAO
 	modelDAO    *dao.ModelDAO
 	db          *gorm.DB
+	cache       *cache.ReadCache // nil = 不带读缓存失效
 }
 
 // NewEndpointRepository 构造 EndpointRepository
 func NewEndpointRepository(db *gorm.DB) llmproxy.EndpointRepository {
 	return &endpointRepository{endpointDAO: dao.GetEndpointDAO(), modelDAO: dao.GetModelDAO(), db: db}
+}
+
+// NewCachedEndpointRepository 构造带读缓存失效钩子的 EndpointRepository
+//
+// 写路径（Create/Update/Delete/DeleteCascade）成功后清空读缓存，
+// 保证读缓存不残留脏数据。
+func NewCachedEndpointRepository(db *gorm.DB, readCache *cache.ReadCache) llmproxy.EndpointRepository {
+	return &endpointRepository{endpointDAO: dao.GetEndpointDAO(), modelDAO: dao.GetModelDAO(), db: db, cache: readCache}
 }
 
 // scopedDB scope 非 nil 时追加 user_id 显式等值条件（含 0=共享池）。
@@ -115,6 +127,7 @@ func (r *endpointRepository) Create(ctx context.Context, ep *aggregate.Endpoint,
 	if err := db.Create(m).Error; err != nil {
 		return 0, ierr.Wrap(ierr.ErrDBCreate, err, "create endpoint")
 	}
+	r.cache.InvalidateAll(ctx)
 	return m.ID, nil
 }
 
@@ -133,6 +146,7 @@ func (r *endpointRepository) Update(ctx context.Context, ep *aggregate.Endpoint)
 	if err := db.Model(&dbmodel.Endpoint{}).Where(constant.WhereIDEquals, ep.AggregateID()).Updates(updates).Error; err != nil {
 		return ierr.Wrap(ierr.ErrDBUpdate, err, "update endpoint")
 	}
+	r.cache.InvalidateAll(ctx)
 	return nil
 }
 
@@ -142,13 +156,14 @@ func (r *endpointRepository) Delete(ctx context.Context, id uint, scopeUserID *u
 	if err := r.endpointDAO.Delete(db, &dbmodel.Endpoint{ID: id}); err != nil {
 		return ierr.Wrap(ierr.ErrDBDelete, err, "delete endpoint")
 	}
+	r.cache.InvalidateAll(ctx)
 	return nil
 }
 
 // DeleteCascade 级联删除端点及其关联模型（事务保护；scopeUserID 非 nil 时精确匹配 user_id）
 func (r *endpointRepository) DeleteCascade(ctx context.Context, id uint, scopeUserID *uint) error {
 	db := r.db.WithContext(ctx)
-	return db.Transaction(func(tx *gorm.DB) error {
+	if err := db.Transaction(func(tx *gorm.DB) error {
 		if err := r.modelDAO.BatchDeleteByField(tx, constant.FieldEndpointID, []uint{id}); err != nil {
 			return ierr.Wrap(ierr.ErrDBDelete, err, "cascade delete models by endpoint id")
 		}
@@ -156,7 +171,11 @@ func (r *endpointRepository) DeleteCascade(ctx context.Context, id uint, scopeUs
 			return ierr.Wrap(ierr.ErrDBDelete, err, "delete endpoint")
 		}
 		return nil
-	})
+	}); err != nil {
+		return err
+	}
+	r.cache.InvalidateAll(ctx)
+	return nil
 }
 
 // List 列出所有端点
@@ -221,6 +240,7 @@ type endpointReadRepository struct {
 	endpointDAO *dao.EndpointDAO
 	modelDAO    *dao.ModelDAO
 	db          *gorm.DB
+	cache       *cache.ReadCache // nil = 不带读缓存
 }
 
 // NewEndpointReadRepository 构造 EndpointReadRepository
@@ -232,39 +252,84 @@ func NewEndpointReadRepository(db *gorm.DB) llmproxy.EndpointReadRepository {
 	}
 }
 
+// NewCachedEndpointReadRepository 构造带 Redis 读缓存的 EndpointReadRepository
+//
+// 缓存只覆盖无凭据载荷（别名列表、模型详情列表）；FindEndpointByAlias 的投影
+// 含上游 API Key，按项目约定不写入 Redis。
+func NewCachedEndpointReadRepository(db *gorm.DB, readCache *cache.ReadCache) llmproxy.EndpointReadRepository {
+	return &endpointReadRepository{
+		endpointDAO: dao.GetEndpointDAO(),
+		modelDAO:    dao.GetModelDAO(),
+		db:          db,
+		cache:       readCache,
+	}
+}
+
 // ListAliases 查询指定用户的不重复模型别名（仅已启用的模型）
 //
 // userID 必传真实用户 ID；0（认证缺失）防御性返回空列表而非全平台别名——
 // struct 零值条件下 GORM 会忽略 user_id 过滤，守卫必须有。
+//
+// 结果走 Redis 读缓存（cache:rd:alias:<userID>）：空结果写空值标记防穿透，
+// TTL 叠加随机抖动防雪崩，同 key 并发回源由 singleflight 合并；
+// 失效由 model/endpoint 写路径的 InvalidateAll 承担。
 func (r *endpointReadRepository) ListAliases(ctx context.Context, userID uint) ([]*llmproxy.ModelAliasProjection, error) {
 	if userID == 0 {
 		return []*llmproxy.ModelAliasProjection{}, nil
 	}
+	key := fmt.Sprintf(constant.ReadCacheAliasKeyTemplate, userID)
+	cached, err := cache.GetOrLoad(ctx, r.cache, key, func(ctx context.Context) (mo.Option[[]*llmproxy.ModelAliasProjection], error) {
+		return r.loadAliases(ctx, userID)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return cached.OrEmpty(), nil
+}
+
+// loadAliases 回源查询模型别名；空结果返回 mo.None（由缓存层写空值标记防穿透）
+func (r *endpointReadRepository) loadAliases(ctx context.Context, userID uint) (mo.Option[[]*llmproxy.ModelAliasProjection], error) {
 	db := r.db.WithContext(ctx)
 	models, err := r.modelDAO.BatchGet(db, &dbmodel.Model{Enabled: true, UserID: userID}, constant.ModelRepoFieldsAlias)
 	if err != nil {
-		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "list model aliases")
+		return mo.None[[]*llmproxy.ModelAliasProjection](), ierr.Wrap(ierr.ErrDBQuery, err, "list model aliases")
 	}
 	out := lo.Map(lo.UniqBy(models, func(m *dbmodel.Model) string { return m.Alias }), func(m *dbmodel.Model, _ int) *llmproxy.ModelAliasProjection {
 		return &llmproxy.ModelAliasProjection{Alias: m.Alias}
 	})
-	return out, nil
+	if len(out) == 0 {
+		return mo.None[[]*llmproxy.ModelAliasProjection](), nil
+	}
+	return mo.Some(out), nil
 }
 
 // ListEnabledModelDetails 查询所有启用中模型的完整投影（仅已启用、按 alias 去重）
 //
 // userID 必传真实用户 ID；0（认证缺失）防御性返回空列表，语义同 ListAliases。
+// 缓存语义同 ListAliases（cache:rd:detail:<userID>）。
 func (r *endpointReadRepository) ListEnabledModelDetails(ctx context.Context, userID uint) ([]*llmproxy.ModelDetailProjection, error) {
 	if userID == 0 {
 		return []*llmproxy.ModelDetailProjection{}, nil
 	}
+	key := fmt.Sprintf(constant.ReadCacheDetailKeyTemplate, userID)
+	cached, err := cache.GetOrLoad(ctx, r.cache, key, func(ctx context.Context) (mo.Option[[]*llmproxy.ModelDetailProjection], error) {
+		return r.loadModelDetails(ctx, userID)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return cached.OrEmpty(), nil
+}
+
+// loadModelDetails 回源查询启用中模型详情；空结果返回 mo.None（写空值标记防穿透）
+func (r *endpointReadRepository) loadModelDetails(ctx context.Context, userID uint) (mo.Option[[]*llmproxy.ModelDetailProjection], error) {
 	db := r.db.WithContext(ctx)
 	models, err := r.modelDAO.BatchGet(db, &dbmodel.Model{Enabled: true, UserID: userID}, constant.ModelRepoFieldsFull)
 	if err != nil {
-		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "list enabled model details")
+		return mo.None[[]*llmproxy.ModelDetailProjection](), ierr.Wrap(ierr.ErrDBQuery, err, "list enabled model details")
 	}
 	uniq := lo.UniqBy(models, func(m *dbmodel.Model) string { return m.Alias })
-	return lo.Map(uniq, func(m *dbmodel.Model, _ int) *llmproxy.ModelDetailProjection {
+	out := lo.Map(uniq, func(m *dbmodel.Model, _ int) *llmproxy.ModelDetailProjection {
 		return &llmproxy.ModelDetailProjection{
 			Alias:           m.Alias,
 			UpstreamModel:   m.UpstreamModel,
@@ -273,7 +338,11 @@ func (r *endpointReadRepository) ListEnabledModelDetails(ctx context.Context, us
 			Capabilities:    m.Capabilities,
 			Pricing:         pricingFromDB(m.ID, m.PricingRules, m.PricingCurrency),
 		}
-	}), nil
+	})
+	if len(out) == 0 {
+		return mo.None[[]*llmproxy.ModelDetailProjection](), nil
+	}
+	return mo.Some(out), nil
 }
 
 // FindEndpointByAlias 按 alias 在指定用户的模型集合内随机选满足 matcher 的 endpoint。
