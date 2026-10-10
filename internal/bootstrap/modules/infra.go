@@ -23,6 +23,7 @@ var InfraModule = fx.Module(constant.DigNameInfraModule,
 	fx.Provide(
 		NewDB,
 		NewCache,
+		NewReadCache,
 		NewPoolManager,
 		NewInflightTracker,
 		metrics.NewRegistry,
@@ -54,6 +55,11 @@ func NewDB() *gorm.DB {
 
 func NewCache() *redis.Client {
 	return cache.InitCache()
+}
+
+// NewReadCache 构造通用读缓存（模型目录类读接口的 cache-aside，防穿透/雪崩/击穿）
+func NewReadCache(client *redis.Client) *cache.ReadCache {
+	return cache.NewReadCache(client)
 }
 
 func NewPoolManager(db *gorm.DB, auditRepo modelcall.AuditRepository, demoAccessAuditRepo demoauditport.DemoAccessAuditRepository) *pool.PoolManager {
