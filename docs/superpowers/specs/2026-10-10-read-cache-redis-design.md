@@ -140,12 +140,15 @@ DB 连接池固定 1 条（模拟生产 DB 连接池瓶颈），缓存预热后�
 
 | 接口 | 加缓存前 | 加缓存后 | 提升 |
 |---|---|---|---|
-| `GET /api/openai/v1/models` | 6,189 QPS | 18,848 QPS | **3.05x** |
-| `GET /api/anthropic/v1/models` | 6,241 QPS | 18,711 QPS | **3.00x** |
-| `GET /api/cli/v1/model/list` | 1,367 QPS | 15,241 QPS | **11.15x** |
-| `GET /api/web/v1/model/list`* | 0.600ms | 0.552ms | 1.09x（延迟） |
+| `GET /api/openai/v1/models` | 6,111 QPS | 18,332 QPS | **3.00x** |
+| `GET /api/anthropic/v1/models` | 6,203 QPS | 18,060 QPS | **2.91x** |
+| `GET /api/cli/v1/model/list` | 1,162 QPS | 14,654 QPS | **12.61x** |
+| `GET /api/web/v1/model/list`* | 0.686ms | 0.463ms | 1.48x（延迟） |
 \* Web manage API 受 TokenBucket 限流（`constant.LimitManageAPIKey` = 20 次/分钟/用户），
 吞吐上限由限流器决定，改测顺序请求平均延迟。
+
+数据取自合并 master（模型调度/Decision/Playground）后的复测；独立重复运行的波动在
+同一量级（如 openai `/models` 另一次测得 6189 → 18848 QPS，3.05x）。
 
 口径说明：sqlite + miniredis 均在进程内，测得的是受控环境下的相对值；生产 PostgreSQL
 往返（网络 + 解析）远高于内存 sqlite，真实收益不低于该比值。`model/list` 提升幅度较小的
