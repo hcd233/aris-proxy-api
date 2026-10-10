@@ -48,6 +48,14 @@ export function truncateText(text: string, maxLen: number): string {
 }
 
 /**
+ * 占比格式化：value / total → "32.4%"（1 位小数）。total <= 0 返回 "0%"。
+ */
+export function formatPct(value: number, total: number): string {
+  if (total <= 0) return "0%";
+  return `${((value / total) * 100).toFixed(1)}%`;
+}
+
+/**
  * 本地时间 `YYYY/MM/DD HH:mm:ss`。非法日期原样返回，避免渲染 "NaN/NaN/NaN"。
  */
 export function formatDateTime(dateStr: string): string {

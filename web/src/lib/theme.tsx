@@ -72,11 +72,13 @@ const TOKEN_LAYER_COLORS: Record<ThemeName, TokenLayerColors> = {
   moonshot: { cacheRead: "#C9C9C9", input: "#FFFFFF", cacheCreated: "#FFEED9", output: "#737373" },
 };
 
-/* Composition ratio bars place all four layers side by side, so hues must
- * diverge clearly (the stacked-area palette above is tonal on purpose). */
+/* Composition ratio bars: input/output carry the theme's two deep hues, and
+ * each cache layer is the pale tint of its counterpart (cacheRead = light
+ * input, cacheWrite = light output), so the four segments read as two
+ * dark/light families instead of four unrelated hues. */
 const RATIO_SEGMENT_COLORS: Record<ThemeName, TokenLayerColors> = {
-  anthropic: { input: "#D97757", output: "#5F8A8B", cacheRead: "#9AA65A", cacheCreated: "#D9A441" },
-  moonshot: { input: "#FFFFFF", output: "#7FA3D6", cacheRead: "#6B6B6B", cacheCreated: "#D9A86C" },
+  anthropic: { input: "#B8654A", output: "#5C4A3D", cacheRead: "#EFC5AC", cacheCreated: "#CDBBA6" },
+  moonshot: { input: "#B8894F", output: "#4E6C8A", cacheRead: "#FFEED9", cacheCreated: "#A8BDD8" },
 };
 
 function chartSeriesColors(theme: ThemeName): readonly string[] {

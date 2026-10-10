@@ -12,12 +12,13 @@ import { Button } from "@/components/ui/button";
 import { TimeRangePicker } from "@/components/ui/time-range-picker";
 import type { TimeRangeKey } from "@/lib/time-range";
 import { computeRange } from "@/lib/time-range";
+import { formatPct } from "@/lib/utils";
 import { useRatioSegmentColors } from "@/lib/theme";
 import { RatioLegend, StackedRatioBar } from "@/components/charts/stacked-ratio-bar";
 
 /**
  * ModelCostBarChart 模型成本：时间范围内各模型总成本 + 输入/输出/缓存读/缓存写四维成本占比条。
- * 行 = 模型 × 币种；模型名下方条形按同币种最大总成本归一化；总成本列可排序。
+ * 行 = 模型 × 币种；总成本列显示金额与其占同币种总成本的百分比，可排序。
  */
 export function ModelCostBarChart() {
   // t 引用已稳定化（见 lib/i18n.tsx），useMemo 改依赖 locale 以响应语言切换
@@ -73,10 +74,10 @@ export function ModelCostBarChart() {
   }, [fetchData]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  // 进度条按币种分别归一化：不同币种金额不可比，混算会让小币种的条形失真
-  const maxTotalByCurrency = useMemo(() => {
+  // 占比按币种分组汇总：不同币种金额不可比，混算会让小币种的占比失真
+  const totalByCurrency = useMemo(() => {
     const m = new Map<string, number>();
-    for (const d of data) m.set(d.currency, Math.max(m.get(d.currency) ?? 0, d.totalCost));
+    for (const d of data) m.set(d.currency, (m.get(d.currency) ?? 0) + d.totalCost);
     return m;
   }, [data]);
 
@@ -151,26 +152,21 @@ export function ModelCostBarChart() {
               </thead>
               <tbody>
                 {sorted.map((item, i) => {
-                  const maxTotal = maxTotalByCurrency.get(item.currency) ?? 0;
-                  const widthPct =
-                    maxTotal > 0 ? Math.max((item.totalCost / maxTotal) * 100, 2) : 2;
+                  const total = totalByCurrency.get(item.currency) ?? 0;
                   return (
                     <tr
                       key={`${item.modelId}|${item.currency}`}
                       className="border-b border-border transition-colors hover:bg-muted/50"
                     >
                       <td className="py-3 pl-6 pr-2 text-muted-foreground">{i + 1}</td>
-                      <td className="py-3 pr-4">
-                        <div className="font-medium">{item.modelId}</div>
-                        <div className="mt-1 h-1.5 overflow-hidden rounded-md bg-muted">
-                          <div
-                            className="h-full rounded-md bg-primary/60 transition-all duration-200"
-                            style={{ width: `${widthPct}%` }}
-                          />
+                      <td className="py-3 pr-4 font-medium">{item.modelId}</td>
+                      <td className="py-3 pr-4 text-right">
+                        <div className="font-semibold">
+                          {formatCost(item.totalCost, item.currency)}
                         </div>
-                      </td>
-                      <td className="py-3 pr-4 text-right font-semibold">
-                        {formatCost(item.totalCost, item.currency)}
+                        <div className="text-xs text-muted-foreground">
+                          {formatPct(item.totalCost, total)}
+                        </div>
                       </td>
                       <td className="w-[360px] py-3 pr-6">
                         <StackedRatioBar

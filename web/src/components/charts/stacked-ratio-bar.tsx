@@ -2,17 +2,13 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { formatPct } from "@/lib/utils";
 
 export interface RatioSegment {
   key: string;
   label: string;
   value: number;
   color: string;
-}
-
-function formatPct(value: number, sum: number): string {
-  if (sum <= 0) return "0%";
-  return `${((value / sum) * 100).toFixed(1)}%`;
 }
 
 /**

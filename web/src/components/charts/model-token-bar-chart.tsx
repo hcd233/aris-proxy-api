@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { TimeRangePicker } from "@/components/ui/time-range-picker";
 import type { TimeRangeKey } from "@/lib/time-range";
 import { computeRange } from "@/lib/time-range";
+import { formatPct } from "@/lib/utils";
 import { useRatioSegmentColors } from "@/lib/theme";
 import { RatioLegend, StackedRatioBar } from "@/components/charts/stacked-ratio-bar";
 
@@ -89,6 +90,8 @@ export function ModelTokenBarChart() {
     );
   }, [data, sortDir]);
 
+  const grandTotal = useMemo(() => data.reduce((acc, d) => acc + tokenTotal(d), 0), [data]);
+
   const legend = useMemo(
     () => [
       { key: "input", label: t("charts.input"), color: tokenColors.input },
@@ -156,8 +159,11 @@ export function ModelTokenBarChart() {
                   >
                     <td className="py-3 pl-6 pr-2 text-muted-foreground">{i + 1}</td>
                     <td className="py-3 pr-4 font-medium">{item.modelId}</td>
-                    <td className="py-3 pr-4 text-right font-semibold">
-                      {formatTokenCount(tokenTotal(item))}
+                    <td className="py-3 pr-4 text-right">
+                      <div className="font-semibold">{formatTokenCount(tokenTotal(item))}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {formatPct(tokenTotal(item), grandTotal)}
+                      </div>
                     </td>
                     <td className="w-[360px] py-3 pr-6">
                       <StackedRatioBar
