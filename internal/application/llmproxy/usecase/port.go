@@ -44,6 +44,8 @@ type OpenAIProxyPort interface {
 	// ReadChatCompletionStream 消费已打开的上游流，负责关闭 stream。
 	ReadChatCompletionStream(ctx context.Context, stream io.ReadCloser, onChunk func(*dto.OpenAIChatCompletionChunk) error) (*dto.OpenAIChatCompletion, error)
 	ForwardCreateResponse(ctx context.Context, ep vo.UpstreamEndpoint, body []byte) ([]byte, error)
+	// ForwardCreateDecision 转发 Decision API 请求（unary，仅 /decisions）。
+	ForwardCreateDecision(ctx context.Context, ep vo.UpstreamEndpoint, body []byte) ([]byte, error)
 	OpenCreateResponseStream(ctx context.Context, ep vo.UpstreamEndpoint, body []byte) (io.ReadCloser, error)
 	// ReadCreateResponseStream 消费已打开的上游流，负责关闭 stream。
 	ReadCreateResponseStream(ctx context.Context, stream io.ReadCloser, onEvent func(event string, data []byte) error) error

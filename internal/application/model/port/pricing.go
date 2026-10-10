@@ -25,12 +25,13 @@ func PricingFromDTO(d *dto.PricingDTO) (vo.Pricing, error) {
 			TimeWindows: lo.Map(r.TimeWindows, func(w dto.TimeWindowDTO, _ int) vo.TimeWindow {
 				return vo.TimeWindow{Days: w.Days, Start: w.Start, End: w.End, Timezone: w.Timezone}
 			}),
-			ContextMin:       r.ContextMin,
-			ContextMax:       r.ContextMax,
-			InputMicro:       dto.PriceMicroFromDisplay(r.InputPrice),
-			OutputMicro:      dto.PriceMicroFromDisplay(r.OutputPrice),
-			CacheCreateMicro: dto.PriceMicroFromDisplay(r.CacheCreationPrice),
-			CacheReadMicro:   dto.PriceMicroFromDisplay(r.CacheReadPrice),
+			ContextMin:         r.ContextMin,
+			ContextMax:         r.ContextMax,
+			InputMicro:         dto.PriceMicroFromDisplay(r.InputPrice),
+			OutputMicro:        dto.PriceMicroFromDisplay(r.OutputPrice),
+			CacheCreateMicro:   dto.PriceMicroFromDisplay(r.CacheCreationPrice),
+			CacheCreate1hMicro: dto.PriceMicroFromDisplay(r.CacheCreation1hPrice),
+			CacheReadMicro:     dto.PriceMicroFromDisplay(r.CacheReadPrice),
 		})
 	}
 	return vo.NewPricing(d.Currency, rules)
@@ -53,12 +54,13 @@ func PricingToDTO(p vo.Pricing) *dto.PricingDTO {
 				TimeWindows: lo.Map(r.TimeWindows, func(w vo.TimeWindow, _ int) dto.TimeWindowDTO {
 					return dto.TimeWindowDTO{Days: w.Days, Start: w.Start, End: w.End, Timezone: w.Timezone}
 				}),
-				ContextMin:         r.ContextMin,
-				ContextMax:         r.ContextMax,
-				InputPrice:         dto.PriceDisplayFromMicro(r.InputMicro),
-				OutputPrice:        dto.PriceDisplayFromMicro(r.OutputMicro),
-				CacheCreationPrice: dto.PriceDisplayFromMicro(r.CacheCreateMicro),
-				CacheReadPrice:     dto.PriceDisplayFromMicro(r.CacheReadMicro),
+				ContextMin:           r.ContextMin,
+				ContextMax:           r.ContextMax,
+				InputPrice:           dto.PriceDisplayFromMicro(r.InputMicro),
+				OutputPrice:          dto.PriceDisplayFromMicro(r.OutputMicro),
+				CacheCreationPrice:   dto.PriceDisplayFromMicro(r.CacheCreateMicro),
+				CacheCreation1hPrice: dto.PriceDisplayFromMicro(r.CacheCreate1hMicro),
+				CacheReadPrice:       dto.PriceDisplayFromMicro(r.CacheReadMicro),
 			}
 		}),
 	}

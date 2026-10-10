@@ -609,6 +609,59 @@ class ApiClient {
     });
   }
 
+  // ─── Playground（调试链路：审计留痕、不落会话） ──────────────────────────────
+
+  /** Playground 流式调试调用：逐 SSE 行回调（"data: ..." 原行），返回最终响应状态 */
+  async playgroundChatStream(
+    apiKeyID: number,
+    body: Record<string, unknown>,
+    onLine: (line: string) => void,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    const doFetch = () =>
+      fetch(`${API_BASE}${API_PREFIX}/playground/chat?apiKeyID=${apiKeyID}`, {
+        method: "POST",
+        headers: { ...this.getHeaders() },
+        body: JSON.stringify({ ...body, stream: true }),
+        signal,
+      });
+
+    let res = await doFetch();
+    if (res.status === 401) {
+      const refreshed = await this.tryRefreshToken();
+      if (refreshed) {
+        res = await doFetch();
+      } else {
+        this.clearAuthAndPromptLogin();
+        throw new ApiError(401, "Authentication required");
+      }
+    }
+
+    // 统一错误契约：业务错误以 200 + {error} JSON 返回而非 SSE 帧；
+    // 非 text/event-stream 的响应说明握手阶段即失败，直接抛错。
+    const contentType = res.headers.get("content-type") ?? "";
+    if (!contentType.includes("text/event-stream")) {
+      await resolveResponse(res);
+      return;
+    }
+    if (!res.body) throw new ApiError(500, "No response body");
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+      for (const line of lines) {
+        if (line.trim()) onLine(line);
+      }
+    }
+    if (buffer.trim()) onLine(buffer);
+  }
+
   // ─── Models (admin) ────────────────────────────────────────────────────────
 
   async createModel(body: CreateModelReqBody): Promise<void> {

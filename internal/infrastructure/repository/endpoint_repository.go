@@ -97,6 +97,7 @@ func toEndpointAggregate(m *dbmodel.Endpoint) (*aggregate.Endpoint, error) {
 		m.SupportOpenAIChatCompletion,
 		m.SupportOpenAIResponse,
 		m.SupportAnthropicMessage,
+		m.SupportOpenAIDecision,
 	)
 	if err != nil {
 		return nil, err
@@ -116,6 +117,7 @@ func toEndpointModel(ep *aggregate.Endpoint) *dbmodel.Endpoint {
 		SupportOpenAIChatCompletion: ep.SupportOpenAIChatCompletion(),
 		SupportOpenAIResponse:       ep.SupportOpenAIResponse(),
 		SupportAnthropicMessage:     ep.SupportAnthropicMessage(),
+		SupportOpenAIDecision:       ep.SupportOpenAIDecision(),
 	}
 }
 
@@ -142,6 +144,7 @@ func (r *endpointRepository) Update(ctx context.Context, ep *aggregate.Endpoint)
 		constant.FieldEndpointSupportOpenAIChatCompletion: ep.SupportOpenAIChatCompletion(),
 		constant.FieldEndpointSupportOpenAIResponse:       ep.SupportOpenAIResponse(),
 		constant.FieldEndpointSupportAnthropicMessage:     ep.SupportAnthropicMessage(),
+		constant.FieldEndpointSupportOpenAIDecision:       ep.SupportOpenAIDecision(),
 	}
 	if err := db.Model(&dbmodel.Endpoint{}).Where(constant.WhereIDEquals, ep.AggregateID()).Updates(updates).Error; err != nil {
 		return ierr.Wrap(ierr.ErrDBUpdate, err, "update endpoint")

@@ -1,8 +1,11 @@
 package constant
 
+import "time"
+
 const (
 	UpstreamPathOpenAIChatCompletions = "/chat/completions"
 	UpstreamPathOpenAIResponses       = "/responses"
+	UpstreamPathOpenAIDecisions       = "/decisions"
 	UpstreamPathAnthropicMessages     = "/messages"
 	UpstreamPathAnthropicCountTokens  = "/messages/count_tokens"
 
@@ -75,6 +78,12 @@ const (
 	ModuleOpenAIProxy = "OpenAIProxy"
 	// ModuleAnthropicProxy Anthropic 代理模块名（用于日志前缀和重试模块标识）
 	ModuleAnthropicProxy = "AnthropicProxy"
+	// ModuleOpenAIUseCase OpenAI 用例模块名（用于日志前缀）
+	ModuleOpenAIUseCase = "OpenAIUseCase"
+	// ModuleAnthropicUseCase Anthropic 用例模块名（用于日志前缀）
+	ModuleAnthropicUseCase = "AnthropicUseCase"
+	// AffinityTTL 端点亲和映射 TTL（同亲和键的后续请求在此窗口内优先命中上次成功的端点）
+	AffinityTTL = 5 * time.Minute
 
 	ResponseFailedAuditReason             = "response.failed"
 	ResponseFailedAuditReasonTemplate     = "response.failed: %s"

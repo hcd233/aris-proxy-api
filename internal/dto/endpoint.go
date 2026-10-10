@@ -16,6 +16,7 @@ type CreateEndpointReqBody struct {
 	SupportOpenAIChatCompletion *bool   `json:"supportOpenAIChatCompletion,omitempty" doc:"是否支持 OpenAI Chat Completion"`
 	SupportOpenAIResponse       *bool   `json:"supportOpenAIResponse,omitempty" doc:"是否支持 OpenAI Response"`
 	SupportAnthropicMessage     *bool   `json:"supportAnthropicMessage,omitempty" doc:"是否支持 Anthropic Message"`
+	SupportOpenAIDecision       *bool   `json:"supportOpenAIDecision,omitempty" doc:"是否支持 OpenAI Decision"`
 }
 
 // UpdateEndpointReq 更新 Endpoint 请求
@@ -33,6 +34,7 @@ type UpdateEndpointReqBody struct {
 	SupportOpenAIChatCompletion *bool   `json:"supportOpenAIChatCompletion,omitempty" doc:"是否支持 OpenAI Chat Completion"`
 	SupportOpenAIResponse       *bool   `json:"supportOpenAIResponse,omitempty" doc:"是否支持 OpenAI Response"`
 	SupportAnthropicMessage     *bool   `json:"supportAnthropicMessage,omitempty" doc:"是否支持 Anthropic Message"`
+	SupportOpenAIDecision       *bool   `json:"supportOpenAIDecision,omitempty" doc:"是否支持 OpenAI Decision"`
 }
 
 // DeleteEndpointReq 删除 Endpoint 请求

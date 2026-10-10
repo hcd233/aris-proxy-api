@@ -17,6 +17,7 @@ type CreateEndpointCommand struct {
 	SupportOpenAIChatCompletion bool
 	SupportOpenAIResponse       bool
 	SupportAnthropicMessage     bool
+	SupportOpenAIDecision       bool
 }
 
 // CreateEndpointResult 创建命令结果
@@ -42,6 +43,7 @@ type UpdateEndpointCommand struct {
 	SupportOpenAIChatCompletion *bool
 	SupportOpenAIResponse       *bool
 	SupportAnthropicMessage     *bool
+	SupportOpenAIDecision       *bool
 }
 
 // UpdateEndpointHandler 更新命令处理器

@@ -73,6 +73,8 @@ func (h *modelHandler) HandleCreateModel(ctx context.Context, req *dto.CreateMod
 		ContextLength:   req.Body.ContextLength,
 		MaxOutputTokens: req.Body.MaxOutputTokens,
 		Capabilities:    req.Body.Capabilities,
+		Priority:        req.Body.Priority,
+		Weight:          req.Body.Weight,
 		Pricing:         pricing,
 	})
 	if err != nil {
@@ -104,6 +106,8 @@ func (h *modelHandler) HandleUpdateModel(ctx context.Context, req *dto.UpdateMod
 		Capabilities:    req.Body.Capabilities,
 		ModelID:         req.Body.ModelID,
 		SyncHistory:     req.Body.SyncHistory,
+		Priority:        req.Body.Priority,
+		Weight:          req.Body.Weight,
 	}
 	if req.Body.Pricing != nil {
 		pricing, perr := port.PricingFromDTO(req.Body.Pricing)
@@ -166,6 +170,7 @@ func (h *modelHandler) HandleListModels(ctx context.Context, req *dto.ListModels
 		Status:      req.Status,
 		EndpointID:  req.EndpointID,
 		Capability:  req.Capability,
+		MissingOnly: req.MissingOnly,
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[ModelHandler] List models failed", zap.Error(err))
@@ -186,10 +191,13 @@ func toModelListItem(v *port.ListModelView) *dto.ModelListItem {
 		ModelID:         v.ModelID,
 		UpstreamModel:   v.UpstreamModel,
 		Enabled:         v.Enabled,
+		Priority:        v.Priority,
+		Weight:          v.Weight,
 		ContextLength:   v.ContextLength,
 		MaxOutputTokens: v.MaxOutputTokens,
 		Capabilities:    v.Capabilities,
 		Pricing:         port.PricingToDTO(v.Pricing),
+		ConfigMissing:   v.ConfigMissing,
 		CreatedAt:       v.CreatedAt,
 		UpdatedAt:       v.UpdatedAt,
 	}

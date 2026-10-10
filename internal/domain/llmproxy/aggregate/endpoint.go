@@ -22,6 +22,7 @@ type Endpoint struct {
 	supportOpenAIChatCompletion bool
 	supportOpenAIResponse       bool
 	supportAnthropicMessage     bool
+	supportOpenAIDecision       bool
 	createdAt                   time.Time
 	updatedAt                   time.Time
 }
@@ -30,7 +31,7 @@ type Endpoint struct {
 func CreateEndpoint(
 	id uint,
 	name, openaiBaseURL, anthropicBaseURL, apiKey string,
-	supportChatCompletion, supportResponse, supportMessage bool,
+	supportChatCompletion, supportResponse, supportMessage, supportDecision bool,
 ) (*Endpoint, error) {
 	if name == "" {
 		return nil, ierr.New(ierr.ErrValidation, "endpoint name cannot be empty")
@@ -41,10 +42,10 @@ func CreateEndpoint(
 	if openaiBaseURL == "" && anthropicBaseURL == "" {
 		return nil, ierr.New(ierr.ErrValidation, "at least one base URL must be provided")
 	}
-	if !supportChatCompletion && !supportResponse && !supportMessage {
+	if !supportChatCompletion && !supportResponse && !supportMessage && !supportDecision {
 		return nil, ierr.New(ierr.ErrValidation, "at least one capability must be enabled")
 	}
-	if (supportChatCompletion || supportResponse) && openaiBaseURL == "" {
+	if (supportChatCompletion || supportResponse || supportDecision) && openaiBaseURL == "" {
 		return nil, ierr.New(ierr.ErrValidation, "endpoint openai baseURL cannot be empty when OpenAI APIs are supported")
 	}
 	if supportMessage && anthropicBaseURL == "" {
@@ -58,6 +59,7 @@ func CreateEndpoint(
 		supportOpenAIChatCompletion: supportChatCompletion,
 		supportOpenAIResponse:       supportResponse,
 		supportAnthropicMessage:     supportMessage,
+		supportOpenAIDecision:       supportDecision,
 	}
 	ep.SetID(id)
 	return ep, nil
@@ -71,6 +73,7 @@ func (e *Endpoint) APIKey() string                    { return e.apiKey }
 func (e *Endpoint) SupportOpenAIChatCompletion() bool { return e.supportOpenAIChatCompletion }
 func (e *Endpoint) SupportOpenAIResponse() bool       { return e.supportOpenAIResponse }
 func (e *Endpoint) SupportAnthropicMessage() bool     { return e.supportAnthropicMessage }
+func (e *Endpoint) SupportOpenAIDecision() bool       { return e.supportOpenAIDecision }
 func (e *Endpoint) CreatedAt() time.Time              { return e.createdAt }
 func (e *Endpoint) UpdatedAt() time.Time              { return e.updatedAt }
 
@@ -83,7 +86,7 @@ func (e *Endpoint) SetTimestamps(createdAt, updatedAt time.Time) {
 }
 
 // Update 更新 Endpoint 字段（仅非 nil 字段更新）
-func (e *Endpoint) Update(name, openaiBaseURL, anthropicBaseURL, apiKey *string, supportChatCompletion, supportResponse, supportMessage *bool) {
+func (e *Endpoint) Update(name, openaiBaseURL, anthropicBaseURL, apiKey *string, supportChatCompletion, supportResponse, supportMessage, supportDecision *bool) {
 	if name != nil {
 		e.name = *name
 	}
@@ -104,5 +107,8 @@ func (e *Endpoint) Update(name, openaiBaseURL, anthropicBaseURL, apiKey *string,
 	}
 	if supportMessage != nil {
 		e.supportAnthropicMessage = *supportMessage
+	}
+	if supportDecision != nil {
+		e.supportOpenAIDecision = *supportDecision
 	}
 }

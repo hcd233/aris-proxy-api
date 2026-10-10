@@ -142,40 +142,46 @@ func newLeakFixture(t *testing.T) *leakFixture {
 
 	endpointRepo := repository.NewEndpointRepository(db)
 	modelRepo := repository.NewModelRepository(db)
-	resolver := llmproxyservice.NewEndpointResolver(endpointRepo, modelRepo, false)
+	resolver := llmproxyservice.NewEndpointResolver(endpointRepo, modelRepo, false, nil)
 	listModels := usecase.NewListOpenAIModels(repository.NewEndpointReadRepository(db))
 
 	openAIUC := usecase.NewOpenAIUseCase(resolver, listModels, openAIProxy, anthropicProxy,
-		noopTaskSubmitter{}, noopTriggerChecker{}, metrics.NewTokenUsageCounter(registry))
+		noopTaskSubmitter{}, noopTriggerChecker{}, metrics.NewTokenUsageCounter(registry), nil)
+	sseGauge := metrics.NewSSEGauge(registry)
 	openAIHandler := handler.NewOpenAIHandler(handler.OpenAIDependencies{
 		UseCase:  openAIUC,
-		SSEGauge: metrics.NewSSEGauge(registry),
+		SSEGauge: sseGauge,
+	})
+	playgroundHandler := handler.NewPlaygroundHandler(handler.PlaygroundDependencies{
+		UseCase:  openAIUC,
+		SSEGauge: sseGauge,
 	})
 
 	app := fiber.New()
 	api := humafiber.New(app, huma.DefaultConfig("goroutine leak repro", "1.0"))
 	router.RegisterAPIRouter(api, router.APIRouterDependencies{
-		DB:               db,
-		Cache:            rdb,
-		PingHandler:      &stubPingHandler{},
-		TraceHandler:     &stubTraceHandler{},
-		TokenHandler:     &stubTokenHandler{},
-		Oauth2Handler:    &stubOauth2Handler{},
-		UserHandler:      &stubUserHandler{},
-		DemoHandler:      &stubDemoHandler{},
-		APIKeyHandler:    &stubAPIKeyHandler{},
-		SessionHandler:   &stubSessionHandler{},
-		EndpointHandler:  &stubEndpointHandler{},
-		ModelHandler:     &stubModelHandler{},
-		AuditHandler:     &stubAuditHandler{},
-		CronHandler:      &stubCronHandler{},
-		OpenAIHandler:    openAIHandler,
-		AnthropicHandler: &stubAnthropicHandler{},
-		TriggerHandler:   &stubTriggerHandler{},
-		MetricsHandler:   &stubMetricsHandler{},
-		DatasetHandler:   &stubDatasetHandler{},
-		ClientHandler:    &stubClientHandler{},
-		UpstreamHandler:  &stubUpstreamHandler{},
+		DB:                db,
+		Cache:             rdb,
+		PingHandler:       &stubPingHandler{},
+		TraceHandler:      &stubTraceHandler{},
+		TokenHandler:      &stubTokenHandler{},
+		Oauth2Handler:     &stubOauth2Handler{},
+		UserHandler:       &stubUserHandler{},
+		DemoHandler:       &stubDemoHandler{},
+		APIKeyHandler:     &stubAPIKeyHandler{},
+		SessionHandler:    &stubSessionHandler{},
+		EndpointHandler:   &stubEndpointHandler{},
+		ModelHandler:      &stubModelHandler{},
+		AuditHandler:      &stubAuditHandler{},
+		CronHandler:       &stubCronHandler{},
+		OpenAIHandler:     openAIHandler,
+		PlaygroundHandler: playgroundHandler,
+		AnthropicHandler:  &stubAnthropicHandler{},
+		TriggerHandler:    &stubTriggerHandler{},
+		MetricsHandler:    &stubMetricsHandler{},
+		DatasetHandler:    &stubDatasetHandler{},
+		ClientHandler:     &stubClientHandler{},
+		UpstreamHandler:   &stubUpstreamHandler{},
 	})
 
 	// 种子：用户 + 代理 API Key + endpoint（指向上游 httptest）+ model

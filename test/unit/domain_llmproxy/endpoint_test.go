@@ -17,6 +17,7 @@ func TestCreateEndpoint_AllowsSingleProtocolEndpoint(t *testing.T) {
 		supportOpenAIChatCompletion bool
 		supportOpenAIResponse       bool
 		supportAnthropicMessage     bool
+		supportOpenAIDecision       bool
 	}{
 		{
 			name:                        "openai_only_chat",
@@ -27,6 +28,11 @@ func TestCreateEndpoint_AllowsSingleProtocolEndpoint(t *testing.T) {
 			name:                    "anthropic_only_message",
 			anthropicBaseURL:        "https://api.anthropic.com",
 			supportAnthropicMessage: true,
+		},
+		{
+			name:                  "openai_only_decision",
+			openaiBaseURL:         "https://api.openai.com",
+			supportOpenAIDecision: true,
 		},
 	}
 
@@ -43,6 +49,7 @@ func TestCreateEndpoint_AllowsSingleProtocolEndpoint(t *testing.T) {
 				tc.supportOpenAIChatCompletion,
 				tc.supportOpenAIResponse,
 				tc.supportAnthropicMessage,
+				tc.supportOpenAIDecision,
 			)
 			if err != nil {
 				t.Fatalf("CreateEndpoint() error: %v", err)
@@ -63,6 +70,7 @@ func TestCreateEndpoint_RejectsMissingSupportedProtocolBaseURL(t *testing.T) {
 		supportOpenAIChatCompletion bool
 		supportOpenAIResponse       bool
 		supportAnthropicMessage     bool
+		supportOpenAIDecision       bool
 	}{
 		{
 			name:                        "missing_openai_chat_base_url",
@@ -75,6 +83,10 @@ func TestCreateEndpoint_RejectsMissingSupportedProtocolBaseURL(t *testing.T) {
 		{
 			name:                    "missing_anthropic_message_base_url",
 			supportAnthropicMessage: true,
+		},
+		{
+			name:                  "missing_openai_decision_base_url",
+			supportOpenAIDecision: true,
 		},
 	}
 
@@ -91,6 +103,7 @@ func TestCreateEndpoint_RejectsMissingSupportedProtocolBaseURL(t *testing.T) {
 				tc.supportOpenAIChatCompletion,
 				tc.supportOpenAIResponse,
 				tc.supportAnthropicMessage,
+				tc.supportOpenAIDecision,
 			)
 			if !errors.Is(err, ierr.ErrValidation) {
 				t.Fatalf("CreateEndpoint() error = %v, want ErrValidation", err)
@@ -103,7 +116,7 @@ func TestCreateEndpoint_RejectsBothEmptyBaseURL(t *testing.T) {
 	t.Parallel()
 	_, err := aggregate.CreateEndpoint(
 		1, "test", "", "", "sk-test",
-		false, false, false,
+		false, false, false, false,
 	)
 	if !errors.Is(err, ierr.ErrValidation) {
 		t.Fatalf("CreateEndpoint() error = %v, want ErrValidation", err)
@@ -114,7 +127,7 @@ func TestCreateEndpoint_RejectsNoCapability(t *testing.T) {
 	t.Parallel()
 	_, err := aggregate.CreateEndpoint(
 		1, "test", "https://api.openai.com", "https://api.anthropic.com", "sk-test",
-		false, false, false,
+		false, false, false, false,
 	)
 	if !errors.Is(err, ierr.ErrValidation) {
 		t.Fatalf("CreateEndpoint() error = %v, want ErrValidation", err)

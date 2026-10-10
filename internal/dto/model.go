@@ -23,6 +23,8 @@ type CreateModelReqBody struct {
 	MaxOutputTokens int                  `json:"maxOutputTokens,omitempty" minimum:"0" default:"64000" doc:"最大输出长度（tokens）"`
 	Capabilities    []enum.InputModality `json:"capabilities,omitempty" doc:"模型能力（输入模态集合；合法值 text/image/pdf/video/audio；必须包含 text；缺省为 [text]）"`
 	Pricing         *PricingDTO          `json:"pricing,omitempty" doc:"定价（缺省=未计价）"`
+	Priority        int                  `json:"priority,omitempty" minimum:"-100" maximum:"100" doc:"调度优先级（数字小=优先级高，缺省 0）"`
+	Weight          int                  `json:"weight,omitempty" minimum:"0" maximum:"1000" doc:"同优先级加权随机权重（缺省 1，0 归 1，负数拒绝）"`
 }
 
 // UpdateModelReq 更新 Model 请求
@@ -43,6 +45,8 @@ type UpdateModelReqBody struct {
 	MaxOutputTokens *int                  `json:"maxOutputTokens,omitempty" minimum:"0" doc:"最大输出长度（tokens）"`
 	Capabilities    *[]enum.InputModality `json:"capabilities,omitempty" doc:"模型能力（输入模态集合；合法值 text/image/pdf/video/audio；必须包含 text）"`
 	Pricing         *PricingDTO           `json:"pricing,omitempty" doc:"定价（缺省=不修改；currency 与 rules 均置空=清空为未计价）"`
+	Priority        *int                  `json:"priority,omitempty" minimum:"-100" maximum:"100" doc:"调度优先级（数字小=优先级高）"`
+	Weight          *int                  `json:"weight,omitempty" minimum:"0" maximum:"1000" doc:"同优先级加权随机权重（0 归 1，负数拒绝）"`
 }
 
 // ModelUpdateRsp 更新 Model 响应
@@ -69,15 +73,16 @@ type DeleteModelReq struct {
 //	@author centonhuang
 //	@update 2026-08-28 10:00:00
 type ListModelsReq struct {
-	Page       int       `query:"page" required:"true" minimum:"1" doc:"页码"`
-	PageSize   int       `query:"pageSize" required:"true" minimum:"1" maximum:"500" doc:"每页条数"`
-	Query      string    `query:"query" maxLength:"100" doc:"关键词（命中 alias / modelId / upstreamModel）"`
-	Sort       enum.Sort `query:"sort" enum:"asc,desc" doc:"排序方向"`
-	SortField  string    `query:"sortField" maxLength:"50" doc:"排序列（白名单：alias/context_length/max_output_tokens/created_at/endpoint_id/enabled；非法值回退 created_at）"`
-	Status     string    `query:"status" enum:"enabled,disabled" doc:"启用状态筛选（缺省为全部）"`
-	EndpointID uint      `query:"endpointID" minimum:"1" doc:"按所属端点过滤（0=不过滤）"`
-	Capability string    `query:"capability" enum:"text,image,pdf,video,audio" doc:"按输入模态过滤（缺省为全部）"`
-	Username   string    `query:"username" maxLength:"64" doc:"按归属用户名过滤（仅管理员生效）"`
+	Page        int       `query:"page" required:"true" minimum:"1" doc:"页码"`
+	PageSize    int       `query:"pageSize" required:"true" minimum:"1" maximum:"500" doc:"每页条数"`
+	Query       string    `query:"query" maxLength:"100" doc:"关键词（命中 alias / modelId / upstreamModel）"`
+	Sort        enum.Sort `query:"sort" enum:"asc,desc" doc:"排序方向"`
+	SortField   string    `query:"sortField" maxLength:"50" doc:"排序列（白名单：alias/context_length/max_output_tokens/created_at/endpoint_id/enabled；非法值回退 created_at）"`
+	Status      string    `query:"status" enum:"enabled,disabled" doc:"启用状态筛选（缺省为全部）"`
+	EndpointID  uint      `query:"endpointID" minimum:"1" doc:"按所属端点过滤（0=不过滤）"`
+	Capability  string    `query:"capability" enum:"text,image,pdf,video,audio" doc:"按输入模态过滤（缺省为全部）"`
+	MissingOnly bool      `query:"missingOnly" doc:"仅看配置缺失（未计价或未填规格）"`
+	Username    string    `query:"username" maxLength:"64" doc:"按归属用户名过滤（仅管理员生效）"`
 }
 
 // ListModelsRsp 平铺模型列表响应
@@ -115,10 +120,13 @@ type ModelListItem struct {
 	ModelID         string                 `json:"modelId" doc:"业务模型ID"`
 	UpstreamModel   string                 `json:"upstreamModel" doc:"上游实际模型名（demo 权限下已脱敏）"`
 	Enabled         bool                   `json:"enabled" doc:"是否启用"`
+	Priority        int                    `json:"priority" doc:"调度优先级（数字小=优先级高）"`
+	Weight          int                    `json:"weight" doc:"同优先级加权随机权重"`
 	ContextLength   int                    `json:"contextLength" doc:"上下文窗口长度（tokens）"`
 	MaxOutputTokens int                    `json:"maxOutputTokens" doc:"最大输出长度（tokens）"`
 	Capabilities    []enum.InputModality   `json:"capabilities" doc:"模型能力（输入模态集合）"`
 	Pricing         *PricingDTO            `json:"pricing,omitempty" doc:"定价（未计价缺省）"`
+	ConfigMissing   []enum.ConfigMissing   `json:"configMissing,omitempty" enum:"pricing,spec" doc:"配置缺失项: pricing(未计价)/spec(未填规格)"`
 	CreatedAt       time.Time              `json:"createdAt" doc:"创建时间"`
 	UpdatedAt       time.Time              `json:"updatedAt" doc:"更新时间"`
 }

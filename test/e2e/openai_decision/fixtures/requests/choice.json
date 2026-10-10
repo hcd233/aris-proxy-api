@@ -1,0 +1,16 @@
+{
+  "model": "REPLACE_WITH_DECISION_MODEL",
+  "input": "The package arrived with a broken screen.",
+  "questions": [
+    {
+      "type": "choice",
+      "name": "sentiment",
+      "instructions": "What is the customer sentiment?",
+      "choices": [
+        { "value": "negative", "description": "unhappy" },
+        { "value": "positive", "description": "happy" },
+        { "value": true, "description": "boolean marker" }
+      ]
+    }
+  ]
+}

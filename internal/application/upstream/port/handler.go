@@ -28,6 +28,7 @@ type UpstreamEndpointView struct {
 	SupportOpenAIChatCompletion bool
 	SupportOpenAIResponse       bool
 	SupportAnthropicMessage     bool
+	SupportOpenAIDecision       bool
 	CreatedAt                   time.Time
 	UpdatedAt                   time.Time
 }
@@ -40,10 +41,13 @@ type UpstreamModelView struct {
 	ModelID         string
 	UpstreamModel   string
 	Enabled         bool
+	Priority        int
+	Weight          int
 	ContextLength   int
 	MaxOutputTokens int
 	Capabilities    []enum.InputModality
 	Pricing         vo.Pricing
+	ConfigMissing   []enum.ConfigMissing // 配置缺失项：pricing（未计价）/spec（未填规格）
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 }

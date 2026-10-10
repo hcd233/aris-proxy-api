@@ -55,6 +55,10 @@ const (
 	//	@update 2026-08-11 10:00:00
 	CtxKeySkipStore enum.CtxKey = "skipStore"
 
+	// CtxKeyFailureAuditDeferral 跨端点 fallback 期间暂存失败审计（仅终局失败提交）
+	//	@update 2026-10-09 10:00:00
+	CtxKeyFailureAuditDeferral enum.CtxKey = "failureAuditDeferral"
+
 	// CtxKeyClientIP 客户端 IP（由 InjectRequestMetaMiddleware 注入，用于 demo 访问审计）
 	CtxKeyClientIP enum.CtxKey = "clientIP"
 

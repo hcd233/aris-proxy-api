@@ -33,24 +33,25 @@ const routeTestAPIKey = "sk-route-regression"
 // 用「嵌入接口」的空结构体即可满足所有接口：nil 嵌入接口满足方法集，
 // 注册期不会解引用，只有真正请求该路由才会 panic（本用例只请求模型分发路由）。
 type (
-	stubPingHandler      struct{ handler.PingHandler }
-	stubTraceHandler     struct{ handler.TraceHandler }
-	stubTokenHandler     struct{ handler.TokenHandler }
-	stubOauth2Handler    struct{ handler.Oauth2Handler }
-	stubUserHandler      struct{ handler.UserHandler }
-	stubDemoHandler      struct{ handler.DemoHandler }
-	stubAPIKeyHandler    struct{ handler.APIKeyHandler }
-	stubSessionHandler   struct{ handler.SessionHandler }
-	stubEndpointHandler  struct{ handler.EndpointHandler }
-	stubModelHandler     struct{ handler.ModelHandler }
-	stubUpstreamHandler  struct{ handler.UpstreamHandler }
-	stubAuditHandler     struct{ handler.AuditHandler }
-	stubCronHandler      struct{ handler.CronHandler }
-	stubTriggerHandler   struct{ handler.TriggerHandler }
-	stubOpenAIHandler    struct{ handler.OpenAIHandler }
-	stubAnthropicHandler struct{ handler.AnthropicHandler }
-	stubMetricsHandler   struct{ handler.MetricsHandler }
-	stubDatasetHandler   struct{ handler.DatasetHandler }
+	stubPingHandler       struct{ handler.PingHandler }
+	stubTraceHandler      struct{ handler.TraceHandler }
+	stubTokenHandler      struct{ handler.TokenHandler }
+	stubOauth2Handler     struct{ handler.Oauth2Handler }
+	stubUserHandler       struct{ handler.UserHandler }
+	stubDemoHandler       struct{ handler.DemoHandler }
+	stubAPIKeyHandler     struct{ handler.APIKeyHandler }
+	stubSessionHandler    struct{ handler.SessionHandler }
+	stubEndpointHandler   struct{ handler.EndpointHandler }
+	stubModelHandler      struct{ handler.ModelHandler }
+	stubUpstreamHandler   struct{ handler.UpstreamHandler }
+	stubAuditHandler      struct{ handler.AuditHandler }
+	stubCronHandler       struct{ handler.CronHandler }
+	stubTriggerHandler    struct{ handler.TriggerHandler }
+	stubOpenAIHandler     struct{ handler.OpenAIHandler }
+	stubPlaygroundHandler struct{ handler.PlaygroundHandler }
+	stubAnthropicHandler  struct{ handler.AnthropicHandler }
+	stubMetricsHandler    struct{ handler.MetricsHandler }
+	stubDatasetHandler    struct{ handler.DatasetHandler }
 )
 
 // newRouteTestDB 建 sqlite 内存库并迁移 API Key 中间件所需表
@@ -92,26 +93,27 @@ func TestClientModelsRouteMatchesSDKPath(t *testing.T) {
 	app := fiber.New()
 	api := humafiber.New(app, huma.DefaultConfig("client models route", "1.0"))
 	router.RegisterAPIRouter(api, router.APIRouterDependencies{
-		DB:               db,
-		PingHandler:      &stubPingHandler{},
-		TraceHandler:     &stubTraceHandler{},
-		TokenHandler:     &stubTokenHandler{},
-		Oauth2Handler:    &stubOauth2Handler{},
-		UserHandler:      &stubUserHandler{},
-		DemoHandler:      &stubDemoHandler{},
-		APIKeyHandler:    &stubAPIKeyHandler{},
-		SessionHandler:   &stubSessionHandler{},
-		EndpointHandler:  &stubEndpointHandler{},
-		ModelHandler:     &stubModelHandler{},
-		UpstreamHandler:  &stubUpstreamHandler{},
-		AuditHandler:     &stubAuditHandler{},
-		CronHandler:      &stubCronHandler{},
-		TriggerHandler:   &stubTriggerHandler{},
-		OpenAIHandler:    &stubOpenAIHandler{},
-		AnthropicHandler: &stubAnthropicHandler{},
-		MetricsHandler:   &stubMetricsHandler{},
-		DatasetHandler:   &stubDatasetHandler{},
-		ClientHandler:    handler.NewClientHandler(handler.ClientDependencies{List: &fakeListClientModels{}}),
+		DB:                db,
+		PingHandler:       &stubPingHandler{},
+		TraceHandler:      &stubTraceHandler{},
+		TokenHandler:      &stubTokenHandler{},
+		Oauth2Handler:     &stubOauth2Handler{},
+		UserHandler:       &stubUserHandler{},
+		DemoHandler:       &stubDemoHandler{},
+		APIKeyHandler:     &stubAPIKeyHandler{},
+		SessionHandler:    &stubSessionHandler{},
+		EndpointHandler:   &stubEndpointHandler{},
+		ModelHandler:      &stubModelHandler{},
+		UpstreamHandler:   &stubUpstreamHandler{},
+		AuditHandler:      &stubAuditHandler{},
+		CronHandler:       &stubCronHandler{},
+		TriggerHandler:    &stubTriggerHandler{},
+		OpenAIHandler:     &stubOpenAIHandler{},
+		PlaygroundHandler: &stubPlaygroundHandler{},
+		AnthropicHandler:  &stubAnthropicHandler{},
+		MetricsHandler:    &stubMetricsHandler{},
+		DatasetHandler:    &stubDatasetHandler{},
+		ClientHandler:     handler.NewClientHandler(handler.ClientDependencies{List: &fakeListClientModels{}}),
 	})
 
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, constant.ClientModelsListPath, http.NoBody)

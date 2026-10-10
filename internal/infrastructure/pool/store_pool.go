@@ -236,7 +236,7 @@ func (pm *PoolManager) SubmitModelCallAuditTask(task *dto.ModelCallAuditTask) er
 			UpstreamProtocol:     task.UpstreamProtocol,
 			APIProtocol:          task.APIProtocol,
 			Endpoint:             task.Endpoint,
-			Tokens:               mcvo.NewTokenBreakdown(task.InputTokens, task.OutputTokens, task.CacheCreationInputTokens, task.CacheReadInputTokens),
+			Tokens:               mcvo.NewTokenBreakdown(task.InputTokens, task.OutputTokens, task.CacheCreationInputTokens, task.CacheCreation1hInputTokens, task.CacheReadInputTokens),
 			Latency:              mcvo.NewCallLatency(time.Duration(task.FirstTokenLatencyMs)*time.Millisecond, time.Duration(task.StreamDurationMs)*time.Millisecond),
 			Status:               mcvo.NewCallStatus(task.UpstreamStatusCode, task.ErrorMessage),
 			UserAgent:            util.CtxValueString(task.Ctx, constant.CtxKeyClient),

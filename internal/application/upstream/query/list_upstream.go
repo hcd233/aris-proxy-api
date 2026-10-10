@@ -178,6 +178,7 @@ func toEndpointView(ep *llmagg.Endpoint, usersByID map[uint]*identityaggregate.U
 		SupportOpenAIChatCompletion: ep.SupportOpenAIChatCompletion(),
 		SupportOpenAIResponse:       ep.SupportOpenAIResponse(),
 		SupportAnthropicMessage:     ep.SupportAnthropicMessage(),
+		SupportOpenAIDecision:       ep.SupportOpenAIDecision(),
 		CreatedAt:                   ep.CreatedAt(),
 		UpdatedAt:                   ep.UpdatedAt(),
 	}
@@ -195,10 +196,13 @@ func toModelView(m *llmagg.Model, usersByID map[uint]*identityaggregate.User, is
 		ModelID:         m.ModelID(),
 		UpstreamModel:   upstreamModel,
 		Enabled:         m.Enabled(),
+		Priority:        m.Priority(),
+		Weight:          m.Weight(),
 		ContextLength:   m.ContextLength(),
 		MaxOutputTokens: m.MaxOutputTokens(),
 		Capabilities:    m.Capabilities(),
 		Pricing:         m.Pricing(),
+		ConfigMissing:   m.MissingConfig(),
 		CreatedAt:       m.CreatedAt(),
 		UpdatedAt:       m.UpdatedAt(),
 	}

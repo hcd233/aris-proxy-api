@@ -103,6 +103,7 @@ func toUpstreamEndpointItem(v *upstreamport.UpstreamEndpointView) *dto.UpstreamE
 		SupportOpenAIChatCompletion: v.SupportOpenAIChatCompletion,
 		SupportOpenAIResponse:       v.SupportOpenAIResponse,
 		SupportAnthropicMessage:     v.SupportAnthropicMessage,
+		SupportOpenAIDecision:       v.SupportOpenAIDecision,
 		CreatedAt:                   v.CreatedAt,
 		UpdatedAt:                   v.UpdatedAt,
 	}
@@ -116,10 +117,13 @@ func toUpstreamModelItem(v *upstreamport.UpstreamModelView) *dto.UpstreamModelIt
 		ModelID:         v.ModelID,
 		UpstreamModel:   v.UpstreamModel,
 		Enabled:         v.Enabled,
+		Priority:        v.Priority,
+		Weight:          v.Weight,
 		ContextLength:   v.ContextLength,
 		MaxOutputTokens: v.MaxOutputTokens,
 		Capabilities:    v.Capabilities,
 		Pricing:         modelport.PricingToDTO(v.Pricing),
+		ConfigMissing:   v.ConfigMissing,
 		CreatedAt:       v.CreatedAt,
 		UpdatedAt:       v.UpdatedAt,
 	}

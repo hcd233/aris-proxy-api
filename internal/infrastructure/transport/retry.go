@@ -9,7 +9,6 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
@@ -23,6 +22,7 @@ import (
 //   - UpstreamError 且 StatusCode == 429（Too Many Requests，限流）
 //
 // 不可重试：UpstreamError 且 StatusCode 为其他 4xx（客户端错误）、其他错误（请求构建失败等）
+// 判定逻辑下沉 common/model 的 Retryable()，与 usecase 层换端点判定共用一份。
 //
 //	@param err error 错误
 //	@return bool 是否可重试
@@ -31,12 +31,11 @@ import (
 func IsRetryableError(err error) bool {
 	var connErr *model.UpstreamConnectionError
 	if errors.As(err, &connErr) {
-		return true
+		return connErr.Retryable()
 	}
 	var upstreamErr *model.UpstreamError
 	if errors.As(err, &upstreamErr) {
-		return upstreamErr.StatusCode >= constant.UpstreamRetryableStatusThreshold ||
-			upstreamErr.StatusCode == http.StatusTooManyRequests
+		return upstreamErr.Retryable()
 	}
 	return false
 }

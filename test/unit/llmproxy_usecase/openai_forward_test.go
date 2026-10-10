@@ -16,6 +16,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
+	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 )
@@ -32,6 +33,11 @@ type mockOpenAIProxy struct {
 	lastChatBody             []byte
 	openChatStreamErr        error
 	openResponseStreamErr    error
+	decisionUnaryCalled      bool
+	lastDecisionCtx          context.Context
+	lastDecisionBody         []byte
+	decisionResp             []byte
+	decisionErr              error
 	// chatStreamClosed 记录上游 body 是否被关闭（验证 port.Stream.Close 兜底路径）
 	chatStreamClosed bool
 }
@@ -107,6 +113,16 @@ func (p *mockOpenAIProxy) ReadCreateResponseStream(_ context.Context, _ io.ReadC
 	return nil
 }
 
+func (p *mockOpenAIProxy) ForwardCreateDecision(ctx context.Context, _ vo.UpstreamEndpoint, body []byte) ([]byte, error) {
+	p.decisionUnaryCalled = true
+	p.lastDecisionCtx = ctx
+	p.lastDecisionBody = append([]byte(nil), body...)
+	if p.decisionErr != nil {
+		return nil, p.decisionErr
+	}
+	return p.decisionResp, nil
+}
+
 var _ usecase.OpenAIProxyPort = (*mockOpenAIProxy)(nil)
 
 // trackedReadCloser 记录底层 body 是否被 Close，用于验证 port.Stream.Close 兜底路径。
@@ -126,14 +142,21 @@ type mockResolver struct {
 	resolveErr      error
 }
 
-func (r *mockResolver) Resolve(_ context.Context, _ uint, _ vo.EndpointAlias, matcher func(*aggregate.Endpoint) bool) (*aggregate.Endpoint, *aggregate.Model, error) {
-	if r.resolveErr != nil || r.resolveEndpoint == nil {
-		return r.resolveEndpoint, r.resolveModel, r.resolveErr
+func (r *mockResolver) ResolveCandidatesWithAffinity(ctx context.Context, userID uint, alias vo.EndpointAlias, _ string, matcher func(*aggregate.Endpoint) bool) ([]service.Candidate, error) {
+	return r.ResolveCandidates(ctx, userID, alias, matcher)
+}
+
+func (r *mockResolver) ResolveCandidates(_ context.Context, _ uint, _ vo.EndpointAlias, matcher func(*aggregate.Endpoint) bool) ([]service.Candidate, error) {
+	if r.resolveErr != nil {
+		return nil, r.resolveErr
+	}
+	if r.resolveEndpoint == nil {
+		return nil, ierr.New(ierr.ErrDataNotExists, "no candidate")
 	}
 	if matcher != nil && !matcher(r.resolveEndpoint) {
-		return nil, nil, ierr.New(ierr.ErrInternal, "endpoint unsupported")
+		return nil, ierr.New(ierr.ErrInternal, "endpoint unsupported")
 	}
-	return r.resolveEndpoint, r.resolveModel, nil
+	return []service.Candidate{{Endpoint: r.resolveEndpoint, Model: r.resolveModel}}, nil
 }
 
 type mockListModels struct{}
@@ -157,7 +180,7 @@ func buildCompatEndpoint(name string, supportChat, supportResponse, supportMessa
 	if supportMessage {
 		anthropicBaseURL = "https://api.anthropic.com"
 	}
-	ep, _ := aggregate.CreateEndpoint(1, name, openaiBaseURL, anthropicBaseURL, "test-api-key", supportChat, supportResponse, supportMessage)
+	ep, _ := aggregate.CreateEndpoint(1, name, openaiBaseURL, anthropicBaseURL, "test-api-key", supportChat, supportResponse, supportMessage, false)
 	return ep
 }
 
@@ -216,7 +239,7 @@ func TestOpenAICreateChatCompletion_NativeStream(t *testing.T) {
 	t.Parallel()
 	proxy := &mockOpenAIProxy{}
 	resolver := &mockResolver{resolveEndpoint: buildTestEndpoint(), resolveModel: buildTestModel()}
-	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{}, nil, nil)
+	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{}, nil, nil, nil)
 
 	stream := true
 	req := &dto.OpenAIChatCompletionRequest{Body: &dto.OpenAIChatCompletionReq{
@@ -261,7 +284,7 @@ func TestOpenAICreateChatCompletion_StreamOpenErrorPassthrough(t *testing.T) {
 	}
 	proxy := &mockOpenAIProxy{openChatStreamErr: upstreamErr}
 	resolver := &mockResolver{resolveEndpoint: buildTestEndpoint(), resolveModel: buildTestModel()}
-	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{}, nil, nil)
+	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{}, nil, nil, nil)
 
 	stream := true
 	req := &dto.OpenAIChatCompletionRequest{Body: &dto.OpenAIChatCompletionReq{
@@ -294,7 +317,7 @@ func TestOpenAICreateChatCompletion_NativeUnary(t *testing.T) {
 	t.Parallel()
 	proxy := &mockOpenAIProxy{}
 	resolver := &mockResolver{resolveEndpoint: buildTestEndpoint(), resolveModel: buildTestModel()}
-	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{}, nil, nil)
+	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{}, nil, nil, nil)
 
 	stream := false
 	req := &dto.OpenAIChatCompletionRequest{Body: &dto.OpenAIChatCompletionReq{
@@ -328,7 +351,7 @@ func TestOpenAICreateChatCompletion_NativeUnary(t *testing.T) {
 func TestOpenAICreateChatCompletion_ModelNotFound(t *testing.T) {
 	t.Parallel()
 	resolver := &mockResolver{resolveErr: ierr.New(ierr.ErrInternal, "model not found")}
-	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, &mockOpenAIProxy{}, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{}, nil, nil)
+	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, &mockOpenAIProxy{}, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{}, nil, nil, nil)
 
 	stream := false
 	req := &dto.OpenAIChatCompletionRequest{Body: &dto.OpenAIChatCompletionReq{
@@ -360,7 +383,7 @@ func TestOpenAICreateResponse_NativeStream(t *testing.T) {
 	t.Parallel()
 	proxy := &mockOpenAIProxy{}
 	resolver := &mockResolver{resolveEndpoint: buildTestEndpoint(), resolveModel: buildTestModel()}
-	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{}, nil, nil)
+	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{}, nil, nil, nil)
 
 	stream := true
 	req := &dto.OpenAICreateResponseRequest{Body: &dto.OpenAICreateResponseReq{
@@ -392,7 +415,7 @@ func TestOpenAICreateResponse_NativeUnary(t *testing.T) {
 	t.Parallel()
 	proxy := &mockOpenAIProxy{}
 	resolver := &mockResolver{resolveEndpoint: buildTestEndpoint(), resolveModel: buildTestModel()}
-	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{}, nil, nil)
+	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{}, nil, nil, nil)
 
 	stream := false
 	req := &dto.OpenAICreateResponseRequest{Body: &dto.OpenAICreateResponseReq{
@@ -422,7 +445,7 @@ func TestOpenAICreateResponse_NativeUnary(t *testing.T) {
 func TestOpenAICreateResponse_ModelNotFound(t *testing.T) {
 	t.Parallel()
 	resolver := &mockResolver{resolveErr: ierr.New(ierr.ErrInternal, "model not found")}
-	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, &mockOpenAIProxy{}, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{}, nil, nil)
+	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, &mockOpenAIProxy{}, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{}, nil, nil, nil)
 
 	stream := false
 	req := &dto.OpenAICreateResponseRequest{Body: &dto.OpenAICreateResponseReq{
@@ -451,7 +474,7 @@ func TestOpenAICreateChatCompletion_AnthropicOnlyUsesAnthropicCompatibility(t *t
 	openAIProxy := &mockOpenAIProxy{}
 	anthropicProxy := &mockAnthropicProxyForOpenAI{}
 	resolver := &mockResolver{resolveEndpoint: buildCompatEndpoint("anthropic-only", false, false, true), resolveModel: buildTestModel()}
-	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, openAIProxy, anthropicProxy, &mockTaskSubmitter{}, nil, nil)
+	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, openAIProxy, anthropicProxy, &mockTaskSubmitter{}, nil, nil, nil)
 
 	stream := false
 	req := &dto.OpenAIChatCompletionRequest{Body: &dto.OpenAIChatCompletionReq{
@@ -479,7 +502,7 @@ func TestOpenAICreateResponse_ChatOnlyUsesChatCompatibility(t *testing.T) {
 	openAIProxy := &mockOpenAIProxy{}
 	anthropicProxy := &mockAnthropicProxyForOpenAI{}
 	resolver := &mockResolver{resolveEndpoint: buildCompatEndpoint("chat-only", true, false, false), resolveModel: buildTestModel()}
-	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, openAIProxy, anthropicProxy, &mockTaskSubmitter{}, nil, nil)
+	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, openAIProxy, anthropicProxy, &mockTaskSubmitter{}, nil, nil, nil)
 
 	stream := false
 	req := &dto.OpenAICreateResponseRequest{Body: &dto.OpenAICreateResponseReq{
@@ -507,7 +530,7 @@ func TestOpenAICreateResponse_AnthropicOnlyUsesAnthropicCompatibility(t *testing
 	openAIProxy := &mockOpenAIProxy{}
 	anthropicProxy := &mockAnthropicProxyForOpenAI{}
 	resolver := &mockResolver{resolveEndpoint: buildCompatEndpoint("anthropic-only", false, false, true), resolveModel: buildTestModel()}
-	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, openAIProxy, anthropicProxy, &mockTaskSubmitter{}, nil, nil)
+	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, openAIProxy, anthropicProxy, &mockTaskSubmitter{}, nil, nil, nil)
 
 	stream := false
 	req := &dto.OpenAICreateResponseRequest{Body: &dto.OpenAICreateResponseReq{
@@ -535,7 +558,7 @@ func TestOpenAICreateResponse_ChatAndAnthropicPrefersChatCompatibility(t *testin
 	openAIProxy := &mockOpenAIProxy{}
 	anthropicProxy := &mockAnthropicProxyForOpenAI{}
 	resolver := &mockResolver{resolveEndpoint: buildCompatEndpoint("chat-and-anthropic", true, false, true), resolveModel: buildTestModel()}
-	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, openAIProxy, anthropicProxy, &mockTaskSubmitter{}, nil, nil)
+	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, openAIProxy, anthropicProxy, &mockTaskSubmitter{}, nil, nil, nil)
 
 	stream := false
 	req := &dto.OpenAICreateResponseRequest{Body: &dto.OpenAICreateResponseReq{
@@ -569,7 +592,7 @@ func TestOpenAICreateChatCompletion_NativeStream_OpenErrorSkipsRead(t *testing.T
 	}
 	proxy := &mockOpenAIProxy{openChatStreamErr: upstreamErr}
 	resolver := &mockResolver{resolveEndpoint: buildTestEndpoint(), resolveModel: buildTestModel()}
-	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{}, nil, nil)
+	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{}, nil, nil, nil)
 
 	stream := true
 	req := &dto.OpenAIChatCompletionRequest{Body: &dto.OpenAIChatCompletionReq{
@@ -600,7 +623,7 @@ func TestOpenAICreateResponse_NativeStream_OpenErrorSkipsRead(t *testing.T) {
 	}
 	proxy := &mockOpenAIProxy{openResponseStreamErr: upstreamErr}
 	resolver := &mockResolver{resolveEndpoint: buildTestEndpoint(), resolveModel: buildTestModel()}
-	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{}, nil, nil)
+	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{}, nil, nil, nil)
 
 	stream := true
 	req := &dto.OpenAICreateResponseRequest{Body: &dto.OpenAICreateResponseReq{
@@ -632,7 +655,7 @@ func TestOpenAICreateChatCompletion_ViaAnthropicStream_OpenErrorSkipsRead(t *tes
 	openAIProxy := &mockOpenAIProxy{}
 	// 只支持 Anthropic，强制走 ViaAnthropicMessage 跨协议路径
 	resolver := &mockResolver{resolveEndpoint: buildCompatEndpoint("anthropic-only", false, false, true), resolveModel: buildTestModel()}
-	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, openAIProxy, anthropicProxy, &mockTaskSubmitter{}, nil, nil)
+	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, openAIProxy, anthropicProxy, &mockTaskSubmitter{}, nil, nil, nil)
 
 	stream := true
 	req := &dto.OpenAIChatCompletionRequest{Body: &dto.OpenAIChatCompletionReq{
@@ -651,5 +674,23 @@ func TestOpenAICreateChatCompletion_ViaAnthropicStream_OpenErrorSkipsRead(t *tes
 	}
 	if anthropicProxy.readMessageStreamCnt != 0 {
 		t.Fatalf("ReadCreateMessageStream must not be called when Open fails; got cnt=%d", anthropicProxy.readMessageStreamCnt)
+	}
+}
+
+func TestSelectCompatRoute_DecisionNativeOnly(t *testing.T) {
+	t.Parallel()
+
+	decisionEp, _ := aggregate.CreateEndpoint(3, "decision-only", "https://api.openai.com", "", "sk-test", false, false, false, true)
+	if route := usecase.SelectCompatRoute(enum.ProxyAPIOpenAIDecision, decisionEp); route != enum.CompatRouteNative {
+		t.Fatalf("decision-only route = %v, want native", route)
+	}
+
+	chatEp, _ := aggregate.CreateEndpoint(4, "chat-only", "https://api.openai.com", "", "sk-test", true, false, false, false)
+	if route := usecase.SelectCompatRoute(enum.ProxyAPIOpenAIDecision, chatEp); route != enum.CompatRouteUnsupported {
+		t.Fatalf("chat-only route = %v, want unsupported", route)
+	}
+
+	if route := usecase.SelectCompatRoute(enum.ProxyAPIOpenAIDecision, nil); route != enum.CompatRouteUnsupported {
+		t.Fatalf("nil endpoint route = %v, want unsupported", route)
 	}
 }

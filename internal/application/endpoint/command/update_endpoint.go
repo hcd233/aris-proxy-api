@@ -46,7 +46,7 @@ func (h *updateEndpointHandler) Handle(ctx context.Context, cmd port.UpdateEndpo
 		return ierr.New(ierr.ErrDataNotExists, "endpoint not found")
 	}
 
-	ep.Update(cmd.Name, cmd.OpenaiBaseURL, cmd.AnthropicBaseURL, cmd.APIKey, cmd.SupportOpenAIChatCompletion, cmd.SupportOpenAIResponse, cmd.SupportAnthropicMessage)
+	ep.Update(cmd.Name, cmd.OpenaiBaseURL, cmd.AnthropicBaseURL, cmd.APIKey, cmd.SupportOpenAIChatCompletion, cmd.SupportOpenAIResponse, cmd.SupportAnthropicMessage, cmd.SupportOpenAIDecision)
 
 	if err := h.repo.Update(ctx, ep); err != nil {
 		log.Error("[EndpointCommand] Update endpoint failed", zap.Error(err))

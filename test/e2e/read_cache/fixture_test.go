@@ -63,21 +63,22 @@ const (
 
 // 嵌入接口空结构体：注册期满足方法集、不解引用（cross_tenant / goroutine_leak 惯例）
 type (
-	stubPingHandler     struct{ handler.PingHandler }
-	stubTraceHandler    struct{ handler.TraceHandler }
-	stubTokenHandler    struct{ handler.TokenHandler }
-	stubOauth2Handler   struct{ handler.Oauth2Handler }
-	stubUserHandler     struct{ handler.UserHandler }
-	stubDemoHandler     struct{ handler.DemoHandler }
-	stubAPIKeyHandler   struct{ handler.APIKeyHandler }
-	stubSessionHandler  struct{ handler.SessionHandler }
-	stubEndpointHandler struct{ handler.EndpointHandler }
-	stubAuditHandler    struct{ handler.AuditHandler }
-	stubCronHandler     struct{ handler.CronHandler }
-	stubTriggerHandler  struct{ handler.TriggerHandler }
-	stubMetricsHandler  struct{ handler.MetricsHandler }
-	stubDatasetHandler  struct{ handler.DatasetHandler }
-	stubUpstreamHandler struct{ handler.UpstreamHandler }
+	stubPingHandler       struct{ handler.PingHandler }
+	stubTraceHandler      struct{ handler.TraceHandler }
+	stubTokenHandler      struct{ handler.TokenHandler }
+	stubOauth2Handler     struct{ handler.Oauth2Handler }
+	stubUserHandler       struct{ handler.UserHandler }
+	stubDemoHandler       struct{ handler.DemoHandler }
+	stubAPIKeyHandler     struct{ handler.APIKeyHandler }
+	stubSessionHandler    struct{ handler.SessionHandler }
+	stubEndpointHandler   struct{ handler.EndpointHandler }
+	stubAuditHandler      struct{ handler.AuditHandler }
+	stubCronHandler       struct{ handler.CronHandler }
+	stubTriggerHandler    struct{ handler.TriggerHandler }
+	stubMetricsHandler    struct{ handler.MetricsHandler }
+	stubDatasetHandler    struct{ handler.DatasetHandler }
+	stubUpstreamHandler   struct{ handler.UpstreamHandler }
+	stubPlaygroundHandler struct{ handler.PlaygroundHandler }
 )
 
 // noopTaskSubmitter 丢弃异步任务（读接口不触发）
@@ -157,16 +158,17 @@ func newFixture(t *testing.T, withCache bool, modelCount int) *fixture {
 	anthropicProxy := transport.NewAnthropicProxy(tracker, guard)
 
 	openAIUC := usecase.NewOpenAIUseCase(
-		llmproxyservice.NewEndpointResolver(endpointRepo, modelRepo, false),
+		llmproxyservice.NewEndpointResolver(endpointRepo, modelRepo, false, nil),
 		usecase.NewListOpenAIModels(readRepo),
 		openAIProxy,
 		anthropicProxy,
 		noopTaskSubmitter{},
 		noopTriggerChecker{},
 		tokenMetrics,
+		nil,
 	)
 	anthropicUC := usecase.NewAnthropicUseCase(
-		llmproxyservice.NewEndpointResolver(endpointRepo, modelRepo, false),
+		llmproxyservice.NewEndpointResolver(endpointRepo, modelRepo, false, nil),
 		usecase.NewListAnthropicModels(readRepo),
 		usecase.NewCountTokens(readRepo, anthropicProxy),
 		anthropicProxy,
@@ -174,6 +176,7 @@ func newFixture(t *testing.T, withCache bool, modelCount int) *fixture {
 		noopTaskSubmitter{},
 		noopTriggerChecker{},
 		tokenMetrics,
+		nil,
 	)
 	modelHandler := handler.NewModelHandler(handler.ModelDependencies{
 		Create: modelcommand.NewCreateModelHandler(endpointRepo, modelRepo),
@@ -190,28 +193,29 @@ func newFixture(t *testing.T, withCache bool, modelCount int) *fixture {
 	config.JwtAccessTokenExpired = time.Hour
 	signer := jwt.NewAccessTokenSigner()
 	router.RegisterAPIRouter(api, router.APIRouterDependencies{
-		DB:               db,
-		Cache:            rdb,
-		AccessSigner:     signer,
-		PingHandler:      &stubPingHandler{},
-		TraceHandler:     &stubTraceHandler{},
-		TokenHandler:     &stubTokenHandler{},
-		Oauth2Handler:    &stubOauth2Handler{},
-		UserHandler:      &stubUserHandler{},
-		DemoHandler:      &stubDemoHandler{},
-		APIKeyHandler:    &stubAPIKeyHandler{},
-		SessionHandler:   &stubSessionHandler{},
-		EndpointHandler:  &stubEndpointHandler{},
-		ModelHandler:     modelHandler,
-		UpstreamHandler:  &stubUpstreamHandler{},
-		AuditHandler:     &stubAuditHandler{},
-		CronHandler:      &stubCronHandler{},
-		TriggerHandler:   &stubTriggerHandler{},
-		OpenAIHandler:    handler.NewOpenAIHandler(handler.OpenAIDependencies{UseCase: openAIUC, SSEGauge: sseGauge}),
-		AnthropicHandler: handler.NewAnthropicHandler(handler.AnthropicDependencies{UseCase: anthropicUC, SSEGauge: sseGauge}),
-		MetricsHandler:   &stubMetricsHandler{},
-		DatasetHandler:   &stubDatasetHandler{},
-		ClientHandler:    handler.NewClientHandler(handler.ClientDependencies{List: usecase.NewListClientModels(readRepo)}),
+		DB:                db,
+		Cache:             rdb,
+		AccessSigner:      signer,
+		PingHandler:       &stubPingHandler{},
+		TraceHandler:      &stubTraceHandler{},
+		TokenHandler:      &stubTokenHandler{},
+		Oauth2Handler:     &stubOauth2Handler{},
+		UserHandler:       &stubUserHandler{},
+		DemoHandler:       &stubDemoHandler{},
+		APIKeyHandler:     &stubAPIKeyHandler{},
+		SessionHandler:    &stubSessionHandler{},
+		EndpointHandler:   &stubEndpointHandler{},
+		ModelHandler:      modelHandler,
+		UpstreamHandler:   &stubUpstreamHandler{},
+		PlaygroundHandler: &stubPlaygroundHandler{},
+		AuditHandler:      &stubAuditHandler{},
+		CronHandler:       &stubCronHandler{},
+		TriggerHandler:    &stubTriggerHandler{},
+		OpenAIHandler:     handler.NewOpenAIHandler(handler.OpenAIDependencies{UseCase: openAIUC, SSEGauge: sseGauge}),
+		AnthropicHandler:  handler.NewAnthropicHandler(handler.AnthropicDependencies{UseCase: anthropicUC, SSEGauge: sseGauge}),
+		MetricsHandler:    &stubMetricsHandler{},
+		DatasetHandler:    &stubDatasetHandler{},
+		ClientHandler:     handler.NewClientHandler(handler.ClientDependencies{List: usecase.NewListClientModels(readRepo)}),
 	})
 
 	f.seed(t, signer)

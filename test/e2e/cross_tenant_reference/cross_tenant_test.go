@@ -53,22 +53,23 @@ import (
 
 // e2eStubHandlers 嵌入接口空结构体：注册期满足方法集、不解引用（client_route_test.go 惯例）
 type (
-	stubPingHandler      struct{ handler.PingHandler }
-	stubTraceHandler     struct{ handler.TraceHandler }
-	stubTokenHandler     struct{ handler.TokenHandler }
-	stubOauth2Handler    struct{ handler.Oauth2Handler }
-	stubUserHandler      struct{ handler.UserHandler }
-	stubDemoHandler      struct{ handler.DemoHandler }
-	stubAPIKeyHandler    struct{ handler.APIKeyHandler }
-	stubSessionHandler   struct{ handler.SessionHandler }
-	stubAuditHandler     struct{ handler.AuditHandler }
-	stubCronHandler      struct{ handler.CronHandler }
-	stubTriggerHandler   struct{ handler.TriggerHandler }
-	stubOpenAIHandler    struct{ handler.OpenAIHandler }
-	stubAnthropicHandler struct{ handler.AnthropicHandler }
-	stubMetricsHandler   struct{ handler.MetricsHandler }
-	stubDatasetHandler   struct{ handler.DatasetHandler }
-	stubClientHandler    struct{ handler.ClientHandler }
+	stubPingHandler       struct{ handler.PingHandler }
+	stubTraceHandler      struct{ handler.TraceHandler }
+	stubTokenHandler      struct{ handler.TokenHandler }
+	stubOauth2Handler     struct{ handler.Oauth2Handler }
+	stubUserHandler       struct{ handler.UserHandler }
+	stubDemoHandler       struct{ handler.DemoHandler }
+	stubAPIKeyHandler     struct{ handler.APIKeyHandler }
+	stubSessionHandler    struct{ handler.SessionHandler }
+	stubAuditHandler      struct{ handler.AuditHandler }
+	stubCronHandler       struct{ handler.CronHandler }
+	stubTriggerHandler    struct{ handler.TriggerHandler }
+	stubOpenAIHandler     struct{ handler.OpenAIHandler }
+	stubPlaygroundHandler struct{ handler.PlaygroundHandler }
+	stubAnthropicHandler  struct{ handler.AnthropicHandler }
+	stubMetricsHandler    struct{ handler.MetricsHandler }
+	stubDatasetHandler    struct{ handler.DatasetHandler }
+	stubClientHandler     struct{ handler.ClientHandler }
 )
 
 // crossTenantFixture 真实装配：生产路由 + JWT + sqlite 仓储 + miniredis
@@ -130,28 +131,29 @@ func newCrossTenantFixture(t *testing.T) *crossTenantFixture {
 	app := fiber.New()
 	api := humafiber.New(app, huma.DefaultConfig("cross tenant reference", "1.0"))
 	router.RegisterAPIRouter(api, router.APIRouterDependencies{
-		DB:               db,
-		Cache:            rdb,
-		AccessSigner:     jwt.NewAccessTokenSigner(),
-		PingHandler:      &stubPingHandler{},
-		TraceHandler:     &stubTraceHandler{},
-		TokenHandler:     &stubTokenHandler{},
-		Oauth2Handler:    &stubOauth2Handler{},
-		UserHandler:      &stubUserHandler{},
-		DemoHandler:      &stubDemoHandler{},
-		APIKeyHandler:    &stubAPIKeyHandler{},
-		SessionHandler:   &stubSessionHandler{},
-		EndpointHandler:  endpointHandler,
-		ModelHandler:     modelHandler,
-		UpstreamHandler:  upstreamHandler,
-		AuditHandler:     &stubAuditHandler{},
-		CronHandler:      &stubCronHandler{},
-		TriggerHandler:   &stubTriggerHandler{},
-		OpenAIHandler:    &stubOpenAIHandler{},
-		AnthropicHandler: &stubAnthropicHandler{},
-		MetricsHandler:   &stubMetricsHandler{},
-		DatasetHandler:   &stubDatasetHandler{},
-		ClientHandler:    &stubClientHandler{},
+		DB:                db,
+		Cache:             rdb,
+		AccessSigner:      jwt.NewAccessTokenSigner(),
+		PingHandler:       &stubPingHandler{},
+		TraceHandler:      &stubTraceHandler{},
+		TokenHandler:      &stubTokenHandler{},
+		Oauth2Handler:     &stubOauth2Handler{},
+		UserHandler:       &stubUserHandler{},
+		DemoHandler:       &stubDemoHandler{},
+		APIKeyHandler:     &stubAPIKeyHandler{},
+		SessionHandler:    &stubSessionHandler{},
+		EndpointHandler:   endpointHandler,
+		ModelHandler:      modelHandler,
+		UpstreamHandler:   upstreamHandler,
+		AuditHandler:      &stubAuditHandler{},
+		CronHandler:       &stubCronHandler{},
+		TriggerHandler:    &stubTriggerHandler{},
+		OpenAIHandler:     &stubOpenAIHandler{},
+		PlaygroundHandler: &stubPlaygroundHandler{},
+		AnthropicHandler:  &stubAnthropicHandler{},
+		MetricsHandler:    &stubMetricsHandler{},
+		DatasetHandler:    &stubDatasetHandler{},
+		ClientHandler:     &stubClientHandler{},
 	})
 	// 种子：两个普通用户 + 一个 admin；A/B 各自名下一个 endpoint；A 名下一个 model
 	f := &crossTenantFixture{db: db, app: app, signer: jwt.NewAccessTokenSigner()}

@@ -24,13 +24,14 @@ type TimeWindowDTO struct {
 
 // PricingRuleDTO 定价规则（单价：货币单位/1M tokens）
 type PricingRuleDTO struct {
-	TimeWindows        []TimeWindowDTO `json:"time_windows,omitempty" maxItems:"8" doc:"时段窗口（空=全时段，多窗口 OR）"`
-	ContextMin         int64           `json:"context_min,omitempty" minimum:"0" doc:"prompt token 下界（含）"`
-	ContextMax         int64           `json:"context_max,omitempty" minimum:"0" doc:"上界（不含），0=无上限"`
-	InputPrice         float64         `json:"input_price" minimum:"0" maximum:"1000000" doc:"输入单价"`
-	OutputPrice        float64         `json:"output_price" minimum:"0" maximum:"1000000" doc:"输出单价"`
-	CacheCreationPrice float64         `json:"cache_creation_price" minimum:"0" maximum:"1000000" doc:"缓存创建单价"`
-	CacheReadPrice     float64         `json:"cache_read_price" minimum:"0" maximum:"1000000" doc:"缓存读取单价"`
+	TimeWindows          []TimeWindowDTO `json:"time_windows,omitempty" maxItems:"8" doc:"时段窗口（空=全时段，多窗口 OR）"`
+	ContextMin           int64           `json:"context_min,omitempty" minimum:"0" doc:"prompt token 下界（含）"`
+	ContextMax           int64           `json:"context_max,omitempty" minimum:"0" doc:"上界（不含），0=无上限"`
+	InputPrice           float64         `json:"input_price" minimum:"0" maximum:"1000000" doc:"输入单价"`
+	OutputPrice          float64         `json:"output_price" minimum:"0" maximum:"1000000" doc:"输出单价"`
+	CacheCreationPrice   float64         `json:"cache_creation_price" minimum:"0" maximum:"1000000" doc:"5m 缓存创建单价（兼作 1h 未配置时的回落价）"`
+	CacheCreation1hPrice float64         `json:"cache_creation_1h_price,omitempty" minimum:"0" maximum:"1000000" doc:"1h 缓存创建单价（可选；0=回落 5m 档 cache_creation_price）"`
+	CacheReadPrice       float64         `json:"cache_read_price" minimum:"0" maximum:"1000000" doc:"缓存读取单价"`
 }
 
 // PriceMicroFromDisplay 展示单位 → 微单位（1e-6 货币单位），半入。

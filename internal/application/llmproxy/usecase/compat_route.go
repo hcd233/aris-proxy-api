@@ -34,6 +34,12 @@ func SelectCompatRoute(requestAPI enum.ProxyAPI, ep *aggregate.Endpoint) enum.Co
 		if ep.SupportOpenAIChatCompletion() {
 			return enum.CompatRouteViaOpenAIChat
 		}
+	case enum.ProxyAPIOpenAIDecision:
+		// Decision 仅支持原生转发：predicate/choice/score 在 Chat/Anthropic 协议里
+		// 没有等价语义，跨协议转换等于自造一套 prompt 协议（见设计文档 §2.2）。
+		if ep.SupportOpenAIDecision() {
+			return enum.CompatRouteNative
+		}
 	}
 	return enum.CompatRouteUnsupported
 }

@@ -60,6 +60,7 @@ var RepositoryModule = fx.Module(constant.DigNameRepositoryModule,
 		NewOauth2Platforms,
 		NewStateManager,
 		NewTaskSubmitter,
+		cache.NewEndpointAffinityCache,
 		NewEndpointResolver,
 		NewTriggerRepository,
 		NewTriggerCache,
@@ -170,8 +171,9 @@ func NewTaskSubmitter(pm *pool.PoolManager) usecase.TaskSubmitter {
 func NewEndpointResolver(
 	endpointRepo llmproxy.EndpointRepository,
 	modelRepo llmproxy.ModelRepository,
+	affinity llmproxyservice.EndpointAffinity,
 ) llmproxyservice.EndpointResolver {
-	return llmproxyservice.NewEndpointResolver(endpointRepo, modelRepo, config.GatewaySharedPoolFallback)
+	return llmproxyservice.NewEndpointResolver(endpointRepo, modelRepo, config.GatewaySharedPoolFallback, affinity)
 }
 
 func NewTriggerRepository(db *gorm.DB) trigger.TriggerRepository {

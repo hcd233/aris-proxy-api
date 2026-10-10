@@ -27,8 +27,8 @@ type scopedEndpointRepo struct {
 }
 
 func newScopedEndpointRepo() *scopedEndpointRepo {
-	epA, _ := aggregate.CreateEndpoint(1, "ep-a", "https://o.example.com", "https://a.example.com", "k", true, false, false)
-	epB, _ := aggregate.CreateEndpoint(2, "ep-b", "https://o.example.com", "https://a.example.com", "k", true, false, false)
+	epA, _ := aggregate.CreateEndpoint(1, "ep-a", "https://o.example.com", "https://a.example.com", "k", true, false, false, false)
+	epB, _ := aggregate.CreateEndpoint(2, "ep-b", "https://o.example.com", "https://a.example.com", "k", true, false, false, false)
 	epA.SetUserID(101)
 	epB.SetUserID(202)
 	return &scopedEndpointRepo{byID: map[uint]*aggregate.Endpoint{1: epA, 2: epB}}
@@ -64,6 +64,7 @@ type recordingModelRepo struct {
 	gotOwner    uint
 	gotEndpoint uint
 	gotPricing  vo.Pricing
+	gotModel    *aggregate.Model
 }
 
 func (r *recordingModelRepo) FindByAlias(context.Context, vo.EndpointAlias, *uint) ([]*aggregate.Model, error) {
@@ -76,6 +77,7 @@ func (r *recordingModelRepo) Create(_ context.Context, m *aggregate.Model, owner
 	r.gotOwner = ownerUserID
 	r.gotEndpoint = m.EndpointID()
 	r.gotPricing = m.Pricing()
+	r.gotModel = m
 	return 1, nil
 }
 func (r *recordingModelRepo) Update(context.Context, *aggregate.Model) error { return nil }
