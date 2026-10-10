@@ -78,7 +78,10 @@ const TOKEN_LAYER_COLORS: Record<ThemeName, TokenLayerColors> = {
  * dark/light families instead of four unrelated hues. */
 const RATIO_SEGMENT_COLORS: Record<ThemeName, TokenLayerColors> = {
   anthropic: { input: "#B8654A", output: "#5C4A3D", cacheRead: "#EFC5AC", cacheCreated: "#CDBBA6" },
-  moonshot: { input: "#B8894F", output: "#4E6C8A", cacheRead: "#FFEED9", cacheCreated: "#A8BDD8" },
+  /* Moonshot stays inside its own token set: moon-rock grey and moon-shadow
+   * slate as the two darks, their pale forms being the warm moonlight cream
+   * and the ice-blue haze already used by the theme's charts. */
+  moonshot: { input: "#737373", output: "#6E7B8C", cacheRead: "#FFEED9", cacheCreated: "#A8BDD8" },
 };
 
 function chartSeriesColors(theme: ThemeName): readonly string[] {
