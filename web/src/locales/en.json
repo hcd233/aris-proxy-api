@@ -896,7 +896,6 @@
   "upstream.pricing.outputPrice": "Output price",
   "upstream.pricing.cacheCreationPrice": "Cache write price",
   "upstream.pricing.cacheCreation1hPrice": "Cache write 1h price",
-  "upstream.missing.pricing": "Unpriced",
   "upstream.missing.spec": "No spec",
   "upstream.filter_config_missing": "Config health",
   "upstream.filter_config_missing_value": "Missing only",

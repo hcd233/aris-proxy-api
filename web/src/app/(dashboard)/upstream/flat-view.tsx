@@ -300,8 +300,11 @@ export function FlatView({
               <CapabilityBadges capabilities={m.capabilities} />
             </TableCell>
             <TableCell className={cn(!m.enabled && "opacity-45")}>
-              <PricingInline pricing={m.pricing} />
-              <ConfigMissingBadges missing={m.configMissing} />
+              {/* 与兄弟列同形裹一层 flex：价格与徽标才能同行且有固定间距 */}
+              <div className="flex items-center gap-1.5">
+                <PricingInline pricing={m.pricing} />
+                <ConfigMissingBadges missing={m.configMissing} />
+              </div>
             </TableCell>
             <TableCell>
               <Switch

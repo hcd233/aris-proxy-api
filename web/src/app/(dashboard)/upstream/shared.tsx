@@ -54,20 +54,20 @@ export const emptyPricing: PricingDTO = { currency: "", rules: [] };
 
 // 无条件默认规则判定见 ./pricing-rule（isDefaultRule）
 
-/** 配置缺失徽标：未定价（pricing）/ 未填规格（spec）；无缺失不渲染 */
+/**
+ * 配置缺失徽标：只呈现「未填规格」。
+ *
+ * 未计价不再出徽标——定价列的 — 已经把这件事说完了（后端 !IsPriced() 与前端
+ * rules 为空等价，两者永远同现同隐），徽标只是把同一句话再说一遍。无缺失不渲染。
+ */
 export function ConfigMissingBadges({ missing }: { missing?: ConfigMissing[] }) {
   const t = useT();
-  if (!missing || missing.length === 0) return null;
+  if (!missing?.includes("spec")) return null;
   return (
     <div className="flex items-center gap-1">
-      {missing.map((m) => (
-        <span
-          key={m}
-          className="inline-flex items-center rounded-md bg-amber-500/15 px-1.5 py-0.5 font-mono text-[11px] text-amber-600 dark:text-amber-400"
-        >
-          {m === "pricing" ? t("upstream.missing.pricing") : t("upstream.missing.spec")}
-        </span>
-      ))}
+      <span className="inline-flex items-center rounded-md bg-amber-500/15 px-1.5 py-0.5 font-mono text-[11px] text-amber-600 dark:text-amber-400">
+        {t("upstream.missing.spec")}
+      </span>
     </div>
   );
 }
