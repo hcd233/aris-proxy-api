@@ -187,6 +187,62 @@ func TestEndpointRepo_UserIsolation(t *testing.T) {
 	}
 }
 
+// TestEndpointRepo_ReadsInconsistentRow 回归 2026-10-12 tokenhub 事故：
+// 库侧直改产生的「SupportAnthropicMessage=true 且 anthropic_base_url 为空」行
+// 必须仍能被读出。恢复期做不变量校验会把单行脏数据放大成整表读取失败，
+// 连 PATCH 修复入口（先 FindByID）一起锁死，只能手改数据库。
+func TestEndpointRepo_ReadsInconsistentRow(t *testing.T) {
+	t.Parallel()
+	db := newTestDB(t)
+	if err := db.AutoMigrate(&dbmodel.Endpoint{}); err != nil {
+		t.Fatal(err)
+	}
+	bad := &dbmodel.Endpoint{
+		UserID:                  1,
+		Name:                    "tokenhub",
+		APIKey:                  "sk-k",
+		OpenaiBaseURL:           "https://o.example.com",
+		AnthropicBaseURL:        "",
+		SupportOpenAIResponse:   true,
+		SupportAnthropicMessage: true,
+	}
+	if err := db.Create(bad).Error; err != nil {
+		t.Fatal(err)
+	}
+	repo := repository.NewEndpointRepository(db)
+
+	ep, err := repo.FindByID(t.Context(), bad.ID, nil)
+	if err != nil {
+		t.Fatalf("FindByID must tolerate inconsistent row: %v", err)
+	}
+	if ep == nil || ep.AggregateID() != bad.ID || !ep.SupportAnthropicMessage() {
+		t.Fatalf("inconsistent row must stay readable for repair, got %+v", ep)
+	}
+
+	batch, err := repo.BatchFindByIDs(t.Context(), []uint{bad.ID})
+	if err != nil {
+		t.Fatalf("BatchFindByIDs must tolerate inconsistent row: %v", err)
+	}
+	if len(batch) != 1 {
+		t.Fatalf("BatchFindByIDs returned %d rows, want 1", len(batch))
+	}
+
+	// 修复路径：读出来 → 补 anthropic baseURL → 落库，应自愈
+	if err := ep.Update(nil, nil, lo.ToPtr("https://a.example.com"), nil, nil, nil, nil, nil); err != nil {
+		t.Fatalf("repair update rejected: %v", err)
+	}
+	if err := repo.Update(t.Context(), ep); err != nil {
+		t.Fatalf("repair persist failed: %v", err)
+	}
+	var row dbmodel.Endpoint
+	if err := db.First(&row, bad.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if row.AnthropicBaseURL != "https://a.example.com" {
+		t.Fatalf("anthropic_base_url = %q, want repaired value", row.AnthropicBaseURL)
+	}
+}
+
 func TestModelRepo_UserIsolation(t *testing.T) {
 	t.Parallel()
 	db := newTestDB(t)

@@ -18,7 +18,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
-	"github.com/hcd233/aris-proxy-api/internal/util"
 )
 
 // endpointRepository EndpointRepository 的 GORM 实现
@@ -63,7 +62,7 @@ func (r *endpointRepository) FindByID(ctx context.Context, id uint, scopeUserID 
 		}
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "find endpoint by id")
 	}
-	return toEndpointAggregate(ep)
+	return toEndpointAggregate(ep), nil
 }
 
 // BatchFindByIDs 按 ID 集合一次性查询端点，返回以 ID 索引的 map；ids 为空时返回空 map 且不打 SQL。
@@ -78,17 +77,18 @@ func (r *endpointRepository) BatchFindByIDs(ctx context.Context, ids []uint) (ma
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "batch find endpoints by ids")
 	}
 	for _, rec := range records {
-		ep, convErr := toEndpointAggregate(rec)
-		if convErr != nil {
-			return nil, convErr
-		}
-		out[rec.ID] = ep
+		out[rec.ID] = toEndpointAggregate(rec)
 	}
 	return out, nil
 }
 
-func toEndpointAggregate(m *dbmodel.Endpoint) (*aggregate.Endpoint, error) {
-	ep, err := aggregate.CreateEndpoint(
+// toEndpointAggregate 从 DB 记录恢复聚合根。
+//
+// 走不校验的 RehydrateEndpoint：恢复失败的代价是整表读取失败（upstream 列表、
+// 代理路由、PATCH 修复入口全挂），而校验型工厂只该守在写边界上。
+// 见 aggregate.RehydrateEndpoint 的注释。
+func toEndpointAggregate(m *dbmodel.Endpoint) *aggregate.Endpoint {
+	ep := aggregate.RehydrateEndpoint(
 		m.ID,
 		m.Name,
 		m.OpenaiBaseURL,
@@ -99,12 +99,9 @@ func toEndpointAggregate(m *dbmodel.Endpoint) (*aggregate.Endpoint, error) {
 		m.SupportAnthropicMessage,
 		m.SupportOpenAIDecision,
 	)
-	if err != nil {
-		return nil, err
-	}
 	ep.SetUserID(m.UserID)
 	ep.SetTimestamps(m.CreatedAt, m.UpdatedAt)
-	return ep, nil
+	return ep
 }
 
 func toEndpointModel(ep *aggregate.Endpoint) *dbmodel.Endpoint {
@@ -188,9 +185,9 @@ func (r *endpointRepository) List(ctx context.Context) ([]*aggregate.Endpoint, e
 	if err := db.Find(&models).Error; err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "list endpoints")
 	}
-	return util.MapErr(models, func(m *dbmodel.Endpoint, _ int) (*aggregate.Endpoint, error) {
+	return lo.Map(models, func(m *dbmodel.Endpoint, _ int) *aggregate.Endpoint {
 		return toEndpointAggregate(m)
-	})
+	}), nil
 }
 
 // Paginate 分页查询端点列表
@@ -212,12 +209,9 @@ func (r *endpointRepository) Paginate(ctx context.Context, param model.CommonPar
 	if err != nil {
 		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "paginate endpoints")
 	}
-	out, convErr := util.MapErr(records, func(m *dbmodel.Endpoint, _ int) (*aggregate.Endpoint, error) {
+	out := lo.Map(records, func(m *dbmodel.Endpoint, _ int) *aggregate.Endpoint {
 		return toEndpointAggregate(m)
 	})
-	if convErr != nil {
-		return nil, nil, convErr
-	}
 	return out, pageInfo, nil
 }
 

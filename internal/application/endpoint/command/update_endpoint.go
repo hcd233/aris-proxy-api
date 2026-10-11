@@ -46,7 +46,11 @@ func (h *updateEndpointHandler) Handle(ctx context.Context, cmd port.UpdateEndpo
 		return ierr.New(ierr.ErrDataNotExists, "endpoint not found")
 	}
 
-	ep.Update(cmd.Name, cmd.OpenaiBaseURL, cmd.AnthropicBaseURL, cmd.APIKey, cmd.SupportOpenAIChatCompletion, cmd.SupportOpenAIResponse, cmd.SupportAnthropicMessage, cmd.SupportOpenAIDecision)
+	// 校验在聚合根内、落库前完成：能力标记与对应 baseURL 必须一致，
+	// 否则写出的行会让之后每次读取都失败（见 Endpoint.Update 注释）。
+	if err := ep.Update(cmd.Name, cmd.OpenaiBaseURL, cmd.AnthropicBaseURL, cmd.APIKey, cmd.SupportOpenAIChatCompletion, cmd.SupportOpenAIResponse, cmd.SupportAnthropicMessage, cmd.SupportOpenAIDecision); err != nil {
+		return err
+	}
 
 	if err := h.repo.Update(ctx, ep); err != nil {
 		log.Error("[EndpointCommand] Update endpoint failed", zap.Error(err))

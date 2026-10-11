@@ -33,24 +33,33 @@ func CreateEndpoint(
 	name, openaiBaseURL, anthropicBaseURL, apiKey string,
 	supportChatCompletion, supportResponse, supportMessage, supportDecision bool,
 ) (*Endpoint, error) {
-	if name == "" {
-		return nil, ierr.New(ierr.ErrValidation, "endpoint name cannot be empty")
+	ep := newEndpoint(id, name, openaiBaseURL, anthropicBaseURL, apiKey, supportChatCompletion, supportResponse, supportMessage, supportDecision)
+	if err := ep.validate(); err != nil {
+		return nil, err
 	}
-	if apiKey == "" {
-		return nil, ierr.New(ierr.ErrValidation, "endpoint apiKey cannot be empty")
-	}
-	if openaiBaseURL == "" && anthropicBaseURL == "" {
-		return nil, ierr.New(ierr.ErrValidation, "at least one base URL must be provided")
-	}
-	if !supportChatCompletion && !supportResponse && !supportMessage && !supportDecision {
-		return nil, ierr.New(ierr.ErrValidation, "at least one capability must be enabled")
-	}
-	if (supportChatCompletion || supportResponse || supportDecision) && openaiBaseURL == "" {
-		return nil, ierr.New(ierr.ErrValidation, "endpoint openai baseURL cannot be empty when OpenAI APIs are supported")
-	}
-	if supportMessage && anthropicBaseURL == "" {
-		return nil, ierr.New(ierr.ErrValidation, "endpoint anthropic baseURL cannot be empty when Anthropic messages API is supported")
-	}
+	return ep, nil
+}
+
+// RehydrateEndpoint 从持久化状态恢复 Endpoint 聚合根，不做不变量校验。
+//
+// 专供仓储读路径：把校验型工厂用在恢复上，会让单行历史脏数据（例如
+// supportAnthropicMessage=true 而 anthropicBaseURL 为空）变成读错误，
+// 一次写坏就连锁打挂 upstream 列表、代理路由，以及自己的修复入口
+// （PATCH 必须先 FindByID）。恢复是忠实拷贝，不变量由写路径
+// CreateEndpoint / Update 保证。
+func RehydrateEndpoint(
+	id uint,
+	name, openaiBaseURL, anthropicBaseURL, apiKey string,
+	supportChatCompletion, supportResponse, supportMessage, supportDecision bool,
+) *Endpoint {
+	return newEndpoint(id, name, openaiBaseURL, anthropicBaseURL, apiKey, supportChatCompletion, supportResponse, supportMessage, supportDecision)
+}
+
+func newEndpoint(
+	id uint,
+	name, openaiBaseURL, anthropicBaseURL, apiKey string,
+	supportChatCompletion, supportResponse, supportMessage, supportDecision bool,
+) *Endpoint {
 	ep := &Endpoint{
 		name:                        name,
 		openaiBaseURL:               openaiBaseURL,
@@ -62,7 +71,30 @@ func CreateEndpoint(
 		supportOpenAIDecision:       supportDecision,
 	}
 	ep.SetID(id)
-	return ep, nil
+	return ep
+}
+
+// validate 校验能力标记与对应 baseURL 的一致性；创建与更新共用同一套规则。
+func (e *Endpoint) validate() error {
+	if e.name == "" {
+		return ierr.New(ierr.ErrValidation, "endpoint name cannot be empty")
+	}
+	if e.apiKey == "" {
+		return ierr.New(ierr.ErrValidation, "endpoint apiKey cannot be empty")
+	}
+	if e.openaiBaseURL == "" && e.anthropicBaseURL == "" {
+		return ierr.New(ierr.ErrValidation, "at least one base URL must be provided")
+	}
+	if !e.supportOpenAIChatCompletion && !e.supportOpenAIResponse && !e.supportAnthropicMessage && !e.supportOpenAIDecision {
+		return ierr.New(ierr.ErrValidation, "at least one capability must be enabled")
+	}
+	if (e.supportOpenAIChatCompletion || e.supportOpenAIResponse || e.supportOpenAIDecision) && e.openaiBaseURL == "" {
+		return ierr.New(ierr.ErrValidation, "endpoint openai baseURL cannot be empty when OpenAI APIs are supported")
+	}
+	if e.supportAnthropicMessage && e.anthropicBaseURL == "" {
+		return ierr.New(ierr.ErrValidation, "endpoint anthropic baseURL cannot be empty when Anthropic messages API is supported")
+	}
+	return nil
 }
 
 func (e *Endpoint) Name() string                      { return e.name }
@@ -85,30 +117,41 @@ func (e *Endpoint) SetTimestamps(createdAt, updatedAt time.Time) {
 	e.updatedAt = updatedAt
 }
 
-// Update 更新 Endpoint 字段（仅非 nil 字段更新）
-func (e *Endpoint) Update(name, openaiBaseURL, anthropicBaseURL, apiKey *string, supportChatCompletion, supportResponse, supportMessage, supportDecision *bool) {
+// Update 更新 Endpoint 字段（仅非 nil 字段更新），并在落库前复核不变量。
+//
+// 先算出结果再校验、通过后才写回接收者：校验失败时不留下半更新实体。
+// 仓储的 Update 会一次性写入全部字段（含能力标记），所以这里是唯一可能把
+// 「能力已开、对应 baseURL 为空」写进库的地方——2026-10-12 tokenhub 事故
+// 正是从这条缺校验的路径进入，之后该 endpoint 的每次读取都失败。
+func (e *Endpoint) Update(name, openaiBaseURL, anthropicBaseURL, apiKey *string, supportChatCompletion, supportResponse, supportMessage, supportDecision *bool) error {
+	next := *e
 	if name != nil {
-		e.name = *name
+		next.name = *name
 	}
 	if openaiBaseURL != nil {
-		e.openaiBaseURL = *openaiBaseURL
+		next.openaiBaseURL = *openaiBaseURL
 	}
 	if anthropicBaseURL != nil {
-		e.anthropicBaseURL = *anthropicBaseURL
+		next.anthropicBaseURL = *anthropicBaseURL
 	}
 	if apiKey != nil {
-		e.apiKey = *apiKey
+		next.apiKey = *apiKey
 	}
 	if supportChatCompletion != nil {
-		e.supportOpenAIChatCompletion = *supportChatCompletion
+		next.supportOpenAIChatCompletion = *supportChatCompletion
 	}
 	if supportResponse != nil {
-		e.supportOpenAIResponse = *supportResponse
+		next.supportOpenAIResponse = *supportResponse
 	}
 	if supportMessage != nil {
-		e.supportAnthropicMessage = *supportMessage
+		next.supportAnthropicMessage = *supportMessage
 	}
 	if supportDecision != nil {
-		e.supportOpenAIDecision = *supportDecision
+		next.supportOpenAIDecision = *supportDecision
 	}
+	if err := next.validate(); err != nil {
+		return err
+	}
+	*e = next
+	return nil
 }
