@@ -8,12 +8,22 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans:
-    "Maple Mono CN", "Avenir Next", "Noto Sans SC", "Noto Sans JP", ui-sans-serif, system-ui,
-    sans-serif;
+  /* One text face for the whole interface: Noto Sans SC is a single variable
+   * family whose own subsets cover Latin, Han and kana, so a Chinese/English
+   * mixed string never splits across two typefaces the way a Latin-only face
+   * with a system CJK fallback does. Weight comes from the single 100–900 axis
+   * instead of separate 400/500/600/700 files. */
+  --font-sans: "Noto Sans SC Variable", ui-sans-serif, system-ui, sans-serif;
+  /* Monospace stays reserved for code, IDs, keys and figures so it reads as a
+   * distinct "verbatim data" voice rather than blending into prose. */
   --font-mono: "Maple Mono CN", "SFMono-Regular", Consolas, monospace;
-  --font-heading: var(--font-source-serif), "Georgia", "Noto Serif SC", "Noto Serif JP", serif;
-  --font-display: var(--font-source-serif), "Georgia", "Noto Serif SC", "Noto Serif JP", serif;
+  /* Heading tokens are aliases of --font-sans: headings are differentiated by
+   * size/weight/tracking, not by a second family. The names survive because
+   * ~67 call sites use them to declare heading intent, and moonshot hooks its
+   * letter-spacing on them. Keep them pointed at the shared var so a future
+   * face swap only has to touch --font-sans. */
+  --font-heading: var(--font-sans);
+  --font-display: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -265,18 +275,9 @@
   --code-bg: #0a0a0a;
   --code-border: #262626;
   --code-text: #e5e5e5;
-  /* moonshot.ai uses a neo-grotesque sans (M PLUS 1 / MiSans) for both
-   * body and headings — no monospace UI. Hanken Grotesk is the closest
-   * face already bundled; Maple Mono CN stays for --font-mono only. */
-  --font-sans:
-    var(--font-hanken), "Avenir Next", "Noto Sans SC", "Noto Sans JP", ui-sans-serif, system-ui,
-    sans-serif;
-  --font-heading:
-    var(--font-hanken), "Avenir Next", "Noto Sans SC", "Noto Sans JP", ui-sans-serif, system-ui,
-    sans-serif;
-  --font-display:
-    var(--font-hanken), "Avenir Next", "Noto Sans SC", "Noto Sans JP", ui-sans-serif, system-ui,
-    sans-serif;
+  /* No font overrides here on purpose: both skins share the single face set
+   * declared in @theme above, so switching themes only re-skins colour,
+   * depth and motion — text metrics stay put and nothing reflows. */
   /* Inset top hairline mimics moonlight grazing the surface edge;
    * the drop component is plain black, no color cast. */
   --shadow-2xs: inset 0 1px 0 0 rgb(255 255 255 / 0.04), 0 1px 2px 0 rgb(0 0 0 / 0.5);
