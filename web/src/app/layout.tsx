@@ -15,7 +15,7 @@ import { THEME_INIT_SCRIPT, ThemeProvider } from "@/lib/theme";
 import { MOTION_TIER_INIT_SCRIPT } from "@/lib/motion/tier";
 import { HtmlLangUpdater } from "@/components/html-lang-updater";
 import { Toaster } from "@/components/ui/sonner";
-import { ParticleBackground } from "@/components/theme/particle-background";
+import { AmbientStage } from "@/components/ambient/ambient-stage";
 import { ThemeSwitcher } from "@/components/theme/theme-switcher";
 import "./globals.css";
 
@@ -54,7 +54,7 @@ export default function RootLayout({
           <ThemeProvider>
             <HtmlLangUpdater />
             <AuthProvider>{children}</AuthProvider>
-            <ParticleBackground />
+            <AmbientStage />
             <ThemeSwitcher />
             <Toaster />
           </ThemeProvider>
