@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { lampShadow, magnetTarget, tiltFor } from "./interaction";
+import { magnetTarget, tiltFor } from "./interaction";
 
 const BTN = { left: 100, top: 100, width: 80, height: 32 }; // center (140, 116)
 
@@ -46,13 +46,5 @@ describe("tiltFor", () => {
 
   it("clamps when the pointer is outside the card", () => {
     expect(tiltFor(CARD, 400, -50)).toEqual({ rx: 4, ry: 4 });
-  });
-});
-
-describe("lampShadow", () => {
-  it("casts shadows away from the pointer lamp, at most 3 units", () => {
-    expect(lampShadow(0, 0, 1000, 800)).toEqual({ x: 3, y: 3 });
-    expect(lampShadow(1000, 800, 1000, 800)).toEqual({ x: -3, y: -3 });
-    expect(lampShadow(500, 400, 1000, 800)).toEqual({ x: 0, y: 0 });
   });
 });

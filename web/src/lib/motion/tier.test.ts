@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   MOTION_TIER_INIT_SCRIPT,
   isMotionTier,
-  lowerTier,
   resolveMotionTier,
   type MotionSignals,
 } from "./tier";
@@ -57,15 +56,6 @@ describe("resolveMotionTier", () => {
     expect(
       resolveMotionTier({ ...BASE, deviceMemory: undefined, hardwareConcurrency: undefined }),
     ).toBe("immersive");
-  });
-});
-
-describe("lowerTier", () => {
-  it("only ever moves down", () => {
-    expect(lowerTier("immersive", "lite")).toBe("lite");
-    expect(lowerTier("lite", "immersive")).toBe("lite");
-    expect(lowerTier("still", "lite")).toBe("still");
-    expect(lowerTier("lite", "still")).toBe("still");
   });
 });
 

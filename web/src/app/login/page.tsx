@@ -1,11 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useT } from "@/lib/i18n";
 import { api } from "@/lib/api-client";
 import { parseOAuthCallbackParams, resolveOAuthPlatform } from "@/lib/oauth";
-import { emitAmbientPulse } from "@/lib/motion/pulse";
 import type { OAuth2Provider } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { SplitText } from "@/components/motion/split-text";
@@ -17,8 +16,6 @@ const LOGIN_SEEN_SCRIPT =
   "(function(){try{var k='motion.login.seen';if(sessionStorage.getItem(k))" +
   "document.documentElement.dataset.loginSeen='1';sessionStorage.setItem(k,'1');}catch(e){}})();";
 
-/** Brand-mark ink drop lands as the stamp hits the paper (atelier-stamp). */
-const STAMP_INK_DELAY_MS = 380;
 const PENDING_RESET_MS = 4000;
 
 export default function LoginPage() {
@@ -27,31 +24,10 @@ export default function LoginPage() {
   const [processing, setProcessing] = useState(false);
   const [demoAvailable, setDemoAvailable] = useState(false);
   const [pending, setPending] = useState<OAuth2Provider | null>(null);
-  const markRef = useRef<HTMLDivElement>(null);
   const t = useT();
 
-  // Signature Moment (spec §7.2): replay the world's intro (lamp-on /
-  // moonrise) and, in atelier, drop ink where the brand mark is stamped.
-  useEffect(() => {
-    emitAmbientPulse({ kind: "intro" });
-    const root = document.documentElement;
-    if (root.dataset.theme !== "anthropic") return;
-    const pace = root.dataset.loginSeen ? 0.4 : 1;
-    const timer = window.setTimeout(() => {
-      const r = markRef.current?.getBoundingClientRect();
-      if (r && r.width > 0) {
-        emitAmbientPulse({ kind: "primary", x: r.left + r.width / 2, y: r.top + r.height / 2 });
-      }
-    }, STAMP_INK_DELAY_MS * pace);
-    return () => window.clearTimeout(timer);
-  }, []);
-
-  const startOAuth = (provider: OAuth2Provider, e: MouseEvent<HTMLElement>) => {
+  const startOAuth = (provider: OAuth2Provider) => {
     setPending(provider);
-    // Lunar "launch": the stars warp from the pressed button.
-    if (document.documentElement.dataset.theme === "moonshot") {
-      emitAmbientPulse({ kind: "route", x: e.clientX, y: e.clientY });
-    }
     // The redirect is never delayed for the effect. login() resolves once
     // navigation has started (or failed silently), so the waiting cue stays
     // up while the provider page loads and only clears if we are still here.
@@ -162,10 +138,7 @@ export default function LoginPage() {
       <div className="login-card relative grid w-full max-w-5xl overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xl md:grid-cols-[1.05fr_0.95fr]">
         <div className="hidden bg-sidebar p-10 text-sidebar-foreground md:flex md:flex-col md:justify-between bg-[radial-gradient(120%_90%_at_0%_0%,color-mix(in_oklab,var(--sidebar-primary)_14%,transparent),transparent_55%)]">
           <div>
-            <div
-              ref={markRef}
-              className="login-mark mb-10 inline-flex size-14 items-center justify-center rounded-xl bg-sidebar-primary font-display text-3xl font-semibold text-sidebar-primary-foreground shadow-sm"
-            >
+            <div className="login-mark mb-10 inline-flex size-14 items-center justify-center rounded-xl bg-sidebar-primary font-display text-3xl font-semibold text-sidebar-primary-foreground shadow-sm">
               A
             </div>
             <h1 className="login-title font-display text-5xl font-semibold leading-none tracking-tight">
@@ -208,7 +181,7 @@ export default function LoginPage() {
               className="relative"
               data-pending={pending === "github" ? "" : undefined}
               aria-busy={pending === "github"}
-              onClick={(e) => startOAuth("github", e)}
+              onClick={() => startOAuth("github")}
             >
               {t("auth.login_github")}
             </Button>
@@ -219,7 +192,7 @@ export default function LoginPage() {
               data-magnetic=""
               data-pending={pending === "google" ? "" : undefined}
               aria-busy={pending === "google"}
-              onClick={(e) => startOAuth("google", e)}
+              onClick={() => startOAuth("google")}
             >
               {t("auth.login_google")}
             </Button>

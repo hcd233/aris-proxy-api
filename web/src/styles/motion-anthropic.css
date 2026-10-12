@@ -1,7 +1,6 @@
 /* === Motion World「纸与墨 · Atelier」(anthropic, spec §5) ===
  * Things settle onto paper; ink spreads; nothing bounces. Critically damped
- * easing only. Shadows follow the desk lamp: --light-x / --light-y (unitless,
- * −3..3) are written on <html> by InteractionLayer when the pointer rests. */
+ * easing only. The page backdrop itself remains the solid --background token. */
 
 [data-theme="anthropic"] {
   --ease-settle: cubic-bezier(0.22, 1, 0.36, 1);
@@ -11,8 +10,6 @@
   --animate-page: atelier-rise 520ms var(--ease-settle) backwards;
   --animate-rise: atelier-rise 520ms var(--ease-settle) backwards;
   --animate-scale-in: atelier-settle 520ms var(--ease-settle) backwards;
-  --light-x: 0;
-  --light-y: 0;
 }
 
 @keyframes atelier-rise {
@@ -74,10 +71,9 @@
   text-decoration-line: none;
 }
 
-/* ---- Cards「纸张抬起」: lamp-driven shadows; only interactive cards lift. ---- */
+/* ---- Cards「纸张抬起」: soft static shadows; only interactive cards lift. ---- */
 [data-theme="anthropic"] [data-slot="card"] {
-  box-shadow: calc(var(--light-x) * 0.3px) calc(1px + var(--light-y) * 0.3px) 2px 0
-    rgb(31 26 20 / 0.04);
+  box-shadow: 0 1px 2px 0 rgb(31 26 20 / 0.04);
   transition:
     box-shadow 600ms var(--ease-settle),
     border-color 180ms ease,
@@ -85,8 +81,8 @@
 }
 [data-theme="anthropic"] [data-slot="card"]:hover {
   box-shadow:
-    calc(var(--light-x) * 1px) calc(4px + var(--light-y) * 1px) 14px -4px rgb(31 26 20 / 0.1),
-    calc(var(--light-x) * 0.3px) calc(1px + var(--light-y) * 0.3px) 2px 0 rgb(31 26 20 / 0.05);
+    0 4px 14px -4px rgb(31 26 20 / 0.1),
+    0 1px 2px 0 rgb(31 26 20 / 0.05);
   transition-duration: 320ms, 180ms, 320ms;
 }
 [data-theme="anthropic"] [data-slot="card"][data-interactive]:hover {
@@ -97,7 +93,7 @@
 [data-theme="anthropic"] :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"]) {
   box-shadow:
     0 0 0 1px rgb(31 26 20 / 0.1),
-    calc(var(--light-x) * 1.5px) calc(16px + var(--light-y) * 1.5px) 36px -14px rgb(31 26 20 / 0.22);
+    0 16px 36px -14px rgb(31 26 20 / 0.22);
   transition: box-shadow 600ms var(--ease-settle);
 }
 [data-theme="anthropic"]

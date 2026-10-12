@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { isMotionTier, lowerTier, type MotionTier } from "./tier";
+import { isMotionTier, type MotionTier } from "./tier";
 
 /* DOM-backed Motion Tier store. <html data-motion-tier> (written before first
  * paint by MOTION_TIER_INIT_SCRIPT) is the source of truth: CSS reads the
@@ -14,20 +14,15 @@ function readTier(): MotionTier {
   return isMotionTier(v) ? v : SERVER_TIER;
 }
 
-/** Lower the tier (never raises — recovery needs a reload). */
-export function downgradeMotionTier(proposed: MotionTier): void {
-  const root = document.documentElement;
-  const next = lowerTier(readTier(), proposed);
-  if (root.dataset.motionTier === next) return;
-  root.dataset.motionTier = next;
-  for (const listener of listeners) listener();
-}
-
 function bindReducedMotion(): void {
   if (reducedMotionBound) return;
   reducedMotionBound = true;
   window.matchMedia("(prefers-reduced-motion: reduce)").addEventListener("change", (e) => {
-    if (e.matches) downgradeMotionTier("still");
+    if (!e.matches) return;
+    const root = document.documentElement;
+    if (root.dataset.motionTier === "still") return;
+    root.dataset.motionTier = "still";
+    for (const listener of listeners) listener();
   });
 }
 

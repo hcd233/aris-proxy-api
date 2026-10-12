@@ -75,7 +75,7 @@ _Avoid_: model name, upstream alias
 ## Theme（主题皮肤）
 
 **Theme（主题皮肤）**:
-整套视觉皮肤的命名集合，取值 `anthropic`（默认，暖色纸质）| `moonshot`（深空科技，固定深色）。持久化于 `localStorage("theme")`，由根布局内联脚本在 hydration 前反映到 `<html data-theme>`，是所有 per-theme 行为的单一事实来源。与明暗模式正交：moonshot 主题不受 `.dark` class 影响。整页根容器携带 `page-surface` 标记类，两套主题下背景均透明，以透出 Ambient Stage（纸面或星空）；小组件不携带。
+整套视觉皮肤的命名集合，取值 `anthropic`（默认，暖纸色）| `moonshot`（纯黑深色）。持久化于 `localStorage("theme")`，由根布局内联脚本在 hydration 前反映到 `<html data-theme>`，是所有 per-theme 行为的单一事实来源。与明暗模式正交：moonshot 主题不受 `.dark` class 影响。页面背景使用各主题的纯色 `--background`；整页根容器携带 `page-surface` 标记类并保持透明，以透出 body 背景；小组件不携带。
 _Avoid_: color scheme, dark mode toggle
 
 ## Pricing & Cost（定价与成本）
@@ -125,27 +125,15 @@ _Avoid_: cost, billing amount
 ## Motion（动效）
 
 **Motion World（动效世界）**:
-一个主题的完整动效人格，含 token、组件语法、环境场景与签名时刻。anthropic → `atelier`（纸与墨），moonshot → `lunar`（月光与引力）。
+一个主题的完整动效人格，含 token、组件语法、组件交互与签名时刻。anthropic → `atelier`（纸与墨），moonshot → `lunar`（月光与引力）；两者页面背景都保持各自的纯色 `--background`。
 _Avoid_: animation theme, motion skin
 
 **Motion Tier（动效档位）**:
-`immersive | lite | still`，反映到 `<html data-motion-tier>`，是所有降级行为的单一事实来源。首帧前由内联脚本按减弱动态 / 省流量 / 低配 / 粗指针判定，Ambient Stage 挂载后补测 WebGL2；运行时只降不升，恢复需刷新。
+`immersive | lite | still`，反映到 `<html data-motion-tier>`，是动效强度的单一事实来源。首帧前由内联脚本按减弱动态 / 省流量 / 低配 / 粗指针判定；系统运行时开启「减弱动态」后切换到 `still`。页面背景不随档位变化，始终是主题纯色。
 _Avoid_: animation level, quality setting
 
-**Ambient Stage（环境舞台）**:
-根布局里唯一的 fixed 背景层（`components/ambient/ambient-stage.tsx`），`immersive` 档绘制当前世界的 WebGL 场景，`lite / still` 档退回 CSS 纸纹或 Canvas 2D 星空。
-_Avoid_: particle background, background canvas
-
-**Ambient Presence（环境存在感）**:
-注意力信号输出的 `0.35..1`：用户打字 / 滚动 / 点击时背景退后，空闲 8s 后浮现。移动指针不算操作。
-_Avoid_: focus mode, idle dimming
-
-**Ambient Pulse（环境脉冲）**:
-UI 事件经 `emitAmbientPulse()` 发给舞台的一次性效果请求（`primary` 墨滴 / 引力波纹、`route` 墨滴 / 跃迁、`focus-on/off` 聚焦、`intro` 重放入场）。路由切换由舞台自动发出 `route`。
-_Avoid_: background event, fx trigger
-
 **Interaction Layer（交互委托层）**:
-根布局挂载一次的文档级指针监听（`components/motion/interaction-layer.tsx`），按 `data-slot` / `data-variant` / `data-interactive` / `data-magnetic` 命中目标并写 CSS 变量，驱动磁吸按钮、卡片倾斜与边缘光、台灯投影、点击冲击波与环境脉冲。业务组件不需要任何接线。
+根布局挂载一次的文档级指针监听（`components/motion/interaction-layer.tsx`），按 `data-slot` / `data-variant` / `data-interactive` / `data-magnetic` 命中目标并写 CSS 变量，驱动磁吸按钮、卡片倾斜与边缘光、点击冲击波。业务组件不需要任何接线。
 _Avoid_: hover handler, mouse tracker
 
 **Motion Grammar（动效语法层）**:

@@ -2,8 +2,7 @@
 
 import { useEffect } from "react";
 import { useMotionTier } from "@/lib/motion/tier-store";
-import { emitAmbientPulse } from "@/lib/motion/pulse";
-import { lampShadow, magnetTarget, tiltFor, type Box } from "@/lib/motion/interaction";
+import { magnetTarget, tiltFor, type Box } from "@/lib/motion/interaction";
 import { springAtRest, springStep, type SpringState } from "@/lib/motion/spring";
 import { MAGNETIC_SPRING } from "@/lib/motion/tokens";
 
@@ -12,13 +11,9 @@ const SPOT_SELECTOR =
   '[data-slot="button"][data-variant="ghost"], [data-slot="button"][data-variant="outline"]';
 const CARD_SELECTOR = '[data-slot="card"]';
 const DISABLED_SELECTOR = ':disabled, [aria-disabled="true"], [data-disabled]';
-const DIALOG_OPEN_SELECTOR =
-  '[data-slot="dialog-content"][data-open], [data-slot="alert-dialog-content"][data-open]';
 const CARD_VARS = ["--mx", "--my", "--rx", "--ry"];
 const SPOT_VARS = ["--mx", "--my"];
 const MAG_VARS = ["--mag-x", "--mag-y"];
-/** The lamp only moves once the pointer rests (keeps style recalcs rare). */
-const LAMP_SETTLE_MS = 120;
 const SHOCKWAVE_TTL_MS = 1000;
 const MAX_SPRING_DT_S = 0.05;
 
@@ -57,17 +52,14 @@ function spawnShockwave(x: number, y: number): void {
  * Interaction Layer (spec §4.1 ④): one set of document-level listeners that
  * drives every pointer-reactive effect of the active Motion World by writing
  * CSS variables — no per-component wiring, no React re-renders.
- * - all worlds: primary presses → `primary` Ambient Pulse; dialogs → focus pulses
- * - anthropic (immersive): lamp shadow direction (--light-x / --light-y on <html>)
  * - moonshot (fine pointer): card rim light + tilt, ghost-button light spot,
- *   magnetic primary buttons, click shockwave
+ *   magnetic primary buttons and click shockwave
  */
 export function InteractionLayer() {
   const tier = useMotionTier();
 
   useEffect(() => {
     if (tier === "still") return;
-    const root = document.documentElement;
     const finePointer = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
     const magnets = new Map<HTMLElement, Magnet>();
     let pointer: { x: number; y: number; target: Element | null } | null = null;
@@ -76,9 +68,6 @@ export function InteractionLayer() {
     let moveRaf = 0;
     let springRaf = 0;
     let lastSpring = 0;
-    let lampTimer = 0;
-    let dialogRaf = 0;
-    let dialogOpen = false;
 
     const stepSprings = (now: number) => {
       springRaf = 0;
@@ -178,14 +167,6 @@ export function InteractionLayer() {
       kickSprings();
     };
 
-    const settleLamp = () => {
-      lampTimer = 0;
-      if (!pointer || isMoonshot() || root.dataset.motionTier !== "immersive") return;
-      const s = lampShadow(pointer.x, pointer.y, window.innerWidth, window.innerHeight);
-      root.style.setProperty("--light-x", String(s.x));
-      root.style.setProperty("--light-y", String(s.y));
-    };
-
     const onMove = (e: PointerEvent) => {
       pointer = {
         x: e.clientX,
@@ -193,8 +174,6 @@ export function InteractionLayer() {
         target: e.target instanceof Element ? e.target : null,
       };
       if (!moveRaf) moveRaf = requestAnimationFrame(flushMove);
-      window.clearTimeout(lampTimer);
-      lampTimer = window.setTimeout(settleLamp, LAMP_SETTLE_MS);
     };
 
     const onOut = (e: PointerEvent) => {
@@ -208,26 +187,8 @@ export function InteractionLayer() {
       if (e.button !== 0 || !(e.target instanceof Element)) return;
       const el = e.target.closest(PRIMARY_SELECTOR);
       if (!el || el.matches(DISABLED_SELECTOR)) return;
-      emitAmbientPulse({ kind: "primary", x: e.clientX, y: e.clientY });
       if (isMoonshot()) spawnShockwave(e.clientX, e.clientY);
     };
-
-    const checkDialog = () => {
-      dialogRaf = 0;
-      const open = document.querySelector(DIALOG_OPEN_SELECTOR) !== null;
-      if (open === dialogOpen) return;
-      dialogOpen = open;
-      emitAmbientPulse({ kind: open ? "focus-on" : "focus-off" });
-    };
-    const observer = new MutationObserver(() => {
-      if (!dialogRaf) dialogRaf = requestAnimationFrame(checkDialog);
-    });
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["data-open", "data-closed"],
-    });
 
     window.addEventListener("pointermove", onMove, { passive: true });
     window.addEventListener("pointerdown", onDown, { capture: true, passive: true });
@@ -237,11 +198,8 @@ export function InteractionLayer() {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerdown", onDown, { capture: true });
       document.removeEventListener("pointerout", onOut);
-      observer.disconnect();
       cancelAnimationFrame(moveRaf);
       cancelAnimationFrame(springRaf);
-      cancelAnimationFrame(dialogRaf);
-      window.clearTimeout(lampTimer);
       if (hoverCard) clearVars(hoverCard, CARD_VARS);
       if (hoverSpot) clearVars(hoverSpot, SPOT_VARS);
       for (const el of magnets.keys()) {
@@ -249,9 +207,6 @@ export function InteractionLayer() {
         clearVars(el, MAG_VARS);
       }
       magnets.clear();
-      root.style.removeProperty("--light-x");
-      root.style.removeProperty("--light-y");
-      if (dialogOpen) emitAmbientPulse({ kind: "focus-off" });
     };
   }, [tier]);
 

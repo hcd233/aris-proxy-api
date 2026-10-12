@@ -12,7 +12,6 @@ export const MAGNET_RANGE_PX = 60;
 export const MAGNET_MAX_PX = 4;
 const MAGNET_PULL = 0.12;
 export const TILT_MAX_DEG = 4;
-export const LAMP_SHADOW_MAX = 3;
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
@@ -40,15 +39,5 @@ export function tiltFor(r: Box, px: number, py: number): { rx: number; ry: numbe
   return {
     rx: (0.5 - ny) * 2 * TILT_MAX_DEG,
     ry: (nx - 0.5) * 2 * TILT_MAX_DEG,
-  };
-}
-
-/** Atelier lamp shadow offset (unitless, ±LAMP_SHADOW_MAX): the lamp sits at
- * the pointer, so shadows fall away from it. Rounded to 2dp. */
-export function lampShadow(px: number, py: number, w: number, h: number): { x: number; y: number } {
-  const round = (v: number) => Math.round(v * 100) / 100 + 0;
-  return {
-    x: round(-((px / w) * 2 - 1) * LAMP_SHADOW_MAX),
-    y: round(-((py / h) * 2 - 1) * LAMP_SHADOW_MAX),
   };
 }

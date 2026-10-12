@@ -24,13 +24,6 @@ export function resolveMotionTier(s: MotionSignals): MotionTier {
   return "immersive";
 }
 
-const TIER_RANK: Record<MotionTier, number> = { still: 0, lite: 1, immersive: 2 };
-
-/** Runtime tier changes only ever go down: returns the lower of the two. */
-export function lowerTier(current: MotionTier, proposed: MotionTier): MotionTier {
-  return TIER_RANK[proposed] < TIER_RANK[current] ? proposed : current;
-}
-
 export function isMotionTier(x: unknown): x is MotionTier {
   return x === "immersive" || x === "lite" || x === "still";
 }
@@ -39,8 +32,8 @@ export function isMotionTier(x: unknown): x is MotionTier {
  * runs synchronously before first paint and writes <html data-motion-tier>.
  * A hand-written ES5 mirror of resolveMotionTier — production minification
  * makes Function.prototype.toString unreliable — kept in lockstep by the
- * full-matrix parity test in tier.test.ts. WebGL2 is probed later by the
- * Ambient Stage (too costly to create a context before first paint). */
+ * full-matrix parity test in tier.test.ts. The tier controls motion intensity
+ * only; the page backdrop remains the theme's solid --background color. */
 export const MOTION_TIER_INIT_SCRIPT =
   "(function(){var d=document.documentElement;try{var n=navigator,c=n.connection," +
   "m=function(q){return window.matchMedia(q).matches};" +
