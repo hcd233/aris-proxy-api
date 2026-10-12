@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "../styles/motion-base.css";
+@import "../styles/motion-anthropic.css";
+@import "../styles/motion-moonshot.css";
 
 @custom-variant dark (&:is(.dark *));
 @custom-variant moonshot (&:is([data-theme="moonshot"] *));
@@ -393,22 +396,13 @@ html.theme-transition *::after {
     stroke 350ms ease !important;
 }
 
-/* === Motion system "Silk Paper" ===
- * Editorial motion language: paper settling, no bounce. transform/opacity
- * only, expo-out easing, staggered entrances. Keyframes live at root level
- * (not inside @theme) so plain-CSS rules below can reference them too.
- * Everything is neutralized by the prefers-reduced-motion guard at the end. */
-
-@keyframes rise {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
+/* === Motion system: shared entrance utilities ===
+ * The per-world grammar (tokens, keyframes, component motion) lives in
+ * styles/motion-anthropic.css (纸与墨) and styles/motion-moonshot.css (月光与
+ * 引力); each overrides the --animate-* defaults below under its own
+ * [data-theme]. transform/opacity/filter only, fill-mode `backwards` so
+ * nothing lingers after an entrance. Everything is neutralized by the
+ * prefers-reduced-motion guard at the end. */
 
 @keyframes fade {
   from {
@@ -416,17 +410,6 @@ html.theme-transition *::after {
   }
   to {
     opacity: 1;
-  }
-}
-
-@keyframes scale-in {
-  from {
-    opacity: 0;
-    transform: scale(0.965);
-  }
-  to {
-    opacity: 1;
-    transform: none;
   }
 }
 
@@ -441,37 +424,39 @@ html.theme-transition *::after {
 
 @theme {
   --ease-silk: cubic-bezier(0.22, 1, 0.36, 1);
-  --animate-rise: rise 480ms var(--ease-silk) both;
+  --animate-page: atelier-rise 520ms var(--ease-silk) backwards;
+  --animate-rise: atelier-rise 520ms var(--ease-silk) backwards;
   --animate-fade: fade 300ms ease-out both;
-  --animate-scale-in: scale-in 380ms var(--ease-silk) both;
+  --animate-scale-in: atelier-settle 520ms var(--ease-silk) backwards;
   --animate-shimmer: shimmer 1.6s ease-in-out infinite;
 }
 
-/* Staggered entrance: direct children rise one after another (50ms steps).
- * `both` fill keeps later children hidden until their delay elapses. */
+/* Staggered entrance: direct children enter one after another, stepped by
+ * the active world's --motion-stagger (anthropic 40ms / moonshot 60ms).
+ * `backwards` fill keeps later children hidden until their delay elapses. */
 .stagger-rise > * {
-  animation: rise 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: var(--animate-rise);
 }
 .stagger-rise > :nth-child(2) {
-  animation-delay: 50ms;
+  animation-delay: var(--motion-stagger, 40ms);
 }
 .stagger-rise > :nth-child(3) {
-  animation-delay: 100ms;
+  animation-delay: calc(var(--motion-stagger, 40ms) * 2);
 }
 .stagger-rise > :nth-child(4) {
-  animation-delay: 150ms;
+  animation-delay: calc(var(--motion-stagger, 40ms) * 3);
 }
 .stagger-rise > :nth-child(5) {
-  animation-delay: 200ms;
+  animation-delay: calc(var(--motion-stagger, 40ms) * 4);
 }
 .stagger-rise > :nth-child(6) {
-  animation-delay: 250ms;
+  animation-delay: calc(var(--motion-stagger, 40ms) * 5);
 }
 .stagger-rise > :nth-child(7) {
-  animation-delay: 300ms;
+  animation-delay: calc(var(--motion-stagger, 40ms) * 6);
 }
-.stagger-rise > :nth-child(8) {
-  animation-delay: 350ms;
+.stagger-rise > :nth-child(n + 8) {
+  animation-delay: calc(var(--motion-stagger, 40ms) * 7);
 }
 
 /* Manual entrance delays for orchestrated layouts (60ms steps). */

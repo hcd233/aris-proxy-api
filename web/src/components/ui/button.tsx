@@ -49,6 +49,8 @@ function Button({
   return (
     <ButtonPrimitive
       data-slot="button"
+      // Motion Worlds target variants in CSS (magnetic primary, ghost light spot).
+      data-variant={variant}
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
     />
