@@ -16,6 +16,7 @@ import { MOTION_TIER_INIT_SCRIPT } from "@/lib/motion/tier";
 import { HtmlLangUpdater } from "@/components/html-lang-updater";
 import { Toaster } from "@/components/ui/sonner";
 import { AmbientStage } from "@/components/ambient/ambient-stage";
+import { InteractionLayer } from "@/components/motion/interaction-layer";
 import { ThemeSwitcher } from "@/components/theme/theme-switcher";
 import "./globals.css";
 
@@ -60,6 +61,7 @@ export default function RootLayout({
             <HtmlLangUpdater />
             <AuthProvider>{children}</AuthProvider>
             <AmbientStage />
+            <InteractionLayer />
             <ThemeSwitcher />
             <Toaster />
           </ThemeProvider>
