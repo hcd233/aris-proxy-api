@@ -1,18 +1,65 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useT } from "@/lib/i18n";
 import { api } from "@/lib/api-client";
 import { parseOAuthCallbackParams, resolveOAuthPlatform } from "@/lib/oauth";
+import { emitAmbientPulse } from "@/lib/motion/pulse";
+import type { OAuth2Provider } from "@/lib/types";
 import { Button } from "@/components/ui/button";
+import { SplitText } from "@/components/motion/split-text";
+
+/* Runs during HTML parsing, before the first animated frame: marks repeat
+ * visits in this browser session so the choreography plays at 40% length
+ * (html[data-login-seen] .login-stage → --login-pace: 0.4). */
+const LOGIN_SEEN_SCRIPT =
+  "(function(){try{var k='motion.login.seen';if(sessionStorage.getItem(k))" +
+  "document.documentElement.dataset.loginSeen='1';sessionStorage.setItem(k,'1');}catch(e){}})();";
+
+/** Brand-mark ink drop lands as the stamp hits the paper (atelier-stamp). */
+const STAMP_INK_DELAY_MS = 380;
+const PENDING_RESET_MS = 4000;
 
 export default function LoginPage() {
   const { login, handleCallback, accessToken, user } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
   const [demoAvailable, setDemoAvailable] = useState(false);
+  const [pending, setPending] = useState<OAuth2Provider | null>(null);
+  const markRef = useRef<HTMLDivElement>(null);
   const t = useT();
+
+  // Signature Moment (spec §7.2): replay the world's intro (lamp-on /
+  // moonrise) and, in atelier, drop ink where the brand mark is stamped.
+  useEffect(() => {
+    emitAmbientPulse({ kind: "intro" });
+    const root = document.documentElement;
+    if (root.dataset.theme !== "anthropic") return;
+    const pace = root.dataset.loginSeen ? 0.4 : 1;
+    const timer = window.setTimeout(() => {
+      const r = markRef.current?.getBoundingClientRect();
+      if (r && r.width > 0) {
+        emitAmbientPulse({ kind: "primary", x: r.left + r.width / 2, y: r.top + r.height / 2 });
+      }
+    }, STAMP_INK_DELAY_MS * pace);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  const startOAuth = (provider: OAuth2Provider, e: MouseEvent<HTMLElement>) => {
+    setPending(provider);
+    // Lunar "launch": the stars warp from the pressed button.
+    if (document.documentElement.dataset.theme === "moonshot") {
+      emitAmbientPulse({ kind: "route", x: e.clientX, y: e.clientY });
+    }
+    // The redirect is never delayed for the effect. login() resolves once
+    // navigation has started (or failed silently), so the waiting cue stays
+    // up while the provider page loads and only clears if we are still here.
+    // login() is typed `void` in the auth context but is async at runtime.
+    void Promise.resolve(login(provider)).finally(() =>
+      window.setTimeout(() => setPending(null), PENDING_RESET_MS),
+    );
+  };
 
   const processCallback = useCallback(async () => {
     const params = parseOAuthCallbackParams(window.location.search);
@@ -110,33 +157,39 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="page-surface flex min-h-screen items-center justify-center bg-background px-4 py-10">
-      <div className="animate-scale-in grid w-full max-w-5xl overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xl md:grid-cols-[1.05fr_0.95fr]">
+    <div className="login-stage page-surface flex min-h-screen items-center justify-center bg-background px-4 py-10">
+      <script dangerouslySetInnerHTML={{ __html: LOGIN_SEEN_SCRIPT }} />
+      <div className="login-card relative grid w-full max-w-5xl overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xl md:grid-cols-[1.05fr_0.95fr]">
         <div className="hidden bg-sidebar p-10 text-sidebar-foreground md:flex md:flex-col md:justify-between bg-[radial-gradient(120%_90%_at_0%_0%,color-mix(in_oklab,var(--sidebar-primary)_14%,transparent),transparent_55%)]">
           <div>
-            <div className="animate-rise mb-10 inline-flex size-14 items-center justify-center rounded-xl bg-sidebar-primary font-display text-3xl font-semibold text-sidebar-primary-foreground shadow-sm">
+            <div
+              ref={markRef}
+              className="login-mark mb-10 inline-flex size-14 items-center justify-center rounded-xl bg-sidebar-primary font-display text-3xl font-semibold text-sidebar-primary-foreground shadow-sm"
+            >
               A
             </div>
-            <h1 className="animate-rise motion-delay-1 font-display text-5xl font-semibold leading-none tracking-tight">
-              Aris Proxy
+            <h1 className="login-title font-display text-5xl font-semibold leading-none tracking-tight">
+              <SplitText text="Aris Proxy" />
             </h1>
-            <p className="animate-rise motion-delay-2 mt-4 max-w-sm text-sm leading-6 text-sidebar-foreground/70">
+            <p className="login-at login-at-3 mt-4 max-w-sm text-sm leading-6 text-sidebar-foreground/70">
               {t("auth.login_subtitle")}
             </p>
           </div>
-          <p className="animate-rise motion-delay-4 text-xs text-sidebar-foreground/50">
+          <p className="login-at login-at-5 text-xs text-sidebar-foreground/50">
             {t("login.secure_access")}
           </p>
         </div>
 
         <div className="flex flex-col justify-center p-8 md:p-10">
-          <div className="animate-rise motion-delay-1 mb-8 md:hidden">
-            <h1 className="font-display text-5xl font-semibold tracking-tight text-foreground">
-              Aris Proxy
+          <div className="mb-8 md:hidden">
+            <h1 className="login-title font-display text-5xl font-semibold tracking-tight text-foreground">
+              <SplitText text="Aris Proxy" />
             </h1>
-            <p className="mt-2 text-sm text-muted-foreground">{t("auth.login_subtitle")}</p>
+            <p className="login-at login-at-3 mt-2 text-sm text-muted-foreground">
+              {t("auth.login_subtitle")}
+            </p>
           </div>
-          <div className="animate-rise motion-delay-1 hidden md:block">
+          <div className="login-at login-at-2 hidden md:block">
             <h2 className="font-display text-4xl font-semibold tracking-tight text-foreground">
               {t("login.welcome_back")}
             </h2>
@@ -149,11 +202,25 @@ export default function LoginPage() {
             </div>
           )}
 
-          <div className="stagger-rise mt-8 flex flex-col gap-3">
-            <Button size="lg" onClick={() => login("github")}>
+          <div className="login-actions mt-8 flex flex-col gap-3">
+            <Button
+              size="lg"
+              className="relative"
+              data-pending={pending === "github" ? "" : undefined}
+              aria-busy={pending === "github"}
+              onClick={(e) => startOAuth("github", e)}
+            >
               {t("auth.login_github")}
             </Button>
-            <Button size="lg" variant="outline" onClick={() => login("google")}>
+            <Button
+              size="lg"
+              variant="outline"
+              className="relative"
+              data-magnetic=""
+              data-pending={pending === "google" ? "" : undefined}
+              aria-busy={pending === "google"}
+              onClick={(e) => startOAuth("google", e)}
+            >
               {t("auth.login_google")}
             </Button>
             {demoAvailable && (
@@ -163,7 +230,7 @@ export default function LoginPage() {
                   <span>{t("login.demo_or")}</span>
                   <span className="h-px flex-1 bg-border" aria-hidden />
                 </div>
-                <Button size="lg" variant="secondary" onClick={demoLogin}>
+                <Button size="lg" variant="secondary" data-magnetic="" onClick={demoLogin}>
                   {t("login.demo_continue")}
                 </Button>
               </>
