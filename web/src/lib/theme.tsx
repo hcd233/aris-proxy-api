@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { startThemeTransition, type Point } from "@/lib/motion/theme-transition";
 
 /* ============================================================
  * Theme registry
@@ -117,7 +118,8 @@ export const THEME_INIT_SCRIPT =
 
 interface ThemeContextValue {
   theme: ThemeName;
-  setTheme: (next: ThemeName) => void;
+  /** `origin` (viewport px) anchors the theme-switch View Transition. */
+  setTheme: (next: ThemeName, origin?: Point) => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
@@ -138,16 +140,22 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  const setTheme = (next: ThemeName) => {
+  const setTheme = (next: ThemeName, origin?: Point) => {
     const root = document.documentElement;
+    const apply = () => {
+      root.dataset.theme = next;
+      try {
+        localStorage.setItem("theme", next);
+      } catch {
+        // private mode etc.: theme still applies for this session
+      }
+      setThemeState(next);
+    };
+    // Signature Moment: eclipse / ink-wash View Transition between worlds.
+    if (startThemeTransition(next, origin, apply)) return;
+    // Fallback (no View Transitions, or Motion Tier `still`): color fade.
     root.classList.add("theme-transition");
-    root.dataset.theme = next;
-    try {
-      localStorage.setItem("theme", next);
-    } catch {
-      // private mode etc.: theme still applies for this session
-    }
-    setThemeState(next);
+    apply();
     window.setTimeout(() => root.classList.remove("theme-transition"), TRANSITION_MS);
   };
 

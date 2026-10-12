@@ -4,6 +4,7 @@
 @import "../styles/motion-base.css";
 @import "../styles/motion-anthropic.css";
 @import "../styles/motion-moonshot.css";
+@import "../styles/motion-signature.css";
 
 @custom-variant dark (&:is(.dark *));
 @custom-variant moonshot (&:is([data-theme="moonshot"] *));

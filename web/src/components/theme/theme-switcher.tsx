@@ -12,6 +12,12 @@ import {
 import { useT } from "@/lib/i18n";
 import { useTheme } from "@/lib/theme";
 
+/** Viewport center of the clicked switch: the theme transition's origin. */
+function centerOf(el: Element) {
+  const r = el.getBoundingClientRect();
+  return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+}
+
 // The FAB mounts only on public pages (they have no UserBar); dashboard
 // pages render the inline variant inside UserBar instead.
 const FAB_PATHS = ["/login", "/callback", "/share"];
@@ -35,7 +41,7 @@ export function ThemeSwitcher({ variant = "fab" }: { variant?: "fab" | "inline" 
               <Button
                 variant="ghost"
                 size="icon-sm"
-                onClick={() => setTheme(next)}
+                onClick={(e) => setTheme(next, centerOf(e.currentTarget))}
                 aria-label={label}
                 className="text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground"
               >
@@ -59,7 +65,7 @@ export function ThemeSwitcher({ variant = "fab" }: { variant?: "fab" | "inline" 
           render={
             <button
               type="button"
-              onClick={() => setTheme(next)}
+              onClick={(e) => setTheme(next, centerOf(e.currentTarget))}
               aria-label={label}
               className="fixed bottom-6 left-6 z-50 flex h-9 w-9 items-center justify-center rounded-full border border-border bg-popover/70 text-foreground/70 opacity-60 backdrop-blur-md transition-opacity hover:text-foreground hover:opacity-100"
             >
