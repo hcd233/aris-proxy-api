@@ -8,7 +8,7 @@ import { PermissionGuard } from "@/components/permission-guard";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Key, MessageSquare, Server, Cpu } from "lucide-react";
-import { CountUp } from "@/components/count-up";
+import { MetricNumber } from "@/components/motion/metric-number";
 import { ModelCostBarChart } from "@/components/charts/model-cost-bar-chart";
 import { ModelTrendChart } from "@/components/charts/model-trend-chart";
 import { RequestRateChart } from "@/components/charts/request-rate-chart";
@@ -52,7 +52,7 @@ function StatCard({
           <Skeleton className="h-10 w-20" />
         ) : (
           <div className="font-display text-3xl font-semibold tabular-nums text-foreground">
-            <CountUp value={value} />
+            <MetricNumber value={value} />
           </div>
         )}
       </CardContent>
