@@ -48,6 +48,9 @@
 - **背景只有一个**：所有背景效果都在 `AmbientStage` 里实现；业务组件需要背景反馈时调用 `emitAmbientPulse()`（`@/lib/motion/pulse`），不要新建 canvas。路由切换的 `route` 脉冲由舞台自动发出。
 - **`components/ambient/` 只用同目录相对导入**：shader 验证脚手架用 esbuild 直接打包这些模块，不解析 `@/` 别名。
 - **shader 改动必须跑编译与像素断言**：用 chrome-headless-shell（`--use-angle=swiftshader --enable-unsafe-swiftshader`）编译并读回像素，断言 atelier 纸面亮度起伏 ≤ ±3%、lunar 月球亮度 ≤ 0.22。
+- **组件动效写在语法层**：通用组件的进出场、按压、悬停动效只写在 `src/styles/motion-{anthropic,moonshot}.css`，按 `data-slot`（shadcn 自带）、`data-variant`（`Button` 输出）、`data-interactive`（可倾斜/可抬起的卡片，按需在业务处标记）命中。`components/ui/` 的弹层组件不再使用 tw-animate 的 `data-open:animate-in` 一类类名，新增弹层时同样不要加，而是在两份语法层里各补一组规则。
+- **能用 CSS 就不用 JS**：只有需要逐帧物理的效果（磁吸弹簧、倾斜跟随）才进 `InteractionLayer`；弹簧参数在 `lib/motion/tokens.ts`，CSS 侧的 `--ease-orbit` 由 `lib/motion/spring.ts` 采样生成，`spring.test.ts` 保证两者一致——改弹簧参数要同步重新生成 CSS。
+- **入场动画用 `backwards` 填充**：动画结束后不残留 `transform/filter/clip-path`，否则会覆盖元素自身的 transform（如卡片倾斜）或形成 containing block。moonshot 下不要给包含玻璃卡片的祖先元素加 `filter`/`opacity` 动画以外的效果；页面包裹层只用 `--animate-page`（不带 blur），blur 放在内部块上，避免祖先成为 backdrop root 让玻璃失效。
 - **内联脚本不要拼接**：根布局是 server component，从 `"use client"` 模块（如 `lib/theme.tsx`）导入的常量在这里是客户端引用，只能原样作为 prop 传入；与其他字符串拼接会把引用代理 stringify 成 `function(){throw …}`。每段首帧脚本单独一个 `<script>`。
 
 ## i18n 布局稳定性契约

@@ -144,6 +144,14 @@ _Avoid_: focus mode, idle dimming
 UI 事件经 `emitAmbientPulse()` 发给舞台的一次性效果请求（`primary` 墨滴 / 引力波纹、`route` 墨滴 / 跃迁、`focus-on/off` 聚焦、`intro` 重放入场）。路由切换由舞台自动发出 `route`。
 _Avoid_: background event, fx trigger
 
+**Interaction Layer（交互委托层）**:
+根布局挂载一次的文档级指针监听（`components/motion/interaction-layer.tsx`），按 `data-slot` / `data-variant` / `data-interactive` / `data-magnetic` 命中目标并写 CSS 变量，驱动磁吸按钮、卡片倾斜与边缘光、台灯投影、点击冲击波与环境脉冲。业务组件不需要任何接线。
+_Avoid_: hover handler, mouse tracker
+
+**Motion Grammar（动效语法层）**:
+`src/styles/motion-anthropic.css` / `motion-moonshot.css` 中按 `[data-theme]` 定义的 token 与组件动效（页面进场、弹层进出场、按钮按压、卡片、表格、Toast、骨架、Switch、焦点环）。业务页面零改动继承；`--animate-page` / `--animate-rise` / `--animate-scale-in` 由各世界覆写。
+_Avoid_: animation css, theme animations
+
 **Signature Moment（签名时刻）**:
 为单个高光场景专门编排的动效序列（主题转场、登录页、Dashboard、侧栏指示器、Playground 流式输出）。
 _Avoid_: hero animation, special effect

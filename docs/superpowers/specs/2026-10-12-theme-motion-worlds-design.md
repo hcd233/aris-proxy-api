@@ -356,3 +356,10 @@ immersive ← 其余
 | 1 | `route` 脉冲由舞台监听路由自动发出 | 覆盖所有跳转来源，PR3 无需接线 |
 | 1 | 新增 `uDrift` 漂移时钟 uniform | 操作中减速、聚焦时再减速，避免缩放 `uTime` 造成跳变 |
 | 1 | atelier 降级纸纹挂在 `.ambient-stage` 而非 `body` | 与 GL 场景同层，切换档位不叠加两层纹理 |
+| 2 | 磁吸弹簧用自写 `springStep`（`lib/motion/spring.ts`），PR2 不引入 motion | 逐帧积分只需二十行；motion 仅在确有布局动画需求的 PR3（`layoutId`）引入 |
+| 2 | anthropic 只有 `data-interactive` 卡片悬停上浮，其余卡片只加深阴影 | 大量 Card 包裹表格，悬停时整块位移会干扰阅读（与 moonshot「表格卡不倾斜」同理） |
+| 2 | 上游分组块不标 `data-interactive` | 它不是 Card 且内含列表，倾斜/上浮会干扰阅读；只标记 Dashboard 统计卡 |
+| 2 | ghost/outline「墨洗从左铺开」简化为墨色缓动的背景过渡 | 伪元素铺色会与各处自定义的 `hover:bg-*` 颜色冲突 |
+| 2 | moonshot 页面包裹层用独立的 `--animate-page`（透明度 + 缩放，无 blur） | 祖先元素上的 filter 会成为玻璃卡片的 backdrop root，整个入场期间玻璃失效；blur 改放在内部块上 |
+| 2 | 表格悬停墨条 / 光线用首格 inset 阴影淡入，而非 `scaleY` | `tr` 上的伪元素定位不可靠，inset 阴影零布局成本 |
+| 2 | Switch 轨道「从滑块位置铺开」简化为缓动颜色过渡 | Switch 根节点的 `::after` 已用作扩大点击区域 |
