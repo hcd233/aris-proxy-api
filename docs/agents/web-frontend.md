@@ -53,6 +53,8 @@
 - **入场动画用 `backwards` 填充**：动画结束后不残留 `transform/filter/clip-path`，否则会覆盖元素自身的 transform（如卡片倾斜）或形成 containing block。moonshot 下不要在包含玻璃卡片的祖先元素上做 `filter` 动画（祖先会成为 backdrop root，入场期间玻璃失效）；页面包裹层只用 `--animate-page`（透明度 + 缩放），blur 放在内部块上。
 - **主题切换走 `setTheme(next, origin)`**：`lib/motion/theme-transition.ts` 用 View Transitions 做日蚀 / 墨染转场（边缘层 `.vt-edge` 只存在于新状态、实时渲染）；`still` 档或浏览器不支持时回退到颜色渐变。语言切换仍只用 `LocaleFade`，不得复用这条路径。
 - **侧栏激活态由 `NavIndicator` 承担**：导航项只输出 `data-nav-item` / `data-active`，激活背景是那个随弹簧移动的指示器；新增导航项不要再给激活项加背景色。
+- **recharts 系列要展开 `useChartMotion()`**：`<Line>` / `<Area>` 的 `isAnimationActive` / 时长 / 缓动统一来自 `@/lib/motion/chart-motion`。recharts 在 JS 里做动画，CSS 的 reduced-motion 守卫管不到，`still` 档只能靠这个 hook 关掉；实时刷新的图（如 runtime-chart）保持 `isAnimationActive={false}`。
+- **指标数字用 `MetricNumber`**：直接写 DOM 做里程表 / 解码动画，只动变化的位；不要再新增 `CountUp` 一类逐帧 setState 的计数器。
 - **内联脚本不要拼接**：根布局是 server component，从 `"use client"` 模块（如 `lib/theme.tsx`）导入的常量在这里是客户端引用，只能原样作为 prop 传入；与其他字符串拼接会把引用代理 stringify 成 `function(){throw …}`。每段首帧脚本单独一个 `<script>`。
 
 ## i18n 布局稳定性契约

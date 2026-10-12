@@ -367,3 +367,7 @@ immersive ← 其余
 | 3 | 侧栏分组收起不做退场动画 | 条件渲染卸载无法做退场，补退场需要引入 AnimatePresence 类机制，收益小 |
 | 3 | 登录页「再次访问压缩到 40%」由页内首帧脚本写 `html[data-login-seen]` | 静态导出的 HTML 在 hydration 前就开始播放动画，hydration 后再改节奏会中途跳变 |
 | 3 | Google / Demo 按钮标 `data-magnetic` | 让三个 OAuth 入口在 moonshot 下都有磁吸与冲击波、在 anthropic 下都落墨，与 spec「OAuth 按钮带磁吸」一致 |
+| 4 | 图表描线沿用 recharts 自带的描线动画，时长统一 600ms，仅按世界切换缓动 | recharts 的入场与数据更新共用同一时长，单独拉长入场需要额外状态；描线本身就是 recharts Line 的默认入场 |
+| 4 | moonshot 线条的「发光头」未实现，只做点火辉光衰减 | recharts 不暴露逐帧路径进度，发光头需自绘覆盖层，收益与复杂度不匹配 |
+| 4 | 「柱子升起」落在 Dashboard 的自定义占比条（横向，`scaleX` 自左生长） | Dashboard 的柱状信息由 StackedRatioBar 呈现，没有 recharts Bar |
+| 4 | `still` 档关闭 recharts 动画 | recharts 动画在 JS 中执行，全局 reduced-motion 守卫无效 |
