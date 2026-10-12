@@ -12,6 +12,7 @@ import "@chinese-fonts/maple-mono-cn/dist/MapleMono-CN-Bold/result.css";
 import { AuthProvider } from "@/lib/auth-context";
 import { I18nProvider } from "@/lib/i18n";
 import { THEME_INIT_SCRIPT, ThemeProvider } from "@/lib/theme";
+import { MOTION_TIER_INIT_SCRIPT } from "@/lib/motion/tier";
 import { HtmlLangUpdater } from "@/components/html-lang-updater";
 import { Toaster } from "@/components/ui/sonner";
 import { ParticleBackground } from "@/components/theme/particle-background";
@@ -46,8 +47,9 @@ export default function RootLayout({
             and there is no light→dark flash on full-page loads (login
             OAuth flow). Do NOT switch to next/script — its
             beforeInteractive strategy is deferred via the __next_s
-            queue and only runs after the React bundle loads. */}
-        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+            queue and only runs after the React bundle loads. The same
+            script also writes [data-motion-tier] (lib/motion/tier.ts). */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT + MOTION_TIER_INIT_SCRIPT }} />
         <I18nProvider>
           <ThemeProvider>
             <HtmlLangUpdater />
