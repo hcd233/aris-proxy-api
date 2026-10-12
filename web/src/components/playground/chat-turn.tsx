@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { MarkdownLite } from "@/components/chat/markdown-lite";
@@ -109,23 +109,27 @@ function ThinkingBlock({ text, streaming }: { text: string; streaming: boolean }
   );
 }
 
-/** 首个增量到达前的等待指示（三点脉冲） */
+/** 首个增量到达前的等待指示：anthropic 依次点下的墨点 / moonshot 绕环卫星
+ * （styles/motion-signature.css「⑤ Playground」）。 */
 function PendingDots() {
   const t = useT();
   return (
-    <span className="inline-flex items-center gap-1 py-1.5">
+    <span className="pending-dots inline-flex items-center gap-1 py-1.5">
       <span className="sr-only">{t("playground.thinking.streaming")}</span>
       {[0, 150, 300].map((delay) => (
         <span
           key={delay}
           aria-hidden
           style={{ animationDelay: `${delay}ms` }}
-          className="size-1.5 animate-pulse rounded-full bg-muted-foreground/50 motion-reduce:animate-none"
+          className="pending-dot size-1.5 rounded-full bg-muted-foreground/50"
         />
       ))}
     </span>
   );
 }
+
+/** Settle cue after a stream ends (ink dries / light sweeps), ms. */
+const STREAM_SETTLE_MS = 900;
 
 export function ChatTurn({
   message,
@@ -147,6 +151,24 @@ export function ChatTurn({
   const usage = meta?.usage;
   const reasoning = message.reasoning ?? "";
   const showPending = isAssistant && sending && !message.content && !meta?.error;
+  const streaming = isAssistant && sending && !!message.content;
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const wasStreaming = useRef(false);
+
+  // Stream end → brief `data-settling` (DOM write, no re-render) so the wet
+  // ink / glow tail can dry out instead of vanishing with the caret.
+  useEffect(() => {
+    const el = bodyRef.current;
+    const ended = wasStreaming.current && !streaming;
+    wasStreaming.current = streaming;
+    if (!el || !ended) return;
+    el.dataset.settling = "";
+    const timer = window.setTimeout(() => delete el.dataset.settling, STREAM_SETTLE_MS);
+    return () => {
+      window.clearTimeout(timer);
+      delete el.dataset.settling;
+    };
+  }, [streaming]);
 
   const actions = !sending && !editing && (
     <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover/turn:opacity-100 group-focus-within/turn:opacity-100">
@@ -210,7 +232,7 @@ export function ChatTurn({
     <div
       style={{ animationDelay: `${Math.min(index, 12) * 40}ms` }}
       className={cn(
-        "group/turn animate-in fade-in slide-in-from-bottom-1 duration-300",
+        "group/turn turn-enter",
         isUser ? "flex flex-col items-end gap-1" : "flex flex-col gap-1.5",
       )}
     >
@@ -240,7 +262,11 @@ export function ChatTurn({
       ) : isAssistant ? (
         <>
           {reasoning && <ThinkingBlock text={reasoning} streaming={sending} />}
-          <div className="text-[15px] leading-[1.7]">
+          <div
+            ref={bodyRef}
+            className="stream-body text-[15px] leading-[1.7]"
+            data-streaming={streaming ? "" : undefined}
+          >
             {message.content ? (
               <MarkdownLite text={message.content} />
             ) : showPending ? (
