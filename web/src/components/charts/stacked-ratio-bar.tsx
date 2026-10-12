@@ -53,7 +53,7 @@ export function StackedRatioBar({
         setTooltipPos(null);
       }}
     >
-      <div className="flex h-3 gap-px overflow-hidden rounded-md bg-muted">
+      <div className="ratio-track flex h-3 gap-px overflow-hidden rounded-md bg-muted">
         {visible.map((s) => (
           <div
             key={s.key}

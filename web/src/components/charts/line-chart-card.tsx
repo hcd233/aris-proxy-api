@@ -20,6 +20,7 @@ import { TimeRangePicker } from "@/components/ui/time-range-picker";
 import type { TimeRangeKey } from "@/lib/time-range";
 import { computeRange, formatChartTime, generateEmptyTimeline } from "@/lib/time-range";
 import { useChartSeriesColors } from "@/lib/theme";
+import { useChartMotion } from "@/lib/motion/chart-motion";
 
 /** 图表 series 定义（key 同时是 recharts dataKey） */
 export interface ChartSeries {
@@ -124,6 +125,7 @@ export function LineChartCard<T>({
 }: LineChartCardProps<T>) {
   const t = useT();
   const seriesColors = useChartSeriesColors();
+  const chartMotion = useChartMotion();
 
   const [timeRange, setTimeRange] = usePersistentState<TimeRangeKey>(
     `${storageKey}.timeRange`,
@@ -218,8 +220,7 @@ export function LineChartCard<T>({
         fill={s.color}
         strokeOpacity={getStrokeOpacity(s.key)}
         fillOpacity={0.6}
-        animationDuration={600}
-        animationEasing="ease-out"
+        {...chartMotion}
       />
     ) : (
       <Line
@@ -230,8 +231,7 @@ export function LineChartCard<T>({
         strokeWidth={2}
         strokeOpacity={getStrokeOpacity(s.key)}
         dot={false}
-        animationDuration={600}
-        animationEasing="ease-out"
+        {...chartMotion}
       />
     ),
   );

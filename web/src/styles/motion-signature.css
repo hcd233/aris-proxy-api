@@ -383,3 +383,89 @@ html[data-login-seen] .login-stage {
       0 0 26px rgb(255 255 255 / 0.35);
   }
 }
+
+/* ---------------------------------------------------------------------
+ * ③ Dashboard metrics & charts
+ * ------------------------------------------------------------------- */
+
+/* MetricNumber odometer (atelier): a 0–9 strip per changed digit. */
+.odo-cell {
+  display: inline-block;
+  height: 1lh;
+  overflow: hidden;
+  vertical-align: top;
+}
+.odo-strip {
+  display: block;
+  white-space: pre-line;
+}
+/* MetricNumber decode (lunar): each digit flashes once as it locks. */
+.decode-lock {
+  animation: lunar-lock 320ms ease-out;
+}
+@keyframes lunar-lock {
+  from {
+    color: #fff;
+    text-shadow: 0 0 12px rgb(255 255 255 / 0.9);
+  }
+}
+
+/* 钢笔描线 / 墨水渗入 (atelier); 点火 / 星云 (lunar). recharts draws the
+ * stroke itself (useChartMotion); these layers add the world's texture. */
+[data-theme="anthropic"] .recharts-area-area {
+  animation: motion-fade-in 900ms var(--ease-ink) 300ms backwards;
+}
+[data-theme="moonshot"] .recharts-line-curve {
+  filter: drop-shadow(0 0 3px rgb(255 255 255 / 0.25));
+  animation: lunar-ignite 1400ms var(--ease-drift) backwards;
+}
+@keyframes lunar-ignite {
+  from {
+    filter: drop-shadow(0 0 10px rgb(255 255 255 / 0.85));
+  }
+}
+[data-theme="moonshot"] .recharts-area-area {
+  animation: lunar-nebula 1200ms var(--ease-drift) 200ms backwards;
+}
+@keyframes lunar-nebula {
+  from {
+    opacity: 0;
+    filter: blur(6px);
+  }
+}
+
+/* Crosshair: a pencil hairline / a beam of light. */
+[data-theme="anthropic"] .recharts-tooltip-cursor {
+  stroke: rgb(31 26 20 / 0.45);
+  stroke-width: 0.75;
+  stroke-dasharray: 2 3;
+}
+[data-theme="moonshot"] .recharts-tooltip-cursor {
+  stroke: rgb(255 255 255 / 0.55);
+  stroke-width: 1;
+  filter: drop-shadow(0 0 4px rgb(255 255 255 / 0.6));
+}
+[data-theme="moonshot"] .recharts-active-dot circle {
+  filter: drop-shadow(0 0 6px rgb(255 255 255 / 0.8));
+}
+
+/* Ratio bars grow from their baseline: critically damped / with overshoot. */
+[data-theme="anthropic"] .ratio-track {
+  transform-origin: left center;
+  animation: atelier-ratio 700ms var(--ease-settle) backwards;
+}
+[data-theme="moonshot"] .ratio-track {
+  transform-origin: left center;
+  animation: lunar-ratio 760ms var(--ease-orbit) backwards;
+}
+@keyframes atelier-ratio {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes lunar-ratio {
+  from {
+    transform: scaleX(0);
+    filter: brightness(1.8);
+  }
+}
