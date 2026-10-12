@@ -75,7 +75,7 @@ _Avoid_: model name, upstream alias
 ## Theme（主题皮肤）
 
 **Theme（主题皮肤）**:
-整套视觉皮肤的命名集合，取值 `anthropic`（默认，暖色纸质）| `moonshot`（深空科技，固定深色）。持久化于 `localStorage("theme")`，由根布局内联脚本在 hydration 前反映到 `<html data-theme>`，是所有 per-theme 行为的单一事实来源。与明暗模式正交：moonshot 主题不受 `.dark` class 影响。整页根容器携带 `page-surface` 标记类，moonshot 下背景透明以透出星空；小组件不携带。
+整套视觉皮肤的命名集合，取值 `anthropic`（默认，暖色纸质）| `moonshot`（深空科技，固定深色）。持久化于 `localStorage("theme")`，由根布局内联脚本在 hydration 前反映到 `<html data-theme>`，是所有 per-theme 行为的单一事实来源。与明暗模式正交：moonshot 主题不受 `.dark` class 影响。整页根容器携带 `page-surface` 标记类，两套主题下背景均透明，以透出 Ambient Stage（纸面或星空）；小组件不携带。
 _Avoid_: color scheme, dark mode toggle
 
 ## Pricing & Cost（定价与成本）
@@ -121,3 +121,29 @@ _Avoid_: message metadata, debug info
 **估算费用（Estimated Cost）**:
 按模型 pricing 的「无条件默认规则（代表档）」估算的单轮费用：`(prompt−cached)×input + cached×cacheRead + completion×output`，单价每 1M tokens。不做时段/上下文区间匹配，精确值以审计为准。
 _Avoid_: cost, billing amount
+
+## Motion（动效）
+
+**Motion World（动效世界）**:
+一个主题的完整动效人格，含 token、组件语法、环境场景与签名时刻。anthropic → `atelier`（纸与墨），moonshot → `lunar`（月光与引力）。
+_Avoid_: animation theme, motion skin
+
+**Motion Tier（动效档位）**:
+`immersive | lite | still`，反映到 `<html data-motion-tier>`，是所有降级行为的单一事实来源。首帧前由内联脚本按减弱动态 / 省流量 / 低配 / 粗指针判定，Ambient Stage 挂载后补测 WebGL2；运行时只降不升，恢复需刷新。
+_Avoid_: animation level, quality setting
+
+**Ambient Stage（环境舞台）**:
+根布局里唯一的 fixed 背景层（`components/ambient/ambient-stage.tsx`），`immersive` 档绘制当前世界的 WebGL 场景，`lite / still` 档退回 CSS 纸纹或 Canvas 2D 星空。
+_Avoid_: particle background, background canvas
+
+**Ambient Presence（环境存在感）**:
+注意力信号输出的 `0.35..1`：用户打字 / 滚动 / 点击时背景退后，空闲 8s 后浮现。移动指针不算操作。
+_Avoid_: focus mode, idle dimming
+
+**Ambient Pulse（环境脉冲）**:
+UI 事件经 `emitAmbientPulse()` 发给舞台的一次性效果请求（`primary` 墨滴 / 引力波纹、`route` 墨滴 / 跃迁、`focus-on/off` 聚焦、`intro` 重放入场）。路由切换由舞台自动发出 `route`。
+_Avoid_: background event, fx trigger
+
+**Signature Moment（签名时刻）**:
+为单个高光场景专门编排的动效序列（主题转场、登录页、Dashboard、侧栏指示器、Playground 流式输出）。
+_Avoid_: hero animation, special effect

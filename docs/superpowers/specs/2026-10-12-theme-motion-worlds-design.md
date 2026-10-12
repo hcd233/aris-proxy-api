@@ -85,7 +85,7 @@ immersive ← 其余
 ```
 
 - 内联脚本（与 `THEME_INIT_SCRIPT` 同处、同模式）只用廉价信号，首帧前写入 `data-motion-tier`；WebGL2 探测放在 AmbientStage 挂载时，失败则降为 `lite`。
-- 判定为纯函数 `resolveMotionTier(signals)`，内联脚本与运行时共用同一份逻辑的字符串化版本（与 `THEME_INIT_SCRIPT` 同样以常量字符串导出）。
+- 判定为纯函数 `resolveMotionTier(signals)`；内联脚本 `MOTION_TIER_INIT_SCRIPT` 是它的手写 ES5 镜像（生产压缩使 `toString` 不可靠），由全组合对拍单测保证一致。
 - 运行时降级来源：帧率调速器、`webglcontextlost`、`prefers-reduced-motion` 变为 `reduce`（→ `still`）。**只降不升**，恢复要等刷新页面，避免档位来回抖动。
 
 ### 4.3 环境舞台 AmbientStage
@@ -170,7 +170,7 @@ immersive ← 其余
 - **台灯亮起（intro）**：`uIntro` 0→1，800ms，用于主题转场后与登录页。
 - **动态投影**：指针停顿 120ms 后，把台灯方向写入 `:root` 的 `--light-x / --light-y`；`[data-slot=card]`、弹窗、Popover 的投影偏移（≤ ±3px）用 600ms 过渡转向。只在停顿时更新，样式重算极少；`lite` 档关闭。
 - **注意力**：`uPresence` 低时台灯停止跟随、墨滴变淡。
-- **lite / still**：`body` 叠一层静态 SVG `feTurbulence` 纸纹（低透明度），无动画。
+- **lite / still**：`.ambient-stage` 上叠一层静态 SVG `feTurbulence` 纸纹（低透明度），无动画。
 
 **可读性底线**：卡片不透明；直接落在纸面的文字所在区域亮度起伏 ≤ 3%，对比度 ≥ 4.5:1。
 
@@ -261,7 +261,7 @@ immersive ← 其余
 - **anthropic「荧光笔」**：边缘不规则的暖色马克笔痕（SVG `mask-image`），临界阻尼滑动，落定时从左到右刷出一笔。
 - **moonshot「轨道」**：发光玻璃胶囊 + 1px 内光，欠阻尼弹簧滑动并略冲过头；另有刚度更低的 `layoutId="nav-indicator-trail"` 余辉副本（透明度 35%）形成彗尾；激活图标白色辉光。
 - **分组展开**：遵守「宽高不加过渡」契约，容器瞬时展开，子项按各自世界的语汇错峰显现；收起时反向执行，速度更快。
-- 导航点击 → `emitAmbientPulse('route', 导航项中心坐标)`。
+- `route` 脉冲由 AmbientStage 在 `pathname` 变化时自动发出，位置取 1s 内最后一次 `pointerdown`（导航项点击即落在该项上），无近期点击时取视口中心。
 
 ### 7.5 Playground 流式输出
 
@@ -345,3 +345,14 @@ immersive ← 其余
 - share 页专属签名时刻（自动继承组件动效与环境舞台）。
 - 逐 token 的流式动画（受 `MarkdownLite` 整体重解析约束，用尾部方案替代）。
 - 侧栏分组的高度动画（遵守宽高不加过渡的契约）。
+
+## 12. 实现偏差记录
+
+| PR | 偏差 | 原因 |
+|---|---|---|
+| 1 | 内联脚本改为 `resolveMotionTier` 的手写镜像 + 对拍单测 | 生产压缩使 `Function.prototype.toString` 不可靠 |
+| 1 | 档位内联脚本独立成第二个 `<script>`，不与 `THEME_INIT_SCRIPT` 拼接 | 后者来自 `"use client"` 模块，在 server component 中是客户端引用，拼接会 stringify 成抛错函数（运行时矩阵验证捕获） |
+| 1 | 档位 DOM 存储与 hook 拆到 `tier-store.ts` | 保持 `tier.ts` 可在 node 下单测 |
+| 1 | `route` 脉冲由舞台监听路由自动发出 | 覆盖所有跳转来源，PR3 无需接线 |
+| 1 | 新增 `uDrift` 漂移时钟 uniform | 操作中减速、聚焦时再减速，避免缩放 `uTime` 造成跳变 |
+| 1 | atelier 降级纸纹挂在 `.ambient-stage` 而非 `body` | 与 GL 场景同层，切换档位不叠加两层纹理 |

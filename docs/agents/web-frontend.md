@@ -39,6 +39,17 @@
 - 修改前端 DTO 时如发现后端字段缺失，按 `huma-dto-conventions` 流程到 `internal/dto/` 同步更新。
 - **不适用的上游 skill**：`next-cache-components-adoption` / `next-cache-components-optimizer` / `next-partial-prefetching-adoption` 都要求服务端渲染 + 流式 Suspense，与本项目 `output: "export"` 静态导出（88/101 个组件是 `"use client"`，数据全部经 `api-client.ts` 在浏览器 fetch）架构冲突，**不要引入**。
 
+## 动效与环境舞台契约
+
+> 设计见 `docs/superpowers/specs/2026-10-12-theme-motion-worlds-design.md`，术语见 [web/CONTEXT.md](../../web/CONTEXT.md)「Motion」。
+
+- **档位唯一来源**：`<html data-motion-tier>`（`immersive | lite | still`）。JS 读 `useMotionTier()`（`@/lib/motion/tier-store`），CSS 用 `html[data-motion-tier="…"]`；新代码不要再自行 `matchMedia("(prefers-reduced-motion)")`。全局 reduced-motion 守卫保留作底线。
+- **只降不升**：运行时只能调用 `downgradeMotionTier()`，不要提供"恢复"路径。
+- **背景只有一个**：所有背景效果都在 `AmbientStage` 里实现；业务组件需要背景反馈时调用 `emitAmbientPulse()`（`@/lib/motion/pulse`），不要新建 canvas。路由切换的 `route` 脉冲由舞台自动发出。
+- **`components/ambient/` 只用同目录相对导入**：shader 验证脚手架用 esbuild 直接打包这些模块，不解析 `@/` 别名。
+- **shader 改动必须跑编译与像素断言**：用 chrome-headless-shell（`--use-angle=swiftshader --enable-unsafe-swiftshader`）编译并读回像素，断言 atelier 纸面亮度起伏 ≤ ±3%、lunar 月球亮度 ≤ 0.22。
+- **内联脚本不要拼接**：根布局是 server component，从 `"use client"` 模块（如 `lib/theme.tsx`）导入的常量在这里是客户端引用，只能原样作为 prop 传入；与其他字符串拼接会把引用代理 stringify 成 `function(){throw …}`。每段首帧脚本单独一个 `<script>`。
+
 ## i18n 布局稳定性契约
 
 > 详见 [web/CONTEXT.md](../../web/CONTEXT.md)。切换语言（en/zh/ja）时组件不得发生宽高跳变。
