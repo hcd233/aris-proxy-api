@@ -1,0 +1,40 @@
+/* === Motion grammar: shared plumbing (spec §4.1 ③) ===
+ * Each Motion World (motion-anthropic.css / motion-moonshot.css) defines its
+ * tokens and component rules under its own [data-theme]. Rules here are
+ * theme-neutral. Entrance animations use fill-mode `backwards` so nothing
+ * lingers after they finish (no stray transform/filter/clip-path). The
+ * global reduced-motion guard in globals.css collapses all of it. */
+
+/* Interpolable angle for the moonshot conic border sweep. */
+@property --angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes motion-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes motion-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+/* Pseudo-element overlays (card light, popover beam) need a positioned
+ * host. Kept in the components layer so an explicit `absolute` / `fixed`
+ * utility on the same element still wins. */
+@layer components {
+  [data-slot="card"],
+  :is(
+    [data-slot="popover-content"],
+    [data-slot="dropdown-menu-content"],
+    [data-slot="dropdown-menu-sub-content"],
+    [data-slot="select-content"]
+  ) {
+    position: relative;
+  }
+}

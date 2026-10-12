@@ -1,0 +1,373 @@
+/* === Motion World「纸与墨 · Atelier」(anthropic, spec §5) ===
+ * Things settle onto paper; ink spreads; nothing bounces. Critically damped
+ * easing only. Shadows follow the desk lamp: --light-x / --light-y (unitless,
+ * −3..3) are written on <html> by InteractionLayer when the pointer rests. */
+
+[data-theme="anthropic"] {
+  --ease-settle: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-ink: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-lift: cubic-bezier(0.4, 0, 1, 1);
+  --motion-stagger: 40ms;
+  --animate-page: atelier-rise 520ms var(--ease-settle) backwards;
+  --animate-rise: atelier-rise 520ms var(--ease-settle) backwards;
+  --animate-scale-in: atelier-settle 520ms var(--ease-settle) backwards;
+  --light-x: 0;
+  --light-y: 0;
+}
+
+@keyframes atelier-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@keyframes atelier-settle {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985) rotate(-0.3deg);
+  }
+}
+
+/* 墨迹定影: page titles come into focus like ink drying. */
+@keyframes atelier-ink-set {
+  from {
+    opacity: 0;
+    filter: blur(1.5px);
+  }
+}
+
+[data-theme="anthropic"] .motion-title {
+  animation: atelier-ink-set 520ms var(--ease-settle) 60ms backwards;
+}
+
+/* ---- Buttons「活字压印」: pressed into the paper, not scaled. ---- */
+[data-theme="anthropic"] [data-slot="button"]:active:not([aria-haspopup]) {
+  scale: 1;
+  transform: translateY(1px);
+  transition-duration: 90ms;
+}
+[data-theme="anthropic"] [data-slot="button"][data-variant="default"]:active:not([aria-haspopup]) {
+  box-shadow: inset 0 1px 2px rgb(31 26 20 / 0.24);
+}
+[data-theme="anthropic"] [data-slot="button"][data-variant="outline"]:active:not([aria-haspopup]) {
+  box-shadow: inset 0 1px 2px rgb(31 26 20 / 0.1);
+}
+[data-theme="anthropic"]
+  [data-slot="button"]:is([data-variant="ghost"], [data-variant="outline"]):hover {
+  transition-duration: 260ms;
+  transition-timing-function: var(--ease-ink);
+}
+
+/* ---- Links「手绘下划线」: a slightly wobbly ink stroke draws in. ---- */
+[data-theme="anthropic"] main a[href]:not([data-slot]):not(:has(svg, img)),
+[data-theme="anthropic"] [data-slot="button"][data-variant="link"] {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='6' viewBox='0 0 120 6' preserveAspectRatio='none'%3E%3Cpath d='M1 3.6 C 18 2.2 34 4.6 52 3.1 S 86 2.4 104 3.7 S 116 3.2 119 2.9' fill='none' stroke='%23d97757' stroke-opacity='0.75' stroke-width='1.4' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 0% 6px;
+  transition: background-size 420ms var(--ease-ink);
+}
+[data-theme="anthropic"] main a[href]:not([data-slot]):not(:has(svg, img)):hover,
+[data-theme="anthropic"] [data-slot="button"][data-variant="link"]:hover {
+  background-size: 100% 6px;
+  text-decoration-line: none;
+}
+
+/* ---- Cards「纸张抬起」: lamp-driven shadows; only interactive cards lift. ---- */
+[data-theme="anthropic"] [data-slot="card"] {
+  box-shadow: calc(var(--light-x) * 0.3px) calc(1px + var(--light-y) * 0.3px) 2px 0
+    rgb(31 26 20 / 0.04);
+  transition:
+    box-shadow 600ms var(--ease-settle),
+    border-color 180ms ease,
+    translate 320ms var(--ease-settle);
+}
+[data-theme="anthropic"] [data-slot="card"]:hover {
+  box-shadow:
+    calc(var(--light-x) * 1px) calc(4px + var(--light-y) * 1px) 14px -4px rgb(31 26 20 / 0.1),
+    calc(var(--light-x) * 0.3px) calc(1px + var(--light-y) * 0.3px) 2px 0 rgb(31 26 20 / 0.05);
+  transition-duration: 320ms, 180ms, 320ms;
+}
+[data-theme="anthropic"] [data-slot="card"][data-interactive]:hover {
+  translate: 0 -2px;
+}
+
+/* ---- Dialogs「纸片落桌」 ---- */
+[data-theme="anthropic"] :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"]) {
+  box-shadow:
+    0 0 0 1px rgb(31 26 20 / 0.1),
+    calc(var(--light-x) * 1.5px) calc(16px + var(--light-y) * 1.5px) 36px -14px rgb(31 26 20 / 0.22);
+  transition: box-shadow 600ms var(--ease-settle);
+}
+[data-theme="anthropic"]
+  :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"])[data-open] {
+  animation: atelier-paper-drop 420ms var(--ease-settle) backwards;
+}
+[data-theme="anthropic"]
+  :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"])[data-closed] {
+  animation: atelier-paper-lift 220ms var(--ease-lift) both;
+}
+@keyframes atelier-paper-drop {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.985) rotate(-0.4deg);
+    box-shadow:
+      0 0 0 1px rgb(31 26 20 / 0.1),
+      0 2px 4px -2px rgb(31 26 20 / 0);
+  }
+}
+@keyframes atelier-paper-lift {
+  to {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.995);
+  }
+}
+
+[data-theme="anthropic"]
+  :is(
+    [data-slot="dialog-overlay"],
+    [data-slot="alert-dialog-overlay"],
+    [data-slot="sheet-overlay"]
+  ) {
+  background-color: rgb(58 44 30 / 0.18);
+  backdrop-filter: blur(2px);
+}
+[data-theme="anthropic"]
+  :is([data-slot="dialog-overlay"], [data-slot="alert-dialog-overlay"])[data-open] {
+  animation: motion-fade-in 300ms ease-out backwards;
+}
+[data-theme="anthropic"]
+  :is([data-slot="dialog-overlay"], [data-slot="alert-dialog-overlay"])[data-closed] {
+  animation: motion-fade-out 180ms ease-in both;
+}
+
+[data-theme="anthropic"] [data-slot="sheet-content"] {
+  transition-duration: 320ms;
+  transition-timing-function: var(--ease-settle);
+}
+
+/* ---- Menus / Select / Popover「纸张展开」: unfold from the trigger side. ---- */
+[data-theme="anthropic"]
+  :is(
+    [data-slot="popover-content"],
+    [data-slot="dropdown-menu-content"],
+    [data-slot="dropdown-menu-sub-content"],
+    [data-slot="select-content"]
+  ) {
+  &[data-open] {
+    animation: atelier-unfold-down 260ms var(--ease-settle) backwards;
+  }
+  &[data-open][data-side="top"] {
+    animation-name: atelier-unfold-up;
+  }
+  &[data-open]:is([data-side="left"], [data-side="inline-start"]) {
+    animation-name: atelier-unfold-left;
+  }
+  &[data-open]:is([data-side="right"], [data-side="inline-end"]) {
+    animation-name: atelier-unfold-right;
+  }
+  &[data-closed] {
+    animation: atelier-fold 160ms var(--ease-lift) both;
+  }
+}
+/* The end inset is negative so the ring/shadow is never clipped at rest. */
+@keyframes atelier-unfold-down {
+  from {
+    opacity: 0.4;
+    clip-path: inset(0 0 100% 0 round 8px);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(-24px round 8px);
+  }
+}
+@keyframes atelier-unfold-up {
+  from {
+    opacity: 0.4;
+    clip-path: inset(100% 0 0 0 round 8px);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(-24px round 8px);
+  }
+}
+@keyframes atelier-unfold-left {
+  from {
+    opacity: 0.4;
+    clip-path: inset(0 0 0 100% round 8px);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(-24px round 8px);
+  }
+}
+@keyframes atelier-unfold-right {
+  from {
+    opacity: 0.4;
+    clip-path: inset(0 100% 0 0 round 8px);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(-24px round 8px);
+  }
+}
+@keyframes atelier-fold {
+  to {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+}
+
+[data-theme="anthropic"]
+  :is([data-slot="dropdown-menu-content"], [data-slot="select-content"])[data-open]
+  :is(
+    [data-slot="dropdown-menu-item"],
+    [data-slot="dropdown-menu-checkbox-item"],
+    [data-slot="dropdown-menu-radio-item"],
+    [data-slot="select-item"]
+  ) {
+  animation: atelier-item-in 220ms var(--ease-settle) backwards;
+  &:nth-child(2) {
+    animation-delay: 18ms;
+  }
+  &:nth-child(3) {
+    animation-delay: 36ms;
+  }
+  &:nth-child(4) {
+    animation-delay: 54ms;
+  }
+  &:nth-child(5) {
+    animation-delay: 72ms;
+  }
+  &:nth-child(6) {
+    animation-delay: 90ms;
+  }
+  &:nth-child(7) {
+    animation-delay: 108ms;
+  }
+  &:nth-child(n + 8) {
+    animation-delay: 126ms;
+  }
+}
+@keyframes atelier-item-in {
+  from {
+    opacity: 0;
+    transform: translateX(-3px);
+  }
+}
+
+/* ---- Tooltip ---- */
+[data-theme="anthropic"] [data-slot="tooltip-content"]:not([data-instant]) {
+  &[data-open] {
+    animation: atelier-tip-in 140ms var(--ease-settle) backwards;
+  }
+  &[data-closed] {
+    animation: motion-fade-out 100ms ease-in both;
+  }
+}
+@keyframes atelier-tip-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+}
+
+/* ---- Toast「便签」: settle timing + a slip of paper straightening out.
+ * `rotate` is an independent property, so sonner's own transform-based
+ * stacking transitions are left untouched. ---- */
+[data-theme="anthropic"] [data-sonner-toast] {
+  transition-duration: 420ms;
+  transition-timing-function: var(--ease-settle);
+}
+[data-theme="anthropic"] [data-sonner-toast][data-mounted="true"] {
+  animation: atelier-slip 420ms var(--ease-settle) backwards;
+}
+@keyframes atelier-slip {
+  from {
+    rotate: 0.8deg;
+  }
+}
+
+/* ---- Tables「印刷」: rows print in one after another. ---- */
+[data-theme="anthropic"] [data-slot="table-body"] > [data-slot="table-row"] {
+  animation: atelier-print 260ms var(--ease-settle) backwards;
+  &:nth-child(2) {
+    animation-delay: 16ms;
+  }
+  &:nth-child(3) {
+    animation-delay: 32ms;
+  }
+  &:nth-child(4) {
+    animation-delay: 48ms;
+  }
+  &:nth-child(5) {
+    animation-delay: 64ms;
+  }
+  &:nth-child(6) {
+    animation-delay: 80ms;
+  }
+  &:nth-child(7) {
+    animation-delay: 96ms;
+  }
+  &:nth-child(8) {
+    animation-delay: 112ms;
+  }
+  &:nth-child(9) {
+    animation-delay: 128ms;
+  }
+  &:nth-child(10) {
+    animation-delay: 144ms;
+  }
+  &:nth-child(11) {
+    animation-delay: 160ms;
+  }
+  &:nth-child(n + 12) {
+    animation-delay: 176ms;
+  }
+}
+@keyframes atelier-print {
+  from {
+    opacity: 0;
+  }
+}
+[data-theme="anthropic"] [data-slot="table-row"] > [data-slot="table-cell"]:first-child {
+  transition: box-shadow 180ms var(--ease-settle);
+}
+[data-theme="anthropic"] [data-slot="table-row"]:hover > [data-slot="table-cell"]:first-child {
+  box-shadow: inset 2px 0 0 color-mix(in oklab, var(--primary) 70%, transparent);
+}
+
+/* ---- Skeleton「墨洗」: a slow warm wash instead of a cold sweep. ---- */
+[data-theme="anthropic"] .skeleton-shimmer::after {
+  background: linear-gradient(90deg, transparent, rgb(201 160 120 / 0.16), transparent);
+  animation-duration: 2.2s;
+  animation-timing-function: var(--ease-ink);
+}
+
+/* ---- Switch ---- */
+[data-theme="anthropic"] [data-slot="switch"] {
+  transition: background-color 260ms var(--ease-ink);
+}
+[data-theme="anthropic"] [data-slot="switch-thumb"] {
+  transition: translate 220ms var(--ease-settle);
+}
+
+/* ---- Focus: an ink ring tightening onto the control, then absorbed. ---- */
+[data-theme="anthropic"] :focus-visible {
+  animation: atelier-focus-ink 220ms var(--ease-settle);
+}
+@keyframes atelier-focus-ink {
+  0% {
+    outline: 2px solid rgb(217 119 87 / 0);
+    outline-offset: 5px;
+  }
+  60% {
+    outline: 2px solid rgb(217 119 87 / 0.45);
+    outline-offset: 2px;
+  }
+  100% {
+    outline: 2px solid rgb(217 119 87 / 0);
+    outline-offset: 2px;
+  }
+}

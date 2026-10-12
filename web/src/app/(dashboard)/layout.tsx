@@ -21,6 +21,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeSwitcher } from "@/components/theme/theme-switcher";
 import { LocaleFade } from "@/components/locale-fade";
+import { NavIndicator } from "@/components/motion/nav-indicator";
 import { SessionHistorySidebar } from "@/components/session-detail/session-history-sidebar";
 import {
   LayoutDashboard,
@@ -212,9 +213,19 @@ function SidebarNav({
     }))
     .filter((group) => group.items.length > 0);
 
+  // Anything that can move the active item re-targets the indicator.
+  const layoutKey = [
+    pathname,
+    collapsed ? "c" : "e",
+    visibleGroups
+      .map((g) => `${g.key}:${g.items.length}:${collapsed || openGroups.has(g.key) ? 1 : 0}`)
+      .join(","),
+  ].join("|");
+
   return (
     <TooltipProvider>
-      <nav className="flex flex-col px-2">
+      <nav className="relative flex flex-col px-2">
+        <NavIndicator layoutKey={layoutKey} />
         {visibleGroups.map((group, groupIndex) => {
           // 窄栏模式无组头，子项平铺不折叠
           const groupOpen = collapsed || openGroups.has(group.key);
@@ -247,7 +258,7 @@ function SidebarNav({
                 </button>
               )}
               {groupOpen && (
-                <div className="flex flex-col gap-0.5">
+                <div className="nav-items flex flex-col gap-0.5">
                   {group.items.map((item) => {
                     const isActive = isItemActive(pathname, item.href);
                     const label = t(item.labelKey);
@@ -257,7 +268,7 @@ function SidebarNav({
                     const link = demoLocked ? (
                       <span
                         aria-disabled="true"
-                        className={`flex cursor-not-allowed select-none items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground/45 ${
+                        className={`relative flex cursor-not-allowed select-none items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground/45 ${
                           collapsed ? "justify-center" : ""
                         }`}
                       >
@@ -278,9 +289,12 @@ function SidebarNav({
                       <Link
                         href={item.href}
                         onClick={onNavigate}
-                        className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 ${
+                        data-nav-item=""
+                        data-active={isActive ? "" : undefined}
+                        // The active background is the travelling NavIndicator.
+                        className={`relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150 ${
                           isActive
-                            ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-2xs"
+                            ? "text-sidebar-accent-foreground"
                             : "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
                         } ${collapsed ? "justify-center" : ""}`}
                         aria-label={collapsed ? label : undefined}

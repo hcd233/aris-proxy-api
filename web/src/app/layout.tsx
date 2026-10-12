@@ -12,9 +12,11 @@ import "@chinese-fonts/maple-mono-cn/dist/MapleMono-CN-Bold/result.css";
 import { AuthProvider } from "@/lib/auth-context";
 import { I18nProvider } from "@/lib/i18n";
 import { THEME_INIT_SCRIPT, ThemeProvider } from "@/lib/theme";
+import { MOTION_TIER_INIT_SCRIPT } from "@/lib/motion/tier";
 import { HtmlLangUpdater } from "@/components/html-lang-updater";
 import { Toaster } from "@/components/ui/sonner";
-import { ParticleBackground } from "@/components/theme/particle-background";
+import { AmbientStage } from "@/components/ambient/ambient-stage";
+import { InteractionLayer } from "@/components/motion/interaction-layer";
 import { ThemeSwitcher } from "@/components/theme/theme-switcher";
 import "./globals.css";
 
@@ -46,13 +48,20 @@ export default function RootLayout({
             and there is no light→dark flash on full-page loads (login
             OAuth flow). Do NOT switch to next/script — its
             beforeInteractive strategy is deferred via the __next_s
-            queue and only runs after the React bundle loads. */}
+            queue and only runs after the React bundle loads. The second
+            script writes [data-motion-tier] (lib/motion/tier.ts). Keep
+            them separate: THEME_INIT_SCRIPT comes from a "use client"
+            module, so in this server component it is a client reference
+            that only resolves when passed as a prop as-is — string
+            concatenation would stringify the reference proxy instead. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: MOTION_TIER_INIT_SCRIPT }} />
         <I18nProvider>
           <ThemeProvider>
             <HtmlLangUpdater />
             <AuthProvider>{children}</AuthProvider>
-            <ParticleBackground />
+            <AmbientStage />
+            <InteractionLayer />
             <ThemeSwitcher />
             <Toaster />
           </ThemeProvider>

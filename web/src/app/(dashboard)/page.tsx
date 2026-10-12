@@ -8,7 +8,7 @@ import { PermissionGuard } from "@/components/permission-guard";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Key, MessageSquare, Server, Cpu } from "lucide-react";
-import { CountUp } from "@/components/count-up";
+import { MetricNumber } from "@/components/motion/metric-number";
 import { ModelCostBarChart } from "@/components/charts/model-cost-bar-chart";
 import { ModelTrendChart } from "@/components/charts/model-trend-chart";
 import { RequestRateChart } from "@/components/charts/request-rate-chart";
@@ -36,7 +36,7 @@ function StatCard({
   loading: boolean;
 }) {
   return (
-    <Card>
+    <Card data-interactive>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <div className="flex items-center gap-2.5">
           <span className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -52,7 +52,7 @@ function StatCard({
           <Skeleton className="h-10 w-20" />
         ) : (
           <div className="font-display text-3xl font-semibold tabular-nums text-foreground">
-            <CountUp value={value} />
+            <MetricNumber value={value} />
           </div>
         )}
       </CardContent>
@@ -110,7 +110,7 @@ export default function DashboardPage() {
     <PermissionGuard module="dashboard">
       <div className="space-y-8">
         <div className="animate-rise">
-          <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
+          <h1 className="motion-title font-display text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
             {t("dashboard.title")}
           </h1>
           <p className="mt-1.5 text-sm text-muted-foreground">{t("dashboard.overview")}</p>

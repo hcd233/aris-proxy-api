@@ -1,6 +1,10 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "../styles/motion-base.css";
+@import "../styles/motion-anthropic.css";
+@import "../styles/motion-moonshot.css";
+@import "../styles/motion-signature.css";
 
 @custom-variant dark (&:is(.dark *));
 @custom-variant moonshot (&:is([data-theme="moonshot"] *));
@@ -294,10 +298,10 @@
   letter-spacing: 0.02em;
 }
 
-/* Moonshot: page roots become transparent so the starfield shows through.
- * Only full-page containers carry the marker class; small widgets with
- * bg-background (switch knob, tabs, tooltips) stay opaque. */
-[data-theme="moonshot"] :where(.page-surface) {
+/* Page roots are transparent in both skins so the Ambient Stage (paper or
+ * starfield) shows through. Only full-page containers carry the marker
+ * class; small widgets with bg-background (switch knob, tabs) stay opaque. */
+:where(.page-surface) {
   background-color: transparent;
 }
 
@@ -330,23 +334,53 @@
   background-clip: content-box;
 }
 
-/* Starfield container (used by ParticleBackground): pure white stars
- * on the pure black moonshot field. */
-.particle-bg {
+/* Ambient Stage (components/ambient): the fixed backdrop under all content.
+ * Its own background is the skin's --background, so nothing gaps before the
+ * first GL frame; the canvas fades in once it has drawn (data-ready). */
+.ambient-stage {
   position: fixed;
   inset: 0;
   z-index: -10;
   pointer-events: none;
   overflow: hidden;
+  background-color: var(--background);
+}
+.ambient-stage canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   opacity: 0;
   transition: opacity 500ms ease;
 }
-[data-theme="moonshot"] .particle-bg {
+.ambient-stage canvas[data-ready] {
   opacity: 1;
 }
-.particle-bg canvas {
+
+/* Atelier lite/still: static paper grain (sepia fractal noise, ≤6% alpha,
+ * fibers stretched horizontally like the GL scene). */
+html[data-theme="anthropic"]:not([data-motion-tier="immersive"]) .ambient-stage {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.2 0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.43 0 0 0 0 0.33 0 0 0 0 0.25 0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)'/%3E%3C/svg%3E");
+}
+
+/* Lunar lite/still: static moon silhouette matching the GL geometry
+ * (radius 90vh; center 30vh in from the right edge, 5vh above the bottom;
+ * lit from the upper right; brightness kept under the 0.22 cap). */
+html[data-theme="moonshot"]:not([data-motion-tier="immersive"]) .ambient-stage::after {
+  content: "";
   position: absolute;
-  inset: 0;
+  right: -60vh;
+  bottom: -85vh;
+  width: 180vh;
+  height: 180vh;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 62% 28%,
+    rgb(255 238 217 / 0.16),
+    rgb(140 140 150 / 0.07) 42%,
+    rgb(12 12 14 / 0.96) 68%,
+    #050505
+  );
 }
 
 /* Theme switch transition: color properties only, never width/height */
@@ -363,22 +397,13 @@ html.theme-transition *::after {
     stroke 350ms ease !important;
 }
 
-/* === Motion system "Silk Paper" ===
- * Editorial motion language: paper settling, no bounce. transform/opacity
- * only, expo-out easing, staggered entrances. Keyframes live at root level
- * (not inside @theme) so plain-CSS rules below can reference them too.
- * Everything is neutralized by the prefers-reduced-motion guard at the end. */
-
-@keyframes rise {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
+/* === Motion system: shared entrance utilities ===
+ * The per-world grammar (tokens, keyframes, component motion) lives in
+ * styles/motion-anthropic.css (纸与墨) and styles/motion-moonshot.css (月光与
+ * 引力); each overrides the --animate-* defaults below under its own
+ * [data-theme]. transform/opacity/filter only, fill-mode `backwards` so
+ * nothing lingers after an entrance. Everything is neutralized by the
+ * prefers-reduced-motion guard at the end. */
 
 @keyframes fade {
   from {
@@ -386,17 +411,6 @@ html.theme-transition *::after {
   }
   to {
     opacity: 1;
-  }
-}
-
-@keyframes scale-in {
-  from {
-    opacity: 0;
-    transform: scale(0.965);
-  }
-  to {
-    opacity: 1;
-    transform: none;
   }
 }
 
@@ -411,37 +425,39 @@ html.theme-transition *::after {
 
 @theme {
   --ease-silk: cubic-bezier(0.22, 1, 0.36, 1);
-  --animate-rise: rise 480ms var(--ease-silk) both;
+  --animate-page: atelier-rise 520ms var(--ease-silk) backwards;
+  --animate-rise: atelier-rise 520ms var(--ease-silk) backwards;
   --animate-fade: fade 300ms ease-out both;
-  --animate-scale-in: scale-in 380ms var(--ease-silk) both;
+  --animate-scale-in: atelier-settle 520ms var(--ease-silk) backwards;
   --animate-shimmer: shimmer 1.6s ease-in-out infinite;
 }
 
-/* Staggered entrance: direct children rise one after another (50ms steps).
- * `both` fill keeps later children hidden until their delay elapses. */
+/* Staggered entrance: direct children enter one after another, stepped by
+ * the active world's --motion-stagger (anthropic 40ms / moonshot 60ms).
+ * `backwards` fill keeps later children hidden until their delay elapses. */
 .stagger-rise > * {
-  animation: rise 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: var(--animate-rise);
 }
 .stagger-rise > :nth-child(2) {
-  animation-delay: 50ms;
+  animation-delay: var(--motion-stagger, 40ms);
 }
 .stagger-rise > :nth-child(3) {
-  animation-delay: 100ms;
+  animation-delay: calc(var(--motion-stagger, 40ms) * 2);
 }
 .stagger-rise > :nth-child(4) {
-  animation-delay: 150ms;
+  animation-delay: calc(var(--motion-stagger, 40ms) * 3);
 }
 .stagger-rise > :nth-child(5) {
-  animation-delay: 200ms;
+  animation-delay: calc(var(--motion-stagger, 40ms) * 4);
 }
 .stagger-rise > :nth-child(6) {
-  animation-delay: 250ms;
+  animation-delay: calc(var(--motion-stagger, 40ms) * 5);
 }
 .stagger-rise > :nth-child(7) {
-  animation-delay: 300ms;
+  animation-delay: calc(var(--motion-stagger, 40ms) * 6);
 }
-.stagger-rise > :nth-child(8) {
-  animation-delay: 350ms;
+.stagger-rise > :nth-child(n + 8) {
+  animation-delay: calc(var(--motion-stagger, 40ms) * 7);
 }
 
 /* Manual entrance delays for orchestrated layouts (60ms steps). */
