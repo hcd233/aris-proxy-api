@@ -371,3 +371,6 @@ immersive ← 其余
 | 4 | moonshot 线条的「发光头」未实现，只做点火辉光衰减 | recharts 不暴露逐帧路径进度，发光头需自绘覆盖层，收益与复杂度不匹配 |
 | 4 | 「柱子升起」落在 Dashboard 的自定义占比条（横向，`scaleX` 自左生长） | Dashboard 的柱状信息由 StackedRatioBar 呈现，没有 recharts Bar |
 | 4 | `still` 档关闭 recharts 动画 | recharts 动画在 JS 中执行，全局 reduced-motion 守卫无效 |
+| 5 | 光标与尾部渐变由同一个 `::after` 承载（anthropic 光标是其右边框，moonshot 光标是其右端的径向光点），闪烁动画驱动注册属性 `--caret` | 末块只有一个可用的 `::after`；用注册属性只动颜色透明度，不触发布局 |
+| 5 | 尾部「湿墨」改为暖色渐变叠加 + 纸色淡出，而非 `multiply` 混合 | `multiply` 在浅色纸面上只会染色背景，读不出「墨未干」；淡出让新字像正在渗入纸面 |
+| 5 | 流式结束的「干透 / 扫光」由 `data-settling`（900ms，DOM 直写）驱动 | 伪元素在 `data-streaming` 移除时会瞬间消失，需要一个短暂的收尾状态 |
