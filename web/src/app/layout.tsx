@@ -47,9 +47,14 @@ export default function RootLayout({
             and there is no light→dark flash on full-page loads (login
             OAuth flow). Do NOT switch to next/script — its
             beforeInteractive strategy is deferred via the __next_s
-            queue and only runs after the React bundle loads. The same
-            script also writes [data-motion-tier] (lib/motion/tier.ts). */}
-        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT + MOTION_TIER_INIT_SCRIPT }} />
+            queue and only runs after the React bundle loads. The second
+            script writes [data-motion-tier] (lib/motion/tier.ts). Keep
+            them separate: THEME_INIT_SCRIPT comes from a "use client"
+            module, so in this server component it is a client reference
+            that only resolves when passed as a prop as-is — string
+            concatenation would stringify the reference proxy instead. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: MOTION_TIER_INIT_SCRIPT }} />
         <I18nProvider>
           <ThemeProvider>
             <HtmlLangUpdater />
