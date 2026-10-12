@@ -51,6 +51,8 @@
 - **组件动效写在语法层**：通用组件的进出场、按压、悬停动效只写在 `src/styles/motion-{anthropic,moonshot}.css`，按 `data-slot`（shadcn 自带）、`data-variant`（`Button` 输出）、`data-interactive`（可倾斜/可抬起的卡片，按需在业务处标记）命中。`components/ui/` 的弹层组件不再使用 tw-animate 的 `data-open:animate-in` 一类类名，新增弹层时同样不要加，而是在两份语法层里各补一组规则。
 - **能用 CSS 就不用 JS**：只有需要逐帧物理的效果（磁吸弹簧、倾斜跟随）才进 `InteractionLayer`；弹簧参数在 `lib/motion/tokens.ts`，CSS 侧的 `--ease-orbit` 由 `lib/motion/spring.ts` 采样生成，`spring.test.ts` 保证两者一致——改弹簧参数要同步重新生成 CSS。
 - **入场动画用 `backwards` 填充**：动画结束后不残留 `transform/filter/clip-path`，否则会覆盖元素自身的 transform（如卡片倾斜）或形成 containing block。moonshot 下不要在包含玻璃卡片的祖先元素上做 `filter` 动画（祖先会成为 backdrop root，入场期间玻璃失效）；页面包裹层只用 `--animate-page`（透明度 + 缩放），blur 放在内部块上。
+- **主题切换走 `setTheme(next, origin)`**：`lib/motion/theme-transition.ts` 用 View Transitions 做日蚀 / 墨染转场（边缘层 `.vt-edge` 只存在于新状态、实时渲染）；`still` 档或浏览器不支持时回退到颜色渐变。语言切换仍只用 `LocaleFade`，不得复用这条路径。
+- **侧栏激活态由 `NavIndicator` 承担**：导航项只输出 `data-nav-item` / `data-active`，激活背景是那个随弹簧移动的指示器；新增导航项不要再给激活项加背景色。
 - **内联脚本不要拼接**：根布局是 server component，从 `"use client"` 模块（如 `lib/theme.tsx`）导入的常量在这里是客户端引用，只能原样作为 prop 传入；与其他字符串拼接会把引用代理 stringify 成 `function(){throw …}`。每段首帧脚本单独一个 `<script>`。
 
 ## i18n 布局稳定性契约

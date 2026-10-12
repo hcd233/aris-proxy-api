@@ -363,3 +363,7 @@ immersive ← 其余
 | 2 | moonshot 页面包裹层用独立的 `--animate-page`（透明度 + 缩放，无 blur） | 祖先元素上的 filter 会成为玻璃卡片的 backdrop root，整个入场期间玻璃失效；blur 改放在内部块上 |
 | 2 | 表格悬停墨条 / 光线用首格 inset 阴影淡入，而非 `scaleY` | `tr` 上的伪元素定位不可靠，inset 阴影零布局成本 |
 | 2 | Switch 轨道「从滑块位置铺开」简化为缓动颜色过渡 | Switch 根节点的 `::after` 已用作扩大点击区域 |
+| 3 | 侧栏指示器用自写 FLIP + `springStep`，不引入 motion 的 `layoutId` | 单个元素只需追踪纵向位置，二十余行即可，且直接复用两套世界的弹簧 token；整个特性因此零新增依赖 |
+| 3 | 侧栏分组收起不做退场动画 | 条件渲染卸载无法做退场，补退场需要引入 AnimatePresence 类机制，收益小 |
+| 3 | 登录页「再次访问压缩到 40%」由页内首帧脚本写 `html[data-login-seen]` | 静态导出的 HTML 在 hydration 前就开始播放动画，hydration 后再改节奏会中途跳变 |
+| 3 | Google / Demo 按钮标 `data-magnetic` | 让三个 OAuth 入口在 moonshot 下都有磁吸与冲击波、在 anthropic 下都落墨，与 spec「OAuth 按钮带磁吸」一致 |
