@@ -206,10 +206,7 @@ export default function CronPage() {
               {loading ? (
                 <TableSkeleton rows={5} rowClassName="h-10" />
               ) : jobs.length === 0 ? (
-                <ListEmptyState
-                  icon={<Timer className="mb-3 size-10 text-muted-foreground/50" />}
-                  message={t("cron.no_jobs")}
-                />
+                <ListEmptyState icon={Timer} message={t("cron.no_jobs")} />
               ) : (
                 <Table>
                   <TableHeader>

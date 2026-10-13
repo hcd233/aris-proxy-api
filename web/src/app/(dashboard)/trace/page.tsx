@@ -6,6 +6,7 @@ import { showErrorToast } from "@/lib/api-error-handler";
 import type { PageInfo, TraceSummary } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   TooltipProvider,
   TooltipRoot,
@@ -20,7 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Check, Radar, Trash2 } from "lucide-react";
+import { Radar, Trash2 } from "lucide-react";
 import { PaginationBar } from "@/components/pagination-bar";
 import { toast } from "sonner";
 import { usePersistentState } from "@/hooks/use-persistent-state";
@@ -109,8 +110,7 @@ export default function TracePage() {
     onError: (err) => showErrorToast(err, { title: t("trace.delete_error") }),
   });
 
-  const toggleSelect = (id: number, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const toggleSelect = (id: number) => {
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
@@ -198,10 +198,7 @@ export default function TracePage() {
             {loading ? (
               <TableSkeleton rows={5} rowClassName="h-10" />
             ) : traces.length === 0 ? (
-              <ListEmptyState
-                icon={<Radar className="mb-3 size-10 text-muted-foreground/50" />}
-                message={t("trace.no_traces")}
-              />
+              <ListEmptyState icon={Radar} message={t("trace.no_traces")} />
             ) : (
               <>
                 {isMobile ? (
@@ -267,20 +264,10 @@ export default function TracePage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-10">
-                          <div
-                            role="checkbox"
-                            tabIndex={0}
-                            aria-checked={selected.size === traces.length && traces.length > 0}
-                            onClick={toggleSelectAll}
-                            onKeyDown={(e) => {
-                              if (e.key === " " || e.key === "Enter") toggleSelectAll();
-                            }}
-                            className="flex size-4 cursor-pointer items-center justify-center rounded-sm border border-border transition-colors"
-                          >
-                            {selected.size === traces.length && traces.length > 0 && (
-                              <Check className="size-3" />
-                            )}
-                          </div>
+                          <Checkbox
+                            checked={traces.length > 0 && selected.size === traces.length}
+                            onCheckedChange={toggleSelectAll}
+                          />
                         </TableHead>
                         <TableHead className="w-16">{t("common.id")}</TableHead>
                         <TableHead>{t("trace.session_id")}</TableHead>
@@ -301,20 +288,10 @@ export default function TracePage() {
                           }}
                         >
                           <TableCell onClick={(e) => e.stopPropagation()}>
-                            <div
-                              role="checkbox"
-                              tabIndex={0}
-                              aria-checked={selected.has(tr.id)}
-                              onClick={(e) => toggleSelect(tr.id, e as unknown as React.MouseEvent)}
-                              onKeyDown={(e) => {
-                                if (e.key === " " || e.key === "Enter") {
-                                  toggleSelect(tr.id, e as unknown as React.MouseEvent);
-                                }
-                              }}
-                              className="flex size-4 cursor-pointer items-center justify-center rounded-sm border border-border transition-colors"
-                            >
-                              {selected.has(tr.id) && <Check className="size-3" />}
-                            </div>
+                            <Checkbox
+                              checked={selected.has(tr.id)}
+                              onCheckedChange={() => toggleSelect(tr.id)}
+                            />
                           </TableCell>
                           <TableCell className="font-mono text-xs">{tr.id}</TableCell>
                           <TableCell className="font-mono">{tr.sessionId}</TableCell>

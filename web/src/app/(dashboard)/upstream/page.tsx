@@ -49,7 +49,7 @@ import { PricingDialog } from "./pricing-dialog";
 import { GroupedView } from "./grouped-view";
 import { FlatView } from "./flat-view";
 import { useModelList } from "./use-model-list";
-import { ViewSwitch } from "@/components/view-switch";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 const DEFAULT_PAGE_SIZE = 10;
 const VALID_PAGE_SIZES = [10, 20, 50];
@@ -627,14 +627,18 @@ export default function UpstreamPage() {
             <CardContent>
               {/* 视图切换 + faceted bar */}
               <div className="mb-4 flex items-center gap-2">
-                <ViewSwitch
-                  value={view}
-                  onChange={handleViewChange}
-                  options={[
-                    { value: "grouped", label: t("upstream.view_grouped") },
-                    { value: "flat", label: t("upstream.view_flat") },
-                  ]}
-                />
+                <ToggleGroup
+                  variant="segmented"
+                  spacing={0.5}
+                  className="shrink-0"
+                  value={[view]}
+                  onValueChange={(next) => {
+                    if (next[0]) handleViewChange(next[0] as "grouped" | "flat");
+                  }}
+                >
+                  <ToggleGroupItem value="grouped">{t("upstream.view_grouped")}</ToggleGroupItem>
+                  <ToggleGroupItem value="flat">{t("upstream.view_flat")}</ToggleGroupItem>
+                </ToggleGroup>
                 <FilterBar
                   {...activeFilterBar}
                   facets={view === "grouped" ? usernameFacet : [...missingFacet, ...flatFacets]}
@@ -654,10 +658,7 @@ export default function UpstreamPage() {
                 loading ? (
                   <TableSkeleton />
                 ) : groups.length === 0 ? (
-                  <ListEmptyState
-                    icon={<Layers className="mb-3 size-10 text-muted-foreground/40" />}
-                    message={t("upstream.empty")}
-                  />
+                  <ListEmptyState icon={Layers} message={t("upstream.empty")} />
                 ) : (
                   <>
                     <GroupedView

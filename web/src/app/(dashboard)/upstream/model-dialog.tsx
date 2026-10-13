@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -34,7 +35,6 @@ import {
 } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { api } from "@/lib/api-client";
-import { cn } from "@/lib/utils";
 import type { ModelCapability } from "@/lib/types";
 import { DEFAULT_CONTEXT_LENGTH, DEFAULT_MAX_OUTPUT, formatTokens, type ModelForm } from "./shared";
 
@@ -85,27 +85,23 @@ function TokenPresetPopover({
           <PopoverTitle className="text-xs">{label}</PopoverTitle>
           <PopoverDescription className="text-[11px]">{description}</PopoverDescription>
         </PopoverHeader>
-        <div className="grid grid-cols-3 gap-1.5">
-          {presets.map((preset) => {
-            const active = preset === value;
-            return (
-              <Button
-                key={preset}
-                type="button"
-                size="sm"
-                variant={active ? "default" : "outline"}
-                aria-pressed={active}
-                className="font-mono tabular-nums"
-                onClick={() => {
-                  onSelect(preset);
-                  setOpen(false);
-                }}
-              >
-                {formatTokens(preset)}
-              </Button>
-            );
-          })}
-        </div>
+        <ToggleGroup
+          variant="outline"
+          size="sm"
+          spacing={1.5}
+          className="grid w-full grid-cols-3"
+          value={[String(value)]}
+          onValueChange={(next) => {
+            if (next[0]) onSelect(Number(next[0]));
+            setOpen(false);
+          }}
+        >
+          {presets.map((preset) => (
+            <ToggleGroupItem key={preset} value={String(preset)} className="font-mono tabular-nums">
+              {formatTokens(preset)}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
       </PopoverContent>
     </Popover>
   );
@@ -348,37 +344,25 @@ export function ModelDialog({
           </div>
           <div className="space-y-1">
             <Label>{t("models.capabilities")}</Label>
-            <div className="flex flex-wrap gap-1.5">
-              {CAPABILITY_CHIPS.map(({ value, labelKey, Icon }) => {
-                const checked = form.capabilities.includes(value);
+            <ToggleGroup
+              multiple
+              variant="outline"
+              size="sm"
+              spacing={1.5}
+              className="flex-wrap"
+              value={form.capabilities}
+              onValueChange={(next) =>
+                setForm((f) => ({ ...f, capabilities: next as typeof f.capabilities }))
+              }
+            >
+              {CAPABILITY_CHIPS.map(({ value, labelKey, Icon }) => (
                 // text 为必选模态（保存校验的 UI 呈现），不可取消
-                const locked = value === "text";
-                return (
-                  <Button
-                    key={value}
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    aria-pressed={checked}
-                    disabled={locked}
-                    className={cn(
-                      checked && "border-primary/40 bg-primary/10 text-primary hover:bg-primary/15",
-                    )}
-                    onClick={() =>
-                      setForm((f) => ({
-                        ...f,
-                        capabilities: checked
-                          ? f.capabilities.filter((c) => c !== value)
-                          : [...f.capabilities, value],
-                      }))
-                    }
-                  >
-                    <Icon className="size-3.5" />
-                    {t(labelKey)}
-                  </Button>
-                );
-              })}
-            </div>
+                <ToggleGroupItem key={value} value={value} disabled={value === "text"}>
+                  <Icon data-icon="inline-start" />
+                  {t(labelKey)}
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
           </div>
         </div>
 

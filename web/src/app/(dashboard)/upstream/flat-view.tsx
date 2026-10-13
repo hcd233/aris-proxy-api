@@ -131,12 +131,7 @@ export function FlatView({
   if (loading) return <TableSkeleton />;
 
   if (items.length === 0) {
-    return (
-      <ListEmptyState
-        icon={<Layers className="mb-3 size-10 text-muted-foreground/40" />}
-        message={t("upstream.empty")}
-      />
-    );
+    return <ListEmptyState icon={Layers} message={t("upstream.empty")} />;
   }
 
   if (isMobile) {

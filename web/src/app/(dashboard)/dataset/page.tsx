@@ -22,11 +22,11 @@ import { showErrorToast } from "@/lib/api-error-handler";
 import { useT } from "@/lib/i18n";
 import type { DatasetFormatPreviewRsp, DatasetPreviewRsp } from "@/lib/types";
 import { computeRange, type TimeRangeKey } from "@/lib/time-range";
-import { cn } from "@/lib/utils";
 import hljs from "highlight.js/lib/core";
 import json from "highlight.js/lib/languages/json";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MultiSelectPill } from "@/components/ui/multi-select-pill";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -39,6 +39,7 @@ import {
   TooltipContent,
 } from "@/components/ui/tooltip";
 import { PermissionGuard } from "@/components/permission-guard";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 hljs.registerLanguage("json", json);
 
@@ -428,14 +429,13 @@ export default function DatasetPage() {
                     {minScore}
                   </div>
                 </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="5"
-                  step="1"
-                  value={minScore}
-                  onChange={(event) => setMinScore(Number(event.target.value))}
-                  className="mt-5 h-2 w-full cursor-pointer accent-primary"
+                <Slider
+                  min={0}
+                  max={5}
+                  step={1}
+                  value={[minScore]}
+                  onValueChange={(v) => setMinScore(Array.isArray(v) ? v[0] : v)}
+                  className="mt-5"
                   aria-label={t("dataset.min_score")}
                 />
                 <div className="mt-2 flex justify-between font-mono text-xs text-muted-foreground">
@@ -548,26 +548,21 @@ export default function DatasetPage() {
             )}
 
             {/* Format preview */}
-            <div className="overflow-hidden rounded-xl border border-border">
-              <button
-                type="button"
-                className="flex min-h-12 w-full items-center justify-between gap-3 bg-muted/20 px-5 py-3.5 text-left text-sm font-medium text-foreground transition-colors hover:bg-muted/40"
-                onClick={() => setShowFormatPreview((value) => !value)}
-              >
+            <Collapsible
+              open={showFormatPreview}
+              onOpenChange={setShowFormatPreview}
+              className="overflow-hidden rounded-xl border border-border"
+            >
+              <CollapsibleTrigger className="flex min-h-12 w-full items-center justify-between gap-3 bg-muted/20 px-5 py-3.5 text-left text-sm font-medium text-foreground transition-colors hover:bg-muted/40">
                 <span className="flex items-center gap-2.5">
                   <Eye className="size-4 text-primary" />
                   {showFormatPreview
                     ? t("dataset.preview_toggle_hide")
                     : t("dataset.preview_toggle_show")}
                 </span>
-                <ChevronDown
-                  className={cn(
-                    "size-4 text-muted-foreground transition-transform",
-                    showFormatPreview && "rotate-180",
-                  )}
-                />
-              </button>
-              {showFormatPreview && (
+                <ChevronDown className="size-4 text-muted-foreground in-data-panel-open:rotate-180" />
+              </CollapsibleTrigger>
+              <CollapsibleContent>
                 <div className="border-t border-border px-5 py-4">
                   {loadingFormat ? (
                     <Skeleton className="h-48 w-full rounded-lg" />
@@ -594,8 +589,8 @@ export default function DatasetPage() {
                     </div>
                   )}
                 </div>
-              )}
-            </div>
+              </CollapsibleContent>
+            </Collapsible>
           </div>
         </StepCard>
 

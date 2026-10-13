@@ -28,6 +28,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -137,33 +143,20 @@ export function ShareDialog({ sessionId, existingShareID, open, onOpenChange }: 
 
         {shareURL ? (
           <div className="space-y-3">
-            <div className="flex items-stretch gap-2">
-              <input
+            <InputGroup>
+              <InputGroupInput
                 readOnly
                 value={shareURL}
-                className="flex-1 rounded-md border border-input bg-muted/40 px-3 py-2 font-mono text-xs text-foreground/90 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none"
+                className="font-mono text-xs"
                 onFocus={(e) => e.currentTarget.select()}
               />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleCopy}
-                className="shrink-0 gap-1.5"
-              >
-                {copied ? (
-                  <>
-                    <Check className="size-3.5" />
-                    {t("share_dialog.copied")}
-                  </>
-                ) : (
-                  <>
-                    <Copy className="size-3.5" />
-                    {t("share_dialog.copy")}
-                  </>
-                )}
-              </Button>
-            </div>
+              <InputGroupAddon align="inline-end">
+                <InputGroupButton onClick={handleCopy}>
+                  {copied ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}
+                  {copied ? t("share_dialog.copied") : t("share_dialog.copy")}
+                </InputGroupButton>
+              </InputGroupAddon>
+            </InputGroup>
             {expiresAt && (
               <p className="text-xs text-muted-foreground">
                 {t("share_dialog.expires_at")}{" "}

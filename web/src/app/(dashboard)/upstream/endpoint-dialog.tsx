@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -123,46 +124,38 @@ export function EndpointDialog({
             <Label>{t("endpoints.capabilities")}</Label>
             <div className="flex flex-col gap-2">
               <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={form.supportOpenAIChatCompletion}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, supportOpenAIChatCompletion: e.target.checked }))
+                  onCheckedChange={(checked) =>
+                    setForm((f) => ({ ...f, supportOpenAIChatCompletion: checked }))
                   }
-                  className="rounded"
                 />
                 {t("endpoints.openai_chat_label")}
               </label>
               <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={form.supportOpenAIResponse}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, supportOpenAIResponse: e.target.checked }))
+                  onCheckedChange={(checked) =>
+                    setForm((f) => ({ ...f, supportOpenAIResponse: checked }))
                   }
-                  className="rounded"
                 />
                 {t("endpoints.openai_response_label")}
               </label>
               <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={form.supportAnthropicMessage}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, supportAnthropicMessage: e.target.checked }))
+                  onCheckedChange={(checked) =>
+                    setForm((f) => ({ ...f, supportAnthropicMessage: checked }))
                   }
-                  className="rounded"
                 />
                 {t("endpoints.anthropic_messages_label")}
               </label>
               <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={form.supportOpenAIDecision}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, supportOpenAIDecision: e.target.checked }))
+                  onCheckedChange={(checked) =>
+                    setForm((f) => ({ ...f, supportOpenAIDecision: checked }))
                   }
-                  className="rounded"
                 />
                 {t("endpoints.openai_decision_label")}
               </label>

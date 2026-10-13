@@ -7,6 +7,7 @@ import { DEMO_MODULES, normalizeDemoModules } from "@/lib/demo-modules";
 import { useT } from "@/lib/i18n";
 import type { DemoConfig, DemoModule } from "@/lib/types";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -102,11 +103,9 @@ export function DemoConfigCard() {
                 key={module}
                 className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-border/70 px-3 py-2 text-sm transition-colors hover:bg-secondary/50"
               >
-                <input
-                  type="checkbox"
-                  className="size-4 accent-[var(--primary)]"
+                <Checkbox
                   checked={config.modules.includes(module)}
-                  onChange={(e) => toggleModule(module, e.target.checked)}
+                  onCheckedChange={(checked) => toggleModule(module, checked)}
                 />
                 <span>{t(`demo.module_${module}`)}</span>
               </label>

@@ -8,6 +8,7 @@ import { PermissionGuard } from "@/components/permission-guard";
 import type { TriggerAction, TriggerItem, PageInfo } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -28,7 +29,7 @@ import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { PageHeader } from "@/components/page-header";
 import { ListEmptyState } from "@/components/list-empty-state";
 import { TableSkeleton } from "@/components/table-skeleton";
-import { Ban, Check, Lock, Trash2 } from "lucide-react";
+import { Ban, Lock, Trash2 } from "lucide-react";
 import { PaginationBar } from "@/components/pagination-bar";
 import { FilterBar } from "@/components/filter-bar/filter-bar";
 import { useFilterBar } from "@/components/filter-bar/use-filter-bar";
@@ -84,29 +85,6 @@ function ActionBadge({
         <TooltipContent side="top">{t("trigger.action_switch_hint")}</TooltipContent>
       </TooltipRoot>
     </TooltipProvider>
-  );
-}
-
-/** 勾选框（对齐 sessions 的 role="checkbox" 自绘模式） */
-function SelectCheckbox({ checked, onToggle }: { checked: boolean; onToggle: () => void }) {
-  return (
-    <div
-      role="checkbox"
-      aria-checked={checked}
-      tabIndex={0}
-      onClick={onToggle}
-      onKeyDown={(e) => {
-        if (e.key === " " || e.key === "Enter") onToggle();
-      }}
-      className={cn(
-        "flex size-4 cursor-pointer items-center justify-center rounded border transition-colors",
-        checked
-          ? "border-primary bg-primary text-primary-foreground"
-          : "border-muted-foreground/30 hover:border-muted-foreground",
-      )}
-    >
-      {checked && <Check className="size-3" />}
-    </div>
   );
 }
 
@@ -309,10 +287,7 @@ export default function TriggerPage() {
               {loading ? (
                 <TableSkeleton />
               ) : items.length === 0 ? (
-                <ListEmptyState
-                  icon={<Ban className="mb-3 size-10 text-muted-foreground/40" />}
-                  message={t("trigger.no_words")}
-                />
+                <ListEmptyState icon={Ban} message={t("trigger.no_words")} />
               ) : (
                 <>
                   {isMobile ? (
@@ -326,9 +301,9 @@ export default function TriggerPage() {
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div className="flex min-w-0 flex-1 items-start gap-2">
-                                <SelectCheckbox
+                                <Checkbox
                                   checked={isSelected}
-                                  onToggle={() => toggleSelect(item.id)}
+                                  onCheckedChange={() => toggleSelect(item.id)}
                                 />
                                 <div className="min-w-0 flex-1">
                                   <TooltipRoot>
@@ -385,9 +360,9 @@ export default function TriggerPage() {
                       <TableHeader>
                         <TableRow>
                           <TableHead className="w-10">
-                            <SelectCheckbox
-                              checked={selected.size === items.length}
-                              onToggle={toggleSelectAll}
+                            <Checkbox
+                              checked={items.length > 0 && selected.size === items.length}
+                              onCheckedChange={toggleSelectAll}
                             />
                           </TableHead>
                           <TableHead className="w-16">{t("trigger.id")}</TableHead>
@@ -404,9 +379,9 @@ export default function TriggerPage() {
                           return (
                             <TableRow key={item.id}>
                               <TableCell className="w-10">
-                                <SelectCheckbox
+                                <Checkbox
                                   checked={isSelected}
-                                  onToggle={() => toggleSelect(item.id)}
+                                  onCheckedChange={() => toggleSelect(item.id)}
                                 />
                               </TableCell>
                               <TableCell className="text-muted-foreground">{item.id}</TableCell>

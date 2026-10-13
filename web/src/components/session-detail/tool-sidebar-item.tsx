@@ -1,16 +1,15 @@
 "use client";
 
-import { useState } from "react";
-import { Braces, ChevronDown, ChevronRight, FileText, Hash, Wrench } from "lucide-react";
+import { Braces, ChevronRight, FileText, Hash, Wrench } from "lucide-react";
 import type { ToolItem, UnifiedTool } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { CollapsibleText } from "./collapsible-text";
 import { useT } from "@/lib/i18n";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 export function ToolSidebarItem({ tool }: { tool: ToolItem }) {
   const t = useT();
-  const [expanded, setExpanded] = useState(false);
   const toolData: UnifiedTool = tool.tool;
 
   const params = toolData.parameters;
@@ -18,12 +17,8 @@ export function ToolSidebarItem({ tool }: { tool: ToolItem }) {
   const requiredParams = (params?.required as string[]) ?? [];
 
   return (
-    <div className="rounded-xl border border-border/70 bg-card/60">
-      <button
-        type="button"
-        onClick={() => setExpanded(!expanded)}
-        className="flex min-h-[52px] w-full items-center gap-3 px-3.5 py-2.5 text-left transition-colors active:bg-accent/50 md:hover:bg-accent/40"
-      >
+    <Collapsible className="rounded-xl border border-border/70 bg-card/60">
+      <CollapsibleTrigger className="flex min-h-[52px] w-full items-center gap-3 px-3.5 py-2.5 text-left transition-colors active:bg-accent/50 md:hover:bg-accent/40">
         <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
           <Wrench className="size-4" />
         </div>
@@ -53,13 +48,9 @@ export function ToolSidebarItem({ tool }: { tool: ToolItem }) {
             </TooltipContent>
           </TooltipRoot>
         </div>
-        {expanded ? (
-          <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
-        ) : (
-          <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-        )}
-      </button>
-      {expanded && (
+        <ChevronRight className="size-4 shrink-0 text-muted-foreground in-data-panel-open:rotate-90" />
+      </CollapsibleTrigger>
+      <CollapsibleContent>
         <div className="space-y-3 border-t border-border/60 px-3.5 py-3">
           {toolData.description && (
             <div>
@@ -120,7 +111,7 @@ export function ToolSidebarItem({ tool }: { tool: ToolItem }) {
             </div>
           )}
         </div>
-      )}
-    </div>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }

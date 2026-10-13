@@ -285,10 +285,7 @@ export default function UsersPage() {
             {loading ? (
               <TableSkeleton />
             ) : items.length === 0 ? (
-              <ListEmptyState
-                icon={<Users className="mb-3 size-10 text-muted-foreground/40" />}
-                message={t("users.no_users")}
-              />
+              <ListEmptyState icon={Users} message={t("users.no_users")} />
             ) : (
               <>
                 {isMobile ? (

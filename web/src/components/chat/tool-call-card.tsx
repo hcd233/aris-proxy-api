@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Wrench } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { ChevronRight, Wrench } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { CopyButton } from "@/components/ui/copy-button";
 import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import type { UnifiedToolCall } from "@/lib/types";
 import type { ToolResultInfo } from "./content-extract";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 function prettyJSON(s: string): string {
   if (!s) return "";
@@ -43,12 +43,12 @@ export function ToolCallCard({ call, result }: ToolCallCardProps) {
   const preview = previewFirstArg(call.arguments);
 
   return (
-    <div className={cn("mt-3 overflow-hidden rounded-lg border border-border bg-card")}>
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors hover:bg-muted/30"
-      >
+    <Collapsible
+      open={open}
+      onOpenChange={setOpen}
+      className="mt-3 overflow-hidden rounded-lg border border-border bg-card"
+    >
+      <CollapsibleTrigger className="flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors hover:bg-muted/30">
         <div className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/12 text-primary">
           <Wrench className="size-3.5" />
         </div>
@@ -73,13 +73,9 @@ export function ToolCallCard({ call, result }: ToolCallCardProps) {
             )}
           </div>
         </div>
-        {open ? (
-          <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
-        ) : (
-          <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-        )}
-      </button>
-      {open && (
+        <ChevronRight className="size-4 shrink-0 text-muted-foreground in-data-panel-open:rotate-90" />
+      </CollapsibleTrigger>
+      <CollapsibleContent>
         <div className="border-t border-border bg-background/40 min-w-0">
           {call.id && (
             <div className="border-b border-border/50 px-3 py-1.5">
@@ -111,7 +107,7 @@ export function ToolCallCard({ call, result }: ToolCallCardProps) {
             </div>
           )}
         </div>
-      )}
-    </div>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }

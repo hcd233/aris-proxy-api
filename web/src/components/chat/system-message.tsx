@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { MarkdownLite } from "./markdown-lite";
 import { CopyButton } from "@/components/ui/copy-button";
 import { useT } from "@/lib/i18n";
+import { Collapsible, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 const SYSTEM_MSG_PREVIEW_CHARS = 200;
 
@@ -41,19 +42,19 @@ export function SystemMessage({ text, time, index }: SystemMessageProps) {
           className="opacity-0 transition-opacity group-hover/msg:opacity-100"
         />
       </div>
-      <div className="rounded-xl border border-dashed border-border bg-muted/40 px-4 py-3 text-[13.5px] leading-relaxed text-muted-foreground">
+      <Collapsible
+        open={open}
+        onOpenChange={setOpen}
+        className="rounded-xl border border-dashed border-border bg-muted/40 px-4 py-3 text-[13.5px] leading-relaxed text-muted-foreground"
+      >
         <MarkdownLite text={display} />
         {isLong && (
-          <button
-            type="button"
-            onClick={() => setOpen((v) => !v)}
-            className="mt-2 inline-flex items-center gap-1 font-medium text-primary/90 transition-colors hover:text-primary"
-          >
+          <CollapsibleTrigger className="mt-2 inline-flex items-center gap-1 font-medium text-primary/90 transition-colors hover:text-primary">
             {open ? t("system_message.show_less") : t("system_message.show_more")}
-            {open ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}
-          </button>
+            <ChevronRight className="size-3 in-data-panel-open:rotate-90" />
+          </CollapsibleTrigger>
         )}
-      </div>
+      </Collapsible>
     </div>
   );
 }

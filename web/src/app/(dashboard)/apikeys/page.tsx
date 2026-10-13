@@ -242,10 +242,7 @@ export default function APIKeysPage() {
             {loading ? (
               <TableSkeleton />
             ) : keys.length === 0 ? (
-              <ListEmptyState
-                icon={<Key className="mb-3 size-10 text-muted-foreground/40" />}
-                message={t("apikeys.empty")}
-              />
+              <ListEmptyState icon={Key} message={t("apikeys.empty")} />
             ) : (
               <>
                 {isMobile ? (

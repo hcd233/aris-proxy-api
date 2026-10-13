@@ -20,6 +20,7 @@ import {
   Sparkles,
   Trash2,
 } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface ChatTurnProps {
   message: PlaygroundMessage;
@@ -84,28 +85,25 @@ function ThinkingBlock({ text, streaming }: { text: string; streaming: boolean }
   const open = userOpen ?? streaming;
 
   return (
-    <div className="rounded-xl border border-border/70 bg-muted/30 px-3 py-2">
-      <button
-        type="button"
-        aria-expanded={open}
-        onClick={() => setUserOpen((v) => !(v ?? streaming))}
-        className="flex w-full items-center gap-1.5 text-[12px] font-medium text-muted-foreground transition-colors hover:text-foreground"
-      >
+    <Collapsible
+      open={open}
+      onOpenChange={setUserOpen}
+      className="rounded-xl border border-border/70 bg-muted/30 px-3 py-2"
+    >
+      <CollapsibleTrigger className="flex w-full items-center gap-1.5 text-[12px] font-medium text-muted-foreground transition-colors hover:text-foreground">
         <Brain className="size-3.5 text-primary/70" />
         <span>{streaming ? t("playground.thinking.streaming") : t("chat.thought_process")}</span>
         {streaming && (
           <span className="size-1.5 animate-pulse rounded-full bg-primary/70 motion-reduce:animate-none" />
         )}
-        <ChevronRight
-          className={cn("ml-auto size-3.5 transition-transform", open && "rotate-90")}
-        />
-      </button>
-      {open && (
+        <ChevronRight className="ml-auto size-3.5 in-data-panel-open:rotate-90" />
+      </CollapsibleTrigger>
+      <CollapsibleContent>
         <p className="mt-2 border-l-2 border-border pl-3 text-[13px] italic leading-[1.6] break-words whitespace-pre-wrap text-muted-foreground">
           {text}
         </p>
-      )}
-    </div>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
 
@@ -309,23 +307,16 @@ export function ChatTurn({
       {!editing && (
         <div className={cn("flex min-h-7 items-center gap-2", isUser && "justify-end")}>
           {isAssistant && meta && (
-            <div>
-              <button
-                type="button"
-                aria-expanded={detailsOpen}
-                className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
-                onClick={() => setDetailsOpen((v) => !v)}
-              >
-                <ChevronRight
-                  className={cn("size-3 transition-transform", detailsOpen && "rotate-90")}
-                />
+            <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen}>
+              <CollapsibleTrigger className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground">
+                <ChevronRight className="size-3 in-data-panel-open:rotate-90" />
                 <span>
                   {usage ? `${usage.promptTokens + usage.completionTokens} tok` : "—"} ·{" "}
                   {formatDuration(meta.totalMs)} · {formatCost(meta.cost)}
                   {meta.interrupted ? ` · ${t("playground.metrics.interrupted")}` : ""}
                 </span>
-              </button>
-              {detailsOpen && (
+              </CollapsibleTrigger>
+              <CollapsibleContent>
                 <div className="mt-1.5 rounded-xl border bg-background p-2.5 text-[11px] text-muted-foreground">
                   <div>
                     {t("playground.metrics.tokens_in")}{" "}
@@ -356,8 +347,8 @@ export function ChatTurn({
                     />
                   </div>
                 </div>
-              )}
-            </div>
+              </CollapsibleContent>
+            </Collapsible>
           )}
           {actions && <div className={cn(isAssistant && "ml-auto")}>{actions}</div>}
         </div>

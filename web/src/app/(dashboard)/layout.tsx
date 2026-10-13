@@ -18,6 +18,7 @@ import {
   TooltipContent,
 } from "@/components/ui/tooltip";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeSwitcher } from "@/components/theme/theme-switcher";
 import { LocaleFade } from "@/components/locale-fade";
@@ -230,16 +231,16 @@ function SidebarNav({
           // 窄栏模式无组头，子项平铺不折叠
           const groupOpen = collapsed || openGroups.has(group.key);
           return (
-            <div key={group.key} className={groupIndex > 0 ? "mt-3" : ""}>
+            <Collapsible
+              key={group.key}
+              open={groupOpen}
+              onOpenChange={() => onToggleGroup(group.key)}
+              className={groupIndex > 0 ? "mt-3" : ""}
+            >
               {collapsed ? (
                 <Separator className="mx-1 mb-1 bg-sidebar-border/60" />
               ) : (
-                <button
-                  type="button"
-                  onClick={() => onToggleGroup(group.key)}
-                  aria-expanded={openGroups.has(group.key)}
-                  className="flex w-full items-center gap-2 rounded-md px-3 pb-1 pt-1.5 text-[11px] font-medium uppercase tracking-wider text-sidebar-foreground/45 transition-colors hover:text-sidebar-foreground/80"
-                >
+                <CollapsibleTrigger className="flex w-full items-center gap-2 rounded-md px-3 pb-1 pt-1.5 text-[11px] font-medium uppercase tracking-wider text-sidebar-foreground/45 transition-colors hover:text-sidebar-foreground/80">
                   <TooltipRoot>
                     <TooltipTrigger
                       render={
@@ -250,74 +251,70 @@ function SidebarNav({
                     />
                     <TooltipContent side="right">{t(group.labelKey)}</TooltipContent>
                   </TooltipRoot>
-                  <ChevronDown
-                    className={`size-3.5 shrink-0 text-sidebar-foreground/40 transition-transform duration-200 ${
-                      openGroups.has(group.key) ? "" : "-rotate-90"
-                    }`}
-                  />
-                </button>
+                  <ChevronDown className="size-3.5 shrink-0 -rotate-90 text-sidebar-foreground/40 in-data-panel-open:rotate-0" />
+                </CollapsibleTrigger>
               )}
-              {groupOpen && (
-                <div className="nav-items flex flex-col gap-0.5">
-                  {group.items.map((item) => {
-                    const isActive = isItemActive(pathname, item.href);
-                    const label = t(item.labelKey);
-                    const demoLocked =
-                      isDemo() && !(item.demoModule !== undefined && isModuleOpen(item.demoModule));
+              {/* data-instant：NavIndicator 在 layoutKey 变化时一次性测量激活项位置，
+                  高度过渡会让测量落在动画起点，所以侧栏分组不做展开动画 */}
+              <CollapsibleContent data-instant="" className="nav-items flex flex-col gap-0.5">
+                {group.items.map((item) => {
+                  const isActive = isItemActive(pathname, item.href);
+                  const label = t(item.labelKey);
+                  const demoLocked =
+                    isDemo() && !(item.demoModule !== undefined && isModuleOpen(item.demoModule));
 
-                    const link = demoLocked ? (
-                      <span
-                        aria-disabled="true"
-                        className={`relative flex cursor-not-allowed select-none items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground/45 ${
-                          collapsed ? "justify-center" : ""
-                        }`}
-                      >
-                        <span className="opacity-60">{item.icon}</span>
-                        {!collapsed && (
-                          <>
-                            {/* 静态分析假阳性豁免：该 span 仅在 demoLocked 分支渲染，
+                  const link = demoLocked ? (
+                    <span
+                      aria-disabled="true"
+                      className={`relative flex cursor-not-allowed select-none items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground/45 ${
+                        collapsed ? "justify-center" : ""
+                      }`}
+                    >
+                      <span className="opacity-60">{item.icon}</span>
+                      {!collapsed && (
+                        <>
+                          {/* 静态分析假阳性豁免：该 span 仅在 demoLocked 分支渲染，
                                 彼时整个 link 已由下方 TooltipTrigger render 包裹并弹出
                                 "{label} · demo locked" tooltip（变量引用不构成 ESLint
                                 parent 链，规则无法静态判定）。 */}
-                            {/* eslint-disable-next-line truncate-requires-tooltip/truncate-requires-tooltip */}
-                            <span className="min-w-0 flex-1 truncate">{label}</span>
-                            <Lock className="size-3.5 shrink-0 opacity-60" />
-                          </>
-                        )}
-                      </span>
-                    ) : (
-                      <Link
-                        href={item.href}
-                        onClick={onNavigate}
-                        data-nav-item=""
-                        data-active={isActive ? "" : undefined}
-                        // The active background is the travelling NavIndicator.
-                        className={`relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150 ${
-                          isActive
-                            ? "text-sidebar-accent-foreground"
-                            : "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
-                        } ${collapsed ? "justify-center" : ""}`}
-                        aria-label={collapsed ? label : undefined}
-                      >
-                        <span className={isActive ? "text-sidebar-primary" : ""}>{item.icon}</span>
-                        {!collapsed && <span>{label}</span>}
-                      </Link>
-                    );
+                          {/* eslint-disable-next-line truncate-requires-tooltip/truncate-requires-tooltip */}
+                          <span className="min-w-0 flex-1 truncate">{label}</span>
+                          <Lock className="size-3.5 shrink-0 opacity-60" />
+                        </>
+                      )}
+                    </span>
+                  ) : (
+                    <Link
+                      href={item.href}
+                      onClick={onNavigate}
+                      data-nav-item=""
+                      data-active={isActive ? "" : undefined}
+                      // The active background is the travelling NavIndicator.
+                      className={`relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150 ${
+                        isActive
+                          ? "text-sidebar-accent-foreground"
+                          : "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
+                      } ${collapsed ? "justify-center" : ""}`}
+                      aria-label={collapsed ? label : undefined}
+                    >
+                      <span className={isActive ? "text-sidebar-primary" : ""}>{item.icon}</span>
+                      {!collapsed && <span>{label}</span>}
+                    </Link>
+                  );
 
-                    return collapsed || demoLocked ? (
-                      <TooltipRoot key={item.href}>
-                        <TooltipTrigger render={link} />
-                        <TooltipContent side="right">
-                          {demoLocked ? `${label} · ${t("nav.demo_locked")}` : label}
-                        </TooltipContent>
-                      </TooltipRoot>
-                    ) : (
-                      <Fragment key={item.href}>{link}</Fragment>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+                  return collapsed || demoLocked ? (
+                    <TooltipRoot key={item.href}>
+                      <TooltipTrigger render={link} />
+                      <TooltipContent side="right">
+                        {demoLocked ? `${label} · ${t("nav.demo_locked")}` : label}
+                      </TooltipContent>
+                    </TooltipRoot>
+                  ) : (
+                    <Fragment key={item.href}>{link}</Fragment>
+                  );
+                })}
+              </CollapsibleContent>
+            </Collapsible>
           );
         })}
       </nav>

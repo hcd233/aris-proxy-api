@@ -8,7 +8,7 @@ import { useT } from "@/lib/i18n";
 import { PermissionGuard } from "@/components/permission-guard";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import type { RuntimeInstanceSeries, RuntimePoint } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { RuntimeGaugeCard } from "@/components/charts/runtime-gauge-card";
 import { RuntimeChart } from "@/components/charts/runtime-chart";
 import { useChartSeriesColors } from "@/lib/theme";
@@ -319,23 +319,20 @@ export default function MonitorPage() {
               </span>
               <span className="font-mono tabular-nums">5s · {lastUpdated}</span>
             </div>
-            <div className="flex items-center gap-0.5 rounded-lg bg-muted p-0.5">
+            <ToggleGroup
+              variant="segmented"
+              spacing={0.5}
+              value={[range]}
+              onValueChange={(next) => {
+                if (next[0]) setRange(next[0] as RangeKey);
+              }}
+            >
               {RANGE_KEYS.map((key) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setRange(key)}
-                  className={cn(
-                    "inline-flex h-8 items-center justify-center rounded-md px-3 text-xs font-medium transition-colors",
-                    range === key
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
+                <ToggleGroupItem key={key} value={key}>
                   {key}
-                </button>
+                </ToggleGroupItem>
               ))}
-            </div>
+            </ToggleGroup>
           </div>
         </div>
 
