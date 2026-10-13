@@ -416,6 +416,30 @@
   }
 }
 
+/* ---- Collapsible「纸张折页」: the panel unfolds to its measured height while
+ * the ink of its contents fades up; folding back is quicker and lifts.
+ * [data-instant] opts out (sidebar groups — NavIndicator measures once). ---- */
+[data-theme="anthropic"] [data-slot="collapsible-content"]:not([data-instant]) {
+  overflow: hidden;
+  height: var(--collapsible-panel-height);
+  transition:
+    height 320ms var(--ease-settle),
+    opacity 260ms var(--ease-ink);
+  &[data-starting-style] {
+    height: 0;
+    opacity: 0;
+  }
+  &[data-ending-style] {
+    height: 0;
+    opacity: 0;
+    transition-duration: 200ms, 160ms;
+    transition-timing-function: var(--ease-lift);
+  }
+}
+[data-theme="anthropic"] [data-slot="collapsible-trigger"] svg {
+  transition: rotate 260ms var(--ease-settle);
+}
+
 /* ---- Focus: an ink ring tightening onto the control, then absorbed. ---- */
 [data-theme="anthropic"] :focus-visible {
   animation: atelier-focus-ink 220ms var(--ease-settle);

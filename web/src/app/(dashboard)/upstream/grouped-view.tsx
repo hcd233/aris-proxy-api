@@ -41,6 +41,7 @@ import {
   SpecBadges,
   UpstreamModelCell,
 } from "./shared";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 /** 组头的连通详情悬浮层：URL 可完整换行，不占列表列宽 */
 function EndpointDetailPopover({ endpoint }: { endpoint: UpstreamEndpointItem }) {
@@ -189,23 +190,21 @@ export function GroupedView({
           const ep = group.endpoint;
           const open = !isCollapsed(ep.id);
           return (
-            <div key={ep.id} className="rounded-lg border border-border bg-card p-4">
+            <Collapsible
+              key={ep.id}
+              open={open}
+              onOpenChange={() => toggleCollapse(ep.id)}
+              className="rounded-lg border border-border bg-card p-4"
+            >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 space-y-1.5">
-                  <button
-                    type="button"
+                  <CollapsibleTrigger
                     className="flex items-center gap-1 text-muted-foreground hover:text-foreground"
-                    aria-expanded={open}
                     aria-label={open ? t("upstream.collapse_group") : t("upstream.expand_group")}
-                    onClick={() => toggleCollapse(ep.id)}
                   >
-                    {open ? (
-                      <ChevronDown className="size-3.5" />
-                    ) : (
-                      <ChevronRight className="size-3.5" />
-                    )}
+                    <ChevronRight className="size-3.5 in-data-panel-open:rotate-90" />
                     <OwnerCell user={ep.user} />
-                  </button>
+                  </CollapsibleTrigger>
                   <TooltipRoot>
                     <TooltipTrigger
                       render={<p className="line-clamp-1 text-sm font-medium">{ep.name}</p>}
@@ -257,7 +256,7 @@ export function GroupedView({
                   </Button>
                 </div>
               </div>
-              {open && (
+              <CollapsibleContent>
                 <div className="mt-3 divide-y divide-border">
                   {group.models.length === 0 ? (
                     <p className="py-2 text-xs text-muted-foreground">
@@ -362,8 +361,8 @@ export function GroupedView({
                     ))
                   )}
                 </div>
-              )}
-            </div>
+              </CollapsibleContent>
+            </Collapsible>
           );
         })}
       </div>

@@ -540,6 +540,33 @@ html[data-theme="moonshot"][data-motion-tier="lite"] {
   }
 }
 
+/* ---- Collapsible「舱门展开」: the panel drifts open and its contents come
+ * into focus out of a blur; closing falls away fast. The chevron swings on
+ * the lunar spring. [data-instant] opts out (sidebar groups). ---- */
+[data-theme="moonshot"] [data-slot="collapsible-content"]:not([data-instant]) {
+  overflow: hidden;
+  height: var(--collapsible-panel-height);
+  transition:
+    height 420ms var(--ease-drift),
+    opacity 380ms var(--ease-drift),
+    filter 380ms var(--ease-drift);
+  &[data-starting-style] {
+    height: 0;
+    opacity: 0;
+    filter: blur(var(--lunar-blur));
+  }
+  &[data-ending-style] {
+    height: 0;
+    opacity: 0;
+    filter: blur(var(--lunar-blur));
+    transition-duration: 220ms;
+    transition-timing-function: var(--ease-fall);
+  }
+}
+[data-theme="moonshot"] [data-slot="collapsible-trigger"] svg {
+  transition: rotate 380ms var(--ease-orbit);
+}
+
 /* ---- Focus: one luminous pulse. ---- */
 [data-theme="moonshot"] :focus-visible {
   animation: lunar-focus-pulse 300ms ease-out;

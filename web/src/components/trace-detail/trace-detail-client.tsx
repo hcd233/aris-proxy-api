@@ -3,7 +3,7 @@
 import { useT } from "@/lib/i18n";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Bot, Braces, ChevronDown, ChevronRight, Wrench } from "lucide-react";
+import { ArrowLeft, Bot, Braces, ChevronRight, Wrench } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { showErrorToast } from "@/lib/api-error-handler";
 import type { PageInfo, TraceDetail, TraceEventItem } from "@/lib/types";
@@ -23,6 +23,7 @@ import { DeleteIconButton } from "@/components/delete-button";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { toast } from "sonner";
 import { formatDateTime } from "@/lib/utils";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 const EVENT_PAGE_SIZE = 50;
 
@@ -254,20 +255,18 @@ function EventCard({ ev, t }: { ev: TraceEventItem; t: (k: string, f?: string) =
         </div>
       )}
 
-      <button
-        type="button"
-        onClick={() => setShowJson((v) => !v)}
-        className="mt-2 inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
-      >
-        <Braces className="size-3.5" />
-        {showJson ? t("trace.collapse_json") : t("trace.expand_json")}
-        {showJson ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
-      </button>
-      {showJson && (
-        <pre className="mt-2 max-h-96 overflow-auto rounded-md bg-(--code-bg) p-3 font-mono text-[11px] leading-relaxed text-(--code-text)">
-          {rawJson}
-        </pre>
-      )}
+      <Collapsible open={showJson} onOpenChange={setShowJson}>
+        <CollapsibleTrigger className="mt-2 inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground">
+          <Braces className="size-3.5" />
+          {showJson ? t("trace.collapse_json") : t("trace.expand_json")}
+          <ChevronRight className="size-3.5 in-data-panel-open:rotate-90" />
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <pre className="mt-2 max-h-96 overflow-auto rounded-md bg-(--code-bg) p-3 font-mono text-[11px] leading-relaxed text-(--code-text)">
+            {rawJson}
+          </pre>
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   );
 }

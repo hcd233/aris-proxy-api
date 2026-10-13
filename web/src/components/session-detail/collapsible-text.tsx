@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { useT } from "@/lib/i18n";
+import { Collapsible, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 export function CollapsibleText({
   text,
@@ -20,21 +21,17 @@ export function CollapsibleText({
   const display = !isLong || open ? trimmed : `${trimmed.slice(0, previewChars).trimEnd()}…`;
 
   return (
-    <div className={className}>
+    <Collapsible open={open} onOpenChange={setOpen} className={className}>
       <p className="whitespace-pre-wrap break-words">{display}</p>
       {isLong && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            setOpen((v) => !v);
-          }}
+        <CollapsibleTrigger
+          onClick={(e) => e.stopPropagation()}
           className="mt-1 inline-flex items-center gap-0.5 font-medium text-primary/90 transition-colors hover:text-primary"
         >
           {open ? t("collapsible.show_less") : t("collapsible.show_more")}
-          {open ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}
-        </button>
+          <ChevronRight className="size-3 in-data-panel-open:rotate-90" />
+        </CollapsibleTrigger>
       )}
-    </div>
+    </Collapsible>
   );
 }
