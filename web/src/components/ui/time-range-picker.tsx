@@ -5,7 +5,6 @@ import { format, startOfDay, endOfDay } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 
-import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -13,6 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { TimeRangeKey } from "@/lib/time-range";
 
 export interface TimeRangePickerProps {
@@ -67,10 +67,6 @@ export function TimeRangePicker({
     },
     [onChange],
   );
-
-  const handleCustomClick = useCallback(() => {
-    setOpen(true);
-  }, []);
 
   const handleDateRangeSelect = useCallback((range: DateRange | undefined) => {
     setDateRange(range);
@@ -175,39 +171,26 @@ export function TimeRangePicker({
   };
 
   return (
-    <div className={cn("flex items-center gap-0.5 rounded-lg bg-muted p-0.5", className)}>
+    <ToggleGroup
+      variant="segmented"
+      spacing={0.5}
+      className={className}
+      value={[value]}
+      onValueChange={(next) => {
+        // 「自定义」只负责打开弹层，真正切换要等弹层里点「应用」
+        const key = next[0] as TimeRangeKey | undefined;
+        if (key && key !== "custom") handlePresetClick(key);
+      }}
+    >
       {PRESET_KEYS.map((key) => (
-        <button
-          key={key}
-          type="button"
-          onClick={() => handlePresetClick(key)}
-          className={cn(
-            "inline-flex h-8 items-center justify-center whitespace-nowrap rounded-md px-3 text-xs font-medium transition-colors",
-            value === key
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
+        <ToggleGroupItem key={key} value={key}>
           {timeLabels[key]}
-        </button>
+        </ToggleGroupItem>
       ))}
 
       <Popover open={open} onOpenChange={handleOpenChange}>
-        <PopoverTrigger
-          render={
-            <button
-              type="button"
-              onClick={handleCustomClick}
-              className={cn(
-                "inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-3 text-xs font-medium transition-colors",
-                value === "custom"
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            />
-          }
-        >
-          <CalendarIcon className="size-3" />
+        <PopoverTrigger render={<ToggleGroupItem value="custom" />}>
+          <CalendarIcon />
           <span className="hidden sm:inline">{customDisplayLabel}</span>
         </PopoverTrigger>
         <PopoverContent
@@ -299,6 +282,6 @@ export function TimeRangePicker({
           </div>
         </PopoverContent>
       </Popover>
-    </div>
+    </ToggleGroup>
   );
 }

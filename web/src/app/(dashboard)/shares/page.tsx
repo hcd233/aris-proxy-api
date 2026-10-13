@@ -135,7 +135,7 @@ export default function SharesPage() {
               <TableSkeleton rows={4} />
             ) : shares.length === 0 ? (
               <ListEmptyState
-                icon={<Share2 className="mb-3 size-10 text-muted-foreground/40" />}
+                icon={Share2}
                 message={t("shares.no_shares")}
                 hint={t("shares.create_hint")}
               />

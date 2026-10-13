@@ -79,12 +79,7 @@ function SessionListTable({
   const t = useT();
 
   if (items.length === 0) {
-    return (
-      <ListEmptyState
-        icon={<MessageSquare className="mb-3 size-10 text-muted-foreground/40" />}
-        message={emptyMessage}
-      />
-    );
+    return <ListEmptyState icon={MessageSquare} message={emptyMessage} />;
   }
 
   const summary = (item: SessionRow) =>

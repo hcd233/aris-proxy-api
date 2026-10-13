@@ -27,6 +27,7 @@ import hljs from "highlight.js/lib/core";
 import json from "highlight.js/lib/languages/json";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MultiSelectPill } from "@/components/ui/multi-select-pill";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -428,14 +429,13 @@ export default function DatasetPage() {
                     {minScore}
                   </div>
                 </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="5"
-                  step="1"
-                  value={minScore}
-                  onChange={(event) => setMinScore(Number(event.target.value))}
-                  className="mt-5 h-2 w-full cursor-pointer accent-primary"
+                <Slider
+                  min={0}
+                  max={5}
+                  step={1}
+                  value={[minScore]}
+                  onValueChange={(v) => setMinScore(Array.isArray(v) ? v[0] : v)}
+                  className="mt-5"
                   aria-label={t("dataset.min_score")}
                 />
                 <div className="mt-2 flex justify-between font-mono text-xs text-muted-foreground">

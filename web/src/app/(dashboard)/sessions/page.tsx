@@ -17,7 +17,8 @@ import {
 } from "@/components/ui/table";
 import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
-import { MessageSquare, Check, ArrowUp, ArrowDown, Trash2, Lock } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { MessageSquare, ArrowUp, ArrowDown, Trash2, Lock } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth-context";
 import { PermissionGuard } from "@/components/permission-guard";
@@ -218,8 +219,7 @@ export default function SessionsPage() {
     onError: (err) => showErrorToast(err, { title: t("sessions.delete_error") }),
   });
 
-  const toggleSelect = (id: number, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const toggleSelect = (id: number) => {
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
@@ -353,10 +353,7 @@ export default function SessionsPage() {
             {loading ? (
               <TableSkeleton rows={5} rowClassName="h-10" />
             ) : sessions.length === 0 ? (
-              <ListEmptyState
-                icon={<MessageSquare className="mb-3 size-10 text-muted-foreground/50" />}
-                message={t("sessions.no_sessions")}
-              />
+              <ListEmptyState icon={MessageSquare} message={t("sessions.no_sessions")} />
             ) : (
               <>
                 {isMobile ? (
@@ -373,23 +370,12 @@ export default function SessionsPage() {
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex items-center gap-2 min-w-0 flex-1">
-                              <div
-                                role="checkbox"
-                                aria-checked={isSelected}
-                                tabIndex={0}
-                                onClick={(e) => toggleSelect(s.id, e)}
-                                onKeyDown={(e) => {
-                                  if (e.key === " " || e.key === "Enter")
-                                    toggleSelect(s.id, e as unknown as React.MouseEvent);
-                                }}
-                                className={`mt-0.5 flex size-4 shrink-0 cursor-pointer items-center justify-center rounded border transition-colors ${
-                                  isSelected
-                                    ? "border-primary bg-primary text-primary-foreground"
-                                    : "border-muted-foreground/30 hover:border-muted-foreground"
-                                }`}
-                              >
-                                {isSelected && <Check className="size-3" />}
-                              </div>
+                              <Checkbox
+                                checked={isSelected}
+                                onCheckedChange={() => toggleSelect(s.id)}
+                                onClick={(e) => e.stopPropagation()}
+                                className="mt-0.5"
+                              />
                               <div className="min-w-0 flex-1">
                                 <TooltipRoot>
                                   <TooltipTrigger
@@ -474,22 +460,10 @@ export default function SessionsPage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-10">
-                          <div
-                            role="checkbox"
-                            aria-checked={selected.size === sessions.length}
-                            tabIndex={0}
-                            onClick={toggleSelectAll}
-                            onKeyDown={(e) => {
-                              if (e.key === " " || e.key === "Enter") toggleSelectAll();
-                            }}
-                            className={`flex size-4 cursor-pointer items-center justify-center rounded border transition-colors ${
-                              selected.size === sessions.length
-                                ? "border-primary bg-primary text-primary-foreground"
-                                : "border-muted-foreground/30 hover:border-muted-foreground"
-                            }`}
-                          >
-                            {selected.size === sessions.length && <Check className="size-3" />}
-                          </div>
+                          <Checkbox
+                            checked={sessions.length > 0 && selected.size === sessions.length}
+                            onCheckedChange={toggleSelectAll}
+                          />
                         </TableHead>
                         <TableHead>{t("common.id")}</TableHead>
                         <TableHead
@@ -536,23 +510,11 @@ export default function SessionsPage() {
                             }}
                           >
                             <TableCell className="w-10">
-                              <div
-                                role="checkbox"
-                                aria-checked={isSelected}
-                                tabIndex={0}
-                                onClick={(e) => toggleSelect(s.id, e)}
-                                onKeyDown={(e) => {
-                                  if (e.key === " " || e.key === "Enter")
-                                    toggleSelect(s.id, e as unknown as React.MouseEvent);
-                                }}
-                                className={`flex size-4 cursor-pointer items-center justify-center rounded border transition-colors ${
-                                  isSelected
-                                    ? "border-primary bg-primary text-primary-foreground"
-                                    : "border-muted-foreground/30 hover:border-muted-foreground"
-                                }`}
-                              >
-                                {isSelected && <Check className="size-3" />}
-                              </div>
+                              <Checkbox
+                                checked={isSelected}
+                                onCheckedChange={() => toggleSelect(s.id)}
+                                onClick={(e) => e.stopPropagation()}
+                              />
                             </TableCell>
                             <TableCell className="font-mono text-xs">{s.id}</TableCell>
                             <TableCell className="text-muted-foreground">

@@ -349,6 +349,73 @@
   transition: translate 220ms var(--ease-settle);
 }
 
+/* ---- Checkbox「落印」: the box soaks up ink, the tick is stamped in. ---- */
+[data-theme="anthropic"] [data-slot="checkbox"] {
+  transition:
+    background-color 260ms var(--ease-ink),
+    border-color 260ms var(--ease-ink),
+    box-shadow 180ms var(--ease-settle);
+}
+[data-theme="anthropic"] [data-slot="checkbox-indicator"] {
+  animation: atelier-stamp 240ms var(--ease-settle) backwards;
+}
+@keyframes atelier-stamp {
+  from {
+    opacity: 0;
+    transform: scale(0.6) rotate(-8deg);
+    filter: blur(0.6px);
+  }
+}
+
+/* ---- Toggle / ToggleGroup「压印切换」: the pressed state inks in; segmented
+ * items settle onto the track like a card placed on paper. ---- */
+[data-theme="anthropic"] :is([data-slot="toggle"], [data-slot="toggle-group-item"]) {
+  transition:
+    color 260ms var(--ease-ink),
+    background-color 260ms var(--ease-ink),
+    border-color 260ms var(--ease-ink),
+    box-shadow 320ms var(--ease-settle);
+  &:active:not([data-disabled]) {
+    transform: translateY(1px);
+    transition-duration: 90ms;
+  }
+}
+/* :not(:focus-visible) — box-shadow carries the Tailwind focus ring; never mask it. */
+[data-theme="anthropic"]
+  [data-slot="toggle-group-item"][data-variant="segmented"][data-pressed]:not(:focus-visible) {
+  box-shadow:
+    0 1px 2px 0 rgb(31 26 20 / 0.08),
+    0 0 0 1px rgb(31 26 20 / 0.04);
+}
+
+/* ---- Slider「刻刀」: the thumb is pressed into the track while dragging. ---- */
+[data-theme="anthropic"] [data-slot="slider-thumb"] {
+  transition:
+    box-shadow 220ms var(--ease-settle),
+    scale 220ms var(--ease-settle);
+  &:active,
+  &[data-dragging] {
+    scale: 0.9;
+  }
+}
+
+/* ---- InputGroup: the border inks in on focus instead of snapping. ---- */
+[data-theme="anthropic"] [data-slot="input-group"] {
+  transition:
+    border-color 260ms var(--ease-ink),
+    box-shadow 260ms var(--ease-ink);
+}
+
+/* ---- Empty「水印浮现」: the mark surfaces first, the words dry after it. ---- */
+[data-theme="anthropic"] [data-slot="empty"] {
+  [data-slot="empty-icon"] {
+    animation: atelier-settle 520ms var(--ease-settle) backwards;
+  }
+  :is([data-slot="empty-title"], [data-slot="empty-description"]) {
+    animation: atelier-ink-set 520ms var(--ease-settle) 80ms backwards;
+  }
+}
+
 /* ---- Focus: an ink ring tightening onto the control, then absorbed. ---- */
 [data-theme="anthropic"] :focus-visible {
   animation: atelier-focus-ink 220ms var(--ease-settle);

@@ -456,6 +456,90 @@ html[data-theme="moonshot"][data-motion-tier="lite"] {
   }
 }
 
+/* ---- Checkbox「点亮」: the box ignites, the tick is caught by gravity and
+ * overshoots into place. ---- */
+[data-theme="moonshot"] [data-slot="checkbox"] {
+  transition:
+    background-color 200ms ease,
+    border-color 200ms ease,
+    box-shadow 300ms ease;
+  /* :not(:focus-visible) — box-shadow carries the Tailwind focus ring. */
+  &[data-checked]:not(:focus-visible) {
+    box-shadow: 0 0 10px rgb(255 255 255 / 0.3);
+  }
+}
+[data-theme="moonshot"] [data-slot="checkbox-indicator"] {
+  animation: lunar-tick 380ms var(--ease-orbit) backwards;
+}
+@keyframes lunar-tick {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+    filter: drop-shadow(0 0 6px rgb(255 255 255 / 0.8));
+  }
+}
+
+/* ---- Toggle / ToggleGroup「轨道停泊」: the pressed item docks with a little
+ * overshoot and a faint halo; segmented items glow on the track. ---- */
+[data-theme="moonshot"] :is([data-slot="toggle"], [data-slot="toggle-group-item"]) {
+  transition:
+    color 200ms ease,
+    background-color 200ms ease,
+    border-color 200ms ease,
+    box-shadow 300ms ease,
+    scale 380ms var(--ease-orbit);
+  &:active:not([data-disabled]) {
+    scale: 0.95;
+    transition-duration: 90ms;
+  }
+  &[data-pressed] {
+    animation: lunar-dock 380ms var(--ease-orbit);
+  }
+}
+[data-theme="moonshot"] [data-slot="toggle-group-item"][data-pressed]:not(:focus-visible) {
+  box-shadow: 0 0 12px rgb(255 255 255 / 0.18);
+}
+@keyframes lunar-dock {
+  from {
+    scale: 0.92;
+  }
+}
+
+/* ---- Slider「引力滑块」: the thumb swells with light while held. ---- */
+[data-theme="moonshot"] [data-slot="slider-thumb"] {
+  transition:
+    box-shadow 300ms ease,
+    scale 380ms var(--ease-orbit);
+  &:hover {
+    box-shadow: 0 0 10px rgb(255 255 255 / 0.4);
+  }
+  &:active,
+  &[data-dragging] {
+    scale: 1.25;
+    box-shadow: 0 0 16px rgb(255 255 255 / 0.6);
+  }
+}
+[data-theme="moonshot"] [data-slot="slider-range"] {
+  box-shadow: 0 0 8px rgb(255 255 255 / 0.35);
+}
+
+/* ---- InputGroup: the focus ring (box-shadow) fades in with the border. ---- */
+[data-theme="moonshot"] [data-slot="input-group"] {
+  transition:
+    border-color 200ms ease,
+    box-shadow 300ms var(--ease-drift);
+}
+
+/* ---- Empty「深空显影」: the icon emerges out of focus, then the words. ---- */
+[data-theme="moonshot"] [data-slot="empty"] {
+  [data-slot="empty-icon"] {
+    animation: lunar-emerge 760ms var(--ease-drift) backwards;
+  }
+  :is([data-slot="empty-title"], [data-slot="empty-description"]) {
+    animation: lunar-focus-in 760ms var(--ease-drift) 120ms backwards;
+  }
+}
+
 /* ---- Focus: one luminous pulse. ---- */
 [data-theme="moonshot"] :focus-visible {
   animation: lunar-focus-pulse 300ms ease-out;

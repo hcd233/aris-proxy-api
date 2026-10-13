@@ -2,6 +2,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -16,7 +17,6 @@ import { useState } from "react";
 import { Plus, Trash2, ArrowUp, ArrowDown } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import type { PricingDTO, PricingRuleDTO, TimeWindowDTO } from "@/lib/types";
-import { cn } from "@/lib/utils";
 import { isDefaultRule, emptyPricingRule } from "./pricing-rule";
 
 export interface PricingEditorProps {
@@ -201,50 +201,41 @@ export function PricingEditor({ value, onChange }: PricingEditorProps) {
               {timeEnabled(rule) &&
                 (rule.time_windows ?? []).map((w, wi) => (
                   <div key={wi} className="flex flex-wrap items-center gap-1.5">
-                    <div
-                      className="flex gap-1"
-                      role="group"
+                    <ToggleGroup
+                      multiple
+                      variant="outline"
+                      size="sm"
+                      spacing={1}
                       aria-label={t("upstream.pricing.window.days")}
+                      // 空=每天：7 键全亮；点选后进入显式选择模式
+                      value={((w.days ?? []).length === 0 ? WEEKDAYS : (w.days ?? [])).map(String)}
+                      onValueChange={(next) => {
+                        let nextDays = next.map(Number).sort((a, b) => a - b);
+                        // 显式选满 7 天与「每天」后端语义等价，归一化回空数组
+                        if (nextDays.length === WEEKDAYS.length) nextDays = [];
+                        const windows = (rule.time_windows ?? []).map((x, xi) =>
+                          xi === wi ? { ...x, days: nextDays } : x,
+                        );
+                        patchRule(idx, { time_windows: windows });
+                      }}
                     >
                       {WEEKDAYS.map((d) => {
                         const cur = w.days ?? [];
-                        // 空=每天：7 键全亮；点选后进入显式选择模式
-                        const active = cur.length === 0 || cur.includes(d);
                         // 最后一天禁点：取消会静默翻回「每天」，与「仅剩一天」直觉相反
                         const lastDay = cur.length === 1 && cur.includes(d);
                         return (
-                          <Button
+                          // w-9 固定宽保证跨语言不位移
+                          <ToggleGroupItem
                             key={d}
-                            type="button"
-                            size="xs"
-                            variant="outline"
-                            // min-w-0 抵消 size xs 内置 min-w-14；w-9 固定宽保证跨语言不位移
-                            className={cn(
-                              "w-9 min-w-0 p-0",
-                              active
-                                ? "border-primary/40 bg-primary/10 text-primary hover:bg-primary/15"
-                                : "text-muted-foreground",
-                            )}
-                            aria-pressed={active}
+                            value={String(d)}
                             disabled={lastDay}
-                            onClick={() => {
-                              const base = cur.length === 0 ? WEEKDAYS : cur;
-                              let nextDays = base.includes(d)
-                                ? base.filter((x) => x !== d)
-                                : [...base, d].sort((a, b) => a - b);
-                              // 显式选满 7 天与「每天」后端语义等价，归一化回空数组
-                              if (nextDays.length === WEEKDAYS.length) nextDays = [];
-                              const windows = (rule.time_windows ?? []).map((x, xi) =>
-                                xi === wi ? { ...x, days: nextDays } : x,
-                              );
-                              patchRule(idx, { time_windows: windows });
-                            }}
+                            className="w-9"
                           >
                             {t(`upstream.pricing.window.day.${d}`)}
-                          </Button>
+                          </ToggleGroupItem>
                         );
                       })}
-                    </div>
+                    </ToggleGroup>
                     {(w.days ?? []).length === 0 && (
                       <Badge variant="secondary">{t("upstream.pricing.window.everyday")}</Badge>
                     )}
