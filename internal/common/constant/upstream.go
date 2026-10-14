@@ -19,7 +19,14 @@ const (
 
 	// Mock 上游（压测用）：Model 表 upstream_model 为 MockUpstreamModel 时，
 	// 网关不向上游发 HTTP，改由进程内随机流生成；见 transport.MockUpstreamModel 消费方。
-	MockUpstreamModel                   = "mock-llm"
+	MockUpstreamModel = "mock-llm"
+	MockMaxChars      = 16384           // 随机内容长度上限（字符）
+	MockCharsPerToken = 4               // 1 token ≈ 4 字符
+	MockMinTPS        = 20              // mock 输出速率下限 tok/s
+	MockMaxTPS        = 200             // mock 输出速率上限 tok/s
+	MockMaxTTFT       = 1 * time.Second // mock 首 token 延迟上限
+	MockCharAlphabet  = "\n!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
+
 	ResponseStreamFieldType             = "type"
 	ResponseStreamFieldDelta            = "delta"
 	ResponseStreamFieldResponse         = "response"
