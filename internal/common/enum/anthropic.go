@@ -1,6 +1,19 @@
 // Package enum provides common enums for the application.
 package enum
 
+// ==================== Anthropic Message Types ====================
+
+// AnthropicMessageType Anthropic Message 对象的 type 字段值
+//
+//	@author centonhuang
+//	@update 2026-10-15 10:00:00
+type AnthropicMessageType = string
+
+const (
+	// AnthropicMessageTypeMessage message 对象
+	AnthropicMessageTypeMessage AnthropicMessageType = "message"
+)
+
 // ==================== Anthropic SSE Event Types ====================
 
 // AnthropicSSEEventType Anthropic SSE 事件类型
