@@ -79,16 +79,14 @@ func realEndpoint() vo.UpstreamEndpoint {
 }
 
 // TestIsMock_DisabledByDefault 验证开关关闭时即使模型是 mock 标记也不走 mock。
-func TestIsMock_DisabledByDefault(t *testing.T) {
-	t.Parallel()
+func TestIsMock_DisabledByDefault(t *testing.T) { //nolint:paralleltest // modifies global config
 	if transport.IsMock(mockEndpoint()) {
 		t.Fatal("IsMock must be false when switch is off")
 	}
 }
 
 // TestIsMock_EnabledWithMarker 验证开关开启 + mock 标记才走 mock。
-func TestIsMock_EnabledWithMarker(t *testing.T) {
-	t.Parallel()
+func TestIsMock_EnabledWithMarker(t *testing.T) { //nolint:paralleltest // modifies global config
 	config.MockUpstreamEnabled = true
 	t.Cleanup(func() { config.MockUpstreamEnabled = false })
 
@@ -101,8 +99,7 @@ func TestIsMock_EnabledWithMarker(t *testing.T) {
 }
 
 // TestMockOpenAIProxy_UsesMock 验证 mock 目标走本地生成、不触达内层代理。
-func TestMockOpenAIProxy_UsesMock(t *testing.T) {
-	t.Parallel()
+func TestMockOpenAIProxy_UsesMock(t *testing.T) { //nolint:paralleltest // modifies global config
 	config.MockUpstreamEnabled = true
 	t.Cleanup(func() { config.MockUpstreamEnabled = false })
 
@@ -122,8 +119,7 @@ func TestMockOpenAIProxy_UsesMock(t *testing.T) {
 }
 
 // TestMockOpenAIProxy_Passthrough 验证真实模型原样透传到内层代理。
-func TestMockOpenAIProxy_Passthrough(t *testing.T) {
-	t.Parallel()
+func TestMockOpenAIProxy_Passthrough(t *testing.T) { //nolint:paralleltest // modifies global config
 	config.MockUpstreamEnabled = true
 	t.Cleanup(func() { config.MockUpstreamEnabled = false })
 
@@ -139,8 +135,7 @@ func TestMockOpenAIProxy_Passthrough(t *testing.T) {
 }
 
 // TestMockAnthropicProxy_UsesMock 验证 Anthropic 装饰器的 mock 分发。
-func TestMockAnthropicProxy_UsesMock(t *testing.T) {
-	t.Parallel()
+func TestMockAnthropicProxy_UsesMock(t *testing.T) { //nolint:paralleltest // modifies global config
 	config.MockUpstreamEnabled = true
 	t.Cleanup(func() { config.MockUpstreamEnabled = false })
 
@@ -160,8 +155,7 @@ func TestMockAnthropicProxy_UsesMock(t *testing.T) {
 }
 
 // TestMockAnthropicProxy_CountTokens 验证 count_tokens 对 mock 目标返回估算值。
-func TestMockAnthropicProxy_CountTokens(t *testing.T) {
-	t.Parallel()
+func TestMockAnthropicProxy_CountTokens(t *testing.T) { //nolint:paralleltest // modifies global config
 	config.MockUpstreamEnabled = true
 	t.Cleanup(func() { config.MockUpstreamEnabled = false })
 
