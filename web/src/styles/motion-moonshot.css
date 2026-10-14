@@ -280,7 +280,8 @@ html[data-theme="moonshot"][data-motion-tier="lite"] {
     [data-slot="popover-content"],
     [data-slot="dropdown-menu-content"],
     [data-slot="dropdown-menu-sub-content"],
-    [data-slot="select-content"]
+    [data-slot="select-content"],
+    [data-slot="combobox-content"]
   ) {
   &[data-open] {
     animation: lunar-beam 280ms var(--ease-drift) backwards;
@@ -321,7 +322,8 @@ html[data-theme="moonshot"][data-motion-tier="lite"] {
     [data-slot="dropdown-menu-item"],
     [data-slot="dropdown-menu-checkbox-item"],
     [data-slot="dropdown-menu-radio-item"],
-    [data-slot="select-item"]
+    [data-slot="select-item"],
+    [data-slot="combobox-item"]
   ) {
   transition: box-shadow 160ms ease;
   &[data-highlighted] {
