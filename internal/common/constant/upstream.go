@@ -11,11 +11,15 @@ const (
 
 	AnthropicAPIVersion = "2023-06-01"
 
-	AnthropicMessageIDTemplate          = "msg_%s"
-	OpenAIChunkIDTemplate               = "chatcmpl-%s"
-	ConvertedChunkIDSuffix              = "converted"
-	ResponseIDTemplate                  = "resp_%s"
-	ResponseItemIDTemplate              = "msg_%s"
+	AnthropicMessageIDTemplate = "msg_%s"
+	OpenAIChunkIDTemplate      = "chatcmpl-%s"
+	ConvertedChunkIDSuffix     = "converted"
+	ResponseIDTemplate         = "resp_%s"
+	ResponseItemIDTemplate     = "msg_%s"
+
+	// Mock 上游（压测用）：Model 表 upstream_model 为 MockUpstreamModel 时，
+	// 网关不向上游发 HTTP，改由进程内随机流生成；见 transport.MockUpstreamModel 消费方。
+	MockUpstreamModel                   = "mock-llm"
 	ResponseStreamFieldType             = "type"
 	ResponseStreamFieldDelta            = "delta"
 	ResponseStreamFieldResponse         = "response"

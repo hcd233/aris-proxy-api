@@ -195,6 +195,12 @@ var (
 	//	@update 2026-06-23 10:00:00
 	UpstreamRetryJitterFactor float64
 
+	// MockUpstreamEnabled bool 是否启用 mock 上游（压测用）
+	//	开启后 Model 表 upstream_model = mock-llm 的请求改由进程内随机流生成，
+	//	不向上游发起 HTTP；默认关闭，避免生产误配后拿到假响应。
+	//	update 2026-10-15 10:00:00
+	MockUpstreamEnabled bool
+
 	// UpstreamCircuitEnabled bool 是否启用上游熔断
 	//	@update 2026-08-20 10:00:00
 	UpstreamCircuitEnabled bool
@@ -308,6 +314,8 @@ func InitEnvironment() {
 	config.SetDefault("upstream.retry.max_backoff", 2*time.Second)
 	config.SetDefault("upstream.retry.jitter_factor", 0.3)
 
+	config.SetDefault("mock.upstream.enabled", false)
+
 	config.SetDefault("upstream.circuit.enabled", true)
 	config.SetDefault("upstream.circuit.window", 60*time.Second)
 	config.SetDefault("upstream.circuit.min_requests", 10)
@@ -392,6 +400,8 @@ func InitEnvironment() {
 	UpstreamRetryInitialBackoff = config.GetDuration("upstream.retry.initial_backoff")
 	UpstreamRetryMaxBackoff = config.GetDuration("upstream.retry.max_backoff")
 	UpstreamRetryJitterFactor = config.GetFloat64("upstream.retry.jitter_factor")
+
+	MockUpstreamEnabled = config.GetBool("mock.upstream.enabled")
 
 	UpstreamCircuitEnabled = config.GetBool("upstream.circuit.enabled")
 	UpstreamCircuitWindow = max(config.GetDuration("upstream.circuit.window"), constant.ResilienceMinWindow)
