@@ -3,6 +3,8 @@
 import { useRef } from "react";
 import type { PageInfo } from "@/lib/types";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Pagination, PaginationContent, PaginationItem } from "@/components/ui/pagination";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -81,39 +83,49 @@ export function PaginationBar({
         </p>
       </div>
 
-      <div className="flex items-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={pageInfo.page <= 1}
-          onClick={() => onChange(pageInfo.page - 1, pageInfo.pageSize)}
-        >
-          <ChevronLeft className="size-4" />
-        </Button>
-        <div className="flex items-center gap-1.5 text-sm">
-          <span className="whitespace-nowrap text-muted-foreground">{t("pagination.page")}</span>
-          <input
-            key={`page-${pageInfo.page}`}
-            ref={inputRef}
-            type="number"
-            min={1}
-            max={totalPages}
-            defaultValue={pageInfo.page}
-            className="h-8 w-14 rounded-md border border-input bg-transparent px-2 py-1 text-center text-sm tabular-nums focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none dark:bg-input/30"
-            onKeyDown={handlePageInputKeyDown}
-            onBlur={handlePageInputBlur}
-          />
-          <span className="text-muted-foreground">/ {totalPages}</span>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={pageInfo.page >= totalPages}
-          onClick={() => onChange(pageInfo.page + 1, pageInfo.pageSize)}
-        >
-          <ChevronRight className="size-4" />
-        </Button>
-      </div>
+      <Pagination className="w-auto">
+        <PaginationContent className="gap-2">
+          <PaginationItem>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={pageInfo.page <= 1}
+              onClick={() => onChange(pageInfo.page - 1, pageInfo.pageSize)}
+            >
+              <ChevronLeft className="size-4" />
+            </Button>
+          </PaginationItem>
+          <PaginationItem>
+            <div className="flex items-center gap-1.5 text-sm">
+              <span className="whitespace-nowrap text-muted-foreground">
+                {t("pagination.page")}
+              </span>
+              <Input
+                key={`page-${pageInfo.page}`}
+                ref={inputRef}
+                type="number"
+                min={1}
+                max={totalPages}
+                defaultValue={pageInfo.page}
+                className="h-8 w-14 rounded-md bg-transparent px-2 text-center tabular-nums"
+                onKeyDown={handlePageInputKeyDown}
+                onBlur={handlePageInputBlur}
+              />
+              <span className="text-muted-foreground">/ {totalPages}</span>
+            </div>
+          </PaginationItem>
+          <PaginationItem>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={pageInfo.page >= totalPages}
+              onClick={() => onChange(pageInfo.page + 1, pageInfo.pageSize)}
+            >
+              <ChevronRight className="size-4" />
+            </Button>
+          </PaginationItem>
+        </PaginationContent>
+      </Pagination>
     </div>
   );
 }
