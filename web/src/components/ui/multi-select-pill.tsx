@@ -1,8 +1,17 @@
 "use client";
 
 import * as React from "react";
-import { ChevronDown, Check } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+  ComboboxSeparator,
+  ComboboxTrigger,
+} from "@/components/ui/combobox";
+import { Button } from "@/components/ui/button";
 import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
@@ -19,6 +28,10 @@ export interface MultiSelectPillProps {
   formatOption?: (value: string) => string;
 }
 
+/**
+ * 胶囊筛选器的多选弹层：shadcn Combobox（multiple + 弹层内搜索）承载
+ * 过滤、键盘导航与选中管理，外观保持筛选条胶囊形态。
+ */
 export function MultiSelectPill({
   label,
   options,
@@ -31,30 +44,29 @@ export function MultiSelectPill({
 }: MultiSelectPillProps) {
   const t = useT();
   const [open, setOpen] = React.useState(false);
-  const [query, setQuery] = React.useState("");
 
   const showSearch = searchable ?? options.length > 8;
   const active = value.length > 0;
-
-  const filtered = React.useMemo(() => {
-    if (!query) return options;
-    const q = query.toLowerCase();
-    return options.filter((o) => o.toLowerCase().includes(q));
-  }, [options, query]);
-
-  const toggle = (v: string) => {
-    if (value.includes(v)) {
-      onChange(value.filter((x) => x !== v));
-    } else {
-      onChange([...value, v]);
-    }
-  };
-
-  const clearLocal = () => onChange([]);
+  const display = React.useCallback(
+    (opt: string) => (formatOption ? formatOption(opt) : opt),
+    [formatOption],
+  );
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
+    <Combobox
+      multiple
+      items={options}
+      value={value}
+      onValueChange={onChange}
+      open={open}
+      onOpenChange={setOpen}
+      itemToStringLabel={display}
+      onInputValueChange={(_inputValue, eventDetails) => {
+        // 点选选项后保留过滤文本（取消 input-clear），便于连续勾选同一筛选项
+        if (eventDetails.isItemPress) eventDetails.cancel();
+      }}
+    >
+      <ComboboxTrigger
         render={
           <button
             type="button"
@@ -62,88 +74,48 @@ export function MultiSelectPill({
               "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-sm transition-colors",
               active
                 ? "border-ring/40 bg-accent/60 text-foreground hover:bg-accent"
-                : "border-input bg-transparent text-muted-foreground hover:text-foreground hover:border-ring",
+                : "border-input bg-transparent text-muted-foreground hover:border-ring hover:text-foreground",
               className,
             )}
-          >
-            <span>
-              {label}
-              {active ? ` · ${value.length}` : ""}
-            </span>
-            <ChevronDown className="size-3.5" />
-          </button>
+          />
         }
-      />
-      <PopoverContent align="start" className="w-auto min-w-[200px] max-w-[280px] p-1">
-        {showSearch && (
-          <div className="px-1 pb-1">
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={t("multi_select.filter")}
-              className="h-7 w-full rounded-md border border-input bg-transparent px-2 text-xs placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none"
-            />
-          </div>
-        )}
-
-        <div className="max-h-64 overflow-y-auto">
-          {filtered.length === 0 ? (
-            <div className="py-4 text-center text-xs text-muted-foreground">
-              {emptyText ?? t("multi_select.no_options")}
-            </div>
-          ) : (
-            filtered.map((opt) => {
-              const checked = value.includes(opt);
-              return (
-                <button
-                  key={opt}
-                  type="button"
-                  onClick={() => toggle(opt)}
-                  className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent hover:text-accent-foreground"
-                >
-                  <span
-                    aria-hidden
-                    className={cn(
-                      "flex size-4 shrink-0 items-center justify-center rounded border",
-                      checked
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-muted-foreground/30",
-                    )}
-                  >
-                    {checked && <Check className="size-3" />}
-                  </span>
-                  <TooltipRoot>
-                    <TooltipTrigger
-                      render={
-                        <span className="block truncate text-left">
-                          {formatOption ? formatOption(opt) : opt}
-                        </span>
-                      }
-                    />
-                    <TooltipContent side="top" className="max-w-xs break-all">
-                      {formatOption ? formatOption(opt) : opt}
-                    </TooltipContent>
-                  </TooltipRoot>
-                </button>
-              );
-            })
-          )}
-        </div>
-
+      >
+        <span>
+          {label}
+          {active ? ` · ${value.length}` : ""}
+        </span>
+      </ComboboxTrigger>
+      <ComboboxContent align="start" className="w-auto min-w-[200px] max-w-[280px]">
+        {showSearch && <ComboboxInput showTrigger={false} placeholder={t("multi_select.filter")} />}
+        <ComboboxList>
+          {options.map((opt) => (
+            <ComboboxItem key={opt} value={opt}>
+              <TooltipRoot>
+                <TooltipTrigger
+                  render={<span className="block truncate text-left">{display(opt)}</span>}
+                />
+                <TooltipContent side="top" className="max-w-xs break-all">
+                  {display(opt)}
+                </TooltipContent>
+              </TooltipRoot>
+            </ComboboxItem>
+          ))}
+          <ComboboxEmpty>{emptyText ?? t("multi_select.no_options")}</ComboboxEmpty>
+        </ComboboxList>
         {active && (
           <>
-            <div className="-mx-1 my-1 h-px bg-border" />
-            <button
-              type="button"
-              onClick={clearLocal}
-              className="w-full rounded-sm px-2 py-1.5 text-left text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
+            <ComboboxSeparator />
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start text-xs text-muted-foreground"
+              onClick={() => onChange([])}
             >
               {t("multi_select.clear")}
-            </button>
+            </Button>
           </>
         )}
-      </PopoverContent>
-    </Popover>
+      </ComboboxContent>
+    </Combobox>
   );
 }
