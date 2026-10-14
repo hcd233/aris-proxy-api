@@ -137,12 +137,15 @@ func NewSessionDetailCache(redisClient *redis.Client) sessionport.SessionDetailC
 	return cache.NewSessionDetailCache(redisClient)
 }
 
+// NewOpenAIProxy 装配 OpenAI 上游代理：外层 mock 装饰器按开关与标记决定本地生成，
+// 内层为真实 HTTP 代理。装饰器默认不生效（config.MockUpstreamEnabled=false）。
 func NewOpenAIProxy(tracker *inflight.Tracker, guard *transport.EndpointGuard) usecase.OpenAIProxyPort {
-	return transport.NewOpenAIProxy(tracker, guard)
+	return transport.NewMockOpenAIProxy(transport.NewOpenAIProxy(tracker, guard))
 }
 
+// NewAnthropicProxy 同 NewOpenAIProxy，覆盖 Anthropic 协议。
 func NewAnthropicProxy(tracker *inflight.Tracker, guard *transport.EndpointGuard) usecase.AnthropicProxyPort {
-	return transport.NewAnthropicProxy(tracker, guard)
+	return transport.NewMockAnthropicProxy(transport.NewAnthropicProxy(tracker, guard))
 }
 
 func NewEndpointGuard(registry *prometheus.Registry) *transport.EndpointGuard {
