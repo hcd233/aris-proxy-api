@@ -11,6 +11,23 @@ const SWIPE_MS = 320;
 const MAX_DT_S = 0.05;
 
 /**
+ * Top of `el` relative to `ancestor`'s padding box — the containing block of the
+ * absolutely positioned indicator. Read from layout offsets on purpose: the rows
+ * rise from `translateY(8px)` (atelier-rise, `backwards` fill) and
+ * `getBoundingClientRect()` reports that first frame, while the indicator measures
+ * once per `layoutKey` — the skewed read stuck 8px below the row for good.
+ */
+function layoutTopWithin(el: HTMLElement, ancestor: HTMLElement): number {
+  let top = 0;
+  let node: HTMLElement | null = el;
+  while (node && node !== ancestor) {
+    top += node.offsetTop;
+    node = node.offsetParent as HTMLElement | null;
+  }
+  return top;
+}
+
+/**
  * Sidebar navigation indicator (spec §7.4): one element that travels to the
  * active item (`[data-nav-item][data-active]` inside the parent <nav>) on a
  * spring — critically damped highlighter in atelier, an underdamped glowing
@@ -42,7 +59,7 @@ export function NavIndicator({ layoutKey }: { layoutKey: string }) {
       placed.current = false;
       return;
     }
-    const top = active.getBoundingClientRect().top - nav.getBoundingClientRect().top;
+    const top = layoutTopWithin(active, nav);
     const height = active.offsetHeight;
     el.style.height = `${height}px`;
     trail.style.height = `${height}px`;

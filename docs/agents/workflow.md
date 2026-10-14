@@ -66,7 +66,7 @@
 - **分支命名规范**：`{feature|bugfix|refactor|chore|docs|test|hotfix}/{5个以内小写英文单词描述功能或修复，使用连字符}-{当前 datetime，例如 2026-05-28}`。
 - **分支示例**：`feature/session-share-2026-05-28`、`bugfix/token-expiry-2026-05-28`、`refactor/split-endpoint-model-2026-05-28`。
 - **Worktree 精简创建（控制目录体积）**：`git worktree add` 本身只检出跟踪文件（约 50MB），目录膨胀全部来自 worktree 内产生的构建产物（实测单个含前端的 worktree 可达 2G+）。创建后按需执行：
-  - 涉前端改动时软链主工作区依赖，**禁止在 worktree 内 `npm ci`**（每份 `node_modules` 约 1.3G）：`ln -s ../../../web/node_modules .worktrees/<name>/web/node_modules`。前提是主工作区已 `npm ci` 过一次；软链后 `npm run lint` / `test` / `build` 均可正常运行。
+  - 涉前端改动时软链主工作区依赖，**禁止在 worktree 内 `npm ci`**（每份 `node_modules` 约 1.3G）：`ln -s ../../../web/node_modules .worktrees/<name>/web/node_modules`。前提是主工作区已 `npm ci` 过一次；软链后 `npm run lint` / `test` 均可正常运行。**构建例外**：Next 16 默认 Turbopack 拒绝使用跨出 root 的软链（`Symlink node_modules could not be resolved: the symlink target leaves the configured filesystem roots`），worktree 内需要构建产物时用 `npx next build --webpack`。
   - 需要 `go build` / 跑 Go 测试时补 embed 占位文件（`//go:embed all:dist` 不跟随软链，只能放真实文件）：`mkdir -p .worktrees/<name>/internal/web/dist && echo '<!doctype html>' > .worktrees/<name>/internal/web/dist/index.html`。
   - 验证结束后删除 `web/.next` 与 `web/out`（next build/dev 产物，单份可达数百 MB）。
 - **Worktree 清理**：分支合并或任务结束后及时 `git worktree remove .worktrees/<name>` 回收磁盘（remove 失败可先手动删目录再 `git worktree prune`）。

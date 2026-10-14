@@ -93,4 +93,4 @@
 - CI：`.github/workflows/build-and-publish.yml` 的 push path filter **包含** `web/**`（与 `internal/**`、`go.mod` 等同级），纯前端改动也会触发构建发布：构建前端 → embed 进 Go 镜像 → 推送到 ghcr → 部署到 K8s。推送到 `master` 或合并 PR 到 `master` 即自动发布，无需手工触发。另有 `.github/workflows/lint.yml` 的 `web-lint` job 跑 `npm run lint` + `npm run format:check`（无 `--max-warnings`，warning 不阻塞）。
 - 测试：`cd web && npm run test`（vitest，覆盖 `filter-dsl` 等纯函数与自定义 eslint 规则）。改动后至少跑 `npm run lint && npm run test && npm run build`。
 - 提交：前端改动同样遵循 `.worktrees/` + `feature|bugfix|refactor|chore|docs|test|hotfix/...-YYYY-MM-DD` 分支规范；与后端联动的功能尽量在同一个 PR 中提交，避免接口前后不一致。
-- worktree 内**禁止 `npm ci`**：软链主工作区依赖 `ln -s ../../../web/node_modules web/node_modules` 即可跑 lint/test/build（详见 [workflow.md](workflow.md) 的「Worktree 精简创建」）；验证后删除 `web/.next` / `web/out` 构建产物。
+- worktree 内**禁止 `npm ci`**：软链主工作区依赖 `ln -s ../../../web/node_modules web/node_modules` 即可跑 lint/test（详见 [workflow.md](workflow.md) 的「Worktree 精简创建」）；需要构建产物时 Next 16 默认 Turbopack 会拒绝该软链，改用 `npx next build --webpack`。验证后删除 `web/.next` / `web/out` 构建产物。
