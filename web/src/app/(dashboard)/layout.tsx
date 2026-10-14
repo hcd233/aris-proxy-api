@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, Suspense, useCallback, useEffect, useState, type ReactNode } from "react";
+import { Suspense, useCallback, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
@@ -12,18 +12,31 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarSeparator,
+  useSidebar,
+} from "@/components/ui/sidebar";
+import {
   TooltipProvider,
   TooltipRoot,
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeSwitcher } from "@/components/theme/theme-switcher";
 import { LocaleFade } from "@/components/locale-fade";
 import { NavIndicator } from "@/components/motion/nav-indicator";
 import { SessionHistorySidebar } from "@/components/session-detail/session-history-sidebar";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   LayoutDashboard,
   MessageSquare,
@@ -190,17 +203,15 @@ function SidebarNav({
   groups,
   openGroups,
   onToggleGroup,
-  onNavigate,
-  collapsed = false,
 }: {
   groups: NavGroup[];
   openGroups: ReadonlySet<string>;
   onToggleGroup: (key: string) => void;
-  onNavigate?: () => void;
-  collapsed?: boolean;
 }) {
   const pathname = usePathname();
   const { isAdmin, isDemo, isModuleOpen } = useAuth();
+  const { state, isMobile, setOpenMobile } = useSidebar();
+  const collapsed = state === "collapsed";
   const t = useT();
 
   const visibleGroups = groups
@@ -256,63 +267,55 @@ function SidebarNav({
               )}
               {/* data-instant：NavIndicator 在 layoutKey 变化时一次性测量激活项位置，
                   高度过渡会让测量落在动画起点，所以侧栏分组不做展开动画 */}
-              <CollapsibleContent data-instant="" className="nav-items flex flex-col gap-0.5">
-                {group.items.map((item) => {
-                  const isActive = isItemActive(pathname, item.href);
-                  const label = t(item.labelKey);
-                  const demoLocked =
-                    isDemo() && !(item.demoModule !== undefined && isModuleOpen(item.demoModule));
+              <CollapsibleContent data-instant="">
+                <SidebarMenu className="nav-items flex flex-col gap-0.5">
+                  {group.items.map((item) => {
+                    const isActive = isItemActive(pathname, item.href);
+                    const label = t(item.labelKey);
+                    const demoLocked =
+                      isDemo() && !(item.demoModule !== undefined && isModuleOpen(item.demoModule));
 
-                  const link = demoLocked ? (
-                    <span
-                      aria-disabled="true"
-                      className={`relative flex cursor-not-allowed select-none items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground/45 ${
-                        collapsed ? "justify-center" : ""
-                      }`}
-                    >
-                      <span className="opacity-60">{item.icon}</span>
-                      {!collapsed && (
-                        <>
-                          {/* 静态分析假阳性豁免：该 span 仅在 demoLocked 分支渲染，
-                                彼时整个 link 已由下方 TooltipTrigger render 包裹并弹出
-                                "{label} · demo locked" tooltip（变量引用不构成 ESLint
-                                parent 链，规则无法静态判定）。 */}
+                    return (
+                      <SidebarMenuItem key={item.href}>
+                        <SidebarMenuButton
+                          variant="nav"
+                          isActive={isActive}
+                          data-nav-item=""
+                          render={
+                            demoLocked ? (
+                              <span aria-disabled="true" />
+                            ) : (
+                              <Link
+                                href={item.href}
+                                onClick={() => {
+                                  if (isMobile) setOpenMobile(false);
+                                }}
+                              />
+                            )
+                          }
+                          tooltip={
+                            demoLocked
+                              ? { children: `${label} · ${t("nav.demo_locked")}`, hidden: false }
+                              : label
+                          }
+                          className="h-auto gap-3 rounded-lg px-3 py-2 font-medium"
+                        >
+                          <span className={isActive ? "text-sidebar-primary" : ""}>
+                            {item.icon}
+                          </span>
+                          {/* 静态分析假阳性豁免：truncate 的 tooltip 由 SidebarMenuButton 的
+                              tooltip prop 内部提供（collapsed/locked 时弹出），变量引用不构成
+                              ESLint parent 链，规则无法静态判定。 */}
                           {/* eslint-disable-next-line truncate-requires-tooltip/truncate-requires-tooltip */}
-                          <span className="min-w-0 flex-1 truncate">{label}</span>
-                          <Lock className="size-3.5 shrink-0 opacity-60" />
-                        </>
-                      )}
-                    </span>
-                  ) : (
-                    <Link
-                      href={item.href}
-                      onClick={onNavigate}
-                      data-nav-item=""
-                      data-active={isActive ? "" : undefined}
-                      // The active background is the travelling NavIndicator.
-                      className={`relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150 ${
-                        isActive
-                          ? "text-sidebar-accent-foreground"
-                          : "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
-                      } ${collapsed ? "justify-center" : ""}`}
-                      aria-label={collapsed ? label : undefined}
-                    >
-                      <span className={isActive ? "text-sidebar-primary" : ""}>{item.icon}</span>
-                      {!collapsed && <span>{label}</span>}
-                    </Link>
-                  );
-
-                  return collapsed || demoLocked ? (
-                    <TooltipRoot key={item.href}>
-                      <TooltipTrigger render={link} />
-                      <TooltipContent side="right">
-                        {demoLocked ? `${label} · ${t("nav.demo_locked")}` : label}
-                      </TooltipContent>
-                    </TooltipRoot>
-                  ) : (
-                    <Fragment key={item.href}>{link}</Fragment>
-                  );
-                })}
+                          <span className="min-w-0 truncate">
+                            {label}
+                            {demoLocked && <Lock className="ml-1 inline size-3.5 opacity-60" />}
+                          </span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
               </CollapsibleContent>
             </Collapsible>
           );
@@ -396,14 +399,40 @@ function UserBar({ collapsed = false }: { collapsed?: boolean }) {
   );
 }
 
+/** 移动端顶栏（SidebarTrigger 需要 SidebarProvider context，故独立组件）。 */
+function MobileTopBar() {
+  const { toggleSidebar } = useSidebar();
+  const t = useT();
+
+  return (
+    <header className="flex h-14 items-center gap-3 border-b border-border/70 bg-background/80 px-4 backdrop-blur-md md:hidden">
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        onClick={toggleSidebar}
+        aria-label={t("layout.aris_proxy")}
+        className="text-foreground/60 hover:text-foreground hover:bg-secondary"
+      >
+        <Menu className="size-5" />
+      </Button>
+      <span className="flex items-center gap-2.5">
+        <span className="flex size-6 items-center justify-center rounded-md bg-primary font-display text-xs font-semibold text-primary-foreground shadow-2xs">
+          A
+        </span>
+        <span className="font-display text-lg font-semibold tracking-tight">
+          {t("layout.aris_proxy")}
+        </span>
+      </span>
+    </header>
+  );
+}
+
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const isMobile = useIsMobile();
 
   const isSessionDetail = pathname.startsWith("/sessions/detail");
-
-  const closeMobileSidebar = useCallback(() => setSidebarOpen(false), []);
 
   const t = useT();
 
@@ -445,13 +474,20 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   }, [pathname]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  const toggleCollapsed = useCallback(() => {
-    setCollapsed((prev) => {
-      const next = !prev;
-      localStorage.setItem("sidebar-collapsed", String(next));
-      return next;
-    });
-  }, []);
+  // SidebarProvider 受控：桌面折叠态走 localStorage；session-detail 需要历史侧栏常驻，锁定展开。
+  const handleOpenChange = useCallback(
+    (open: boolean) => {
+      if (isSessionDetail) return;
+      setCollapsed(!open);
+      localStorage.setItem("sidebar-collapsed", String(!open));
+    },
+    [isSessionDetail],
+  );
+
+  const toggleCollapsed = useCallback(
+    () => handleOpenChange(collapsed),
+    [handleOpenChange, collapsed],
+  );
 
   const toggleGroup = useCallback((key: string) => {
     setOpenGroups((prev) => {
@@ -468,15 +504,15 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   return (
     <PermissionGuard allowDemo>
-      <div className="page-surface flex h-screen overflow-hidden bg-background text-foreground">
-        {/* Desktop sidebar */}
-        <aside
-          className={`hidden md:flex flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 ${
-            collapsed ? "w-16" : "w-64"
-          }`}
-        >
-          <div className="flex h-14 items-center justify-between border-b border-sidebar-border/50 px-3">
-            {!collapsed && (
+      <SidebarProvider
+        open={!collapsed}
+        onOpenChange={handleOpenChange}
+        className="page-surface h-screen overflow-hidden bg-background text-foreground"
+      >
+        {/* 桌面固定侧栏；移动端自动降级为 Sheet 抽屉（宽度 w-72） */}
+        <Sidebar collapsible="icon" className="border-sidebar-border">
+          <SidebarHeader className="flex h-14 flex-row items-center justify-between border-b border-sidebar-border/50 px-3">
+            {(!collapsed || isMobile) && (
               <span className="flex items-center gap-2.5">
                 <span className="flex size-7 items-center justify-center rounded-lg bg-sidebar-primary font-display text-sm font-semibold text-sidebar-primary-foreground shadow-2xs">
                   A
@@ -491,6 +527,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               size="icon-sm"
               onClick={toggleCollapsed}
               disabled={isSessionDetail}
+              aria-label={t("layout.aris_proxy")}
               className={
                 collapsed
                   ? "mx-auto text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent"
@@ -499,87 +536,31 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             >
               <Menu className="size-4" />
             </Button>
-          </div>
-          <div className="flex-1 overflow-y-auto py-3">
-            <SidebarNav
-              groups={NAV_GROUPS}
-              openGroups={openGroups}
-              onToggleGroup={toggleGroup}
-              collapsed={collapsed}
-            />
-            {!collapsed && isSessionDetail && (
+          </SidebarHeader>
+          <SidebarContent className="overflow-y-auto! py-3">
+            <SidebarNav groups={NAV_GROUPS} openGroups={openGroups} onToggleGroup={toggleGroup} />
+            {!collapsed && !isMobile && isSessionDetail && (
               <Suspense fallback={null}>
                 <SessionHistorySidebar />
               </Suspense>
             )}
-          </div>
-          <Separator className="bg-sidebar-border/50" />
-          <div className="p-2">
+          </SidebarContent>
+          <SidebarSeparator className="mx-0 bg-sidebar-border/50" />
+          <SidebarFooter>
             <UserBar collapsed={collapsed} />
+          </SidebarFooter>
+        </Sidebar>
+
+        {/* Main content */}
+        <SidebarInset className="overflow-hidden">
+          <MobileTopBar />
+          <div className="flex-1 overflow-y-auto p-4 md:p-8 lg:p-10">
+            <LocaleFade>
+              <div className="mx-auto max-w-6xl">{children}</div>
+            </LocaleFade>
           </div>
-        </aside>
-
-        {/* Mobile sidebar via Sheet */}
-        <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-          {/* Main content */}
-          <div className="flex flex-1 flex-col overflow-hidden">
-            {/* Mobile top bar */}
-            <header className="flex h-14 items-center gap-3 border-b border-border/70 bg-background/80 px-4 backdrop-blur-md md:hidden">
-              <SheetTrigger
-                render={
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    className="text-foreground/60 hover:text-foreground hover:bg-secondary"
-                  />
-                }
-              >
-                <Menu className="size-5" />
-              </SheetTrigger>
-              <span className="flex items-center gap-2.5">
-                <span className="flex size-6 items-center justify-center rounded-md bg-primary font-display text-xs font-semibold text-primary-foreground shadow-2xs">
-                  A
-                </span>
-                <span className="font-display text-lg font-semibold tracking-tight">
-                  {t("layout.aris_proxy")}
-                </span>
-              </span>
-            </header>
-
-            <main className="flex-1 overflow-y-auto p-4 md:p-8 lg:p-10">
-              <LocaleFade>
-                <div className="mx-auto max-w-6xl">{children}</div>
-              </LocaleFade>
-            </main>
-          </div>
-
-          <SheetContent
-            side="left"
-            className="w-72 border-sidebar-border bg-sidebar p-0 text-sidebar-foreground"
-          >
-            <SheetHeader className="border-b border-sidebar-border/50 px-4 py-3">
-              <SheetTitle className="flex items-center gap-2.5 font-display text-xl font-semibold tracking-tight">
-                <span className="flex size-7 items-center justify-center rounded-lg bg-sidebar-primary font-display text-sm font-semibold text-sidebar-primary-foreground shadow-2xs">
-                  A
-                </span>
-                {t("layout.aris_proxy")}
-              </SheetTitle>
-            </SheetHeader>
-            <div className="flex-1 overflow-y-auto py-3">
-              <SidebarNav
-                groups={NAV_GROUPS}
-                openGroups={openGroups}
-                onToggleGroup={toggleGroup}
-                onNavigate={closeMobileSidebar}
-              />
-            </div>
-            <Separator className="bg-sidebar-border/50" />
-            <div className="p-2">
-              <UserBar />
-            </div>
-          </SheetContent>
-        </Sheet>
-      </div>
+        </SidebarInset>
+      </SidebarProvider>
     </PermissionGuard>
   );
 }
