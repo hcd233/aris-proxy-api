@@ -150,3 +150,18 @@ describe("③ 组合修正", () => {
     expect(src).toContain("TooltipContent");
   });
 });
+
+describe("④ filter-bar", () => {
+  const src = () => read("components/filter-bar/filter-bar.tsx");
+
+  it("用 Combobox 承载建议弹层", () => {
+    expect(src()).toContain("<Combobox");
+    expect(src()).toContain("<ComboboxItem");
+  });
+
+  it("不再手写 listbox、点击外部监听与原生按钮", () => {
+    expect(src()).not.toContain('role="option"');
+    expect(src()).not.toContain('addEventListener("mousedown"');
+    expect(src()).not.toMatch(/<button[\s>]/);
+  });
+});

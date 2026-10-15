@@ -1,11 +1,22 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Combobox as ComboboxPrimitive } from "@base-ui/react";
 import { Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
-import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxItem,
+  ComboboxList,
+  useComboboxAnchor,
+} from "@/components/ui/combobox";
 import { Spinner } from "@/components/ui/spinner";
+import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import type { FilterToken } from "./filter-dsl";
 import type { FacetDef } from "./types";
 import type { UseFilterBarReturn } from "./use-filter-bar";
@@ -36,6 +47,20 @@ function matchDraftFacet(input: string, facets: FacetDef[]) {
   return { facet, valueQuery: input.slice(match.index + 1) };
 }
 
+function rowKey(row: SuggestionRow) {
+  if (row.kind === "facet") return `f:${row.facet.key}`;
+  if (row.kind === "value") return `v:${row.facet.key}:${row.value}`;
+  return `kw:${row.text}`;
+}
+
+/**
+ * 筛选条：已选条件以标签形式内联在输入框前，建议弹层由 shadcn Combobox 承载
+ * （弹层 Portal 到 body、键盘高亮与选中、点击外部收起都交给 Base UI）。
+ *
+ * 两步选择：先选 facet（输入变为 `key:`，弹层保持打开展示值建议），再选值生成标签；
+ * 无匹配 facet 的输入作为关键词标签。Combobox 的 value 恒为 null，只把「选中事件」
+ * 当作动作；输入框文本完全受控，只接受用户键入引起的变化。
+ */
 export function FilterBar({
   facets,
   tokens,
@@ -48,11 +73,11 @@ export function FilterBar({
   className,
 }: FilterBarProps) {
   const t = useT();
-  const rootRef = useRef<HTMLDivElement>(null);
+  const anchorRef = useComboboxAnchor();
   const inputRef = useRef<HTMLInputElement>(null);
+  const highlighted = useRef<SuggestionRow | undefined>(undefined);
   const [input, setInput] = useState("");
   const [open, setOpen] = useState(false);
-  const [highlight, setHighlight] = useState(0);
   const [valueOptions, setValueOptions] = useState<string[]>([]);
 
   const draft = matchDraftFacet(input, facets);
@@ -75,15 +100,6 @@ export function FilterBar({
     /* eslint-disable-next-line react-hooks/exhaustive-deps -- 仅 draft facet 切换驱动；loadOptions 引用稳定 */
   }, [draftKey]);
   /* eslint-enable react-hooks/set-state-in-effect */
-
-  // 点击组件外收起建议
-  useEffect(() => {
-    const onDocMouseDown = (e: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", onDocMouseDown);
-    return () => document.removeEventListener("mousedown", onDocMouseDown);
-  }, []);
 
   const { heading, rows } = useMemo((): { heading: string; rows: SuggestionRow[] } => {
     if (draft) {
@@ -109,48 +125,37 @@ export function FilterBar({
     };
   }, [draft, valueOptions, tokens, facets, input, t]);
 
-  const hl = Math.min(highlight, Math.max(rows.length - 1, 0));
+  const loading = loadingKey !== null && !!draft;
 
   const pick = (row: SuggestionRow) => {
     if (row.kind === "facet") {
       setInput(`${row.facet.key}:`);
-      setHighlight(0);
-      inputRef.current?.focus();
-      return;
-    }
-    if (row.kind === "value") {
+    } else if (row.kind === "value") {
       addToken({ key: row.facet.key, value: row.value });
+      setInput("");
     } else {
       addToken({ key: null, value: row.text });
+      setInput("");
     }
-    setInput("");
-    setHighlight(0);
+    setOpen(true);
     inputRef.current?.focus();
   };
 
+  // 方向键 / Enter（选中高亮项）/ Esc 由 Base UI 处理；这里只补筛选条特有的按键
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    if (e.key === "Tab" && open && highlighted.current) {
       e.preventDefault();
-      if (rows.length === 0) return;
-      setOpen(true);
-      setHighlight((hl + (e.key === "ArrowDown" ? 1 : -1) + rows.length) % rows.length);
+      pick(highlighted.current);
       return;
     }
-    if (e.key === "Enter" || e.key === "Tab") {
-      if (open && rows.length > 0) {
-        e.preventDefault();
-        pick(rows[hl]);
-      } else if (input.trim()) {
-        e.preventDefault();
-        pick({ kind: "keyword", text: input.trim() });
-      }
+    if (e.key === "Enter" && rows.length === 0 && input.trim()) {
+      e.preventDefault();
+      pick({ kind: "keyword", text: input.trim() });
       return;
     }
     if (e.key === "Backspace" && !input && tokens.length > 0) {
       removeToken(tokens.length - 1);
-      return;
     }
-    if (e.key === "Escape") setOpen(false);
   };
 
   const tokenLabel = (tk: FilterToken) => {
@@ -163,156 +168,140 @@ export function FilterBar({
     };
   };
 
+  const rowText = (row: SuggestionRow) => {
+    if (row.kind === "facet") return row.facet.label;
+    if (row.kind === "value")
+      return row.facet.formatValue ? row.facet.formatValue(row.value) : row.value;
+    return t("filter_bar.keyword_hint").replace("{text}", row.text);
+  };
+
   return (
-    <div ref={rootRef} className={cn("relative min-w-0 flex-1", className)}>
+    <Combobox<SuggestionRow>
+      items={rows}
+      filter={null}
+      value={null}
+      onValueChange={(row) => {
+        if (row) pick(row);
+      }}
+      inputValue={input}
+      onInputValueChange={(value, details) => {
+        // 选中、失焦等引起的回填/清空一律忽略：输入框只反映用户键入
+        if (details.reason !== "input-change") return;
+        setInput(value);
+        setOpen(true);
+      }}
+      open={open && (rows.length > 0 || loading)}
+      onOpenChange={(next, details) => {
+        // 选中后保持打开：选完 facet 展示值建议，选完值继续展示 facet 便于连续添加条件
+        if (!next && details.reason === "item-press") return;
+        setOpen(next);
+      }}
+      onItemHighlighted={(row) => {
+        highlighted.current = row ?? undefined;
+      }}
+      itemToStringLabel={rowText}
+      autoHighlight
+    >
       <div
-        className="flex min-h-10 cursor-text flex-wrap items-center gap-1.5 rounded-lg border border-input bg-background px-2.5 py-1.5 transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/30"
+        ref={anchorRef}
+        className={cn(
+          "flex min-h-10 min-w-0 flex-1 cursor-text flex-wrap items-center gap-1.5 rounded-lg border border-input bg-background px-2.5 py-1.5 transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/30",
+          className,
+        )}
         onClick={() => inputRef.current?.focus()}
       >
         <Search className="size-4 shrink-0 text-muted-foreground" />
         {tokens.map((tk, i) => {
           const label = tokenLabel(tk);
           return (
-            <span
+            <Badge
               key={`${tk.key ?? "kw"}:${tk.value}:${i}`}
-              className={cn(
-                "inline-flex h-7 items-center rounded-md border text-xs",
-                label.free
-                  ? "border-dashed border-input bg-transparent"
-                  : "border-ring/40 bg-accent/60",
-              )}
+              variant="outline"
+              className={cn("h-7 gap-1 pr-0.5", label.free && "border-dashed")}
             >
-              <span className="pl-2 pr-1 text-muted-foreground">{label.k}</span>
+              <span className="text-muted-foreground">{label.k}</span>
               <TooltipRoot>
-                <TooltipTrigger
-                  render={<span className="max-w-40 truncate pr-1 font-medium">{label.v}</span>}
-                />
+                <TooltipTrigger render={<span className="max-w-40 truncate">{label.v}</span>} />
                 <TooltipContent side="top" className="max-w-xs break-all">
                   {label.v}
                 </TooltipContent>
               </TooltipRoot>
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon-xs"
                 aria-label={t("filter_bar.remove_token")}
-                className="mr-0.5 rounded p-0.5 text-muted-foreground transition-colors hover:bg-accent hover:text-destructive"
+                className="rounded-full"
                 onClick={(e) => {
                   e.stopPropagation();
                   removeToken(i);
                 }}
               >
-                <X className="size-3" />
-              </button>
-            </span>
+                <X />
+              </Button>
+            </Badge>
           );
         })}
-        <input
+        <ComboboxPrimitive.Input
           ref={inputRef}
-          value={input}
           placeholder={tokens.length === 0 ? placeholder : undefined}
           autoComplete="off"
           spellCheck={false}
           className="min-w-32 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
-          onChange={(e) => {
-            setInput(e.target.value);
-            setHighlight(0);
-            setOpen(true);
-          }}
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
         />
         {tokens.length > 0 && (
-          <button
+          <Button
             type="button"
-            aria-label={t("filter_bar.clear_all")}
-            className="inline-flex h-6 shrink-0 items-center gap-1 rounded-md px-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-destructive"
+            variant="ghost"
+            size="xs"
+            className="min-w-0"
             onClick={(e) => {
               e.stopPropagation();
               clearTokens();
               setInput("");
             }}
           >
-            <X className="size-3" />
+            <X data-icon="inline-start" />
             {t("filter_bar.clear_all")}
-          </button>
+          </Button>
         )}
       </div>
-
-      {open && (rows.length > 0 || loadingKey !== null) && (
-        <div className="absolute left-0 top-full z-50 mt-1.5 w-72 max-w-[calc(100vw-3rem)] rounded-lg border bg-popover p-1 text-sm shadow-md">
-          <div className="px-2 pb-1 pt-1.5 text-[0.65rem] font-medium uppercase tracking-wider text-muted-foreground">
-            {loadingKey !== null && draft ? t("filter_bar.loading_options") : heading}
-          </div>
-          {loadingKey !== null && draft ? (
-            <div className="flex items-center gap-2 px-2 py-2 text-xs text-muted-foreground">
-              <Spinner />
-              {t("filter_bar.loading_options")}
-            </div>
-          ) : rows.length === 0 ? (
-            <div className="px-2 py-2 text-xs text-muted-foreground">
-              {t("filter_bar.no_options")}
-            </div>
-          ) : (
-            rows.map((row, i) => (
-              <button
-                key={
-                  row.kind === "facet"
-                    ? `f:${row.facet.key}`
-                    : row.kind === "value"
-                      ? `v:${row.facet.key}:${row.value}`
-                      : `kw:${row.text}`
-                }
-                type="button"
-                role="option"
-                aria-selected={i === hl}
-                className={cn(
-                  "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left hover:bg-accent",
-                  i === hl && "bg-accent",
-                )}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  pick(row);
-                }}
-                onMouseEnter={() => setHighlight(i)}
-              >
-                {row.kind === "facet" && (
-                  <>
-                    <span className="font-medium">{row.facet.label}</span>
-                    <span className="text-xs text-muted-foreground">{row.facet.key}:</span>
-                  </>
-                )}
-                {row.kind === "value" && (
-                  <TooltipRoot>
-                    <TooltipTrigger
-                      render={
-                        <span className="truncate">
-                          {row.facet.formatValue ? row.facet.formatValue(row.value) : row.value}
-                        </span>
-                      }
-                    />
-                    <TooltipContent side="top" className="max-w-xs break-all">
-                      {row.facet.formatValue ? row.facet.formatValue(row.value) : row.value}
-                    </TooltipContent>
-                  </TooltipRoot>
-                )}
-                {row.kind === "keyword" && (
-                  <TooltipRoot>
-                    <TooltipTrigger
-                      render={
-                        <span className="truncate">
-                          {t("filter_bar.keyword_hint").replace("{text}", row.text)}
-                        </span>
-                      }
-                    />
-                    <TooltipContent side="top" className="max-w-xs break-all">
-                      {t("filter_bar.keyword_hint").replace("{text}", row.text)}
-                    </TooltipContent>
-                  </TooltipRoot>
-                )}
-              </button>
-            ))
-          )}
+      <ComboboxContent anchor={anchorRef} className="w-72 data-[chips=true]:min-w-0">
+        <div className="px-2 pt-2 pb-1 text-xs text-muted-foreground">
+          {loading ? t("filter_bar.loading_options") : heading}
         </div>
-      )}
-    </div>
+        {loading ? (
+          <div className="flex items-center gap-2 px-2 pb-2 text-xs text-muted-foreground">
+            <Spinner />
+            {t("filter_bar.loading_options")}
+          </div>
+        ) : (
+          <>
+            <ComboboxEmpty>{t("filter_bar.no_options")}</ComboboxEmpty>
+            <ComboboxList>
+              {(row: SuggestionRow) => (
+                <ComboboxItem key={rowKey(row)} value={row}>
+                  {row.kind === "facet" ? (
+                    <>
+                      <span className="font-medium">{row.facet.label}</span>
+                      <span className="text-xs text-muted-foreground">{row.facet.key}:</span>
+                    </>
+                  ) : (
+                    <TooltipRoot>
+                      <TooltipTrigger render={<span className="truncate">{rowText(row)}</span>} />
+                      <TooltipContent side="top" className="max-w-xs break-all">
+                        {rowText(row)}
+                      </TooltipContent>
+                    </TooltipRoot>
+                  )}
+                </ComboboxItem>
+              )}
+            </ComboboxList>
+          </>
+        )}
+      </ComboboxContent>
+    </Combobox>
   );
 }
