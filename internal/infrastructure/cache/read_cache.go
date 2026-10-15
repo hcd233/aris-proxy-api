@@ -40,7 +40,7 @@ func NewReadCache(client *redis.Client) *ReadCache {
 	return &ReadCache{client: client}
 }
 
-// GetOrLoad 读缓存主入口
+// GetOrLoad 读缓存主入口（默认 TTL：constant.ReadCacheTTL ± ReadCacheTTLJitter）
 //
 // 命中缓存直接返回；未命中经 singleflight 回源后写回。
 // loader 返回 mo.None 表示「查无此物」，写入空值标记（短 TTL）防缓存穿透，
@@ -55,6 +55,26 @@ func NewReadCache(client *redis.Client) *ReadCache {
 //	@author centonhuang
 //	@update 2026-10-10 10:00:00
 func GetOrLoad[T any](ctx context.Context, c *ReadCache, key string, loader func(context.Context) (mo.Option[T], error)) (mo.Option[T], error) {
+	return GetOrLoadWithTTL(ctx, c, key, constant.ReadCacheTTL, constant.ReadCacheTTLJitter, loader)
+}
+
+// GetOrLoadWithTTL 读缓存主入口（调用方自定义 TTL）
+//
+// 与 GetOrLoad 相同的穿透/雪崩/击穿防护，但条目 TTL 由调用方指定
+// （如 keyword 命中集需要 60s±10s 的新鲜度）。jitter 语义同 ReadCacheTTLJitter；
+// 空值标记（防穿透）仍用固定短 TTL，不受调用方 ttl 影响。
+//
+//	@param ctx context.Context
+//	@param c *ReadCache 为 nil 时退化为直接回源（无缓存装配）
+//	@param key string 缓存键（constant.ReadCache*KeyTemplate）
+//	@param ttl time.Duration 条目基准 TTL
+//	@param jitter time.Duration TTL 随机抖动上限（<=0 表示不抖动）
+//	@param loader func(context.Context) (mo.Option[T], error) 回源加载器，空结果返回 mo.None
+//	@return mo.Option[T]
+//	@return error
+//	@author centonhuang
+//	@update 2026-10-15 16:00:00
+func GetOrLoadWithTTL[T any](ctx context.Context, c *ReadCache, key string, ttl, jitter time.Duration, loader func(context.Context) (mo.Option[T], error)) (mo.Option[T], error) {
 	if c == nil || c.client == nil {
 		return loader(ctx)
 	}
@@ -76,7 +96,7 @@ func GetOrLoad[T any](ctx context.Context, c *ReadCache, key string, loader func
 		if loadErr != nil {
 			return mo.None[T](), loadErr
 		}
-		if payload, ttl, encodeErr := encodeCached(value); encodeErr != nil {
+		if payload, ttl, encodeErr := encodeCachedWithTTL(value, ttl, jitter); encodeErr != nil {
 			logger.WithCtx(loadCtx).Warn("[ReadCache] Encode cache payload failed", zap.Error(encodeErr))
 		} else {
 			c.set(loadCtx, key, payload, ttl)
@@ -147,11 +167,11 @@ func (c *ReadCache) set(ctx context.Context, key, payload string, ttl time.Durat
 	}
 }
 
-// encodeCached 编码缓存载荷
+// encodeCachedWithTTL 编码缓存载荷（调用方自定义 TTL）
 //
-// mo.None 编码为空值标记（短 TTL，防穿透）；mo.Some 编码为 JSON 载荷，
-// TTL 叠加随机抖动（防雪崩）。
-func encodeCached[T any](value mo.Option[T]) (string, time.Duration, error) {
+// mo.None 编码为空值标记（固定短 TTL，防穿透——不受调用方 ttl 影响）；
+// mo.Some 编码为 JSON 载荷，TTL 叠加随机抖动（防雪崩）。
+func encodeCachedWithTTL[T any](value mo.Option[T], ttl, jitter time.Duration) (string, time.Duration, error) {
 	v, ok := value.Get()
 	if !ok {
 		return constant.ReadCacheEmptyValue, jitteredTTL(constant.ReadCacheEmptyTTL, constant.ReadCacheEmptyTTLJitter), nil
@@ -160,7 +180,7 @@ func encodeCached[T any](value mo.Option[T]) (string, time.Duration, error) {
 	if err != nil {
 		return "", 0, err
 	}
-	return payload, jitteredTTL(constant.ReadCacheTTL, constant.ReadCacheTTLJitter), nil
+	return payload, jitteredTTL(ttl, jitter), nil
 }
 
 // jitteredTTL 返回叠加随机抖动的 TTL，打散同批条目的过期时刻（防缓存雪崩）

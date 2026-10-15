@@ -17,6 +17,13 @@ const (
 	ReadCacheEmptyTTL = 30 * time.Second
 	// ReadCacheEmptyTTLJitter 空结果标记 TTL 随机抖动上限
 	ReadCacheEmptyTTLJitter = 10 * time.Second
+	// ReadCacheKeywordIDsTTL 读缓存-关键词命中用户消息 ID 集合基准 TTL
+	//
+	// 搜索结果新鲜度敏感（新消息应在分钟级可被搜到），显著短于目录类缓存的 5min；
+	// 实际写入值 = 基准 TTL + [0, ReadCacheKeywordIDsTTLJitter) 随机抖动。
+	ReadCacheKeywordIDsTTL = 60 * time.Second
+	// ReadCacheKeywordIDsTTLJitter 读缓存-关键词命中 ID 集合 TTL 随机抖动上限
+	ReadCacheKeywordIDsTTLJitter = 10 * time.Second
 	// ReadCacheEmptyValue 空结果标记载荷
 	//
 	// 以 \x00 开头，与任何 sonic JSON 载荷（对象/数组/标量均以可打印字符开头）不冲突，

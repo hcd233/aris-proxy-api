@@ -285,3 +285,43 @@ func TestReadCache_NilCacheBypasses(t *testing.T) {
 		t.Fatalf("loader called %d times, want 1", loads.Load())
 	}
 }
+
+// TestGetOrLoadWithTTL_UsesCallerTTL 验证 per-call TTL 生效：
+// 自定义 TTL 显著小于默认 5min，miniredis 快进后条目必须已过期回源。
+//
+//	@author centonhuang
+//	@update 2026-10-15 16:00:00
+func TestGetOrLoadWithTTL_UsesCallerTTL(t *testing.T) {
+	t.Parallel()
+	mr, rc := newReadCache(t)
+	const key = "cache:rd:kwids:caller-ttl-test"
+
+	var loads atomic.Int64
+	loader := func(_ context.Context) (mo.Option[[]uint], error) {
+		loads.Add(1)
+		return mo.Some([]uint{1, 2, 3}), nil
+	}
+
+	first, err := cache.GetOrLoadWithTTL(t.Context(), rc, key, 30*time.Second, 0, loader)
+	if err != nil {
+		t.Fatalf("first GetOrLoadWithTTL: %v", err)
+	}
+	if got := first.OrEmpty(); len(got) != 3 {
+		t.Fatalf("first GetOrLoadWithTTL = %v, want [1 2 3]", got)
+	}
+	if _, err := cache.GetOrLoadWithTTL(t.Context(), rc, key, 30*time.Second, 0, loader); err != nil {
+		t.Fatalf("second GetOrLoadWithTTL: %v", err)
+	}
+	if loads.Load() != 1 {
+		t.Fatalf("loader called %d times, want 1 (cache hit must skip loader)", loads.Load())
+	}
+
+	mr.FastForward(31 * time.Second) // 快进超过自定义 TTL（默认 TTL 是 5min，不会提前过期）
+
+	if _, err := cache.GetOrLoadWithTTL(t.Context(), rc, key, 30*time.Second, 0, loader); err != nil {
+		t.Fatalf("third GetOrLoadWithTTL: %v", err)
+	}
+	if loads.Load() != 2 {
+		t.Fatalf("entry must expire at caller TTL (30s), loader called %d times, want 2", loads.Load())
+	}
+}
