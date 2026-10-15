@@ -5,7 +5,7 @@ import { Search } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { useInfiniteList } from "@/hooks/use-infinite-list";
 import type { SessionSummary } from "@/lib/types";
-import { Input } from "@/components/ui/input";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Item, ItemContent, ItemDescription, ItemGroup, ItemTitle } from "@/components/ui/item";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -85,16 +85,16 @@ export function SessionHistoryList({ activeSessionId, onSelect }: SessionHistory
   return (
     <div className="flex h-full flex-col">
       <div className="shrink-0 px-3 pb-3 pt-2">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="text"
+        <InputGroup className="h-9 bg-background">
+          <InputGroupAddon>
+            <Search />
+          </InputGroupAddon>
+          <InputGroupInput
             placeholder={t("session_detail.search_history")}
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
-            className="h-9 bg-background pl-9 text-sm"
           />
-        </div>
+        </InputGroup>
       </div>
       <ScrollArea className="min-h-0 flex-1">
         <div className="px-2 pb-4">
