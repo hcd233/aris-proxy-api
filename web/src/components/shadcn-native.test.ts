@@ -181,3 +181,36 @@ describe("⑤ Drawer", () => {
     expect(src).not.toContain("SwipeDismissSheetBody");
   });
 });
+
+describe("⑥ 聊天区", () => {
+  expectGenerated(["message", "bubble", "attachment", "marker", "message-scroller"]);
+
+  it.each([
+    "components/chat/user-message.tsx",
+    "components/chat/assistant-message.tsx",
+    "components/playground/chat-turn.tsx",
+  ])("%s 用 Message + Bubble", (p) => {
+    expect(read(p)).toMatch(/<Message[\s>]/);
+    expect(read(p)).toMatch(/<Bubble[\s>]/);
+  });
+
+  it("系统消息头用 Marker", () => {
+    expect(read("components/chat/system-message.tsx")).toMatch(/<Marker[\s>]/);
+  });
+
+  it("多模态附件用 Attachment", () => {
+    expect(read("components/chat/multimodal-parts.tsx")).toMatch(/<Attachment[\s>]/);
+  });
+
+  it("playground 对话区用 MessageScroller", () => {
+    const src = read("components/playground/conversation-view.tsx");
+    expect(src).toContain("<MessageScrollerProvider");
+    expect(src).not.toContain("scrollTop");
+  });
+
+  it("chat-turn 保留流式签名动效钩子", () => {
+    const src = read("components/playground/chat-turn.tsx");
+    expect(src).toContain("stream-body");
+    expect(src).toContain("data-streaming");
+  });
+});

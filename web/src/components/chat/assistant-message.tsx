@@ -2,9 +2,16 @@ import { Sparkles, ShieldAlert } from "lucide-react";
 import type { MessageItem, UnifiedToolCall } from "@/lib/types";
 import { ProviderIcon } from "@/components/provider-icon";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Bubble, BubbleContent } from "@/components/ui/bubble";
 import { CopyButton } from "@/components/ui/copy-button";
+import {
+  Message,
+  MessageAvatar,
+  MessageContent,
+  MessageFooter,
+  MessageHeader,
+} from "@/components/ui/message";
 import { useT } from "@/lib/i18n";
-import { cn } from "@/lib/utils";
 import { extractContent, lookupToolResult, type ToolResultInfo } from "./content-extract";
 import { MultimodalParts } from "./multimodal-parts";
 import { ReasoningBlock } from "./reasoning-block";
@@ -48,45 +55,40 @@ export function AssistantMessage({ message, index, toolResultsByID }: AssistantM
   const style = { animationDelay: `${Math.min(index, 12) * 40}ms` };
 
   return (
-    <div
+    <Message
       style={style}
-      className="group/msg animate-in fade-in slide-in-from-bottom-1 flex gap-3 duration-300"
+      className="group/msg animate-in fade-in slide-in-from-bottom-1 duration-300"
     >
-      <div className="flex flex-col items-center gap-1 pt-0.5">
-        <div
-          className={cn(
-            "flex size-7 shrink-0 items-center justify-center rounded-full",
-            isAssistant ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground",
-          )}
-        >
-          {isAssistant ? (
-            modelId ? (
-              (modelIcon(modelId) ?? <Sparkles className="size-3.5" />)
-            ) : (
-              <Sparkles className="size-3.5" />
-            )
+      <MessageAvatar className="size-8">
+        {isAssistant ? (
+          modelId ? (
+            (modelIcon(modelId) ?? <Sparkles className="size-4" />)
           ) : (
-            <ShieldAlert className="size-3.5" />
-          )}
-        </div>
-        {time && <span className="text-[9px] leading-none text-muted-foreground/60">{time}</span>}
-      </div>
+            <Sparkles className="size-4" />
+          )
+        ) : (
+          <ShieldAlert className="size-4" />
+        )}
+      </MessageAvatar>
 
-      <div className="min-w-0 flex-1">
+      <MessageContent>
+        {time && <MessageHeader className="px-0">{time}</MessageHeader>}
         {reasoning_content && <ReasoningBlock text={reasoning_content} />}
 
-        <div className="text-[15px] leading-[1.6] text-foreground">
-          {parts.length > 0 && <MultimodalParts parts={parts} />}
-          {text && <MarkdownLite text={text} />}
-          {!text && parts.length === 0 && !tool_calls?.length && !refusal && (
-            <span className="text-muted-foreground/60">—</span>
-          )}
-        </div>
+        <Bubble variant="ghost">
+          <BubbleContent>
+            {parts.length > 0 && <MultimodalParts parts={parts} />}
+            {text && <MarkdownLite text={text} />}
+            {!text && parts.length === 0 && !tool_calls?.length && !refusal && (
+              <span className="text-muted-foreground">—</span>
+            )}
+          </BubbleContent>
+        </Bubble>
 
         {text && (
-          <div className="-ml-1.5 mt-0.5 opacity-0 transition-opacity group-hover/msg:opacity-100">
+          <MessageFooter className="px-0 opacity-0 transition-opacity group-hover/msg:opacity-100">
             <CopyButton value={text} variant="icon" ariaLabel={t("chat_message.copy_aria")} />
-          </div>
+          </MessageFooter>
         )}
 
         {refusal && <PartRefusal text={refusal} />}
@@ -102,7 +104,7 @@ export function AssistantMessage({ message, index, toolResultsByID }: AssistantM
             ))}
           </div>
         )}
-      </div>
-    </div>
+      </MessageContent>
+    </Message>
   );
 }

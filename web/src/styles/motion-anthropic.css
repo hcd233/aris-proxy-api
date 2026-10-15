@@ -458,6 +458,11 @@
     border-color 220ms var(--ease-ink);
 }
 
+/* ---- Bubble: interactive bubbles (button / link content) ink in on hover. ---- */
+[data-theme="anthropic"] [data-slot="bubble-content"] {
+  transition: background-color 220ms var(--ease-ink);
+}
+
 /* ---- Alert「落纸」: a notice is set down on the page, then the ink dries. ---- */
 [data-theme="anthropic"] [data-slot="alert"] {
   animation: atelier-settle 420ms var(--ease-settle) backwards;

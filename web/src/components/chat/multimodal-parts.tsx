@@ -1,5 +1,14 @@
 import { FileText, Music2, ShieldAlert } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Attachment,
+  AttachmentContent,
+  AttachmentDescription,
+  AttachmentMedia,
+  AttachmentTitle,
+  AttachmentTrigger,
+} from "@/components/ui/attachment";
+import { useT } from "@/lib/i18n";
 import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import type { ContentPart } from "./content-extract";
 import { imageURLOf } from "./content-extract";
@@ -8,13 +17,27 @@ function isSafeUrl(url: string): boolean {
   return url.startsWith("http://") || url.startsWith("https://");
 }
 
+/** 图片附件：缩略图卡片，点击在新标签页打开原图（仅 http/https）。 */
 function PartImage({ url }: { url: string }) {
+  const t = useT();
   if (!isSafeUrl(url)) return null;
   return (
-    <div className="my-2 inline-block max-w-sm overflow-hidden rounded-lg border border-border/60 bg-muted/40">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={url} alt="" className="block h-auto max-h-80 w-full object-contain" />
-    </div>
+    <Attachment orientation="vertical">
+      <AttachmentMedia variant="image">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={url} alt="" />
+      </AttachmentMedia>
+      <AttachmentTrigger
+        render={
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={t("chat.open_image")}
+          />
+        }
+      />
+    </Attachment>
   );
 }
 
@@ -28,31 +51,25 @@ function PartIconCard({
   meta?: string;
 }) {
   return (
-    <div className="my-2 inline-flex items-center gap-2.5 rounded-lg border border-border/60 bg-muted/40 px-3 py-2">
-      <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-background text-muted-foreground">
-        {icon}
-      </div>
-      <div className="min-w-0">
+    <Attachment>
+      <AttachmentMedia>{icon}</AttachmentMedia>
+      <AttachmentContent>
         <TooltipRoot>
-          <TooltipTrigger
-            render={<p className="truncate text-sm font-medium text-foreground">{label}</p>}
-          />
+          <TooltipTrigger render={<AttachmentTitle>{label}</AttachmentTitle>} />
           <TooltipContent side="top" className="max-w-xs break-all">
             {label}
           </TooltipContent>
         </TooltipRoot>
         {meta && (
           <TooltipRoot>
-            <TooltipTrigger
-              render={<p className="truncate text-[11px] text-muted-foreground">{meta}</p>}
-            />
+            <TooltipTrigger render={<AttachmentDescription>{meta}</AttachmentDescription>} />
             <TooltipContent side="top" className="max-w-xs break-all">
               {meta}
             </TooltipContent>
           </TooltipRoot>
         )}
-      </div>
-    </div>
+      </AttachmentContent>
+    </Attachment>
   );
 }
 

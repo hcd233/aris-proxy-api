@@ -581,6 +581,11 @@ html[data-theme="moonshot"][data-motion-tier="lite"] {
     border-color 260ms var(--ease-drift);
 }
 
+/* ---- Bubble: interactive bubbles glow up on the drift curve. ---- */
+[data-theme="moonshot"] [data-slot="bubble-content"] {
+  transition: background-color 260ms var(--ease-drift);
+}
+
 /* ---- Alert「信号显影」: the notice comes into focus out of the dark. ---- */
 [data-theme="moonshot"] [data-slot="alert"] {
   animation: lunar-focus-in 600ms var(--ease-drift) backwards;

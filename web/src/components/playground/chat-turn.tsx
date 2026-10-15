@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Alert, AlertAction, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Bubble, BubbleContent } from "@/components/ui/bubble";
+import { Message, MessageContent, MessageFooter, MessageHeader } from "@/components/ui/message";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { MarkdownLite } from "@/components/chat/markdown-lite";
@@ -229,126 +231,134 @@ export function ChatTurn({
   );
 
   return (
-    <div
+    <Message
+      align={isUser ? "end" : "start"}
       style={{ animationDelay: `${Math.min(index, 12) * 40}ms` }}
-      className={cn(
-        "group/turn turn-enter",
-        isUser ? "flex flex-col items-end gap-1" : "flex flex-col gap-1.5",
-      )}
+      className="group/turn turn-enter"
     >
-      {/* 角色标识：assistant 显示模型 icon + 模型名；system 显示角色标签 */}
-      {isAssistant && (
-        <div className="flex items-center gap-1.5 text-[13px] font-medium text-foreground/80">
-          {meta?.model ? (
-            <ProviderIcon protocol={meta.model} size={15} />
-          ) : (
-            <Sparkles className="size-3.5 text-muted-foreground" />
-          )}
-          <span>{meta?.model ?? message.role}</span>
-        </div>
-      )}
-      {!isAssistant && !isUser && (
-        <Badge variant="secondary" className="font-mono">
-          {message.role}
-        </Badge>
-      )}
-
-      {editing ? (
-        editBox
-      ) : isUser ? (
-        <div className="w-fit max-w-[85%] rounded-[20px] rounded-br-[8px] bg-accent px-4 py-2.5 text-[15px] leading-[1.6] break-words whitespace-pre-wrap">
-          {message.content}
-        </div>
-      ) : isAssistant ? (
-        <>
-          {reasoning && <ThinkingBlock text={reasoning} streaming={sending} />}
-          <div
-            ref={bodyRef}
-            className="stream-body text-[15px] leading-[1.7]"
-            data-streaming={streaming ? "" : undefined}
-          >
-            {message.content ? (
-              <MarkdownLite text={message.content} />
-            ) : showPending ? (
-              <PendingDots />
+      <MessageContent>
+        {/* 角色标识：assistant 显示模型 icon + 模型名；system 显示角色标签 */}
+        {isAssistant && (
+          <MessageHeader className="gap-1.5 px-0">
+            {meta?.model ? (
+              <ProviderIcon protocol={meta.model} size={15} />
             ) : (
-              <span className="text-muted-foreground/60">—</span>
+              <Sparkles className="size-3.5" />
             )}
-          </div>
-        </>
-      ) : (
-        <div className="w-full rounded-xl border border-dashed border-border bg-muted/30 px-3 py-2 text-[13.5px] leading-[1.6] break-words whitespace-pre-wrap text-muted-foreground">
-          {message.content || <span className="text-muted-foreground/60">—</span>}
-        </div>
-      )}
+            <span>{meta?.model ?? message.role}</span>
+          </MessageHeader>
+        )}
+        {!isAssistant && !isUser && (
+          <Badge variant="secondary" className="font-mono">
+            {message.role}
+          </Badge>
+        )}
 
-      {/* 错误卡 */}
-      {meta?.error && (
-        <Alert variant="destructive">
-          <AlertTriangle />
-          <AlertDescription className="break-words">
-            {meta.error.status ? `${meta.error.status} · ` : ""}
-            {meta.error.message}
-          </AlertDescription>
-          <AlertAction>
-            <Button type="button" size="sm" variant="outline" onClick={() => onRetry(index)}>
-              <RefreshCw data-icon="inline-start" />
-              {t("playground.error.retry")}
-            </Button>
-          </AlertAction>
-        </Alert>
-      )}
-
-      {/* 页脚：指标（可展开详情）+ hover 操作条 */}
-      {!editing && (
-        <div className={cn("flex min-h-7 items-center gap-2", isUser && "justify-end")}>
-          {isAssistant && meta && (
-            <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen}>
-              <CollapsibleTrigger className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground">
-                <ChevronRight className="size-3 in-data-panel-open:rotate-90" />
-                <span>
-                  {usage ? `${usage.promptTokens + usage.completionTokens} tok` : "—"} ·{" "}
-                  {formatDuration(meta.totalMs)} · {formatCost(meta.cost)}
-                  {meta.interrupted ? ` · ${t("playground.metrics.interrupted")}` : ""}
-                </span>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <div className="mt-1.5 rounded-xl border bg-background p-2.5 text-[11px] text-muted-foreground">
-                  <div>
-                    {t("playground.metrics.tokens_in")}{" "}
-                    <strong>{usage?.promptTokens ?? "—"}</strong>
-                    {" · "}
-                    {t("playground.metrics.tokens_cached")}{" "}
-                    <strong>{usage?.cachedTokens ?? "—"}</strong>
-                    {" · "}
-                    {t("playground.metrics.tokens_out")}{" "}
-                    <strong>{usage?.completionTokens ?? "—"}</strong>
-                  </div>
-                  <div>
-                    {t("playground.metrics.first_token")}{" "}
-                    <strong>{formatDuration(meta.firstTokenMs)}</strong>
-                    {" · "}
-                    {t("playground.metrics.total_time")}{" "}
-                    <strong>{formatDuration(meta.totalMs)}</strong>
-                  </div>
-                  <div className="mt-1">{t("playground.metrics.estimate_hint")}</div>
-                  <div className="mt-1.5 flex flex-wrap gap-1.5">
-                    <DetailCopyButton
-                      label={t("playground.metrics.request_json")}
-                      value={JSON.stringify(meta.requestSnapshot ?? {}, null, 2)}
-                    />
-                    <DetailCopyButton
-                      label={t("playground.metrics.copy_curl")}
-                      value={buildCurl(meta.requestSnapshot ?? {}, window.location.origin)}
-                    />
-                  </div>
+        {editing ? (
+          editBox
+        ) : isUser ? (
+          <Bubble variant="secondary" align="end">
+            <BubbleContent className="whitespace-pre-wrap">{message.content}</BubbleContent>
+          </Bubble>
+        ) : isAssistant ? (
+          <>
+            {reasoning && <ThinkingBlock text={reasoning} streaming={sending} />}
+            <Bubble variant="ghost">
+              <BubbleContent>
+                {/* stream-body + data-streaming/data-settling：motion-signature.css 的流式签名动效
+                  按「.stream-body > div（MarkdownLite 根）」命中，这一层结构不能省 */}
+                <div
+                  ref={bodyRef}
+                  className="stream-body"
+                  data-streaming={streaming ? "" : undefined}
+                >
+                  {message.content ? (
+                    <MarkdownLite text={message.content} />
+                  ) : showPending ? (
+                    <PendingDots />
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
                 </div>
-              </CollapsibleContent>
-            </Collapsible>
-          )}
-          {actions && <div className={cn(isAssistant && "ml-auto")}>{actions}</div>}
-        </div>
-      )}
-    </div>
+              </BubbleContent>
+            </Bubble>
+          </>
+        ) : (
+          <Bubble variant="outline" className="max-w-full">
+            <BubbleContent className="whitespace-pre-wrap">
+              {message.content || <span className="text-muted-foreground">—</span>}
+            </BubbleContent>
+          </Bubble>
+        )}
+
+        {/* 错误卡 */}
+        {meta?.error && (
+          <Alert variant="destructive">
+            <AlertTriangle />
+            <AlertDescription className="break-words">
+              {meta.error.status ? `${meta.error.status} · ` : ""}
+              {meta.error.message}
+            </AlertDescription>
+            <AlertAction>
+              <Button type="button" size="sm" variant="outline" onClick={() => onRetry(index)}>
+                <RefreshCw data-icon="inline-start" />
+                {t("playground.error.retry")}
+              </Button>
+            </AlertAction>
+          </Alert>
+        )}
+
+        {/* 页脚：指标（可展开详情）+ hover 操作条 */}
+        {!editing && (
+          <MessageFooter className="min-h-7 gap-2 px-0">
+            {isAssistant && meta && (
+              <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen}>
+                <CollapsibleTrigger className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground">
+                  <ChevronRight className="size-3 in-data-panel-open:rotate-90" />
+                  <span>
+                    {usage ? `${usage.promptTokens + usage.completionTokens} tok` : "—"} ·{" "}
+                    {formatDuration(meta.totalMs)} · {formatCost(meta.cost)}
+                    {meta.interrupted ? ` · ${t("playground.metrics.interrupted")}` : ""}
+                  </span>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="mt-1.5 rounded-xl border bg-background p-2.5 text-[11px] text-muted-foreground">
+                    <div>
+                      {t("playground.metrics.tokens_in")}{" "}
+                      <strong>{usage?.promptTokens ?? "—"}</strong>
+                      {" · "}
+                      {t("playground.metrics.tokens_cached")}{" "}
+                      <strong>{usage?.cachedTokens ?? "—"}</strong>
+                      {" · "}
+                      {t("playground.metrics.tokens_out")}{" "}
+                      <strong>{usage?.completionTokens ?? "—"}</strong>
+                    </div>
+                    <div>
+                      {t("playground.metrics.first_token")}{" "}
+                      <strong>{formatDuration(meta.firstTokenMs)}</strong>
+                      {" · "}
+                      {t("playground.metrics.total_time")}{" "}
+                      <strong>{formatDuration(meta.totalMs)}</strong>
+                    </div>
+                    <div className="mt-1">{t("playground.metrics.estimate_hint")}</div>
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      <DetailCopyButton
+                        label={t("playground.metrics.request_json")}
+                        value={JSON.stringify(meta.requestSnapshot ?? {}, null, 2)}
+                      />
+                      <DetailCopyButton
+                        label={t("playground.metrics.copy_curl")}
+                        value={buildCurl(meta.requestSnapshot ?? {}, window.location.origin)}
+                      />
+                    </div>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
+            {actions && <div className={cn(isAssistant && "ml-auto")}>{actions}</div>}
+          </MessageFooter>
+        )}
+      </MessageContent>
+    </Message>
   );
 }
