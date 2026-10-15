@@ -6,6 +6,7 @@ import { MessagesSquare, Share2, Wrench } from "lucide-react";
 
 import { api, ApiError } from "@/lib/api-client";
 import type { ShareSessionMetadata, MessageItem, ToolItem } from "@/lib/types";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -295,12 +296,12 @@ function SharedSessionView() {
                   aria-label={t("share.toggle_tools")}
                 >
                   <Wrench className="size-5" />
-                  <span
-                    className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold tabular-nums text-primary-foreground"
+                  <Badge
+                    className="absolute -top-1 -right-1 h-4 min-w-4 px-1 text-[10px] tabular-nums"
                     aria-hidden
                   >
                     {metadata.toolCount}
-                  </span>
+                  </Badge>
                 </Button>
               }
             />

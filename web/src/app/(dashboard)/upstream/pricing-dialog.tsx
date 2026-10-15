@@ -10,7 +10,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Download, Loader2 } from "lucide-react";
+import { Download } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 import { useT } from "@/lib/i18n";
 import { api } from "@/lib/api-client";
 import type { PricingDTO } from "@/lib/types";
@@ -90,9 +91,9 @@ export function PricingDialog({
             onClick={importPricing}
           >
             {importing ? (
-              <Loader2 className="size-4 animate-spin" />
+              <Spinner data-icon="inline-start" />
             ) : (
-              <Download className="size-4" />
+              <Download data-icon="inline-start" />
             )}
             {t("upstream.pricing.fetch")}
           </Button>

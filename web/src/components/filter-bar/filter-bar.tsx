@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Loader2, Search, X } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
 import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { Spinner } from "@/components/ui/spinner";
 import type { FilterToken } from "./filter-dsl";
 import type { FacetDef } from "./types";
 import type { UseFilterBarReturn } from "./use-filter-bar";
@@ -243,7 +244,7 @@ export function FilterBar({
           </div>
           {loadingKey !== null && draft ? (
             <div className="flex items-center gap-2 px-2 py-2 text-xs text-muted-foreground">
-              <Loader2 className="size-3.5 animate-spin" />
+              <Spinner />
               {t("filter_bar.loading_options")}
             </div>
           ) : rows.length === 0 ? (

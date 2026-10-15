@@ -10,7 +10,6 @@ import {
   FileJson,
   Filter,
   Gauge,
-  Loader2,
   RotateCcw,
   SlidersHorizontal,
   ArrowRight,
@@ -32,6 +31,8 @@ import { MultiSelectPill } from "@/components/ui/multi-select-pill";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TimeRangePicker } from "@/components/ui/time-range-picker";
 import { Separator } from "@/components/ui/separator";
+import { Spinner } from "@/components/ui/spinner";
+import { Progress } from "@/components/ui/progress";
 import {
   TooltipProvider,
   TooltipRoot,
@@ -179,12 +180,7 @@ function DistributionList({
                   {formatNumber(item.value)}
                 </span>
               </div>
-              <div className="h-2.5 overflow-hidden rounded-full bg-background">
-                <div
-                  className="h-full rounded-full bg-primary/70 transition-all duration-500"
-                  style={{ width: `${Math.max(6, (item.value / max) * 100)}%` }}
-                />
-              </div>
+              <Progress value={Math.max(6, (item.value / max) * 100)} />
             </div>
           ))
         )}
@@ -636,24 +632,17 @@ export default function DatasetPage() {
                     total: formatNumber(totalSessions),
                   })}
                 </CardDescription>
-                {exporting && (
-                  <div className="h-2.5 overflow-hidden rounded-full bg-muted">
-                    <div
-                      className="h-full rounded-full bg-primary transition-[width] duration-300 ease-out"
-                      style={{ width: `${exportProgress}%` }}
-                    />
-                  </div>
-                )}
+                {exporting && <Progress value={exportProgress} />}
                 <Button
-                  className="h-11 w-full gap-2"
+                  className="h-11 w-full"
                   size="lg"
                   onClick={handleExport}
                   disabled={exporting || loadingPreview || totalSessions === 0}
                 >
                   {exporting ? (
-                    <Loader2 className="size-4 animate-spin" />
+                    <Spinner data-icon="inline-start" />
                   ) : (
-                    <Download className="size-4" />
+                    <Download data-icon="inline-start" />
                   )}
                   {exporting ? t("dataset.exporting") : t("dataset.export")}
                 </Button>

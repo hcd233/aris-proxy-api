@@ -1,6 +1,7 @@
 import { Sparkles, ShieldAlert } from "lucide-react";
 import type { MessageItem, UnifiedToolCall } from "@/lib/types";
 import { ProviderIcon } from "@/components/provider-icon";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CopyButton } from "@/components/ui/copy-button";
 import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -12,10 +13,10 @@ import { MarkdownLite } from "./markdown-lite";
 
 function PartRefusal({ text }: { text: string }) {
   return (
-    <div className="my-2 flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-      <ShieldAlert className="mt-0.5 size-4 shrink-0" />
-      <span className="whitespace-pre-wrap break-words">{text}</span>
-    </div>
+    <Alert variant="destructive" className="my-2">
+      <ShieldAlert />
+      <AlertDescription className="whitespace-pre-wrap break-words">{text}</AlertDescription>
+    </Alert>
   );
 }
 

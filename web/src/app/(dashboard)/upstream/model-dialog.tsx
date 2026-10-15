@@ -26,13 +26,13 @@ import {
   AudioLines,
   Download,
   FileText,
-  Loader2,
   SlidersHorizontal,
   Type,
   Video,
   Image as ImageIcon,
   type LucideIcon,
 } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 import { useT } from "@/lib/i18n";
 import { api } from "@/lib/api-client";
 import type { ModelCapability } from "@/lib/types";
@@ -245,9 +245,9 @@ export function ModelDialog({
               onClick={fetchSpec}
             >
               {fetching ? (
-                <Loader2 className="size-4 animate-spin" />
+                <Spinner data-icon="inline-start" />
               ) : (
-                <Download className="size-4" />
+                <Download data-icon="inline-start" />
               )}
               {t("models.spec_fetch")}
             </Button>

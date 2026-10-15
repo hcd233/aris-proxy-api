@@ -9,7 +9,7 @@ import { useT } from "@/lib/i18n";
  */
 
 import { useCallback, useState } from "react";
-import { CalendarIcon, Check, Copy, Loader2, Share2 } from "lucide-react";
+import { CalendarIcon, Check, Copy, Share2 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
@@ -19,6 +19,7 @@ import type { CreateShareReqBody } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Dialog,
   DialogClose,
@@ -231,15 +232,15 @@ export function ShareDialog({ sessionId, existingShareID, open, onOpenChange }: 
             {t("share_dialog.close")}
           </DialogClose>
           {!shareURL && (
-            <Button type="button" onClick={createShare} disabled={creating} className="gap-1.5">
+            <Button type="button" onClick={createShare} disabled={creating}>
               {creating ? (
                 <>
-                  <Loader2 className="size-3.5 animate-spin" />
+                  <Spinner data-icon="inline-start" />
                   {t("share_dialog.creating")}
                 </>
               ) : (
                 <>
-                  <Share2 className="size-3.5" />
+                  <Share2 data-icon="inline-start" />
                   {t("share_dialog.create_link")}
                 </>
               )}

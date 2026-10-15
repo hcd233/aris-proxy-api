@@ -6,7 +6,10 @@ import { useT } from "@/lib/i18n";
 import { api } from "@/lib/api-client";
 import { parseOAuthCallbackParams, resolveOAuthPlatform } from "@/lib/oauth";
 import type { OAuth2Provider } from "@/lib/types";
+import { AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { FieldSeparator } from "@/components/ui/field";
 import { SplitText } from "@/components/motion/split-text";
 
 /* Runs during HTML parsing, before the first animated frame: marks repeat
@@ -170,9 +173,10 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <div className="animate-fade mt-6 rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-              {error}
-            </div>
+            <Alert variant="destructive" className="animate-fade mt-6">
+              <AlertCircle />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
           )}
 
           <div className="login-actions mt-8 flex flex-col gap-3">
@@ -198,11 +202,7 @@ export default function LoginPage() {
             </Button>
             {demoAvailable && (
               <>
-                <div className="my-1 flex items-center gap-3 text-xs text-muted-foreground">
-                  <span className="h-px flex-1 bg-border" aria-hidden />
-                  <span>{t("login.demo_or")}</span>
-                  <span className="h-px flex-1 bg-border" aria-hidden />
-                </div>
+                <FieldSeparator className="my-1 text-xs">{t("login.demo_or")}</FieldSeparator>
                 <Button size="lg" variant="secondary" data-magnetic="" onClick={demoLogin}>
                   {t("login.demo_continue")}
                 </Button>

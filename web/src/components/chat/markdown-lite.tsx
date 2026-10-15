@@ -20,7 +20,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import { Check, Copy } from "lucide-react";
+import { AlertTriangle, Check, Copy } from "lucide-react";
 import { toast } from "sonner";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -35,6 +35,16 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
 import { copyTextToClipboard } from "@/lib/clipboard";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 import "highlight.js/styles/atom-one-dark.css";
 
@@ -116,17 +126,16 @@ function MermaidBlock({ code }: { code: string }) {
 
   if (error) {
     return (
-      <div className="my-3 overflow-hidden rounded-lg border border-destructive/40 bg-destructive/5">
-        <div className="border-b border-destructive/20 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-destructive">
-          mermaid · render error
-        </div>
-        <pre className="overflow-x-auto px-4 py-3 font-mono text-[12px] leading-relaxed text-destructive">
-          {error}
-        </pre>
-        <pre className="overflow-x-auto border-t border-destructive/20 bg-background/50 px-4 py-3 font-mono text-[12px] leading-relaxed text-muted-foreground">
-          {code}
-        </pre>
-      </div>
+      <Alert variant="destructive" className="my-3">
+        <AlertTriangle />
+        <AlertTitle className="font-mono">mermaid · render error</AlertTitle>
+        <AlertDescription className="min-w-0">
+          <pre className="overflow-x-auto font-mono text-xs leading-relaxed">{error}</pre>
+          <pre className="mt-2 overflow-x-auto font-mono text-xs leading-relaxed text-muted-foreground">
+            {code}
+          </pre>
+        </AlertDescription>
+      </Alert>
     );
   }
 
@@ -296,29 +305,22 @@ const markdownComponents: Components = {
   ),
 
   // Horizontal rule
-  hr: () => <hr className="my-4 border-border/60" />,
+  hr: () => <Separator className="my-4" />,
 
   // GFM table
   table: ({ children }) => (
-    <div className="my-3 overflow-x-auto rounded-lg border border-border/60">
-      <table className="w-full border-collapse text-[13px]">{children}</table>
+    <div className="my-3 overflow-hidden rounded-lg border">
+      <Table>{children}</Table>
     </div>
   ),
-  thead: ({ children }) => <thead className="bg-muted/50 text-foreground">{children}</thead>,
-  tbody: ({ children }) => <tbody>{children}</tbody>,
-  tr: ({ children }) => <tr className="border-b border-border/60 last:border-0">{children}</tr>,
-  th: ({ children, style }) => (
-    <th
-      style={style}
-      className="px-3 py-2 text-left text-[12px] font-semibold uppercase tracking-wide text-foreground"
-    >
-      {children}
-    </th>
-  ),
+  thead: ({ children }) => <TableHeader>{children}</TableHeader>,
+  tbody: ({ children }) => <TableBody>{children}</TableBody>,
+  tr: ({ children }) => <TableRow>{children}</TableRow>,
+  th: ({ children, style }) => <TableHead style={style}>{children}</TableHead>,
   td: ({ children, style }) => (
-    <td style={style} className="px-3 py-2 align-top text-foreground/90 [&>p]:my-0">
+    <TableCell style={style} className="align-top whitespace-normal [&>p]:my-0">
       {children}
-    </td>
+    </TableCell>
   ),
 
   // Image

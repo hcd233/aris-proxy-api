@@ -1,4 +1,5 @@
 import { FileText, Music2, ShieldAlert } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import type { ContentPart } from "./content-extract";
 import { imageURLOf } from "./content-extract";
@@ -57,10 +58,10 @@ function PartIconCard({
 
 function PartRefusal({ text }: { text: string }) {
   return (
-    <div className="my-2 flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-      <ShieldAlert className="mt-0.5 size-4 shrink-0" />
-      <span className="whitespace-pre-wrap break-words">{text}</span>
-    </div>
+    <Alert variant="destructive" className="my-2">
+      <ShieldAlert />
+      <AlertDescription className="whitespace-pre-wrap break-words">{text}</AlertDescription>
+    </Alert>
   );
 }
 

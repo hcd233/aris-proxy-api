@@ -137,9 +137,7 @@ export function PricingEditor({ value, onChange }: PricingEditorProps) {
               <div className="flex items-center gap-1.5">
                 <span className="text-xs font-medium text-muted-foreground">#{idx + 1}</span>
                 {isDefaultRule(rule) && (
-                  <span className="rounded bg-primary/10 px-1.5 py-0.5 text-xs text-primary">
-                    {t("upstream.pricing.rule.default")}
-                  </span>
+                  <Badge variant="secondary">{t("upstream.pricing.rule.default")}</Badge>
                 )}
                 <div className="ml-auto flex items-center gap-1">
                   <Button

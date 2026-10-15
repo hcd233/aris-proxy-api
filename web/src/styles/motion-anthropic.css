@@ -446,6 +446,16 @@
   transition: rotate 260ms var(--ease-settle);
 }
 
+/* ---- Alert「落纸」: a notice is set down on the page, then the ink dries. ---- */
+[data-theme="anthropic"] [data-slot="alert"] {
+  animation: atelier-settle 420ms var(--ease-settle) backwards;
+}
+
+/* ---- Progress「运笔」: the bar is drawn like a pen stroke, never snapping. ---- */
+[data-theme="anthropic"] [data-slot="progress-indicator"] {
+  transition: width 480ms var(--ease-settle);
+}
+
 /* ---- Focus: an ink ring tightening onto the control, then absorbed. ---- */
 [data-theme="anthropic"] :focus-visible {
   animation: atelier-focus-ink 220ms var(--ease-settle);

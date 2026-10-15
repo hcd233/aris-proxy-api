@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Alert, AlertAction, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { MarkdownLite } from "@/components/chat/markdown-lite";
@@ -246,9 +248,9 @@ export function ChatTurn({
         </div>
       )}
       {!isAssistant && !isUser && (
-        <span className="w-fit rounded-md bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+        <Badge variant="secondary" className="font-mono">
           {message.role}
-        </span>
+        </Badge>
       )}
 
       {editing ? (
@@ -282,25 +284,19 @@ export function ChatTurn({
 
       {/* 错误卡 */}
       {meta?.error && (
-        <div className="flex items-start gap-2 rounded-xl border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-          <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-          <div className="min-w-0 flex-1">
-            <div className="break-words">
-              {meta.error.status ? `${meta.error.status} · ` : ""}
-              {meta.error.message}
-            </div>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="mt-1.5"
-              onClick={() => onRetry(index)}
-            >
-              <RefreshCw className="size-3.5" />
+        <Alert variant="destructive">
+          <AlertTriangle />
+          <AlertDescription className="break-words">
+            {meta.error.status ? `${meta.error.status} · ` : ""}
+            {meta.error.message}
+          </AlertDescription>
+          <AlertAction>
+            <Button type="button" size="sm" variant="outline" onClick={() => onRetry(index)}>
+              <RefreshCw data-icon="inline-start" />
               {t("playground.error.retry")}
             </Button>
-          </div>
-        </div>
+          </AlertAction>
+        </Alert>
       )}
 
       {/* 页脚：指标（可展开详情）+ hover 操作条 */}

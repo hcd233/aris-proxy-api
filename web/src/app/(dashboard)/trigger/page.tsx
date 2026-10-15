@@ -6,6 +6,7 @@ import { showErrorToast } from "@/lib/api-error-handler";
 import { useAuth } from "@/lib/auth-context";
 import { PermissionGuard } from "@/components/permission-guard";
 import type { TriggerAction, TriggerItem, PageInfo } from "@/lib/types";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -60,18 +61,15 @@ function ActionBadge({
       <TooltipRoot>
         <TooltipTrigger
           render={
-            <button
-              type="button"
-              onClick={onClick}
-              disabled={disabled}
+            <Badge
+              render={<button type="button" onClick={onClick} disabled={disabled} />}
+              variant={action === "deny" ? "destructive" : "secondary"}
               className={cn(
-                "inline-flex cursor-pointer items-center rounded-full px-2 py-0.5 text-[11px] font-medium transition-colors",
-                "hover:ring-2 hover:ring-current/20 disabled:cursor-not-allowed disabled:opacity-60",
-                action === "deny"
-                  ? "bg-destructive/10 text-destructive hover:bg-destructive/20"
-                  : action === "capture"
-                    ? "bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 dark:text-blue-400 moonshot:bg-secondary moonshot:text-muted-foreground moonshot:hover:bg-accent"
-                    : "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-400 moonshot:bg-secondary moonshot:text-muted-foreground moonshot:hover:bg-accent",
+                "cursor-pointer disabled:cursor-not-allowed disabled:opacity-60",
+                action === "capture" &&
+                  "border-transparent bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 dark:text-blue-400 moonshot:bg-secondary moonshot:text-muted-foreground moonshot:hover:bg-accent",
+                action === "omit" &&
+                  "border-transparent bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-400 moonshot:bg-secondary moonshot:text-muted-foreground moonshot:hover:bg-accent",
               )}
             >
               {action === "deny"
@@ -79,7 +77,7 @@ function ActionBadge({
                 : action === "capture"
                   ? t("trigger.action_capture")
                   : t("trigger.action_omit")}
-            </button>
+            </Badge>
           }
         />
         <TooltipContent side="top">{t("trigger.action_switch_hint")}</TooltipContent>

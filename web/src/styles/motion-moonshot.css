@@ -569,6 +569,16 @@ html[data-theme="moonshot"][data-motion-tier="lite"] {
   transition: rotate 380ms var(--ease-orbit);
 }
 
+/* ---- Alert「信号显影」: the notice comes into focus out of the dark. ---- */
+[data-theme="moonshot"] [data-slot="alert"] {
+  animation: lunar-focus-in 600ms var(--ease-drift) backwards;
+}
+
+/* ---- Progress「推进」: the bar advances on the drift curve. ---- */
+[data-theme="moonshot"] [data-slot="progress-indicator"] {
+  transition: width 560ms var(--ease-drift);
+}
+
 /* ---- Focus: one luminous pulse. ---- */
 [data-theme="moonshot"] :focus-visible {
   animation: lunar-focus-pulse 300ms ease-out;

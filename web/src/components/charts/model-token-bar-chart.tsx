@@ -7,6 +7,14 @@ import { useI18n } from "@/lib/i18n";
 import type { ModelUsageItem } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { TimeRangePicker } from "@/components/ui/time-range-picker";
 import type { TimeRangeKey } from "@/lib/time-range";
@@ -134,38 +142,39 @@ export function ModelTokenBarChart() {
           </div>
         ) : (
           <div className="h-64 overflow-y-auto">
-            <table className="w-full text-sm tabular-nums">
-              <thead>
-                <tr className="whitespace-nowrap border-b border-border text-muted-foreground">
-                  <th className="w-8 py-2 pl-6 text-left font-medium">{t("model_chart.rank")}</th>
-                  <th className="py-2 text-left font-medium">{t("model_chart.model")}</th>
-                  <th
-                    className="cursor-pointer py-2 pr-4 text-right font-medium hover:text-foreground"
-                    onClick={() => setSortDir((d) => (d === "desc" ? "asc" : "desc"))}
-                  >
-                    {t("charts.total")}
-                    {sortDir === "desc" ? " ▼" : " ▲"}
-                  </th>
-                  <th className="w-[360px] py-2 pr-6 text-left text-xs font-medium">
+            <Table className="tabular-nums">
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="w-8 pl-6">{t("model_chart.rank")}</TableHead>
+                  <TableHead>{t("model_chart.model")}</TableHead>
+                  <TableHead className="pr-4 text-right">
+                    <Button
+                      variant="ghost"
+                      size="xs"
+                      className="-mr-2 min-w-0"
+                      onClick={() => setSortDir((d) => (d === "desc" ? "asc" : "desc"))}
+                    >
+                      {t("charts.total")}
+                      {sortDir === "desc" ? " ▼" : " ▲"}
+                    </Button>
+                  </TableHead>
+                  <TableHead className="w-[360px] pr-6">
                     <RatioLegend segments={legend} />
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {sorted.map((item, i) => (
-                  <tr
-                    key={item.modelId}
-                    className="border-b border-border transition-colors hover:bg-muted/50"
-                  >
-                    <td className="py-3 pl-6 pr-2 text-muted-foreground">{i + 1}</td>
-                    <td className="py-3 pr-4 font-medium">{item.modelId}</td>
-                    <td className="py-3 pr-4 text-right">
+                  <TableRow key={item.modelId}>
+                    <TableCell className="pl-6 text-muted-foreground">{i + 1}</TableCell>
+                    <TableCell className="font-medium">{item.modelId}</TableCell>
+                    <TableCell className="pr-4 text-right">
                       <div className="font-semibold">{formatTokenCount(tokenTotal(item))}</div>
                       <div className="text-xs text-muted-foreground">
                         {formatPct(tokenTotal(item), grandTotal)}
                       </div>
-                    </td>
-                    <td className="w-[360px] py-3 pr-6">
+                    </TableCell>
+                    <TableCell className="w-[360px] pr-6">
                       <StackedRatioBar
                         formatValue={formatExactTokenCount}
                         segments={[
@@ -175,11 +184,11 @@ export function ModelTokenBarChart() {
                           { ...legend[3], value: item.cacheCreationTokens },
                         ]}
                       />
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         )}
       </CardContent>

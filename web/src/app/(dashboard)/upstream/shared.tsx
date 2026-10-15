@@ -1,6 +1,7 @@
 "use client";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TableCell } from "@/components/ui/table";
 import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
@@ -65,9 +66,12 @@ export function ConfigMissingBadges({ missing }: { missing?: ConfigMissing[] }) 
   if (!missing?.includes("spec")) return null;
   return (
     <div className="flex items-center gap-1">
-      <span className="inline-flex items-center rounded-md bg-amber-500/15 px-1.5 py-0.5 font-mono text-[11px] text-amber-600 dark:text-amber-400">
+      <Badge
+        variant="outline"
+        className="border-amber-500/30 bg-amber-500/15 font-mono text-amber-600 dark:text-amber-400"
+      >
         {t("upstream.missing.spec")}
-      </span>
+      </Badge>
     </div>
   );
 }
@@ -121,9 +125,9 @@ export function CapabilityBadges({ capabilities }: { capabilities?: string[] }) 
           <TooltipRoot key={cap}>
             <TooltipTrigger
               render={
-                <span className="inline-flex items-center gap-1 rounded-md bg-secondary px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-secondary-foreground">
-                  <Icon className="size-3 text-muted-foreground" />
-                </span>
+                <Badge variant="secondary" className="font-mono tabular-nums">
+                  <Icon />
+                </Badge>
               }
             />
             <TooltipContent side="top">{cap}</TooltipContent>
@@ -153,10 +157,10 @@ export function SpecBadges({
       <TooltipRoot>
         <TooltipTrigger
           render={
-            <span className="inline-flex items-center gap-1 rounded-md bg-secondary px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-secondary-foreground">
-              <ArrowLeftRight className="size-3 text-muted-foreground" />
+            <Badge variant="secondary" className="font-mono tabular-nums">
+              <ArrowLeftRight />
               {formatTokens(contextLength)}
-            </span>
+            </Badge>
           }
         />
         <TooltipContent side="top" align="start" className="max-w-xs break-all">
@@ -166,10 +170,10 @@ export function SpecBadges({
       <TooltipRoot>
         <TooltipTrigger
           render={
-            <span className="inline-flex items-center gap-1 rounded-md bg-secondary px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-secondary-foreground">
-              <ArrowUpFromLine className="size-3 text-muted-foreground" />
+            <Badge variant="secondary" className="font-mono tabular-nums">
+              <ArrowUpFromLine />
               {formatTokens(maxOutputTokens)}
-            </span>
+            </Badge>
           }
         />
         <TooltipContent side="top" align="start" className="max-w-xs break-all">

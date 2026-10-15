@@ -5,6 +5,7 @@ import { api } from "@/lib/api-client";
 import { showErrorToast } from "@/lib/api-error-handler";
 import type { AuditLogItem, PageInfo } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -360,12 +361,12 @@ export default function AuditPage() {
                         <div className="min-h-0">
                           <div className="border-t border-border px-4 pb-4 pt-3">
                             {hasError && (
-                              <div className="mb-3 rounded-md bg-destructive/10 px-3 py-2 text-xs">
-                                <span className="font-medium text-destructive">
-                                  {t("audit.error_label")}
-                                </span>
-                                <span className="text-destructive">{log.errorMessage}</span>
-                              </div>
+                              <Alert variant="destructive" className="mb-3">
+                                <AlertTitle>{t("audit.error_label")}</AlertTitle>
+                                <AlertDescription className="break-words">
+                                  {log.errorMessage}
+                                </AlertDescription>
+                              </Alert>
                             )}
 
                             <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">

@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useT } from "@/lib/i18n";
 import { api } from "@/lib/api-client";
 import { parseOAuthCallbackParams, resolveOAuthPlatform } from "@/lib/oauth";
-import { Loader2 } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 
 export default function CallbackPage() {
   const { handleCallback } = useAuth();
@@ -76,7 +76,7 @@ export default function CallbackPage() {
   return (
     <div className="page-surface flex min-h-screen items-center justify-center bg-background">
       <div className="animate-rise text-center">
-        <Loader2 className="mx-auto mb-4 size-6 animate-spin text-muted-foreground" />
+        <Spinner className="mx-auto mb-4 size-6 text-muted-foreground" />
         <p className="font-display text-xl font-semibold text-foreground">
           {t("callback.completing")}
         </p>
