@@ -45,7 +45,7 @@ func TestMockChatCompletionStream(t *testing.T) {
 		t.Fatal(err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Api-Key", apiKey)
+	req.Header.Set("Authorization", apiKey)
 
 	resp, err := newClient().Do(req)
 	if err != nil {
@@ -83,7 +83,7 @@ func TestMockResponseNonStream(t *testing.T) {
 		t.Fatal(err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Api-Key", apiKey)
+	req.Header.Set("Authorization", apiKey)
 
 	resp, err := newClient().Do(req)
 	if err != nil {
@@ -129,7 +129,7 @@ func TestMockMessageNonStream(t *testing.T) {
 		t.Fatal(err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Api-Key", apiKey)
+	req.Header.Set("Authorization", apiKey)
 	req.Header.Set("Anthropic-Version", "2023-06-01")
 
 	resp, err := newClient().Do(req)
