@@ -117,6 +117,10 @@ describe("③ 组合修正", () => {
     },
   );
 
+  it("列表分页导航靠右对齐", () => {
+    expect(read("components/pagination-bar.tsx")).toContain('<Pagination className="mx-0 w-auto">');
+  });
+
   it("权限拦截页用 Empty", () => {
     expect(read("components/permission-guard.tsx")).toContain("<Empty");
   });

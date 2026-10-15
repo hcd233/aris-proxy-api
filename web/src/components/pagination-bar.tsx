@@ -90,7 +90,7 @@ export function PaginationBar({
         </p>
       </div>
 
-      <Pagination className="w-auto">
+      <Pagination className="mx-0 w-auto">
         <PaginationContent className="gap-2">
           <PaginationItem>
             <Button
