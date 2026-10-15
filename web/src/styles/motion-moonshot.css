@@ -251,11 +251,14 @@ html[data-theme="moonshot"][data-motion-tier="lite"] {
   }
 }
 
+/* drawer-overlay 只覆盖底色：其透明度随下滑手势（--drawer-swipe-progress）变化，
+ * popup 的 transform 同样由手势驱动，语法层不接管 Drawer 的位移与过渡。 */
 [data-theme="moonshot"]
   :is(
     [data-slot="dialog-overlay"],
     [data-slot="alert-dialog-overlay"],
-    [data-slot="sheet-overlay"]
+    [data-slot="sheet-overlay"],
+    [data-slot="drawer-overlay"]
   ) {
   background-color: rgb(0 0 0 / 0.55);
   backdrop-filter: blur(6px);

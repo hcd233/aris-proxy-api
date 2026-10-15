@@ -2,11 +2,16 @@
 
 import { type ReactNode, type Ref, type UIEvent } from "react";
 import { Wrench, X } from "lucide-react";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { SwipeDismissSheetBody } from "@/components/session-detail/swipe-dismiss-sheet-body";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
@@ -81,30 +86,27 @@ export function ReadingLayout({
         </div>
 
         {toolsCount > 0 && (
-          <Sheet open={toolsOpen} onOpenChange={onToolsOpenChange}>
-            <SheetContent
-              side="bottom"
-              showCloseButton={false}
-              className={cn(
-                "!h-[88dvh] max-h-[88dvh] rounded-t-[20px] border-border/70 p-0",
-                "shadow-[0_-8px_32px_rgba(0,0,0,0.16)]",
-                "flex flex-col",
-                "!duration-[320ms] !ease-[cubic-bezier(0.32,0.72,0,1)]",
-                "data-[side=bottom]:data-starting-style:!translate-y-[100%]",
-                "data-[side=bottom]:data-ending-style:!translate-y-[100%]",
-              )}
-            >
-              <SwipeDismissSheetBody
-                onDismiss={() => onToolsOpenChange(false)}
-                title={t("reading_layout.available_tools")}
-                count={toolsCount}
-                onScroll={onToolsScroll}
-                onScrollRootChange={onToolsScrollRootChange}
+          <Drawer open={toolsOpen} onOpenChange={onToolsOpenChange} showSwipeHandle>
+            <DrawerContent>
+              <DrawerHeader className="flex-row items-center gap-2 pb-3">
+                <Wrench className="size-4 text-muted-foreground" />
+                <DrawerTitle>{t("reading_layout.available_tools")}</DrawerTitle>
+                <Badge variant="secondary">{toolsCount}</Badge>
+                <DrawerClose render={<Button variant="ghost" size="sm" className="ml-auto" />}>
+                  {t("common.done")}
+                </DrawerClose>
+              </DrawerHeader>
+              <ScrollArea
+                className="min-h-0 flex-1"
+                viewportRef={(node) => onToolsScrollRootChange?.(node)}
+                onViewportScroll={onToolsScroll}
               >
-                {toolsPanel}
-              </SwipeDismissSheetBody>
-            </SheetContent>
-          </Sheet>
+                <div className="flex flex-col gap-2 px-3 pt-1 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
+                  {toolsPanel}
+                </div>
+              </ScrollArea>
+            </DrawerContent>
+          </Drawer>
         )}
       </div>
     );

@@ -7,8 +7,10 @@ import { cn } from "@/lib/utils";
 /**
  * 在 shadcn 生成版之上：
  * - 同时挂纵向与横向滚动条（Base UI 在内容不溢出时不渲染滚动条）；
- * - viewport 继承 Root 的 max-height（size-full 在 Root 无确定高度时不生效，
- *   否则 `className="max-h-60"` 这类用法不会出现滚动）；
+ * - Root 为纵向 flex、viewport flex-1：生成版 viewport 用 size-full（height:100%），
+ *   Root 没有确定高度时（只给 max-h-*，或作为 auto 高度 flex 容器里的 flex-1 子项，
+ *   如 Drawer）百分比高度不生效，viewport 被内容撑开而不滚动；flex 收缩在三种场景
+ *   （固定高度 / max-height / flex 子项）下都能把 viewport 压到 Root 的尺寸；
  * - viewportRef / onViewportScroll 透传给真正的滚动元素，供滚动联动逻辑使用。
  */
 function ScrollArea({
@@ -24,14 +26,14 @@ function ScrollArea({
   return (
     <ScrollAreaPrimitive.Root
       data-slot="scroll-area"
-      className={cn("relative", className)}
+      className={cn("relative flex flex-col", className)}
       {...props}
     >
       <ScrollAreaPrimitive.Viewport
         ref={viewportRef}
         onScroll={onViewportScroll}
         data-slot="scroll-area-viewport"
-        className="size-full max-h-[inherit] rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1"
+        className="min-h-0 w-full flex-1 rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1"
       >
         {children}
       </ScrollAreaPrimitive.Viewport>

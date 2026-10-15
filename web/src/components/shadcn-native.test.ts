@@ -165,3 +165,19 @@ describe("④ filter-bar", () => {
     expect(src()).not.toMatch(/<button[\s>]/);
   });
 });
+
+describe("⑤ Drawer", () => {
+  expectGenerated(["drawer"]);
+
+  it("删除手写下滑关闭实现", () => {
+    expect(existsSync(join(SRC, "components/session-detail/swipe-dismiss-sheet-body.tsx"))).toBe(
+      false,
+    );
+  });
+
+  it("阅读布局移动端用 Drawer", () => {
+    const src = read("components/shared/reading-layout.tsx");
+    expect(src).toContain("<Drawer");
+    expect(src).not.toContain("SwipeDismissSheetBody");
+  });
+});
