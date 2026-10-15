@@ -203,7 +203,7 @@ func (f *crossTenantSessionFixture) buildApp(t *testing.T, db *gorm.DB, rdb *red
 	t.Helper()
 
 	sessionRepo := repository.NewSessionRepository(db)
-	readRepo := repository.NewSessionReadRepository(db)
+	readRepo := repository.NewSessionReadRepository(db, nil)
 	apiKeyRepo := repository.NewAPIKeyRepository(db)
 
 	shareCache := cache.NewShareCache(rdb)

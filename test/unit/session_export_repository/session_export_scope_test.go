@@ -52,7 +52,7 @@ func TestListSessionsForExport_OwnerScopeSemantics(t *testing.T) {
 		{APIKeyName: "owner-b", APIKeyID: 2, ModelIDs: []string{"gpt-4"}},
 		{APIKeyName: "owner-b", APIKeyID: 2, ModelIDs: []string{"claude"}},
 	})
-	repo := repository.NewSessionReadRepository(db)
+	repo := repository.NewSessionReadRepository(db, nil)
 	ctx := context.Background()
 
 	// 空（非 nil）OwnerIDs：用户名下无 Key，必须返回空（不得导出全平台会话）
@@ -96,7 +96,7 @@ func TestListSessionsForExport_SameKeyNameAcrossTenants(t *testing.T) {
 		{APIKeyName: "shared-name", APIKeyID: 2, ModelIDs: []string{"tenant-b-model"}},
 		{APIKeyName: "", APIKeyID: 0, ModelIDs: []string{"orphan-model"}},
 	})
-	repo := repository.NewSessionReadRepository(db)
+	repo := repository.NewSessionReadRepository(db, nil)
 	ctx := context.Background()
 
 	rows, err := repo.ListSessionsForExport(ctx, session.ExportFilter{OwnerIDs: []uint{2}})

@@ -30,6 +30,8 @@ const (
 	ReadCacheDetailKeyTemplate = "cache:rd:detail:%d"
 	// ReadCacheModelListKeyTemplate 读缓存-Web 平铺模型列表（%s = scope 片段, %s = 查询签名摘要）
 	ReadCacheModelListKeyTemplate = "cache:rd:modellist:%s:%s"
+	// ReadCacheKeywordIDsKeyTemplate 读缓存-关键词命中用户消息 ID 集合（%s = 归一化 keyword）
+	ReadCacheKeywordIDsKeyTemplate = "cache:rd:kwids:%s"
 	// ReadCacheKeyScanPattern 读缓存命名空间扫描模式（InvalidateAll 用）
 	ReadCacheKeyScanPattern = "cache:rd:*"
 
