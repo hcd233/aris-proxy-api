@@ -175,3 +175,19 @@ npx npm@10 ci --dry-run
 | ScrollArea 隐藏原生滚动条后，依赖 `scrollTop` 的逻辑取不到滚动元素 | 只替换不读 `scrollTop` 的容器；ReadingLayout 工具区通过 `viewportRef` 透传 |
 | `@shadcn/react` 0.3.x 仍在早期，API 可能变动 | 锁定精确版本；只在 playground 一处使用，回退成本低 |
 | 聊天区外观变化明显 | 用户已确认采用 shadcn 默认外观 |
+
+## 8. 实施偏差记录
+
+| 设计原文 | 实际做法 | 原因 |
+|---|---|---|
+| §3 用 `shadcn add` 生成组件 | 用 `shadcn add --dry-run --view` 取源码落盘（脚本化） | `add` 会顺带 `npm install` 包 `cn` 与无版本号的 `@base-ui/react`，并提示覆盖 `button.tsx` 等已定制文件 |
+| §3 ScrollArea 只加横向条与两个透传属性 | 另把 Root 改为纵向 flex、viewport 改 `min-h-0 flex-1` | 生成版 viewport 用 `size-full`（height:100%）。Root 只有 `max-h-*`，或作为 auto 高度 flex 容器的子项（如 Drawer）时，百分比高度不生效，内容撑开不滚动。无头浏览器实测固定高度、max-height、flex 子项、短内容四种模式均正确 |
+| §3 生成组件原样保留工具类 | 删除 `scroll-fade-*`、`shimmer`、`scrollbar-*` | CI 按 lock 安装 `shadcn@4.8.0`，其 `tailwind.css` 只有 `no-scrollbar`，这些类在 CI 构建中是空操作；本地 node_modules 漂移到 4.21.4 会生成，导致本地与 CI 产物不一致 |
+| §4④ 标题行用 `ComboboxLabel` | 用普通 div（沿用 ComboboxLabel 的样式） | `ComboboxLabel` 是 Base UI `GroupLabel`，必须处于 `ComboboxGroup` 内 |
+| §4④ 「若 InputGroup 外观可接受优先 `ComboboxInput`」 | 用 `ComboboxPrimitive.Input` | 标签需要与输入框内联换行，InputGroup 的单行布局放不下 |
+| §4④ 未提 `autoHighlight` 档位 | `autoHighlight`（布尔） | `Combobox.Root` 只接受布尔（`'always'` 仅 Autocomplete 可用）：键入后自动高亮首项；聚焦未键入时需方向键高亮再回车 |
+| §4⑥ 图片 `Attachment render={<a/>}` | `Attachment` + `AttachmentTrigger render={<a/>}` | `Attachment` 是普通 div 组件，可点击覆盖层由 `AttachmentTrigger` 提供 |
+| §4⑥ 多模态外层换 `AttachmentGroup` | 保留 flex-wrap 容器 | 同一容器里还有拒答 `Alert`，`AttachmentGroup` 是横向滚动吸附布局，不适合混排 |
+| §4⑥ 语法层补 `message-scroller-button` 悬停过渡 | 未补 | 组件自带 translate/scale/opacity 过渡，覆盖会破坏进出场 |
+| §4⑥ chat-turn 把 `ref` / `data-streaming` 挂在 `BubbleContent` 上 | 在 `BubbleContent` 内包一层 `div.stream-body` | 签名动效按 `.stream-body > div` 命中 MarkdownLite 根节点，内包一层结构最稳 |
+| — | 新增文案 `chat.open_image`、`playground.jump_to_latest`，删除闲置的 `trace.install_copied` | 图片打开原图的无障碍名称、跳到最新按钮的读屏文案；Trace 安装弹层复用 CopyButton 后旧文案不再使用 |
