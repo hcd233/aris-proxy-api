@@ -569,6 +569,13 @@ html[data-theme="moonshot"][data-motion-tier="lite"] {
   transition: rotate 380ms var(--ease-orbit);
 }
 
+/* ---- Item: hover / selection glows up on the drift curve. ---- */
+[data-theme="moonshot"] [data-slot="item"] {
+  transition:
+    background-color 260ms var(--ease-drift),
+    border-color 260ms var(--ease-drift);
+}
+
 /* ---- Alert「信号显影」: the notice comes into focus out of the dark. ---- */
 [data-theme="moonshot"] [data-slot="alert"] {
   animation: lunar-focus-in 600ms var(--ease-drift) backwards;

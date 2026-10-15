@@ -10,6 +10,14 @@ import type { PageInfo, UserItem } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemTitle,
+} from "@/components/ui/item";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -289,26 +297,26 @@ export default function UsersPage() {
             ) : (
               <>
                 {isMobile ? (
-                  <div className="space-y-3">
+                  <ItemGroup className="gap-3">
                     {items.map((user) => (
-                      <div key={user.id} className="rounded-lg border border-border bg-card p-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium">{user.name}</p>
-                            <p className="mt-0.5 text-xs text-muted-foreground">{user.email}</p>
-                            <p className="mt-0.5 text-xs text-muted-foreground">
-                              {t(`permission.${user.permission}`)}
-                            </p>
-                          </div>
+                      <Item key={user.id} variant="outline" role="listitem" className="items-start">
+                        <ItemContent className="min-w-0">
+                          <ItemTitle className="line-clamp-none break-all">{user.name}</ItemTitle>
+                          <ItemDescription className="line-clamp-none break-all">
+                            {user.email}
+                          </ItemDescription>
+                          <ItemDescription>{t(`permission.${user.permission}`)}</ItemDescription>
+                        </ItemContent>
+                        <ItemActions>
                           <UserRowActions
                             user={user}
                             currentUserId={currentUser?.id ?? null}
                             onAction={handleAction}
                           />
-                        </div>
-                      </div>
+                        </ItemActions>
+                      </Item>
                     ))}
-                  </div>
+                  </ItemGroup>
                 ) : (
                   <Table>
                     <TableHeader>

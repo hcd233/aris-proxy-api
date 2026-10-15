@@ -8,6 +8,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemFooter,
+  ItemGroup,
+  ItemTitle,
+} from "@/components/ui/item";
+import {
   TooltipProvider,
   TooltipRoot,
   TooltipTrigger,
@@ -202,63 +210,63 @@ export default function TracePage() {
             ) : (
               <>
                 {isMobile ? (
-                  <div className="space-y-3">
+                  <ItemGroup className="gap-3">
                     {traces.map((tr) => (
-                      <div
+                      <Item
                         key={tr.id}
-                        className="cursor-pointer rounded-lg border border-border bg-card p-4 transition-colors hover:bg-secondary/50"
+                        variant="outline"
+                        role="listitem"
+                        className="cursor-pointer items-start hover:bg-muted"
                         onClick={() => {
                           window.location.href = `/web/trace/detail/?id=${tr.id}`;
                         }}
                       >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0 flex-1">
-                            <TooltipProvider>
-                              <TooltipRoot>
-                                <TooltipTrigger
-                                  render={
-                                    <p className="truncate font-mono text-sm font-medium">
-                                      {tr.sessionId}
-                                    </p>
-                                  }
-                                />
-                                <TooltipContent side="top" className="max-w-xs break-all">
-                                  {tr.sessionId}
-                                </TooltipContent>
-                              </TooltipRoot>
-                            </TooltipProvider>
-                          </div>
-                          <div className="flex shrink-0 items-center gap-2">
-                            <TooltipProvider>
-                              <TooltipRoot>
-                                <TooltipTrigger
-                                  render={
-                                    <DeleteIconButton
-                                      aria-label={t("trace.delete_aria")}
-                                      disabled={
-                                        deleteConfirm.loading && deleteConfirm.target?.id === tr.id
-                                      }
-                                      onClick={(e) => {
-                                        (e as unknown as React.MouseEvent).stopPropagation();
-                                        deleteConfirm.openDelete(tr);
-                                      }}
-                                    />
-                                  }
-                                />
-                                <TooltipContent side="top">{t("trace.delete_aria")}</TooltipContent>
-                              </TooltipRoot>
-                            </TooltipProvider>
-                          </div>
-                        </div>
-                        <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                        <ItemContent className="min-w-0">
+                          <TooltipProvider>
+                            <TooltipRoot>
+                              <TooltipTrigger
+                                render={
+                                  <ItemTitle className="w-full truncate font-mono">
+                                    {tr.sessionId}
+                                  </ItemTitle>
+                                }
+                              />
+                              <TooltipContent side="top" className="max-w-xs break-all">
+                                {tr.sessionId}
+                              </TooltipContent>
+                            </TooltipRoot>
+                          </TooltipProvider>
+                        </ItemContent>
+                        <ItemActions>
+                          <TooltipProvider>
+                            <TooltipRoot>
+                              <TooltipTrigger
+                                render={
+                                  <DeleteIconButton
+                                    aria-label={t("trace.delete_aria")}
+                                    disabled={
+                                      deleteConfirm.loading && deleteConfirm.target?.id === tr.id
+                                    }
+                                    onClick={(e) => {
+                                      (e as unknown as React.MouseEvent).stopPropagation();
+                                      deleteConfirm.openDelete(tr);
+                                    }}
+                                  />
+                                }
+                              />
+                              <TooltipContent side="top">{t("trace.delete_aria")}</TooltipContent>
+                            </TooltipRoot>
+                          </TooltipProvider>
+                        </ItemActions>
+                        <ItemFooter className="flex-wrap justify-start gap-3 text-xs text-muted-foreground">
                           <span>ID: {tr.id}</span>
                           <span>{tr.agent}</span>
                           <span>{tr.model}</span>
                           <span>{formatDateTime(tr.createdAt)}</span>
-                        </div>
-                      </div>
+                        </ItemFooter>
+                      </Item>
                     ))}
-                  </div>
+                  </ItemGroup>
                 ) : (
                   <Table>
                     <TableHeader>

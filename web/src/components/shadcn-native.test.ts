@@ -60,3 +60,47 @@ describe("① 反馈类", () => {
     expect(src).not.toMatch(/h-full rounded-full bg-primary/);
   });
 });
+
+describe("② 表单与列表", () => {
+  expectGenerated(["item", "scroll-area"]);
+
+  const forms = [
+    "app/(dashboard)/upstream/endpoint-dialog.tsx",
+    "app/(dashboard)/upstream/model-dialog.tsx",
+    "app/(dashboard)/upstream/pricing-editor.tsx",
+    "components/cron/schedule-editor.tsx",
+    "components/demo-config-card.tsx",
+    "app/(dashboard)/profile/page.tsx",
+    "components/share/share-dialog.tsx",
+  ];
+  it.each(forms)("%s 用 Field 布局", (p) => {
+    expect(read(p)).toMatch(/<Field[\s>]/);
+    expect(read(p)).not.toMatch(/<label[\s>]/);
+  });
+
+  const mobileLists = ["apikeys", "sessions", "trace", "trigger", "users", "audit/model"].map(
+    (p) => `app/(dashboard)/${p}/page.tsx`,
+  );
+  it.each(mobileLists)("%s 移动端列表用 Item", (p) => {
+    expect(read(p)).toContain("<ItemGroup");
+  });
+
+  it.each([
+    "components/session-detail/session-history-list.tsx",
+    "components/playground/session-sidebar.tsx",
+  ])("%s 会话列表用 Item 与 ScrollArea", (p) => {
+    expect(read(p)).toMatch(/<Item[\s>]/);
+    expect(read(p)).toContain("<ScrollArea");
+  });
+
+  it("代码 / JSON 预览与图表卡片表格用 ScrollArea", () => {
+    expect(read("components/trace-detail/trace-detail-client.tsx")).not.toMatch(/overflow-auto/);
+    expect(read("app/(dashboard)/dataset/page.tsx")).not.toMatch(/overflow-auto/);
+    for (const p of [
+      "components/charts/model-cost-bar-chart.tsx",
+      "components/charts/model-token-bar-chart.tsx",
+    ]) {
+      expect(read(p)).toContain("<ScrollArea");
+    }
+  });
+});

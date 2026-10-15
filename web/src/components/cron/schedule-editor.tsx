@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { useI18n } from "@/lib/i18n";
 
 type RepeatMode = "minute" | "hour" | "day" | "week" | "month" | "advanced";
@@ -219,14 +219,14 @@ export function ScheduleEditorDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
-          <div className="space-y-2">
-            <Label>{t("schedule.repeat")}</Label>
+        <FieldGroup className="gap-4 py-2">
+          <Field>
+            <FieldLabel htmlFor="schedule-repeat">{t("schedule.repeat")}</FieldLabel>
             <Select
               value={parsed.mode}
               onValueChange={(value) => updateParsed({ mode: String(value) as RepeatMode })}
             >
-              <SelectTrigger>
+              <SelectTrigger id="schedule-repeat">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -238,7 +238,7 @@ export function ScheduleEditorDialog({
                 <SelectItem value="advanced">{t("schedule.advanced")}</SelectItem>
               </SelectContent>
             </Select>
-          </div>
+          </Field>
 
           {parsed.mode !== "minute" && parsed.mode !== "advanced" && (
             <div className="grid grid-cols-2 gap-3">
@@ -246,9 +246,10 @@ export function ScheduleEditorDialog({
                 parsed.mode === "day" ||
                 parsed.mode === "week" ||
                 parsed.mode === "month") && (
-                <div className="space-y-2">
-                  <Label>{t("schedule.minute")}</Label>
+                <Field>
+                  <FieldLabel htmlFor="schedule-minute">{t("schedule.minute")}</FieldLabel>
                   <Input
+                    id="schedule-minute"
                     type="number"
                     min={0}
                     max={59}
@@ -259,13 +260,14 @@ export function ScheduleEditorDialog({
                       })
                     }
                   />
-                </div>
+                </Field>
               )}
 
               {(parsed.mode === "day" || parsed.mode === "week" || parsed.mode === "month") && (
-                <div className="space-y-2">
-                  <Label>{t("schedule.hour")}</Label>
+                <Field>
+                  <FieldLabel htmlFor="schedule-hour">{t("schedule.hour")}</FieldLabel>
                   <Input
+                    id="schedule-hour"
                     type="number"
                     min={0}
                     max={23}
@@ -276,13 +278,16 @@ export function ScheduleEditorDialog({
                       })
                     }
                   />
-                </div>
+                </Field>
               )}
 
               {parsed.mode === "month" && (
-                <div className="space-y-2">
-                  <Label>{t("schedule.day_of_month")}</Label>
+                <Field>
+                  <FieldLabel htmlFor="schedule-day-of-month">
+                    {t("schedule.day_of_month")}
+                  </FieldLabel>
                   <Input
+                    id="schedule-day-of-month"
                     type="number"
                     min={1}
                     max={31}
@@ -293,17 +298,19 @@ export function ScheduleEditorDialog({
                       })
                     }
                   />
-                </div>
+                </Field>
               )}
 
               {parsed.mode === "week" && (
-                <div className="space-y-2 col-span-2">
-                  <Label>{t("schedule.day_of_week")}</Label>
+                <Field className="col-span-2">
+                  <FieldLabel htmlFor="schedule-day-of-week">
+                    {t("schedule.day_of_week")}
+                  </FieldLabel>
                   <Select
                     value={String(parsed.dayOfWeek)}
                     onValueChange={(value) => updateParsed({ dayOfWeek: parseInt(String(value)) })}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger id="schedule-day-of-week">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -314,21 +321,22 @@ export function ScheduleEditorDialog({
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
+                </Field>
               )}
             </div>
           )}
 
           {parsed.mode === "advanced" && (
-            <div className="space-y-2">
-              <Label>{t("schedule.cron_expression")}</Label>
+            <Field>
+              <FieldLabel htmlFor="schedule-cron">{t("schedule.cron_expression")}</FieldLabel>
               <Input
+                id="schedule-cron"
                 placeholder="*/5 * * * *"
                 value={parsed.advancedSpec}
                 onChange={(e) => updateParsed({ advancedSpec: e.target.value })}
                 className="font-mono"
               />
-            </div>
+            </Field>
           )}
 
           {humanReadable && (
@@ -339,7 +347,7 @@ export function ScheduleEditorDialog({
               <p className="mt-1 font-mono text-xs text-muted-foreground">{currentSpec}</p>
             </div>
           )}
-        </div>
+        </FieldGroup>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>

@@ -6,9 +6,11 @@ import { api } from "@/lib/api-client";
 import { useInfiniteList } from "@/hooks/use-infinite-list";
 import type { SessionSummary } from "@/lib/types";
 import { Input } from "@/components/ui/input";
+import { Item, ItemContent, ItemDescription, ItemGroup, ItemTitle } from "@/components/ui/item";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { cn, formatRelativeTime } from "@/lib/utils";
+import { formatRelativeTime } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
 
 const HISTORY_PAGE_SIZE = 20;
@@ -94,32 +96,30 @@ export function SessionHistoryList({ activeSessionId, onSelect }: SessionHistory
           />
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto">
+      <ScrollArea className="min-h-0 flex-1">
         <div className="px-2 pb-4">
           {items.length === 0 && !loading && (
             <p className="px-3 py-4 text-center text-sm text-muted-foreground">
               {t("session_detail.no_history")}
             </p>
           )}
-          <ul className="space-y-0.5">
+          <ItemGroup className="gap-0.5">
             {items.map((session) => (
-              <li key={session.id}>
-                <button
-                  type="button"
-                  onClick={() => onSelect(session.id)}
-                  className={cn(
-                    "w-full rounded-md px-3 py-2 text-left transition-colors",
-                    "hover:bg-accent hover:text-accent-foreground",
-                    session.id === activeSessionId && "bg-accent text-accent-foreground",
-                  )}
-                >
+              <Item
+                key={session.id}
+                size="sm"
+                variant={session.id === activeSessionId ? "muted" : "default"}
+                render={<button type="button" onClick={() => onSelect(session.id)} />}
+                className="text-left hover:bg-muted"
+              >
+                <ItemContent className="min-w-0 gap-0.5">
                   <TooltipRoot>
                     <TooltipTrigger
                       render={
-                        <p className="line-clamp-1 text-sm font-medium">
+                        <ItemTitle className="w-full">
                           {session.summary ||
                             t("session_history.session_label").replace("{id}", String(session.id))}
-                        </p>
+                        </ItemTitle>
                       }
                     />
                     <TooltipContent side="top" className="max-w-xs break-all">
@@ -130,12 +130,12 @@ export function SessionHistoryList({ activeSessionId, onSelect }: SessionHistory
                   <TooltipRoot>
                     <TooltipTrigger
                       render={
-                        <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
+                        <ItemDescription className="line-clamp-1 text-xs">
                           {t("session_history.message_count")
                             .replace("{count}", String(session.messageCount))
                             .replace("{s}", session.messageCount === 1 ? "" : "s")}{" "}
                           · {formatRelativeTime(session.updatedAt, locale)}
-                        </p>
+                        </ItemDescription>
                       }
                     />
                     <TooltipContent side="top" className="max-w-xs break-all">
@@ -145,17 +145,17 @@ export function SessionHistoryList({ activeSessionId, onSelect }: SessionHistory
                       · {formatRelativeTime(session.updatedAt, locale)}
                     </TooltipContent>
                   </TooltipRoot>
-                </button>
-              </li>
+                </ItemContent>
+              </Item>
             ))}
-          </ul>
+          </ItemGroup>
           {hasMore && (
             <div ref={sentinelRef} className="flex justify-center py-3">
               <Skeleton className="h-4 w-24" />
             </div>
           )}
         </div>
-      </div>
+      </ScrollArea>
     </div>
   );
 }

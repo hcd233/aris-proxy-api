@@ -9,7 +9,7 @@ import type { DemoConfig, DemoModule } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
+import { Field, FieldLabel, FieldLegend, FieldSet, FieldTitle } from "@/components/ui/field";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 
@@ -77,41 +77,39 @@ export function DemoConfigCard() {
       <CardHeader>
         <CardTitle className="font-display">{t("demo.config_title")}</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-5">
+      <CardContent className="flex flex-col gap-5">
         <p className="text-sm text-muted-foreground">{t("demo.config_desc")}</p>
 
-        <div className="flex flex-wrap items-center gap-6">
-          <div className="flex items-center gap-3">
-            <Switch
-              id="demo-login-enabled"
-              checked={config.loginEnabled}
-              onCheckedChange={(checked) =>
-                setConfig((prev) => (prev ? { ...prev, loginEnabled: checked } : prev))
-              }
-            />
-            <Label htmlFor="demo-login-enabled" className="text-sm min-w-20">
-              {t("demo.login_enabled")}
-            </Label>
-          </div>
-        </div>
+        <Field orientation="horizontal" className="w-auto">
+          <Switch
+            id="demo-login-enabled"
+            checked={config.loginEnabled}
+            onCheckedChange={(checked) =>
+              setConfig((prev) => (prev ? { ...prev, loginEnabled: checked } : prev))
+            }
+          />
+          <FieldLabel htmlFor="demo-login-enabled" className="min-w-20">
+            {t("demo.login_enabled")}
+          </FieldLabel>
+        </Field>
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">{t("demo.modules")}</p>
+        <FieldSet>
+          <FieldLegend variant="label">{t("demo.modules")}</FieldLegend>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {DEMO_MODULES.map((module) => (
-              <label
-                key={module}
-                className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-border/70 px-3 py-2 text-sm transition-colors hover:bg-secondary/50"
-              >
-                <Checkbox
-                  checked={config.modules.includes(module)}
-                  onCheckedChange={(checked) => toggleModule(module, checked)}
-                />
-                <span>{t(`demo.module_${module}`)}</span>
-              </label>
+              <FieldLabel key={module} htmlFor={`demo-module-${module}`}>
+                <Field orientation="horizontal">
+                  <Checkbox
+                    id={`demo-module-${module}`}
+                    checked={config.modules.includes(module)}
+                    onCheckedChange={(checked) => toggleModule(module, checked)}
+                  />
+                  <FieldTitle>{t(`demo.module_${module}`)}</FieldTitle>
+                </Field>
+              </FieldLabel>
             ))}
           </div>
-        </div>
+        </FieldSet>
 
         <div className="flex justify-end">
           <Button onClick={save} disabled={saving}>

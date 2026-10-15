@@ -446,6 +446,13 @@
   transition: rotate 260ms var(--ease-settle);
 }
 
+/* ---- Item: rows take the ink of hover / selection gradually. ---- */
+[data-theme="anthropic"] [data-slot="item"] {
+  transition:
+    background-color 220ms var(--ease-ink),
+    border-color 220ms var(--ease-ink);
+}
+
 /* ---- Alert「落纸」: a notice is set down on the page, then the ink dries. ---- */
 [data-theme="anthropic"] [data-slot="alert"] {
   animation: atelier-settle 420ms var(--ease-settle) backwards;

@@ -35,7 +35,7 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "@/components/ui/input-group";
-import { Label } from "@/components/ui/label";
+import { Field, FieldGroup, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { copyTextToClipboard } from "@/lib/clipboard";
@@ -143,7 +143,7 @@ export function ShareDialog({ sessionId, existingShareID, open, onOpenChange }: 
         </DialogHeader>
 
         {shareURL ? (
-          <div className="space-y-3">
+          <div className="flex flex-col gap-3">
             <InputGroup>
               <InputGroupInput
                 readOnly
@@ -168,9 +168,9 @@ export function ShareDialog({ sessionId, existingShareID, open, onOpenChange }: 
             )}
           </div>
         ) : (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>{t("share_dialog.link_expiration")}</Label>
+          <FieldGroup className="gap-4">
+            <FieldSet>
+              <FieldLegend variant="label">{t("share_dialog.link_expiration")}</FieldLegend>
               <RadioGroup
                 value={expireOption}
                 onValueChange={(v) => setExpireOption(v as ExpireOption)}
@@ -183,18 +183,15 @@ export function ShareDialog({ sessionId, existingShareID, open, onOpenChange }: 
                   { value: "never", label: t("share_dialog.expire_never") },
                   { value: "custom", label: t("share_dialog.expire_custom") },
                 ].map((opt) => (
-                  <div key={opt.value} className="flex items-center gap-1.5">
+                  <Field key={opt.value} orientation="horizontal" className="w-auto">
                     <RadioGroupItem value={opt.value} id={`expire-${opt.value}`} />
-                    <Label
-                      htmlFor={`expire-${opt.value}`}
-                      className="text-sm font-normal cursor-pointer"
-                    >
+                    <FieldLabel htmlFor={`expire-${opt.value}`} className="font-normal">
                       {opt.label}
-                    </Label>
-                  </div>
+                    </FieldLabel>
+                  </Field>
                 ))}
               </RadioGroup>
-            </div>
+            </FieldSet>
 
             {expireOption === "custom" && (
               <Popover>
@@ -224,7 +221,7 @@ export function ShareDialog({ sessionId, existingShareID, open, onOpenChange }: 
             <div className="rounded-lg border border-dashed border-border/70 bg-muted/20 px-4 py-5 text-center text-sm text-muted-foreground">
               {t("share_dialog.warning")}
             </div>
-          </div>
+          </FieldGroup>
         )}
 
         <DialogFooter>

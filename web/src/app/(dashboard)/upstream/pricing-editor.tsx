@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Switch } from "@/components/ui/switch";
 import {
   Select,
@@ -106,11 +106,11 @@ export function PricingEditor({ value, onChange }: PricingEditorProps) {
   const addRule = () => emit([...rules, emptyRule()], [...keys, newRuleKey()]);
 
   return (
-    <div className="space-y-3">
+    <div className="flex flex-col gap-3">
       {/* flex-wrap：计价开关 + 单位说明的 min-content 之和超过弹窗正文宽度时
       换行；否则会把弹窗 grid 轨道撑宽，定价卡片整体溢出弹窗右边界 */}
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex items-center gap-2">
+        <Field orientation="horizontal" className="w-auto">
           <Switch
             id="pricing-enabled"
             size="sm"
@@ -119,21 +119,19 @@ export function PricingEditor({ value, onChange }: PricingEditorProps) {
               checked ? emit([emptyRule()], [newRuleKey()]) : emit([], [])
             }
           />
-          <Label htmlFor="pricing-enabled">{t("upstream.pricing.enabled")}</Label>
-        </div>
+          <FieldLabel htmlFor="pricing-enabled">{t("upstream.pricing.enabled")}</FieldLabel>
+        </Field>
         {priced && (
           <span className="text-xs text-muted-foreground">{t("upstream.pricing.unit")}</span>
         )}
       </div>
 
-      {!priced && (
-        <p className="text-[11px] text-muted-foreground">{t("upstream.pricing.disabled_hint")}</p>
-      )}
+      {!priced && <FieldDescription>{t("upstream.pricing.disabled_hint")}</FieldDescription>}
 
       {priced && (
-        <div className="space-y-2">
+        <div className="flex flex-col gap-2">
           {rules.map((rule, idx) => (
-            <div key={keys[idx]} className="rounded-md border p-2.5 space-y-2">
+            <div key={keys[idx]} className="flex flex-col gap-2 rounded-md border p-2.5">
               <div className="flex items-center gap-1.5">
                 <span className="text-xs font-medium text-muted-foreground">#{idx + 1}</span>
                 {isDefaultRule(rule) && (
@@ -171,8 +169,9 @@ export function PricingEditor({ value, onChange }: PricingEditorProps) {
               </div>
 
               <div className="flex flex-wrap items-center gap-4">
-                <label className="flex items-center gap-2 text-xs">
+                <Field orientation="horizontal" className="w-auto">
                   <Switch
+                    id={`${keys[idx]}-time`}
                     checked={timeEnabled(rule)}
                     onCheckedChange={(checked) =>
                       patchRule(idx, {
@@ -180,10 +179,13 @@ export function PricingEditor({ value, onChange }: PricingEditorProps) {
                       })
                     }
                   />
-                  {t("upstream.pricing.opt.timeWindow")}
-                </label>
-                <label className="flex items-center gap-2 text-xs">
+                  <FieldLabel htmlFor={`${keys[idx]}-time`} className="font-normal">
+                    {t("upstream.pricing.opt.timeWindow")}
+                  </FieldLabel>
+                </Field>
+                <Field orientation="horizontal" className="w-auto">
                   <Switch
+                    id={`${keys[idx]}-context`}
                     checked={contextEnabled(rule)}
                     onCheckedChange={(checked) =>
                       patchRule(idx, {
@@ -192,8 +194,10 @@ export function PricingEditor({ value, onChange }: PricingEditorProps) {
                       })
                     }
                   />
-                  {t("upstream.pricing.opt.context")}
-                </label>
+                  <FieldLabel htmlFor={`${keys[idx]}-context`} className="font-normal">
+                    {t("upstream.pricing.opt.context")}
+                  </FieldLabel>
+                </Field>
               </div>
 
               {timeEnabled(rule) &&
@@ -313,8 +317,11 @@ export function PricingEditor({ value, onChange }: PricingEditorProps) {
 
               {contextEnabled(rule) && (
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <Label className="w-20 shrink-0">{t("upstream.pricing.context")}</Label>
+                  <FieldLabel htmlFor={`${keys[idx]}-context-min`} className="w-20 shrink-0">
+                    {t("upstream.pricing.context")}
+                  </FieldLabel>
                   <Input
+                    id={`${keys[idx]}-context-min`}
                     className="w-24"
                     type="number"
                     min={0}
@@ -343,9 +350,12 @@ export function PricingEditor({ value, onChange }: PricingEditorProps) {
                     ["upstream.pricing.cacheReadPrice", "cache_read_price"],
                   ] as const
                 ).map(([labelKey, field]) => (
-                  <div key={field} className="space-y-1">
-                    <Label className="text-xs">{t(labelKey)}</Label>
+                  <Field key={field} className="gap-1">
+                    <FieldLabel htmlFor={`${keys[idx]}-${field}`} className="text-xs">
+                      {t(labelKey)}
+                    </FieldLabel>
                     <Input
+                      id={`${keys[idx]}-${field}`}
                       type="number"
                       min={0}
                       step={0.000001}
@@ -354,7 +364,7 @@ export function PricingEditor({ value, onChange }: PricingEditorProps) {
                       value={rule[field] ?? 0}
                       onChange={(e) => patchRule(idx, { [field]: priceOrZero(e.target.value) })}
                     />
-                  </div>
+                  </Field>
                 ))}
               </div>
             </div>

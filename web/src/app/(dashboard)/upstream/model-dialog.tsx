@@ -12,7 +12,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+  FieldTitle,
+} from "@/components/ui/field";
 import { Switch } from "@/components/ui/switch";
 import {
   Popover,
@@ -186,9 +195,9 @@ export function ModelDialog({
             {editing ? t("models.edit_desc") : t("upstream.create_model_desc")}
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-3">
-          <div className="space-y-1">
-            <Label htmlFor="model-alias">{t("models.alias")}</Label>
+        <FieldGroup className="gap-4">
+          <Field>
+            <FieldLabel htmlFor="model-alias">{t("models.alias")}</FieldLabel>
             <Input
               id="model-alias"
               placeholder={t("models.alias_placeholder")}
@@ -203,9 +212,9 @@ export function ModelDialog({
                 }));
               }}
             />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="model-id">{t("models.model_id")}</Label>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="model-id">{t("models.model_id")}</FieldLabel>
             <Input
               id="model-id"
               placeholder={t("models.model_id_placeholder")}
@@ -215,26 +224,33 @@ export function ModelDialog({
                 setForm((f) => ({ ...f, modelId: e.target.value }));
               }}
             />
-            <p className="text-[11px] text-muted-foreground">{t("models.model_id_hint")}</p>
-          </div>
+            <FieldDescription>{t("models.model_id_hint")}</FieldDescription>
+          </Field>
           {showSyncHistory && (
-            <div className="space-y-1 rounded-lg border border-input px-3 py-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm">{t("models.sync_history")}</span>
-                <Switch size="sm" checked={syncHistory} onCheckedChange={onSyncHistoryChange} />
-              </div>
-              <p className="text-[11px] text-muted-foreground">{t("models.sync_history_desc")}</p>
-            </div>
+            <FieldLabel htmlFor="model-sync-history">
+              <Field orientation="horizontal">
+                <FieldContent>
+                  <FieldTitle>{t("models.sync_history")}</FieldTitle>
+                  <FieldDescription>{t("models.sync_history_desc")}</FieldDescription>
+                </FieldContent>
+                <Switch
+                  id="model-sync-history"
+                  size="sm"
+                  checked={syncHistory}
+                  onCheckedChange={onSyncHistoryChange}
+                />
+              </Field>
+            </FieldLabel>
           )}
-          <div className="space-y-1">
-            <Label htmlFor="model-upstream">{t("models.upstream_model")}</Label>
+          <Field>
+            <FieldLabel htmlFor="model-upstream">{t("models.upstream_model")}</FieldLabel>
             <Input
               id="model-upstream"
               placeholder={t("models.upstream_model_placeholder")}
               value={form.upstreamModel}
               onChange={(e) => setForm((f) => ({ ...f, upstreamModel: e.target.value }))}
             />
-          </div>
+          </Field>
           {/* 规格导入入口 + 结果提示同一行（按钮产出的是下方规格三件套，故紧邻其上方） */}
           <div className="flex flex-wrap items-center gap-2">
             <Button
@@ -261,8 +277,8 @@ export function ModelDialog({
             )}
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label htmlFor="model-context-length">{t("models.context_length")}</Label>
+            <Field>
+              <FieldLabel htmlFor="model-context-length">{t("models.context_length")}</FieldLabel>
               <div className="flex gap-2">
                 <Input
                   id="model-context-length"
@@ -285,9 +301,9 @@ export function ModelDialog({
                   onSelect={(v) => setForm((f) => ({ ...f, contextLength: v }))}
                 />
               </div>
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="model-max-output">{t("models.max_output")}</Label>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="model-max-output">{t("models.max_output")}</FieldLabel>
               <div className="flex gap-2">
                 <Input
                   id="model-max-output"
@@ -310,11 +326,11 @@ export function ModelDialog({
                   onSelect={(v) => setForm((f) => ({ ...f, maxOutputTokens: v }))}
                 />
               </div>
-            </div>
+            </Field>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label htmlFor="model-priority">{t("models.priority")}</Label>
+            <Field>
+              <FieldLabel htmlFor="model-priority">{t("models.priority")}</FieldLabel>
               <Input
                 id="model-priority"
                 type="number"
@@ -325,10 +341,10 @@ export function ModelDialog({
                 value={form.priority}
                 onChange={(e) => setForm((f) => ({ ...f, priority: Number(e.target.value) || 0 }))}
               />
-              <p className="text-[11px] text-muted-foreground">{t("models.priority_hint")}</p>
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="model-weight">{t("models.weight")}</Label>
+              <FieldDescription>{t("models.priority_hint")}</FieldDescription>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="model-weight">{t("models.weight")}</FieldLabel>
               <Input
                 id="model-weight"
                 type="number"
@@ -339,11 +355,11 @@ export function ModelDialog({
                 value={form.weight}
                 onChange={(e) => setForm((f) => ({ ...f, weight: Number(e.target.value) || 1 }))}
               />
-              <p className="text-[11px] text-muted-foreground">{t("models.weight_hint")}</p>
-            </div>
+              <FieldDescription>{t("models.weight_hint")}</FieldDescription>
+            </Field>
           </div>
-          <div className="space-y-1">
-            <Label>{t("models.capabilities")}</Label>
+          <FieldSet>
+            <FieldLegend variant="label">{t("models.capabilities")}</FieldLegend>
             <ToggleGroup
               multiple
               variant="outline"
@@ -363,8 +379,8 @@ export function ModelDialog({
                 </ToggleGroupItem>
               ))}
             </ToggleGroup>
-          </div>
-        </div>
+          </FieldSet>
+        </FieldGroup>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>

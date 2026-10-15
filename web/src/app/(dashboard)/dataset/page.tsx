@@ -31,6 +31,7 @@ import { MultiSelectPill } from "@/components/ui/multi-select-pill";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TimeRangePicker } from "@/components/ui/time-range-picker";
 import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -570,14 +571,16 @@ export default function DatasetPage() {
                           total: String(formatPreview.totalCount ?? 0),
                         })}
                       </div>
-                      <pre className="max-h-96 overflow-auto rounded-lg border border-border bg-(--code-bg) p-4 text-xs leading-6 [&_.hljs-punctuation]:text-[#9ca3af] [&_.hljs-attr]:text-[#93c5fd] [&_.hljs-string]:text-[#86efac] [&_.hljs-number]:text-[#f9a8d4] [&_.hljs-literal]:text-[#f9a8d4] [&_.hljs-keyword]:text-[#a78bfa] [&_.hljs-comment]:text-[#6b7280] [&_.hljs-comment]:italic">
-                        <code
-                          className="font-mono whitespace-pre"
-                          dangerouslySetInnerHTML={{
-                            __html: formatAndHighlight(formatPreview.sharegptJson),
-                          }}
-                        />
-                      </pre>
+                      <ScrollArea className="max-h-96 rounded-lg border border-border bg-(--code-bg)">
+                        <pre className="p-4 text-xs leading-6 [&_.hljs-punctuation]:text-[#9ca3af] [&_.hljs-attr]:text-[#93c5fd] [&_.hljs-string]:text-[#86efac] [&_.hljs-number]:text-[#f9a8d4] [&_.hljs-literal]:text-[#f9a8d4] [&_.hljs-keyword]:text-[#a78bfa] [&_.hljs-comment]:text-[#6b7280] [&_.hljs-comment]:italic">
+                          <code
+                            className="font-mono whitespace-pre"
+                            dangerouslySetInnerHTML={{
+                              __html: formatAndHighlight(formatPreview.sharegptJson),
+                            }}
+                          />
+                        </pre>
+                      </ScrollArea>
                     </div>
                   ) : (
                     <div className="rounded-lg border border-dashed border-border px-3 py-8 text-center text-sm text-muted-foreground">

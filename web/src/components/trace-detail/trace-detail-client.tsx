@@ -10,6 +10,7 @@ import type { PageInfo, TraceDetail, TraceEventItem } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   TooltipProvider,
@@ -192,19 +193,25 @@ function EventCard({ ev, t }: { ev: TraceEventItem; t: (k: string, f?: string) =
       </p>
 
       {view.kind === "message" && view.text && (
-        <pre className="mt-2 max-h-96 overflow-auto whitespace-pre-wrap break-words rounded-md bg-(--code-bg) p-3 font-mono text-[12px] leading-relaxed text-(--code-text)">
-          {view.text}
-        </pre>
+        <ScrollArea className="mt-2 max-h-96 rounded-md bg-(--code-bg)">
+          <pre className="whitespace-pre-wrap break-words p-3 font-mono text-[12px] leading-relaxed text-(--code-text)">
+            {view.text}
+          </pre>
+        </ScrollArea>
       )}
       {view.kind === "tool_call" && (
-        <pre className="mt-2 max-h-60 overflow-auto rounded-md bg-(--code-bg) p-3 font-mono text-[11px] leading-relaxed text-(--code-text)">
-          {view.argumentsText || t("trace.empty_payload")}
-        </pre>
+        <ScrollArea className="mt-2 max-h-60 rounded-md bg-(--code-bg)">
+          <pre className="p-3 font-mono text-[11px] leading-relaxed text-(--code-text)">
+            {view.argumentsText || t("trace.empty_payload")}
+          </pre>
+        </ScrollArea>
       )}
       {view.kind === "tool_output" && (
-        <pre className="mt-2 max-h-60 overflow-auto rounded-md bg-(--code-bg) p-3 font-mono text-[11px] leading-relaxed text-(--code-text)">
-          {view.outputText || t("trace.empty_payload")}
-        </pre>
+        <ScrollArea className="mt-2 max-h-60 rounded-md bg-(--code-bg)">
+          <pre className="p-3 font-mono text-[11px] leading-relaxed text-(--code-text)">
+            {view.outputText || t("trace.empty_payload")}
+          </pre>
+        </ScrollArea>
       )}
       {view.kind === "session_meta" && (
         <div className="mt-2 space-y-3">
@@ -213,9 +220,11 @@ function EventCard({ ev, t }: { ev: TraceEventItem; t: (k: string, f?: string) =
               <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/80">
                 {t("trace.system_prompt")}
               </p>
-              <pre className="mt-1 max-h-60 overflow-auto whitespace-pre-wrap break-words rounded-md bg-(--code-bg) p-3 font-mono text-[11px] leading-relaxed text-(--code-text)">
-                {view.systemPrompt}
-              </pre>
+              <ScrollArea className="mt-1 max-h-60 rounded-md bg-(--code-bg)">
+                <pre className="whitespace-pre-wrap break-words p-3 font-mono text-[11px] leading-relaxed text-(--code-text)">
+                  {view.systemPrompt}
+                </pre>
+              </ScrollArea>
             </div>
           )}
           {view.tools.length > 0 && (
@@ -243,9 +252,11 @@ function EventCard({ ev, t }: { ev: TraceEventItem; t: (k: string, f?: string) =
                       </p>
                     )}
                     {tool.parameters && (
-                      <pre className="mt-2 max-h-60 overflow-auto rounded-md bg-(--code-bg) p-3 font-mono text-[11px] leading-relaxed text-(--code-text)">
-                        {tool.parameters}
-                      </pre>
+                      <ScrollArea className="mt-2 max-h-60 rounded-md bg-(--code-bg)">
+                        <pre className="p-3 font-mono text-[11px] leading-relaxed text-(--code-text)">
+                          {tool.parameters}
+                        </pre>
+                      </ScrollArea>
                     )}
                   </div>
                 ))}
@@ -262,9 +273,11 @@ function EventCard({ ev, t }: { ev: TraceEventItem; t: (k: string, f?: string) =
           <ChevronRight className="size-3.5 in-data-panel-open:rotate-90" />
         </CollapsibleTrigger>
         <CollapsibleContent>
-          <pre className="mt-2 max-h-96 overflow-auto rounded-md bg-(--code-bg) p-3 font-mono text-[11px] leading-relaxed text-(--code-text)">
-            {rawJson}
-          </pre>
+          <ScrollArea className="mt-2 max-h-96 rounded-md bg-(--code-bg)">
+            <pre className="p-3 font-mono text-[11px] leading-relaxed text-(--code-text)">
+              {rawJson}
+            </pre>
+          </ScrollArea>
         </CollapsibleContent>
       </Collapsible>
     </div>

@@ -18,6 +18,15 @@ import {
 import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemFooter,
+  ItemGroup,
+  ItemMedia,
+  ItemTitle,
+} from "@/components/ui/item";
 import { MessageSquare, ArrowUp, ArrowDown, Trash2, Lock } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth-context";
@@ -357,82 +366,76 @@ export default function SessionsPage() {
             ) : (
               <>
                 {isMobile ? (
-                  <div className="space-y-3">
+                  <ItemGroup className="gap-3">
                     {sessions.map((s) => {
                       const isSelected = selected.has(s.id);
                       return (
-                        <div
+                        <Item
                           key={s.id}
-                          className="cursor-pointer rounded-lg border border-border bg-card p-4 transition-colors hover:bg-secondary/50"
+                          variant="outline"
+                          role="listitem"
+                          className="cursor-pointer hover:bg-muted"
                           onClick={() => {
                             window.location.href = `/web/sessions/detail/?id=${s.id}`;
                           }}
                         >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex items-center gap-2 min-w-0 flex-1">
-                              <Checkbox
-                                checked={isSelected}
-                                onCheckedChange={() => toggleSelect(s.id)}
-                                onClick={(e) => e.stopPropagation()}
-                                className="mt-0.5"
-                              />
-                              <div className="min-w-0 flex-1">
-                                <TooltipRoot>
-                                  <TooltipTrigger
-                                    render={
-                                      <p className="truncate text-sm font-medium">
-                                        {s.summary ||
-                                          t("sessions.untitled_session").replace(
-                                            "{id}",
-                                            String(s.id),
-                                          )}
-                                      </p>
-                                    }
-                                  />
-                                  <TooltipContent side="top" className="max-w-xs break-all">
+                          <ItemMedia>
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={() => toggleSelect(s.id)}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          </ItemMedia>
+                          <ItemContent className="min-w-0">
+                            <TooltipRoot>
+                              <TooltipTrigger
+                                render={
+                                  <ItemTitle className="w-full truncate">
                                     {s.summary ||
                                       t("sessions.untitled_session").replace("{id}", String(s.id))}
-                                  </TooltipContent>
-                                </TooltipRoot>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2 shrink-0">
-                              {!isDemo() && (
-                                <ScoreDots
-                                  score={s.score}
-                                  scoring={scoring === s.id}
-                                  onScore={(v) => handleScoreSession(s.id, v)}
-                                  onClear={() => handleDeleteScore(s.id)}
-                                  size={isMobile ? 20 : 16}
-                                />
-                              )}
-                              <Badge variant="secondary" className="text-xs">
-                                {t("sessions.msg_count").replace(
-                                  "{count}",
-                                  String(s.messageCount ?? 0),
-                                )}
-                              </Badge>
-                              <DemoAddButton
-                                sessionId={s.id}
-                                inDemo={isInDemo(s.id)}
-                                pending={pending}
-                                loginEnabled={loginEnabled}
-                                onToggle={toggle}
-                              />
-                              <DeleteIconButton
-                                locked={isDemo()}
-                                disabled={
-                                  deleteConfirm.loading && deleteConfirm.target?.id === s.id
+                                  </ItemTitle>
                                 }
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  deleteConfirm.openDelete(s);
-                                }}
-                                aria-label={t("sessions.delete_aria")}
                               />
-                            </div>
-                          </div>
-                          <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                              <TooltipContent side="top" className="max-w-xs break-all">
+                                {s.summary ||
+                                  t("sessions.untitled_session").replace("{id}", String(s.id))}
+                              </TooltipContent>
+                            </TooltipRoot>
+                          </ItemContent>
+                          <ItemActions>
+                            {!isDemo() && (
+                              <ScoreDots
+                                score={s.score}
+                                scoring={scoring === s.id}
+                                onScore={(v) => handleScoreSession(s.id, v)}
+                                onClear={() => handleDeleteScore(s.id)}
+                                size={isMobile ? 20 : 16}
+                              />
+                            )}
+                            <Badge variant="secondary" className="text-xs">
+                              {t("sessions.msg_count").replace(
+                                "{count}",
+                                String(s.messageCount ?? 0),
+                              )}
+                            </Badge>
+                            <DemoAddButton
+                              sessionId={s.id}
+                              inDemo={isInDemo(s.id)}
+                              pending={pending}
+                              loginEnabled={loginEnabled}
+                              onToggle={toggle}
+                            />
+                            <DeleteIconButton
+                              locked={isDemo()}
+                              disabled={deleteConfirm.loading && deleteConfirm.target?.id === s.id}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteConfirm.openDelete(s);
+                              }}
+                              aria-label={t("sessions.delete_aria")}
+                            />
+                          </ItemActions>
+                          <ItemFooter className="flex-wrap justify-start gap-3 text-xs text-muted-foreground">
                             <span>
                               {t("common.id")}: {s.id}
                             </span>
@@ -450,11 +453,11 @@ export default function SessionsPage() {
                               </div>
                             )}
                             <span>{formatDateTime(s.createdAt)}</span>
-                          </div>
-                        </div>
+                          </ItemFooter>
+                        </Item>
                       );
                     })}
-                  </div>
+                  </ItemGroup>
                 ) : (
                   <Table>
                     <TableHeader>

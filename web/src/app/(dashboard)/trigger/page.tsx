@@ -10,6 +10,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemMedia,
+  ItemTitle,
+} from "@/components/ui/item";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -289,70 +298,70 @@ export default function TriggerPage() {
               ) : (
                 <>
                   {isMobile ? (
-                    <div className="space-y-3">
+                    <ItemGroup className="gap-3">
                       {items.map((item) => {
                         const isSelected = selected.has(item.id);
                         return (
-                          <div
+                          <Item
                             key={item.id}
-                            className="rounded-lg border border-border bg-card p-4"
+                            variant="outline"
+                            role="listitem"
+                            className="items-start"
                           >
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="flex min-w-0 flex-1 items-start gap-2">
-                                <Checkbox
-                                  checked={isSelected}
-                                  onCheckedChange={() => toggleSelect(item.id)}
+                            <ItemMedia>
+                              <Checkbox
+                                checked={isSelected}
+                                onCheckedChange={() => toggleSelect(item.id)}
+                              />
+                            </ItemMedia>
+                            <ItemContent className="min-w-0">
+                              <TooltipRoot>
+                                <TooltipTrigger
+                                  render={
+                                    <ItemTitle
+                                      className="line-clamp-none cursor-pointer break-all underline-offset-2 hover:underline"
+                                      onClick={() => handleCopyWord(item.word)}
+                                    >
+                                      {item.word}
+                                    </ItemTitle>
+                                  }
                                 />
-                                <div className="min-w-0 flex-1">
-                                  <TooltipRoot>
-                                    <TooltipTrigger
-                                      render={
-                                        <p
-                                          className="cursor-pointer text-sm font-medium underline-offset-2 hover:underline"
-                                          onClick={() => handleCopyWord(item.word)}
-                                        >
-                                          {item.word}
-                                        </p>
-                                      }
-                                    />
-                                    <TooltipContent side="top">
-                                      {t("trigger.copy_word_title")}
-                                    </TooltipContent>
-                                  </TooltipRoot>
-                                  <p className="mt-0.5 text-xs text-muted-foreground">
-                                    {t("trigger.hit_count")}: {item.hitCount}
-                                  </p>
-                                  <div className="mt-1.5">
-                                    <ActionBadge
-                                      action={item.action}
-                                      t={t}
-                                      disabled={toggleAction.updatingKey !== null}
-                                      onClick={() =>
-                                        toggleAction.apply(item, {
-                                          action:
-                                            item.action === "deny"
-                                              ? "omit"
-                                              : item.action === "omit"
-                                                ? "capture"
-                                                : "deny",
-                                        })
-                                      }
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="flex shrink-0 items-center gap-1">
-                                <DeleteButton
-                                  label={t("common.delete")}
-                                  locked={isDemo()}
-                                  onClick={() => deleteConfirm.openDelete(item)}
+                                <TooltipContent side="top">
+                                  {t("trigger.copy_word_title")}
+                                </TooltipContent>
+                              </TooltipRoot>
+                              <ItemDescription>
+                                {t("trigger.hit_count")}: {item.hitCount}
+                              </ItemDescription>
+                              <div>
+                                <ActionBadge
+                                  action={item.action}
+                                  t={t}
+                                  disabled={toggleAction.updatingKey !== null}
+                                  onClick={() =>
+                                    toggleAction.apply(item, {
+                                      action:
+                                        item.action === "deny"
+                                          ? "omit"
+                                          : item.action === "omit"
+                                            ? "capture"
+                                            : "deny",
+                                    })
+                                  }
                                 />
                               </div>
-                            </div>
-                          </div>
+                            </ItemContent>
+                            <ItemActions>
+                              <DeleteButton
+                                label={t("common.delete")}
+                                locked={isDemo()}
+                                onClick={() => deleteConfirm.openDelete(item)}
+                              />
+                            </ItemActions>
+                          </Item>
                         );
                       })}
-                    </div>
+                    </ItemGroup>
                   ) : (
                     <Table>
                       <TableHeader>

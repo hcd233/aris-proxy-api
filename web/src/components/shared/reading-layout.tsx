@@ -4,6 +4,7 @@ import { type ReactNode, type Ref, type UIEvent } from "react";
 import { Wrench } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { SwipeDismissSheetBody } from "@/components/session-detail/swipe-dismiss-sheet-body";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
@@ -156,13 +157,13 @@ export function ReadingLayout({
                 ✕
               </button>
             </div>
-            <div
-              ref={(node) => onToolsScrollRootChange?.(node)}
-              onScroll={onToolsScroll}
-              className="min-h-0 flex-1 space-y-2 overflow-y-auto p-4"
+            <ScrollArea
+              className="min-h-0 flex-1"
+              viewportRef={(node) => onToolsScrollRootChange?.(node)}
+              onViewportScroll={onToolsScroll}
             >
-              {toolsPanel}
-            </div>
+              <div className="flex flex-col gap-2 p-4">{toolsPanel}</div>
+            </ScrollArea>
           </div>
         </aside>
       )}

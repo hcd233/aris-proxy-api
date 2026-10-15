@@ -6,6 +6,7 @@ import { api } from "@/lib/api-client";
 import { useI18n } from "@/lib/i18n";
 import type { ModelUsageItem } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -141,7 +142,7 @@ export function ModelTokenBarChart() {
             </Button>
           </div>
         ) : (
-          <div className="h-64 overflow-y-auto">
+          <ScrollArea className="h-64">
             <Table className="tabular-nums">
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
@@ -189,7 +190,7 @@ export function ModelTokenBarChart() {
                 ))}
               </TableBody>
             </Table>
-          </div>
+          </ScrollArea>
         )}
       </CardContent>
     </Card>

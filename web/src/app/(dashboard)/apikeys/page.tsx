@@ -8,6 +8,15 @@ import type { APIKeyItem, APIKeyDetail, PageInfo } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemFooter,
+  ItemGroup,
+  ItemTitle,
+} from "@/components/ui/item";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -246,64 +255,64 @@ export default function APIKeysPage() {
             ) : (
               <>
                 {isMobile ? (
-                  <div className="space-y-3">
+                  <ItemGroup className="gap-3">
                     {keys.map((key) => (
-                      <div key={key.id} className="rounded-lg border border-border bg-card p-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0 flex-1">
-                            <TooltipRoot>
-                              <TooltipTrigger
-                                render={<p className="truncate text-sm font-medium">{key.name}</p>}
-                              />
-                              <TooltipContent className="max-w-xs break-all">
-                                {key.name}
-                              </TooltipContent>
-                            </TooltipRoot>
-                            <TooltipRoot>
-                              <TooltipTrigger
-                                render={
-                                  <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">
-                                    {key.key}
-                                  </p>
-                                }
-                              />
-                              <TooltipContent className="max-w-xs break-all">
-                                {key.key}
-                              </TooltipContent>
-                            </TooltipRoot>
-                            {key.user && (
-                              <p className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-                                <Avatar size="sm">
-                                  {key.user.avatar && (
-                                    <AvatarImage src={key.user.avatar} alt={key.user.name} />
-                                  )}
-                                  <AvatarFallback className="text-[10px]">
-                                    {key.user.name.charAt(0).toUpperCase() || "?"}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <TooltipRoot>
-                                  <TooltipTrigger
-                                    render={<span className="truncate">{key.user.name}</span>}
-                                  />
-                                  <TooltipContent className="max-w-xs break-all">
-                                    {key.user.name}
-                                  </TooltipContent>
-                                </TooltipRoot>
-                              </p>
-                            )}
-                          </div>
+                      <Item key={key.id} variant="outline" role="listitem" className="items-start">
+                        <ItemContent className="min-w-0">
+                          <TooltipRoot>
+                            <TooltipTrigger
+                              render={<ItemTitle className="w-full truncate">{key.name}</ItemTitle>}
+                            />
+                            <TooltipContent className="max-w-xs break-all">
+                              {key.name}
+                            </TooltipContent>
+                          </TooltipRoot>
+                          <TooltipRoot>
+                            <TooltipTrigger
+                              render={
+                                <ItemDescription className="truncate font-mono text-xs">
+                                  {key.key}
+                                </ItemDescription>
+                              }
+                            />
+                            <TooltipContent className="max-w-xs break-all">
+                              {key.key}
+                            </TooltipContent>
+                          </TooltipRoot>
+                          {key.user && (
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <Avatar size="sm">
+                                {key.user.avatar && (
+                                  <AvatarImage src={key.user.avatar} alt={key.user.name} />
+                                )}
+                                <AvatarFallback className="text-[10px]">
+                                  {key.user.name.charAt(0).toUpperCase() || "?"}
+                                </AvatarFallback>
+                              </Avatar>
+                              <TooltipRoot>
+                                <TooltipTrigger
+                                  render={<span className="truncate">{key.user.name}</span>}
+                                />
+                                <TooltipContent className="max-w-xs break-all">
+                                  {key.user.name}
+                                </TooltipContent>
+                              </TooltipRoot>
+                            </div>
+                          )}
+                        </ItemContent>
+                        <ItemActions>
                           <DeleteButton
                             label={t("common.delete")}
                             disabled={deleteConfirm.loading && deleteConfirm.target?.id === key.id}
                             onClick={() => deleteConfirm.openDelete(key)}
                           />
-                        </div>
-                        <p className="mt-2 text-xs text-muted-foreground">
+                        </ItemActions>
+                        <ItemFooter className="justify-start text-xs text-muted-foreground">
                           {t("apikeys.created")} {new Date(key.createdAt).toLocaleDateString()}
-                        </p>
-                      </div>
+                        </ItemFooter>
+                      </Item>
                     ))}
-                  </div>
+                  </ItemGroup>
                 ) : (
                   <Table>
                     <TableHeader>

@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { PageHeader } from "@/components/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
@@ -122,27 +122,27 @@ export default function ProfilePage() {
             <CardTitle className="font-display">{t("profile.update")}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="max-w-md space-y-5">
-              <div className="space-y-1.5">
-                <Label htmlFor="profile-name" className="text-sm font-medium">
-                  {t("profile.name")}
-                </Label>
+            <FieldGroup className="max-w-md">
+              <Field>
+                <FieldLabel htmlFor="profile-name">{t("profile.name")}</FieldLabel>
                 <Input
                   id="profile-name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder={t("profile.name_placeholder")}
                 />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-sm font-medium">{t("profile.email")}</Label>
-                <Input value={localUser.email ?? ""} disabled className="opacity-60 bg-muted/30" />
-                <p className="text-xs text-muted-foreground">{t("profile.email_oauth_hint")}</p>
-              </div>
-              <Button onClick={handleSave} disabled={saving || name === (localUser.name ?? "")}>
-                {saving ? t("common.saving") : t("common.save")}
-              </Button>
-            </div>
+              </Field>
+              <Field data-disabled>
+                <FieldLabel htmlFor="profile-email">{t("profile.email")}</FieldLabel>
+                <Input id="profile-email" value={localUser.email ?? ""} disabled />
+                <FieldDescription>{t("profile.email_oauth_hint")}</FieldDescription>
+              </Field>
+              <Field orientation="horizontal">
+                <Button onClick={handleSave} disabled={saving || name === (localUser.name ?? "")}>
+                  {saving ? t("common.saving") : t("common.save")}
+                </Button>
+              </Field>
+            </FieldGroup>
           </CardContent>
         </Card>
       </div>

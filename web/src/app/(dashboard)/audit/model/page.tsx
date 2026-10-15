@@ -7,6 +7,7 @@ import type { AuditLogItem, PageInfo } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Item, ItemGroup } from "@/components/ui/item";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -25,6 +26,7 @@ import { useRequestSeq } from "@/hooks/use-request-seq";
 import { useI18n } from "@/lib/i18n";
 import { PermissionGuard } from "@/components/permission-guard";
 import { formatCost } from "@/lib/money";
+import { cn } from "@/lib/utils";
 import {
   TooltipProvider,
   TooltipRoot,
@@ -239,7 +241,7 @@ export default function AuditPage() {
                 <p className="text-sm text-muted-foreground">{t("audit.no_logs_range")}</p>
               </div>
             ) : isMobile ? (
-              <div className="space-y-3">
+              <ItemGroup className="gap-3">
                 {logs.map((log) => {
                   const ok = log.upstreamStatusCode === 200;
                   const hasError = !!log.errorMessage;
@@ -250,9 +252,14 @@ export default function AuditPage() {
                   );
 
                   return (
-                    <div
+                    <Item
                       key={log.id}
-                      className={`rounded-lg border border-border bg-card ${ok ? "" : "bg-destructive/5"}`}
+                      variant="outline"
+                      role="listitem"
+                      className={cn(
+                        "flex-col flex-nowrap items-stretch gap-0 p-0",
+                        !ok && "bg-destructive/5",
+                      )}
                     >
                       <div
                         className="cursor-pointer p-4"
@@ -463,10 +470,10 @@ export default function AuditPage() {
                           </div>
                         </div>
                       </div>
-                    </div>
+                    </Item>
                   );
                 })}
-              </div>
+              </ItemGroup>
             ) : (
               <Table>
                 <TableHeader>

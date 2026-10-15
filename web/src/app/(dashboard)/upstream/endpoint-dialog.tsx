@@ -11,7 +11,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+} from "@/components/ui/field";
 import {
   Select,
   SelectContent,
@@ -56,19 +63,19 @@ export function EndpointDialog({
             {editingId ? t("endpoints.edit_description") : t("endpoints.create_description")}
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-3">
-          <div className="space-y-1">
-            <Label htmlFor="ep-name">{t("endpoints.name")}</Label>
+        <FieldGroup className="gap-4">
+          <Field>
+            <FieldLabel htmlFor="ep-name">{t("endpoints.name")}</FieldLabel>
             <Input
               id="ep-name"
               placeholder={t("endpoints.name") + "..."}
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
             />
-          </div>
+          </Field>
           {!editingId && isAdmin && (
-            <div className="space-y-1">
-              <Label htmlFor="ep-owner">{t("upstream.owner")}</Label>
+            <Field>
+              <FieldLabel htmlFor="ep-owner">{t("upstream.owner")}</FieldLabel>
               <Select
                 value={form.ownerUserID ? String(form.ownerUserID) : ""}
                 onValueChange={(value) =>
@@ -89,29 +96,29 @@ export function EndpointDialog({
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-[11px] text-muted-foreground">{t("upstream.owner_default")}</p>
-            </div>
+              <FieldDescription>{t("upstream.owner_default")}</FieldDescription>
+            </Field>
           )}
-          <div className="space-y-1">
-            <Label htmlFor="ep-openai-url">{t("endpoints.openai_base_url")}</Label>
+          <Field>
+            <FieldLabel htmlFor="ep-openai-url">{t("endpoints.openai_base_url")}</FieldLabel>
             <Input
               id="ep-openai-url"
               placeholder="https://api.openai.com/v1"
               value={form.openaiBaseURL}
               onChange={(e) => setForm((f) => ({ ...f, openaiBaseURL: e.target.value }))}
             />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="ep-anthropic-url">{t("endpoints.anthropic_base_url")}</Label>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="ep-anthropic-url">{t("endpoints.anthropic_base_url")}</FieldLabel>
             <Input
               id="ep-anthropic-url"
               placeholder="https://api.anthropic.com/v1"
               value={form.anthropicBaseURL}
               onChange={(e) => setForm((f) => ({ ...f, anthropicBaseURL: e.target.value }))}
             />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="ep-apikey">{t("endpoints.api_key")}</Label>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="ep-apikey">{t("endpoints.api_key")}</FieldLabel>
             <Input
               id="ep-apikey"
               type="password"
@@ -119,49 +126,61 @@ export function EndpointDialog({
               value={form.apiKey}
               onChange={(e) => setForm((f) => ({ ...f, apiKey: e.target.value }))}
             />
-          </div>
-          <div className="space-y-2">
-            <Label>{t("endpoints.capabilities")}</Label>
-            <div className="flex flex-col gap-2">
-              <label className="flex items-center gap-2 text-sm">
+          </Field>
+          <FieldSet>
+            <FieldLegend variant="label">{t("endpoints.capabilities")}</FieldLegend>
+            <FieldGroup className="gap-2">
+              <Field orientation="horizontal">
                 <Checkbox
+                  id="ep-supportOpenAIChatCompletion"
                   checked={form.supportOpenAIChatCompletion}
                   onCheckedChange={(checked) =>
                     setForm((f) => ({ ...f, supportOpenAIChatCompletion: checked }))
                   }
                 />
-                {t("endpoints.openai_chat_label")}
-              </label>
-              <label className="flex items-center gap-2 text-sm">
+                <FieldLabel htmlFor="ep-supportOpenAIChatCompletion" className="font-normal">
+                  {t("endpoints.openai_chat_label")}
+                </FieldLabel>
+              </Field>
+              <Field orientation="horizontal">
                 <Checkbox
+                  id="ep-supportOpenAIResponse"
                   checked={form.supportOpenAIResponse}
                   onCheckedChange={(checked) =>
                     setForm((f) => ({ ...f, supportOpenAIResponse: checked }))
                   }
                 />
-                {t("endpoints.openai_response_label")}
-              </label>
-              <label className="flex items-center gap-2 text-sm">
+                <FieldLabel htmlFor="ep-supportOpenAIResponse" className="font-normal">
+                  {t("endpoints.openai_response_label")}
+                </FieldLabel>
+              </Field>
+              <Field orientation="horizontal">
                 <Checkbox
+                  id="ep-supportAnthropicMessage"
                   checked={form.supportAnthropicMessage}
                   onCheckedChange={(checked) =>
                     setForm((f) => ({ ...f, supportAnthropicMessage: checked }))
                   }
                 />
-                {t("endpoints.anthropic_messages_label")}
-              </label>
-              <label className="flex items-center gap-2 text-sm">
+                <FieldLabel htmlFor="ep-supportAnthropicMessage" className="font-normal">
+                  {t("endpoints.anthropic_messages_label")}
+                </FieldLabel>
+              </Field>
+              <Field orientation="horizontal">
                 <Checkbox
+                  id="ep-supportOpenAIDecision"
                   checked={form.supportOpenAIDecision}
                   onCheckedChange={(checked) =>
                     setForm((f) => ({ ...f, supportOpenAIDecision: checked }))
                   }
                 />
-                {t("endpoints.openai_decision_label")}
-              </label>
-            </div>
-          </div>
-        </div>
+                <FieldLabel htmlFor="ep-supportOpenAIDecision" className="font-normal">
+                  {t("endpoints.openai_decision_label")}
+                </FieldLabel>
+              </Field>
+            </FieldGroup>
+          </FieldSet>
+        </FieldGroup>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             {t("common.cancel")}
