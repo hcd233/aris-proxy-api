@@ -61,8 +61,12 @@ func BuildChatCompletion(spec MockSpec, model string) *dto.OpenAIChatCompletion 
 	}
 }
 
-// BuildChatUsage 按 1 token ≈ 4 字符口径估算 usage（input 计 0，由调用方按请求文本回填）。
+// BuildChatUsage 按 1 token ≈ 4 字符口径估算 usage；输入维由调用方按请求 body 填入 Spec.InputTokens。
 func BuildChatUsage(spec MockSpec) *dto.OpenAICompletionUsage {
 	out := spec.Tokens()
-	return &dto.OpenAICompletionUsage{CompletionTokens: out, TotalTokens: out}
+	return &dto.OpenAICompletionUsage{
+		PromptTokens:     spec.InputTokens,
+		CompletionTokens: out,
+		TotalTokens:      spec.InputTokens + out,
+	}
 }

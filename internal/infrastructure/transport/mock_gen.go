@@ -12,9 +12,10 @@ import (
 // 时序模型（每次请求独立抽参）：T=0 收到请求 → T=TTFT 吐首片 →
 // 之后每片间隔 1/TPS → T=TTFT+(N-1)/TPS 流结束。
 type MockSpec struct {
-	Chars    []byte        // 随机字符内容
-	TTFT     time.Duration // 首 token 延迟 [0,1s]
-	Interval time.Duration // 相邻分片间隔 = 1/TPS
+	Chars       []byte        // 随机字符内容
+	TTFT        time.Duration // 首 token 延迟 [0,1s]
+	Interval    time.Duration // 相邻分片间隔 = 1/TPS
+	InputTokens int           // 输入 token 估算（由调用方按请求 body 填入）
 }
 
 // NewMockSpec 抽取一次 mock 响应的随机参数。

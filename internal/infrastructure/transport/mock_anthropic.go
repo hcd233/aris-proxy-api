@@ -32,7 +32,7 @@ func BuildMessageStream(spec MockSpec, model, messageID string) []MockResponseEv
 				Type:  enum.AnthropicMessageTypeMessage,
 				Role:  enum.RoleAssistant,
 				Model: model,
-				Usage: &dto.AnthropicUsage{},
+				Usage: &dto.AnthropicUsage{InputTokens: spec.InputTokens},
 			},
 		}),
 		mockEvent(enum.AnthropicSSEEventTypeContentBlockStart, &dto.AnthropicSSEContentBlockStart{
@@ -70,7 +70,7 @@ func BuildMessage(spec MockSpec, model string) *dto.AnthropicMessage {
 		Model:      model,
 		Content:    []*dto.AnthropicContentBlock{buildMessageBlock(spec)},
 		StopReason: lo.ToPtr(enum.AnthropicStopReasonEndTurn),
-		Usage:      &dto.AnthropicUsage{OutputTokens: spec.Tokens()},
+		Usage:      &dto.AnthropicUsage{InputTokens: spec.InputTokens, OutputTokens: spec.Tokens()},
 	}
 }
 

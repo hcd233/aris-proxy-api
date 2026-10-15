@@ -64,6 +64,33 @@ func TestBuildChatCompletion_NonStream(t *testing.T) {
 	}
 }
 
+// TestBuildChatUsage_IncludesInputTokens 验证 usage 带输入维（来自 Spec.InputTokens），
+// 满足 spec「input_tokens 从请求 body 估算」的要求，避免审计入账恒为 0。
+func TestBuildChatUsage_IncludesInputTokens(t *testing.T) {
+	t.Parallel()
+	spec := transport.MockSpec{Chars: []byte("abcdefgh"), InputTokens: 7} // 8 字符 → 2 output
+	got := transport.BuildChatUsage(spec)
+	if got.PromptTokens != 7 {
+		t.Fatalf("prompt_tokens want 7, got %d", got.PromptTokens)
+	}
+	if got.CompletionTokens != 2 || got.TotalTokens != 9 {
+		t.Fatalf("usage mismatch: %+v", got)
+	}
+}
+
+// TestBuildResponseUsage_IncludesInputTokens 同上，覆盖 Responses 协议。
+func TestBuildResponseUsage_IncludesInputTokens(t *testing.T) {
+	t.Parallel()
+	spec := transport.MockSpec{Chars: []byte("abcdefgh"), InputTokens: 7}
+	rsp := transport.BuildResponse(spec, "mock-response")
+	if rsp.Usage.InputTokens != 7 {
+		t.Fatalf("input_tokens want 7, got %d", rsp.Usage.InputTokens)
+	}
+	if rsp.Usage.TotalTokens != 9 {
+		t.Fatalf("total_tokens want 9, got %d", rsp.Usage.TotalTokens)
+	}
+}
+
 // TestBuildChatUsage_Bounds 验证 usage 估算口径：1 token≈4 字符，至少 1。
 func TestBuildChatUsage_Bounds(t *testing.T) {
 	t.Parallel()

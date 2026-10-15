@@ -80,14 +80,18 @@ func BuildResponse(spec MockSpec, model string) *dto.OpenAICreateResponseRsp {
 		Status:    enum.ResponseStatusCompleted,
 		Model:     model,
 		Output:    []*dto.ResponseInputItem{buildResponseItem(spec)},
-		Usage:     BuildResponseUsage(spec),
+		Usage:     buildResponseUsage(spec),
 	}
 }
 
-// BuildResponseUsage 按 1 token ≈ 4 字符口径估算 usage（input 计 0）。
-func BuildResponseUsage(spec MockSpec) *dto.ResponseUsage {
+// buildResponseUsage 按 1 token ≈ 4 字符口径估算 usage；输入维由调用方按请求 body 填入 Spec.InputTokens。
+func buildResponseUsage(spec MockSpec) *dto.ResponseUsage {
 	out := spec.Tokens()
-	return &dto.ResponseUsage{OutputTokens: out, TotalTokens: out}
+	return &dto.ResponseUsage{
+		InputTokens:  spec.InputTokens,
+		OutputTokens: out,
+		TotalTokens:  spec.InputTokens + out,
+	}
 }
 
 // mockEvent 把事件负载序列化为 SSE data 字段。

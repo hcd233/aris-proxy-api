@@ -33,21 +33,21 @@ func IsMock(ep vo.UpstreamEndpoint) bool {
 	return config.MockUpstreamEnabled && ep.Model == constant.MockUpstreamModel
 }
 
-// MockStream 承载 mock 参数的假流。Read 恒返回 EOF——真实内容由 Read*Stream
+// mockStream 承载 mock 参数的假流。Read 恒返回 EOF——真实内容由 Read*Stream
 // 依 Spec 本地生成，不经过字节流序列化往返。
-type MockStream struct {
+type mockStream struct {
 	io.Reader
 	Spec  MockSpec
 	Model string
 }
 
-// NewMockStream 构造承载 mock 参数的假流。
-func NewMockStream(spec MockSpec, model string) *MockStream {
-	return &MockStream{Reader: strings.NewReader(""), Spec: spec, Model: model}
+// newMockStream 构造承载 mock 参数的假流。
+func newMockStream(spec MockSpec, model string) *mockStream {
+	return &mockStream{Reader: strings.NewReader(""), Spec: spec, Model: model}
 }
 
 // Close 实现 io.ReadCloser；假流无资源可释放。
-func (s *MockStream) Close() error { return nil }
+func (s *mockStream) Close() error { return nil }
 
 // mockOpenAIProxy 包装真实 OpenAIProxyPort，命中 mock 标记时本地生成响应。
 type mockOpenAIProxy struct{ inner usecase.OpenAIProxyPort }
@@ -61,18 +61,18 @@ func (p *mockOpenAIProxy) ForwardChatCompletion(ctx context.Context, ep vo.Upstr
 	if !IsMock(ep) {
 		return p.inner.ForwardChatCompletion(ctx, ep, body)
 	}
-	return BuildChatCompletion(NewMockSpec(mockRNG, maxTokensFromBody(body)), ep.Model), nil
+	return BuildChatCompletion(newSpecFromBody(body), ep.Model), nil
 }
 
 func (p *mockOpenAIProxy) OpenChatCompletionStream(ctx context.Context, ep vo.UpstreamEndpoint, body []byte) (io.ReadCloser, error) {
 	if !IsMock(ep) {
 		return p.inner.OpenChatCompletionStream(ctx, ep, body)
 	}
-	return NewMockStream(NewMockSpec(mockRNG, maxTokensFromBody(body)), ep.Model), nil
+	return newMockStream(newSpecFromBody(body), ep.Model), nil
 }
 
 func (p *mockOpenAIProxy) ReadChatCompletionStream(ctx context.Context, stream io.ReadCloser, onChunk func(*dto.OpenAIChatCompletionChunk) error) (*dto.OpenAIChatCompletion, error) {
-	ms, ok := stream.(*MockStream)
+	ms, ok := stream.(*mockStream)
 	if !ok {
 		return p.inner.ReadChatCompletionStream(ctx, stream, onChunk)
 	}
@@ -84,7 +84,7 @@ func (p *mockOpenAIProxy) ForwardCreateResponse(ctx context.Context, ep vo.Upstr
 	if !IsMock(ep) {
 		return p.inner.ForwardCreateResponse(ctx, ep, body)
 	}
-	return sonic.Marshal(BuildResponse(NewMockSpec(mockRNG, maxTokensFromBody(body)), ep.Model))
+	return sonic.Marshal(BuildResponse(newSpecFromBody(body), ep.Model))
 }
 
 // ForwardCreateDecision 不在 mock 范围（mock Endpoint 不开该能力），原样透传。
@@ -96,11 +96,11 @@ func (p *mockOpenAIProxy) OpenCreateResponseStream(ctx context.Context, ep vo.Up
 	if !IsMock(ep) {
 		return p.inner.OpenCreateResponseStream(ctx, ep, body)
 	}
-	return NewMockStream(NewMockSpec(mockRNG, maxTokensFromBody(body)), ep.Model), nil
+	return newMockStream(newSpecFromBody(body), ep.Model), nil
 }
 
 func (p *mockOpenAIProxy) ReadCreateResponseStream(ctx context.Context, stream io.ReadCloser, onEvent func(event string, data []byte) error) error {
-	ms, ok := stream.(*MockStream)
+	ms, ok := stream.(*mockStream)
 	if !ok {
 		return p.inner.ReadCreateResponseStream(ctx, stream, onEvent)
 	}
@@ -120,18 +120,18 @@ func (p *mockAnthropicProxy) ForwardCreateMessage(ctx context.Context, ep vo.Ups
 	if !IsMock(ep) {
 		return p.inner.ForwardCreateMessage(ctx, ep, body)
 	}
-	return BuildMessage(NewMockSpec(mockRNG, maxTokensFromBody(body)), ep.Model), nil
+	return BuildMessage(newSpecFromBody(body), ep.Model), nil
 }
 
 func (p *mockAnthropicProxy) OpenCreateMessageStream(ctx context.Context, ep vo.UpstreamEndpoint, body []byte) (io.ReadCloser, error) {
 	if !IsMock(ep) {
 		return p.inner.OpenCreateMessageStream(ctx, ep, body)
 	}
-	return NewMockStream(NewMockSpec(mockRNG, maxTokensFromBody(body)), ep.Model), nil
+	return newMockStream(newSpecFromBody(body), ep.Model), nil
 }
 
 func (p *mockAnthropicProxy) ReadCreateMessageStream(ctx context.Context, stream io.ReadCloser, onEvent func(dto.AnthropicSSEEvent) error) (*dto.AnthropicMessage, error) {
-	ms, ok := stream.(*MockStream)
+	ms, ok := stream.(*mockStream)
 	if !ok {
 		return p.inner.ReadCreateMessageStream(ctx, stream, onEvent)
 	}
@@ -139,7 +139,7 @@ func (p *mockAnthropicProxy) ReadCreateMessageStream(ctx context.Context, stream
 	if err := waitDelay(ctx, ms.Spec.TTFT); err != nil {
 		return nil, err
 	}
-	for _, ev := range BuildMessageStream(ms.Spec, ms.Model, mockMessageID()) {
+	for _, ev := range BuildMessageStream(ms.Spec, ms.Model, mockID(constant.AnthropicMessageIDTemplate)) {
 		if err := onEvent(dto.AnthropicSSEEvent{Event: ev.Event, Data: ev.Data}); err != nil {
 			return nil, err
 		}
@@ -154,15 +154,15 @@ func (p *mockAnthropicProxy) ForwardCountTokens(ctx context.Context, ep vo.Upstr
 	if !IsMock(ep) {
 		return p.inner.ForwardCountTokens(ctx, ep, body)
 	}
-	return BuildTokensCount(NewMockSpec(mockRNG, maxTokensFromBody(body))), nil
+	return BuildTokensCount(newSpecFromBody(body)), nil
 }
 
 // emitChatStream 按 Spec 的 TTFT/TPS 时序吐出 Chat chunk 并聚合出 completion。
-func emitChatStream(ctx context.Context, ms *MockStream, onChunk func(*dto.OpenAIChatCompletionChunk) error) (*dto.OpenAIChatCompletion, error) {
+func emitChatStream(ctx context.Context, ms *mockStream, onChunk func(*dto.OpenAIChatCompletionChunk) error) (*dto.OpenAIChatCompletion, error) {
 	if err := waitDelay(ctx, ms.Spec.TTFT); err != nil {
 		return nil, err
 	}
-	for _, chunk := range BuildChatStream(ms.Spec, ms.Model, mockChunkID()) {
+	for _, chunk := range BuildChatStream(ms.Spec, ms.Model, mockID(constant.OpenAIChunkIDTemplate)) {
 		if err := onChunk(chunk); err != nil {
 			return nil, err
 		}
@@ -174,11 +174,11 @@ func emitChatStream(ctx context.Context, ms *MockStream, onChunk func(*dto.OpenA
 }
 
 // emitResponseStream 按时序吐出 Responses 事件。
-func emitResponseStream(ctx context.Context, ms *MockStream, onEvent func(event string, data []byte) error) error {
+func emitResponseStream(ctx context.Context, ms *mockStream, onEvent func(event string, data []byte) error) error {
 	if err := waitDelay(ctx, ms.Spec.TTFT); err != nil {
 		return err
 	}
-	for _, ev := range BuildResponseStream(ms.Spec, ms.Model, mockResponseID()) {
+	for _, ev := range BuildResponseStream(ms.Spec, ms.Model, mockID(constant.ResponseIDTemplate)) {
 		if err := onEvent(ev.Event, ev.Data); err != nil {
 			return err
 		}
@@ -213,17 +213,20 @@ func maxTokensFromBody(body []byte) int {
 	return max(req.MaxTokens, req.MaxOutputTokens)
 }
 
-// mockChunkID 生成 Chat 流式 chunk ID。
-func mockChunkID() string {
-	return fmt.Sprintf(constant.OpenAIChunkIDTemplate, strconv.FormatInt(time.Now().UnixNano(), 10))
+// mockID 用给定模板生成 mock 对象 ID（纳秒时间戳保证每次请求唯一）。
+func mockID(template string) string {
+	return fmt.Sprintf(template, strconv.FormatInt(time.Now().UnixNano(), 10))
 }
 
-// mockResponseID 生成 Responses 响应 ID。
-func mockResponseID() string {
-	return fmt.Sprintf(constant.ResponseIDTemplate, strconv.FormatInt(time.Now().UnixNano(), 10))
+// newSpecFromBody 从请求体构造 mock 参数：随机内容/时序 + 输入 token 估算。
+func newSpecFromBody(body []byte) MockSpec {
+	spec := NewMockSpec(mockRNG, maxTokensFromBody(body))
+	spec.InputTokens = estimateInputTokens(body)
+	return spec
 }
 
-// mockMessageID 生成 Anthropic 消息 ID。
-func mockMessageID() string {
-	return fmt.Sprintf(constant.AnthropicMessageIDTemplate, strconv.FormatInt(time.Now().UnixNano(), 10))
+// estimateInputTokens 从请求 body 估算输入 token 数：按 1 token ≈ 4 字符粗估。
+// body 为 JSON、含结构开销，故为粗估口径；对压测审计入账够用。
+func estimateInputTokens(body []byte) int {
+	return max(1, len(body)/constant.MockCharsPerToken)
 }
