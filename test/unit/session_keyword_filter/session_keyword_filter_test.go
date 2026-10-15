@@ -25,38 +25,34 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 )
 
-// TestSessionKeywordFilterSQL_UsesPKJoinShape 断言新形态：
-// 必须以 jsonb_array_elements_text 展开 message_ids 并按 messages.id 主键回查，
-// 这样 planner 才能避开"为每条 session 在 messages 全表跑 ILIKE 顺序扫描"。
+// TestSessionKeywordFilterSQL_UsesAnyArrayShape 断言 2026-10-15 形态：
+// 第二段过滤必须以 = ANY(?::bigint[]) 接收应用层传入的常量 id 数组。
 //
-// 2026-08-02 起为 IN 子查询形态（arr.mid::bigint IN (SELECT id FROM messages ...)）：
-// 旧的 JOIN messages ON messages.id = arr.mid::bigint 形态会被 messages 上的 trigram 索引
-// 误导而选择 bitmap 回表路径（keyword=Task: 实测 27.4s 超时），IN 形态强制 planner 以
-// arr 为驱动侧对 messages_pkey 主键点查（实测 22ms）。
+// 历史教训：EXISTS(SRF + IN 子查询) 会被 planner 建成 correlated SubPlan，
+// messages 的 ILIKE 扫描对外层每行重复执行（生产实测 10s~60s+）；
+// IN 子查询形态（2026-08-02）的去相关成败依赖 trigram 统计信息，统计漂移后退化。
+// 常量数组形态从结构上不可能产生 correlated SubPlan。
 //
 //	@author centonhuang
-//	@update 2026-08-02 12:40:00
-func TestSessionKeywordFilterSQL_UsesPKJoinShape(t *testing.T) {
+//	@update 2026-10-15 16:00:00
+func TestSessionKeywordFilterSQL_UsesAnyArrayShape(t *testing.T) {
 	t.Parallel()
 	fragment := constant.SessionKeywordFilterSQL
 
 	if fragment == "" {
 		t.Fatal("SessionKeywordFilterSQL must be defined and non-empty")
 	}
-	if !strings.Contains(fragment, "::jsonb") {
-		t.Errorf("SessionKeywordFilterSQL must cast message_ids to jsonb, got %q", fragment)
-	}
 	if !strings.Contains(fragment, "jsonb_array_elements_text(") {
-		t.Errorf("SessionKeywordFilterSQL must expand sessions.message_ids via jsonb_array_elements_text() so messages can be PK-joined instead of running a correlated ILIKE per session, got %q", fragment)
+		t.Errorf("SessionKeywordFilterSQL must expand sessions.questions via jsonb_array_elements_text(), got %q", fragment)
 	}
-	if !strings.Contains(fragment, "IN (SELECT id FROM messages") {
-		t.Errorf("SessionKeywordFilterSQL must PK-lookup messages via IN (SELECT id FROM messages ...) so the planner drives from the small question-id set instead of the trigram bitmap on the large messages table, got %q", fragment)
+	if !strings.Contains(fragment, "= ANY(?::bigint[])") {
+		t.Errorf("SessionKeywordFilterSQL must match ids via = ANY(?::bigint[]) constant array to rule out correlated SubPlan, got %q", fragment)
+	}
+	if strings.Contains(fragment, "IN (SELECT id FROM messages") {
+		t.Errorf("SessionKeywordFilterSQL must not use IN (SELECT id FROM messages ...) — statistics drift turns it into a correlated SubPlan with per-row ILIKE scans; pass ids as a constant array instead, got %q", fragment)
 	}
 	if strings.Contains(fragment, "JOIN messages ON messages.id =") {
-		t.Errorf("SessionKeywordFilterSQL must not JOIN messages (the planner may pick the trigram bitmap path and time out on high-frequency keywords); use IN (SELECT id FROM messages ...) instead, got %q", fragment)
-	}
-	if !strings.Contains(fragment, "ILIKE ?") {
-		t.Errorf("SessionKeywordFilterSQL must keep ILIKE ? parameter placeholder, got %q", fragment)
+		t.Errorf("SessionKeywordFilterSQL must not JOIN messages (trigram bitmap trap on high-frequency keywords), got %q", fragment)
 	}
 }
 
@@ -64,12 +60,12 @@ func TestSessionKeywordFilterSQL_UsesPKJoinShape(t *testing.T) {
 //
 //   - 不能用 ANY(sessions.message_ids)：message_ids 在 PG 里是 jsonb 文本不是原生数组（fix #58）
 //
-//   - 整段 SQL 必须只有 1 个 '?'（gorm 占位符），不能再出现裸 '?' jsonb 顶层操作符（fix #59）
+//   - 整段 SQL 必须只有 1 个 '?'（fix #59：裸 '?' 操作符与 gorm 占位符撞车，SQLSTATE 42601）
 //
-//   - 不能让 ILIKE 与 sessions.message_ids 形成强相关（refactor 2026-06-07）
+//   - 不能出现 jsonb_exists 强相关历史形态（refactor 2026-06-07）
 //
 //     @author centonhuang
-//     @update 2026-06-07 21:20:00
+//     @update 2026-10-15 16:00:00
 func TestSessionKeywordFilterSQL_AvoidsLandmines(t *testing.T) {
 	t.Parallel()
 	fragment := constant.SessionKeywordFilterSQL
@@ -81,16 +77,43 @@ func TestSessionKeywordFilterSQL_AvoidsLandmines(t *testing.T) {
 		t.Errorf("SessionKeywordFilterSQL must not use ANY against raw message_ids column, got %q", fragment)
 	}
 
-	// 占位符只允许 1 个（ILIKE ?）。多于 1 个意味着引入了裸 '?' 操作符，
+	// 占位符只允许 1 个（id 数组占位）。多于 1 个意味着引入了裸 '?' 操作符，
 	// gorm 会把它当成参数槽，回到 fix #59 的报错路径（SQLSTATE 42601）。
 	placeholderCount := strings.Count(fragment, "?")
 	if placeholderCount != 1 {
-		t.Errorf("SessionKeywordFilterSQL must contain exactly one ? placeholder (for ILIKE), got %d in %q", placeholderCount, fragment)
+		t.Errorf("SessionKeywordFilterSQL must contain exactly one ? placeholder (for the id array), got %d in %q", placeholderCount, fragment)
 	}
 
 	// jsonb_exists 是历史实现，强相关到 sessions，导致 planner 退化为每条 session
-	// 在 messages 全表跑一次 ILIKE。新实现走 jsonb_array_elements_text + PK join。
+	// 在 messages 全表跑一次 ILIKE。
 	if strings.Contains(fragment, "jsonb_exists(") {
-		t.Errorf("SessionKeywordFilterSQL must not couple ILIKE to a per-session jsonb_exists subquery; expand message_ids via jsonb_array_elements_text and PK-join messages instead, got %q", fragment)
+		t.Errorf("SessionKeywordFilterSQL must not use historical jsonb_exists() correlated form, got %q", fragment)
+	}
+}
+
+// TestSessionKeywordMatchIDsSQL_ScopesToUserContent 断言第一段只搜用户消息正文：
+// 部分索引 idx_messages_user_content_trgm 以 role='user' 为谓词，查询必须携带相同
+// 条件才能命中索引；搜 ->>'content' 而非 message 全文避免 role/tool 元数据误报。
+//
+//	@author centonhuang
+//	@update 2026-10-15 16:00:00
+func TestSessionKeywordMatchIDsSQL_ScopesToUserContent(t *testing.T) {
+	t.Parallel()
+	fragment := constant.SessionKeywordMatchIDsSQL
+
+	if fragment == "" {
+		t.Fatal("SessionKeywordMatchIDsSQL must be defined and non-empty")
+	}
+	if !strings.Contains(fragment, "message::jsonb->>'role' = 'user'") {
+		t.Errorf("SessionKeywordMatchIDsSQL must scope to user messages to hit the partial index, got %q", fragment)
+	}
+	if !strings.Contains(fragment, "message::jsonb->>'content' ILIKE ?") {
+		t.Errorf("SessionKeywordMatchIDsSQL must match message content via ILIKE ? (single placeholder), got %q", fragment)
+	}
+	if strings.Contains(fragment, "message::text ILIKE") {
+		t.Errorf("SessionKeywordMatchIDsSQL must not match raw message JSON text (role/tool metadata false positives), got %q", fragment)
+	}
+	if strings.Count(fragment, "?") != 1 {
+		t.Errorf("SessionKeywordMatchIDsSQL must contain exactly one ? placeholder, got %q", fragment)
 	}
 }
