@@ -4,10 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/bytedance/sonic"
+	"strconv"
+	"strings"
 	"time"
 
+	"github.com/bytedance/sonic"
 	"github.com/samber/lo"
+	"github.com/samber/mo"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
@@ -19,6 +22,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/session"
 	"github.com/hcd233/aris-proxy-api/internal/domain/session/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/session/vo"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"github.com/hcd233/aris-proxy-api/internal/util"
@@ -174,19 +178,23 @@ type sessionReadRepository struct {
 	sessionDAO *dao.SessionDAO
 	messageDAO *dao.MessageDAO
 	toolDAO    *dao.ToolDAO
+	cache      *cache.ReadCache
 }
 
 // NewSessionReadRepository 构造只读仓储
 //
+//	@param db *gorm.DB
+//	@param rc *cache.ReadCache keyword 命中集读缓存；nil 时退化为无缓存直查
 //	@return session.SessionReadRepository
 //	@author centonhuang
-//	@update 2026-04-24 20:00:00
-func NewSessionReadRepository(db *gorm.DB) session.SessionReadRepository {
+//	@update 2026-10-15 16:00:00
+func NewSessionReadRepository(db *gorm.DB, rc *cache.ReadCache) session.SessionReadRepository {
 	return &sessionReadRepository{
 		db:         db,
 		sessionDAO: dao.GetSessionDAO(),
 		messageDAO: dao.GetMessageDAO(),
 		toolDAO:    dao.GetToolDAO(),
+		cache:      rc,
 	}
 }
 
@@ -207,6 +215,61 @@ type sessionSummaryRow struct {
 	Questions    []uint    `gorm:"column:questions;serializer:json"`
 	ModelIDs     []string  `gorm:"column:model_ids;serializer:json"`
 	TotalCount   int64     `gorm:"column:total_count"`
+}
+
+// NormalizeKeyword 归一化 keyword 作为缓存 key 片段（trim + 小写）
+func NormalizeKeyword(keyword string) string {
+	return strings.ToLower(strings.TrimSpace(keyword))
+}
+
+// FormatBigIntArray 把 id 集合序列化为 PG bigint[] 字面量（"{1,2,3}"）
+//
+// 纯数字拼接，无 SQL 注入面；供 SessionKeywordFilterSQL 的 = ANY(?::bigint[]) 使用。
+//
+// ponytail: 无命中上限保护，user 消息超数十万行时再考虑分页/降级/FTS，
+// upgrade path: 分区表 + tsvector 或命中集分页传递。
+func FormatBigIntArray(ids []uint) string {
+	return "{" + strings.Join(lo.Map(ids, func(id uint, _ int) string {
+		return strconv.FormatUint(uint64(id), 10)
+	}), ",") + "}"
+}
+
+// keywordMessageIDs 两段式第一段：keyword → 用户消息 id 集合（带读缓存）
+//
+// 命中为空时返回 nil（GetOrLoad 的 mo.None 空值标记防穿透，短 TTL 自愈）。
+func (r *sessionReadRepository) keywordMessageIDs(ctx context.Context, keyword string) ([]uint, error) {
+	key := fmt.Sprintf(constant.ReadCacheKeywordIDsKeyTemplate, NormalizeKeyword(keyword))
+	opt, err := cache.GetOrLoadWithTTL(ctx, r.cache, key,
+		constant.ReadCacheKeywordIDsTTL, constant.ReadCacheKeywordIDsTTLJitter,
+		func(loadCtx context.Context) (mo.Option[[]uint], error) {
+			var ids []uint
+			if err := r.db.WithContext(loadCtx).Raw(constant.SessionKeywordMatchIDsSQL, "%"+keyword+"%").Scan(&ids).Error; err != nil {
+				return mo.None[[]uint](), ierr.Wrap(ierr.ErrDBQuery, err, "match keyword message ids")
+			}
+			if len(ids) == 0 {
+				return mo.None[[]uint](), nil
+			}
+			return mo.Some(ids), nil
+		})
+	if err != nil {
+		return nil, err
+	}
+	ids, _ := opt.Get()
+	return ids, nil
+}
+
+// applyKeywordFilter 注入 keyword 过滤条件
+//
+// ok=false 表示关键词命中为空，调用方直接返回空页（短路，不执行第二段查询）。
+func (r *sessionReadRepository) applyKeywordFilter(ctx context.Context, sql *gorm.DB, keyword string) (*gorm.DB, bool, error) {
+	ids, err := r.keywordMessageIDs(ctx, keyword)
+	if err != nil {
+		return nil, false, err
+	}
+	if len(ids) == 0 {
+		return nil, false, nil
+	}
+	return sql.Where(constant.SessionKeywordFilterSQL, FormatBigIntArray(ids)), true, nil
 }
 
 func (r *sessionReadRepository) ListAllSessions(ctx context.Context, param model.CommonParam, startTime, endTime time.Time, keyword string, criteria *filter.FilterCriteria) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
@@ -233,7 +296,14 @@ func (r *sessionReadRepository) ListAllSessions(ctx context.Context, param model
 		sql = sql.Order(clause.OrderByColumn{Column: clause.Column{Name: param.SortField}, Desc: param.Sort == enum.SortDesc})
 	}
 	if keyword != "" {
-		sql = sql.Where(constant.SessionKeywordFilterSQL, "%"+keyword+"%")
+		filtered, ok, err := r.applyKeywordFilter(ctx, sql, keyword)
+		if err != nil {
+			return nil, nil, err
+		}
+		if !ok {
+			return []*session.SessionSummaryProjection{}, &model.PageInfo{Page: param.Page, PageSize: param.PageSize}, nil
+		}
+		sql = filtered
 	}
 
 	// 注入 filter 条件
@@ -302,7 +372,14 @@ func (r *sessionReadRepository) ListSessionsByOwnerIDs(ctx context.Context, owne
 		sql = sql.Order(clause.OrderByColumn{Column: clause.Column{Name: param.SortField}, Desc: param.Sort == enum.SortDesc})
 	}
 	if keyword != "" {
-		sql = sql.Where(constant.SessionKeywordFilterSQL, "%"+keyword+"%")
+		filtered, ok, err := r.applyKeywordFilter(ctx, sql, keyword)
+		if err != nil {
+			return nil, nil, err
+		}
+		if !ok {
+			return []*session.SessionSummaryProjection{}, &model.PageInfo{Page: param.Page, PageSize: param.PageSize}, nil
+		}
+		sql = filtered
 	}
 
 	// 注入 filter 条件

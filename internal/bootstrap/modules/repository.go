@@ -86,8 +86,8 @@ func NewAPIKeyRepository(db *gorm.DB) apikey.APIKeyRepository {
 	return repository.NewAPIKeyRepository(db)
 }
 
-func NewSessionReadRepository(db *gorm.DB) session.SessionReadRepository {
-	return repository.NewSessionReadRepository(db)
+func NewSessionReadRepository(db *gorm.DB, rc *cache.ReadCache) session.SessionReadRepository {
+	return repository.NewSessionReadRepository(db, rc)
 }
 
 func NewSessionWriteRepository(db *gorm.DB) session.SessionRepository {

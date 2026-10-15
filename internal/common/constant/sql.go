@@ -247,31 +247,32 @@ var (
 	//   message_count 和 tool_count 从 message_ids / tool_ids 实时计算，不再物化冗余列。
 	SessionSummarySelect = "id, created_at, updated_at, score, COALESCE(jsonb_array_length(message_ids::jsonb), 0) AS message_count, COALESCE(jsonb_array_length(tool_ids::jsonb), 0) AS tool_count, questions, model_ids, COUNT(*) OVER () AS total_count"
 
-	// SessionKeywordFilterSQL session 列表 keyword 过滤 SQL 片段。
+	// SessionKeywordMatchIDsSQL keyword 搜索第一段：关键词 → 用户消息 id 集合。
 	//
-	// 设计要点（refactor/session-list-keyword-perf-2026-06-07）：
-	//   旧实现写成 "EXISTS (SELECT 1 FROM messages WHERE jsonb_exists(sessions.message_ids::jsonb,
-	//   messages.id::text) AND messages.message::text ILIKE ?)"，messages 上没有任何能命中
-	//   ILIKE 的索引，且 jsonb_exists 把 sessions 与 messages 强相关，planner 只能为每条
-	//   候选 session 在 messages 全表上重跑一次 ILIKE 顺序扫描；外层再叠 COUNT(*)，复杂度
-	//   接近 O(候选 sessions × messages)。
+	// 只搜 role='user' 的消息正文（->>'content'）：
+	//   - 与「只搜用户消息」的产品语义一致，搜索面为 11.5K 行/127MB（全表 164K 行/1GB）；
+	//   - 与部分索引 idx_messages_user_content_trgm（WHERE role='user'）谓词对齐，才能走索引；
+	//   - 不搜 message 全文 JSON，避免 role/tool_call 等元数据造成误报（搜 "user" 命中全部用户消息）。
+	SessionKeywordMatchIDsSQL = "SELECT id FROM messages WHERE message::jsonb->>'role' = 'user' AND message::jsonb->>'content' ILIKE ?"
+
+	// SessionKeywordFilterSQL session 列表 keyword 过滤 SQL 片段（第二段）。
 	//
-	//   2026-06-07 曾改为 "jsonb_array_elements_text(sessions.questions::jsonb) arr(mid)
-	//   JOIN messages ON messages.id = arr.mid::bigint"：语义上仍是 PK 回查，但 planner 会
-	//   被 messages 上的 trigram 索引（idx_messages_message_trgm）误导，估计 %keyword% 命中
-	//   很少行而选择 bitmap 路径；keyword 为高频词（如 "Task:"）时 bitmap 索引命中近万条
-	//   候选，回表 366MB messages 大表 recheck，单次 2s+，实测接口超时 27.4s。
+	// 设计沿革：
+	//   - 2026-06-07 之前：EXISTS + jsonb_exists 强相关，O(sessions × messages) 全表 ILIKE。
+	//   - refactor/session-list-keyword-perf-2026-06-07 → JOIN messages 形态：planner 被
+	//     trigram 索引误导选 bitmap 回表，高频词（Task:）27.4s 超时。
+	//   - bugfix/session-list-keyword-perf-2026-08-02 → IN 子查询形态：当时统计下 planner
+	//     以 arr 驱动主键点查（22ms）。但统计漂移后退化为 correlated SubPlan，
+	//     messages 的 ILIKE 扫描对每条 session 重复执行（2026-10-15 生产实测 10s~60s+）。
+	//   - bugfix/session-keyword-search-perf-2026-10-15（本次）→ = ANY(?::bigint[]) 常量数组：
+	//     匹配集由应用层两段式查询（SessionKeywordMatchIDsSQL + 读缓存）传入，
+	//     片段内无子查询，correlated SubPlan 从结构上不可能产生。
 	//
-	//   本次（bugfix/session-list-keyword-perf-2026-08-02）改为 IN 子查询形态：planner 以
-	//   arr（每 session 少量 question id）为驱动侧对 messages_pkey 主键点查，彻底避开
-	//   trigram bitmap 回表。生产实测 keyword=Task: 22ms、error 17ms、罕见词 19ms。
-	//
-	// 占位符约束：
-	//   - 必须是 ILIKE ?（gorm 占位符），且整段 SQL 中只能有 1 个 '?'，
-	//     否则会与 gorm 占位符撞车（参考 fix #59 的 jsonb_exists 由来）。
-	//   - 不要写 messages.id = ANY(sessions.message_ids)：message_ids 在 PG 里是 jsonb 文本，
-	//     不是原生数组，会触发 SQLSTATE 42809（参考 fix #58）。
-	SessionKeywordFilterSQL = "EXISTS (SELECT 1 FROM jsonb_array_elements_text(sessions.questions::jsonb) AS arr(mid) WHERE arr.mid::bigint IN (SELECT id FROM messages WHERE messages.message::text ILIKE ?))"
+	// 占位符约束（fix #58/#59）：
+	//   - 整段 SQL 只能有 1 个 '?'（gorm 占位符），命中 id 数组以 "{1,2,3}" 字符串传入；
+	//   - 不要写 messages.id = ANY(sessions.message_ids)：message_ids 是 jsonb 文本非
+	//     原生数组，会触发 SQLSTATE 42809。
+	SessionKeywordFilterSQL = "EXISTS (SELECT 1 FROM jsonb_array_elements_text(sessions.questions::jsonb) AS arr(mid) WHERE arr.mid::bigint = ANY(?::bigint[]))"
 
 	DateTruncMinute = "date_trunc('minute', created_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'"
 	DateTruncHour   = "date_trunc('hour', created_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'"
