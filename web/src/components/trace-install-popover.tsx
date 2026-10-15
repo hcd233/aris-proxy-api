@@ -1,15 +1,14 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import hljs from "highlight.js/lib/core";
 import bash from "highlight.js/lib/languages/bash";
-import { Check, Copy, Radar } from "lucide-react";
-import { toast } from "sonner";
+import { Radar } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { CopyButton } from "@/components/ui/copy-button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useT } from "@/lib/i18n";
-import { copyTextToClipboard } from "@/lib/clipboard";
 
 hljs.registerLanguage("bash", bash);
 
@@ -30,7 +29,6 @@ function generateInstallCommand(hostValue: string): string {
 export default function TraceInstallPopover() {
   const t = useT();
   const [host] = useState(() => (typeof window === "undefined" ? "" : window.location.origin));
-  const [copied, setCopied] = useState(false);
 
   const previewCommand = useMemo(
     () => generateInstallCommand(host || "https://your-aris-server.example"),
@@ -41,23 +39,12 @@ export default function TraceInstallPopover() {
     [previewCommand],
   );
 
-  // 复制结果必须按返回值分支：失败不得展示已复制态（与其它 copyTextToClipboard 调用点一致）
-  const handleCopy = useCallback(async () => {
-    const ok = await copyTextToClipboard(generateInstallCommand(host));
-    if (ok) {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } else {
-      toast.error(t("common.copy_failed"));
-    }
-  }, [host, t]);
-
   return (
     <Popover>
       <PopoverTrigger
         render={
-          <Button variant="outline" className="gap-1.5">
-            <Radar className="size-4" />
+          <Button variant="outline">
+            <Radar data-icon="inline-start" />
             {t("trace.install")}
           </Button>
         }
@@ -91,19 +78,12 @@ export default function TraceInstallPopover() {
                 dangerouslySetInnerHTML={{ __html: highlighted }}
               />
             </pre>
-            <button
-              type="button"
-              onClick={handleCopy}
-              disabled={!host}
-              className="mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded-md border border-(--code-border) bg-white/[0.04] text-(--code-text)/35 transition-all hover:border-(--code-text)/25 hover:bg-white/[0.08] hover:text-(--code-text)/80 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-(--code-text)/40 disabled:pointer-events-none disabled:opacity-30"
-              aria-label={copied ? t("trace.install_copied") : t("trace.install_copy")}
-            >
-              {copied ? (
-                <Check className="size-3.5 text-[#28C840]" />
-              ) : (
-                <Copy className="size-3.5" />
-              )}
-            </button>
+            <CopyButton
+              value={host ? generateInstallCommand(host) : ""}
+              variant="icon"
+              ariaLabel={t("trace.install_copy")}
+              className="text-(--code-text)/50 hover:bg-white/5 hover:text-(--code-text)"
+            />
           </div>
 
           {/* Blinking cursor */}

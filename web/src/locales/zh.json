@@ -683,7 +683,6 @@
   "trace.invalid_id": "无效的轨迹 ID",
   "trace.not_found": "未找到轨迹",
   "trace.install_copy": "复制",
-  "trace.install_copied": "已复制",
   "trace.install_close": "关闭",
   "trace.delete_confirm": "确定要删除该轨迹吗？",
   "trace.delete_success": "轨迹已删除",

@@ -1,6 +1,14 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
+import { ShieldAlert } from "lucide-react";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { useAuth } from "@/lib/auth-context";
 import { useT } from "@/lib/i18n";
 import type { DemoModule } from "@/lib/types";
@@ -17,10 +25,15 @@ interface PermissionGuardProps {
 function GuardState({ title, description }: { title: string; description: string }) {
   return (
     <div className="page-surface flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="w-full max-w-md rounded-3xl border bg-card p-8 text-center shadow-xl">
-        <h1 className="font-display text-4xl font-bold tracking-tight text-foreground">{title}</h1>
-        <p className="mt-3 text-sm leading-6 text-muted-foreground">{description}</p>
-      </div>
+      <Empty className="max-w-md">
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <ShieldAlert />
+          </EmptyMedia>
+          <EmptyTitle>{title}</EmptyTitle>
+          <EmptyDescription>{description}</EmptyDescription>
+        </EmptyHeader>
+      </Empty>
     </div>
   );
 }

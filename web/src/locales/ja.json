@@ -684,7 +684,6 @@
   "trace.invalid_id": "無効なトレース ID",
   "trace.not_found": "トレースが見つかりません",
   "trace.install_copy": "コピー",
-  "trace.install_copied": "コピーしました",
   "trace.install_close": "閉じる",
   "trace.delete_confirm": "この軌跡を削除しますか？",
   "trace.delete_success": "軌跡を削除しました",

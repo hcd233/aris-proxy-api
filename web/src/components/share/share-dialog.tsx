@@ -195,17 +195,20 @@ export function ShareDialog({ sessionId, existingShareID, open, onOpenChange }: 
 
             {expireOption === "custom" && (
               <Popover>
-                <PopoverTrigger>
-                  <button
-                    type="button"
-                    className={cn(
-                      "flex w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground",
-                      !customDate && "text-muted-foreground",
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 size-4" />
-                    {customDate ? format(customDate, "PPP") : t("share_dialog.pick_date")}
-                  </button>
+                <PopoverTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start font-normal",
+                        !customDate && "text-muted-foreground",
+                      )}
+                    />
+                  }
+                >
+                  <CalendarIcon data-icon="inline-start" />
+                  {customDate ? format(customDate, "PPP") : t("share_dialog.pick_date")}
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar

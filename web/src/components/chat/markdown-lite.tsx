@@ -20,8 +20,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import { AlertTriangle, Check, Copy } from "lucide-react";
-import { toast } from "sonner";
+import { AlertTriangle } from "lucide-react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
@@ -34,8 +33,8 @@ import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
-import { copyTextToClipboard } from "@/lib/clipboard";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { CopyButton } from "@/components/ui/copy-button";
 import { Separator } from "@/components/ui/separator";
 import {
   Table,
@@ -166,19 +165,7 @@ function CodeBlock({
   children?: ReactNode;
   highlightedClassName?: string;
 }) {
-  const [copied, setCopied] = useState(false);
   const t = useT();
-
-  const onCopy = () => {
-    void copyTextToClipboard(value).then((ok) => {
-      if (ok) {
-        setCopied(true);
-        window.setTimeout(() => setCopied(false), 1400);
-      } else {
-        toast.error(t("common.copy_failed"));
-      }
-    });
-  };
 
   return (
     <div className="group/code my-3 overflow-hidden rounded-xl border border-(--code-border) bg-(--code-bg)">
@@ -186,24 +173,11 @@ function CodeBlock({
         <span className="font-mono text-[10px] tracking-[0.12em] text-(--code-text)/35">
           {lang || "text"}
         </span>
-        <button
-          type="button"
-          onClick={onCopy}
-          className="flex items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[10px] text-(--code-text)/35 transition-colors hover:bg-white/5 hover:text-(--code-text)/70"
-          aria-label={t("markdown.copy_code_aria")}
-        >
-          {copied ? (
-            <>
-              <Check className="size-3" />
-              {t("markdown.copied")}
-            </>
-          ) : (
-            <>
-              <Copy className="size-3" />
-              {t("markdown.copy")}
-            </>
-          )}
-        </button>
+        <CopyButton
+          value={value}
+          ariaLabel={t("markdown.copy_code_aria")}
+          className="text-(--code-text)/50 hover:bg-white/5 hover:text-(--code-text)"
+        />
       </div>
       <pre className="overflow-x-auto px-4 py-3 font-mono text-[12.5px] leading-[1.55] text-(--code-text)">
         <code className={cn("hljs bg-transparent !p-0", highlightedClassName)}>

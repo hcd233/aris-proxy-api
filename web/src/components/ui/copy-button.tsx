@@ -1,17 +1,17 @@
 "use client";
 
 /**
- * CopyButton — shared "copy to clipboard" affordance.
+ * CopyButton — shared "copy to clipboard" affordance built on the shadcn Button.
  *
- * Two visual variants:
- *  - "label": icon + copy/copied text, for code-block-style headers
- *    (e.g. tool input/output blocks).
- *  - "icon": icon-only, compact, for hover-reveal actions on chat bubbles.
+ * Two variants:
+ *  - "label": icon + copy/copied text (ghost xs), for code-block-style headers.
+ *  - "icon": icon-only (ghost icon-xs), for hover-reveal actions on chat bubbles.
  */
 
 import { useState, type MouseEvent } from "react";
 import { Check, Copy } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { copyTextToClipboard } from "@/lib/clipboard";
 import { useT } from "@/lib/i18n";
@@ -41,20 +41,27 @@ export function CopyButton({ value, ariaLabel, variant = "label", className }: C
     });
   };
 
+  const Icon = copied ? Check : Copy;
+
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
+      size={variant === "label" ? "xs" : "icon-xs"}
       onClick={onCopy}
       disabled={!value}
       aria-label={ariaLabel ?? t("markdown.copy")}
-      className={cn(
-        "inline-flex shrink-0 items-center gap-1 rounded font-mono text-[10px] text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground disabled:pointer-events-none disabled:opacity-30",
-        variant === "label" ? "px-1.5 py-0.5" : "size-6 justify-center p-0",
-        className,
-      )}
+      // min-w-0：抵消 xs 尺寸的 i18n 宽度预留，复制按钮跟随内容宽度
+      className={cn("min-w-0", className)}
     >
-      {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
-      {variant === "label" && (copied ? t("markdown.copied") : t("markdown.copy"))}
-    </button>
+      {variant === "label" ? (
+        <>
+          <Icon data-icon="inline-start" />
+          {copied ? t("markdown.copied") : t("markdown.copy")}
+        </>
+      ) : (
+        <Icon />
+      )}
+    </Button>
   );
 }

@@ -565,7 +565,9 @@ html[data-theme="moonshot"][data-motion-tier="lite"] {
     transition-timing-function: var(--ease-fall);
   }
 }
-[data-theme="moonshot"] [data-slot="collapsible-trigger"] svg {
+[data-theme="moonshot"]
+  :is([data-slot="collapsible-trigger"], [data-slot="sidebar-group-label"])
+  svg {
   transition: rotate 380ms var(--ease-orbit);
 }
 

@@ -89,23 +89,25 @@ function SortableHead({
   const active = sortField === field;
   return (
     <TableHead>
-      <button
+      <Button
         type="button"
-        className="inline-flex items-center gap-1 uppercase tracking-[0.08em] hover:text-foreground"
+        variant="ghost"
+        size="xs"
+        className="-ml-2 min-w-0 uppercase tracking-[0.08em]"
         aria-label={`${label} ${sort === "asc" ? t("upstream.sort_asc") : t("upstream.sort_desc")}`}
         onClick={() => onSort(field)}
       >
         {label}
         {active ? (
           sort === "asc" ? (
-            <ArrowUp className="size-3" />
+            <ArrowUp data-icon="inline-end" />
           ) : (
-            <ArrowDown className="size-3" />
+            <ArrowDown data-icon="inline-end" />
           )
         ) : (
-          <ArrowUpDown className="size-3 opacity-40" />
+          <ArrowUpDown data-icon="inline-end" className="opacity-40" />
         )}
-      </button>
+      </Button>
     </TableHead>
   );
 }

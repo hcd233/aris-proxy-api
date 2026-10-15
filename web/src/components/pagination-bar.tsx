@@ -8,10 +8,13 @@ import { Pagination, PaginationContent, PaginationItem } from "@/components/ui/p
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
+  DropdownMenuGroup,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronLeft, ChevronRight, Check, ListFilter } from "lucide-react";
+import { ChevronLeft, ChevronRight, ListFilter } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
 
 const PAGE_SIZES = [20, 50, 100, 200, 500];
@@ -56,24 +59,28 @@ export function PaginationBar({
   };
 
   return (
-    <div className={`mt-4 flex flex-wrap items-center justify-between gap-4 ${className}`}>
+    <div className={cn("mt-4 flex flex-wrap items-center justify-between gap-4", className)}>
       <div className="hidden items-center gap-3 md:flex">
         <DropdownMenu>
           <DropdownMenuTrigger
-            render={<Button variant="outline" size="sm" className="min-w-[7.5rem] gap-1.5" />}
+            render={<Button variant="outline" size="sm" className="min-w-[7.5rem]" />}
           >
-            <ListFilter size={14} />
+            <ListFilter data-icon="inline-start" />
             {pageInfo.pageSize} {t("pagination.per_page")}
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
-            {PAGE_SIZES.map((size) => (
-              <DropdownMenuItem key={size} onClick={() => onChange(1, size)}>
-                {size === pageInfo.pageSize && <Check className="size-4" />}
-                <span className={size === pageInfo.pageSize ? "ml-0" : "ml-6"}>
-                  {size} {t("pagination.per_page")}
-                </span>
-              </DropdownMenuItem>
-            ))}
+            <DropdownMenuGroup>
+              <DropdownMenuRadioGroup
+                value={String(pageInfo.pageSize)}
+                onValueChange={(value) => onChange(1, Number(value))}
+              >
+                {PAGE_SIZES.map((size) => (
+                  <DropdownMenuRadioItem key={size} value={String(size)}>
+                    {size} {t("pagination.per_page")}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
         <p className="hidden whitespace-nowrap text-sm tabular-nums text-muted-foreground md:block">
@@ -92,7 +99,7 @@ export function PaginationBar({
               disabled={pageInfo.page <= 1}
               onClick={() => onChange(pageInfo.page - 1, pageInfo.pageSize)}
             >
-              <ChevronLeft className="size-4" />
+              <ChevronLeft />
             </Button>
           </PaginationItem>
           <PaginationItem>
@@ -121,7 +128,7 @@ export function PaginationBar({
               disabled={pageInfo.page >= totalPages}
               onClick={() => onChange(pageInfo.page + 1, pageInfo.pageSize)}
             >
-              <ChevronRight className="size-4" />
+              <ChevronRight />
             </Button>
           </PaginationItem>
         </PaginationContent>

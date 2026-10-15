@@ -15,6 +15,7 @@ import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarInset,
   SidebarMenu,
@@ -251,7 +252,10 @@ function SidebarNav({
               {collapsed ? (
                 <Separator className="mx-1 mb-1 bg-sidebar-border/60" />
               ) : (
-                <CollapsibleTrigger className="flex w-full items-center gap-2 rounded-md px-3 pb-1 pt-1.5 text-[11px] font-medium uppercase tracking-wider text-sidebar-foreground/45 transition-colors hover:text-sidebar-foreground/80">
+                <SidebarGroupLabel
+                  render={<CollapsibleTrigger />}
+                  className="w-full cursor-pointer gap-2 hover:text-sidebar-foreground"
+                >
                   <TooltipRoot>
                     <TooltipTrigger
                       render={
@@ -262,8 +266,8 @@ function SidebarNav({
                     />
                     <TooltipContent side="right">{t(group.labelKey)}</TooltipContent>
                   </TooltipRoot>
-                  <ChevronDown className="size-3.5 shrink-0 -rotate-90 text-sidebar-foreground/40 in-data-panel-open:rotate-0" />
-                </CollapsibleTrigger>
+                  <ChevronDown className="-rotate-90 in-data-panel-open:rotate-0" />
+                </SidebarGroupLabel>
               )}
               {/* data-instant：NavIndicator 在 layoutKey 变化时一次性测量激活项位置，
                   高度过渡会让测量落在动画起点，所以侧栏分组不做展开动画 */}

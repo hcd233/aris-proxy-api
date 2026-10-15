@@ -104,3 +104,49 @@ describe("② 表单与列表", () => {
     }
   });
 });
+
+describe("③ 组合修正", () => {
+  it("share-dialog 不再按钮嵌套", () => {
+    expect(read("components/share/share-dialog.tsx")).not.toMatch(/<PopoverTrigger>\s*<button/);
+  });
+
+  it.each(["components/pagination-bar.tsx", "components/language-switcher.tsx"])(
+    "%s 用 DropdownMenuRadioGroup",
+    (p) => {
+      expect(read(p)).toContain("DropdownMenuRadioGroup");
+    },
+  );
+
+  it("权限拦截页用 Empty", () => {
+    expect(read("components/permission-guard.tsx")).toContain("<Empty");
+  });
+
+  it("侧栏分组标题用 SidebarGroupLabel", () => {
+    expect(read("app/(dashboard)/layout.tsx")).toContain("<SidebarGroupLabel");
+  });
+
+  it.each([
+    "components/chat/markdown-lite.tsx",
+    "app/(dashboard)/upstream/grouped-view.tsx",
+    "components/trace-install-popover.tsx",
+  ])("%s 复用 CopyButton", (p) => {
+    expect(read(p)).toContain("<CopyButton");
+    expect(read(p)).not.toContain("copyTextToClipboard");
+  });
+
+  it("CopyButton 基于 Button", () => {
+    expect(read("components/ui/copy-button.tsx")).toContain("<Button");
+  });
+
+  it("排序表头、分组折叠、工具栏关闭按钮用 Button", () => {
+    expect(read("app/(dashboard)/upstream/flat-view.tsx")).not.toMatch(/<button[\s>]/);
+    expect(read("app/(dashboard)/upstream/grouped-view.tsx")).not.toMatch(/<button[\s>]/);
+    expect(read("components/shared/reading-layout.tsx")).not.toMatch(/<button[\s>]/);
+  });
+
+  it("比例条浮层用 Tooltip", () => {
+    const src = read("components/charts/stacked-ratio-bar.tsx");
+    expect(src).not.toContain("createPortal");
+    expect(src).toContain("TooltipContent");
+  });
+});

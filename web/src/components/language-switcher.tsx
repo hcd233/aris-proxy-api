@@ -1,11 +1,14 @@
 "use client";
 
 import { useI18n, type Locale } from "@/lib/i18n";
-import { ChevronDown, Check } from "lucide-react";
+import { ChevronDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
+  DropdownMenuGroup,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
@@ -23,31 +26,20 @@ export function LanguageSwitcher() {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="flex cursor-pointer items-center gap-1 rounded-lg border border-sidebar-border/50 bg-sidebar px-2 py-1 text-[11px] font-medium leading-none tracking-wider transition-all duration-200 hover:bg-sidebar-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-popup-open:bg-sidebar-accent/50">
-        <span>{LANGUAGE_LABELS[locale].native}</span>
-        <ChevronDown className="size-3 text-sidebar-foreground/30 transition-transform duration-200 data-popup-open:rotate-180" />
+      <DropdownMenuTrigger render={<Button variant="outline" size="xs" className="min-w-0" />}>
+        {LANGUAGE_LABELS[locale].native}
+        <ChevronDown data-icon="inline-end" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent
-        align="end"
-        className="min-w-[130px] rounded-xl border-sidebar-border/50 bg-popover p-1 shadow-lg"
-      >
-        {LOCALE_LIST.map(([code, lang]) => {
-          const isActive = locale === code;
-          return (
-            <DropdownMenuItem
-              key={code}
-              onClick={() => setLocale(code)}
-              className={`flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs transition-all duration-150 ${
-                isActive
-                  ? "bg-primary/10 text-primary font-medium"
-                  : "text-popover-foreground/70 hover:text-popover-foreground"
-              }`}
-            >
-              <span>{lang.native}</span>
-              {isActive && <Check className="ml-auto size-3 shrink-0 text-primary" />}
-            </DropdownMenuItem>
-          );
-        })}
+      <DropdownMenuContent align="end" className="min-w-32">
+        <DropdownMenuGroup>
+          <DropdownMenuRadioGroup value={locale} onValueChange={(v) => setLocale(v as Locale)}>
+            {LOCALE_LIST.map(([code, lang]) => (
+              <DropdownMenuRadioItem key={code} value={code}>
+                {lang.native}
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+        </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   );

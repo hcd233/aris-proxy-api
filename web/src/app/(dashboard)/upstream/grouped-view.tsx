@@ -3,6 +3,7 @@
 import { Fragment } from "react";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { Button } from "@/components/ui/button";
+import { CopyButton } from "@/components/ui/copy-button";
 import { Badge } from "@/components/ui/badge";
 import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
@@ -24,10 +25,8 @@ import {
 import { DeleteButton } from "@/components/delete-button";
 import { Switch } from "@/components/ui/switch";
 import { ProviderIcon } from "@/components/provider-icon";
-import { Plus, Pencil, ChevronDown, ChevronRight, Coins, Info, Copy, Lock } from "lucide-react";
+import { Plus, Pencil, ChevronRight, Coins, Info, Lock } from "lucide-react";
 import { useT } from "@/lib/i18n";
-import { copyTextToClipboard } from "@/lib/clipboard";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { UpstreamGroupItem, UpstreamModelItem, UpstreamEndpointItem } from "@/lib/types";
 import {
@@ -47,27 +46,18 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 function EndpointDetailPopover({ endpoint }: { endpoint: UpstreamEndpointItem }) {
   const t = useT();
 
-  const copy = (text: string) => {
-    if (!text) return;
-    void copyTextToClipboard(text).then((ok) =>
-      ok ? toast.success(t("common.copied_to_clipboard")) : toast.error(t("common.copy_failed")),
-    );
-  };
-
   // copyable=false 的字段（掩码凭据、创建日期）复制无意义，渲染为纯文本
   const field = (label: string, value: string, copyable = true) => (
     <div className="min-w-0 rounded-md border border-border bg-background px-2 py-1.5">
       <p className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground">{label}</p>
       {value ? (
         copyable ? (
-          <button
-            type="button"
-            className="mt-0.5 flex w-full items-start gap-1 text-left font-mono text-[11px] break-all text-foreground hover:text-primary"
-            onClick={() => copy(value)}
-          >
-            <Copy className="mt-0.5 size-3 shrink-0 text-muted-foreground" />
-            <span className="min-w-0">{value}</span>
-          </button>
+          <div className="mt-0.5 flex items-start gap-1">
+            <span className="min-w-0 flex-1 font-mono text-[11px] break-all text-foreground">
+              {value}
+            </span>
+            <CopyButton value={value} variant="icon" className="-mt-1 -mr-1" />
+          </div>
         ) : (
           <p className="mt-0.5 font-mono text-[11px] break-all text-foreground">{value}</p>
         )
@@ -394,19 +384,16 @@ export function GroupedView({
               <TableRow className="bg-card hover:bg-card">
                 <TableCell colSpan={9} className="border-l-[3px] border-l-primary pl-3">
                   <div className="flex min-w-0 items-center gap-2.5 py-0.5">
-                    <button
+                    <Button
                       type="button"
-                      className="shrink-0 text-muted-foreground hover:text-foreground"
+                      variant="ghost"
+                      size="icon-xs"
                       aria-expanded={open}
                       aria-label={open ? t("upstream.collapse_group") : t("upstream.expand_group")}
                       onClick={() => toggleCollapse(ep.id)}
                     >
-                      {open ? (
-                        <ChevronDown className="size-4" />
-                      ) : (
-                        <ChevronRight className="size-4" />
-                      )}
-                    </button>
+                      <ChevronRight className={cn("transition-transform", open && "rotate-90")} />
+                    </Button>
                     <OwnerCell user={ep.user} />
                     <span className="flex min-w-0 items-center gap-2">
                       <TooltipRoot>

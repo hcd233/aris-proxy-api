@@ -683,7 +683,6 @@
   "trace.invalid_id": "Invalid trace ID",
   "trace.not_found": "Trace not found",
   "trace.install_copy": "Copy",
-  "trace.install_copied": "Copied",
   "trace.install_close": "Close",
   "trace.delete_confirm": "Delete this trace?",
   "trace.delete_success": "Trace deleted",

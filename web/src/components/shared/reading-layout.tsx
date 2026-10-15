@@ -1,9 +1,10 @@
 "use client";
 
 import { type ReactNode, type Ref, type UIEvent } from "react";
-import { Wrench } from "lucide-react";
+import { Wrench, X } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SwipeDismissSheetBody } from "@/components/session-detail/swipe-dismiss-sheet-body";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -148,14 +149,15 @@ export function ReadingLayout({
                   {toolsCount}
                 </Badge>
               </div>
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon-sm"
                 onClick={() => onToolsOpenChange(false)}
-                className="text-[14px] text-muted-foreground transition-colors hover:text-foreground"
                 aria-label={t("reading_layout.close_tools")}
               >
-                ✕
-              </button>
+                <X />
+              </Button>
             </div>
             <ScrollArea
               className="min-h-0 flex-1"
