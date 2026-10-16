@@ -2,6 +2,8 @@ package repository
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"strconv"
@@ -217,9 +219,17 @@ type sessionSummaryRow struct {
 	TotalCount   int64     `gorm:"column:total_count"`
 }
 
-// NormalizeKeyword 归一化 keyword 作为缓存 key 片段（trim + 小写）
+// NormalizeKeyword 归一化 keyword（trim + 小写），对齐 ILIKE 的大小写不敏感语义。
 func NormalizeKeyword(keyword string) string {
 	return strings.ToLower(strings.TrimSpace(keyword))
+}
+
+// KeywordCacheKeyFragment 归一化 keyword 并取 SHA-256 摘要作为缓存 key 片段。
+// 摘要对齐 modelListCacheKey 的键构造风格：用户输入不原样进 Redis key，
+// 键长固定且无特殊字符。
+func KeywordCacheKeyFragment(keyword string) string {
+	sum := sha256.Sum256([]byte(NormalizeKeyword(keyword)))
+	return hex.EncodeToString(sum[:])
 }
 
 // FormatBigIntArray 把 id 集合序列化为 PG bigint[] 字面量（"{1,2,3}"）
@@ -238,7 +248,7 @@ func FormatBigIntArray(ids []uint) string {
 //
 // 命中为空时返回 nil（GetOrLoad 的 mo.None 空值标记防穿透，短 TTL 自愈）。
 func (r *sessionReadRepository) keywordMessageIDs(ctx context.Context, keyword string) ([]uint, error) {
-	key := fmt.Sprintf(constant.ReadCacheKeywordIDsKeyTemplate, NormalizeKeyword(keyword))
+	key := fmt.Sprintf(constant.ReadCacheKeywordIDsKeyTemplate, KeywordCacheKeyFragment(keyword))
 	opt, err := cache.GetOrLoadWithTTL(ctx, r.cache, key,
 		constant.ReadCacheKeywordIDsTTL, constant.ReadCacheKeywordIDsTTLJitter,
 		func(loadCtx context.Context) (mo.Option[[]uint], error) {
@@ -261,6 +271,11 @@ func (r *sessionReadRepository) keywordMessageIDs(ctx context.Context, keyword s
 // applyKeywordFilter 注入 keyword 过滤条件
 //
 // ok=false 表示关键词命中为空，调用方直接返回空页（短路，不执行第二段查询）。
+//
+// 安全前提：第一段命中集（keywordMessageIDs）跨租户共享——缓存 key 无 scope 维度，
+// 且 SQL 不带 owner 条件扫全表 messages。数据隔离完全由第二段所在查询自身的
+// owner/权限条件收敛（如 ListSessionsByOwnerIDs 的 api_key_id IN ?）。
+// 新增调用方必须自带 owner 过滤，否则会把他人 session 泄漏进结果集。
 func (r *sessionReadRepository) applyKeywordFilter(ctx context.Context, sql *gorm.DB, keyword string) (*gorm.DB, bool, error) {
 	ids, err := r.keywordMessageIDs(ctx, keyword)
 	if err != nil {
