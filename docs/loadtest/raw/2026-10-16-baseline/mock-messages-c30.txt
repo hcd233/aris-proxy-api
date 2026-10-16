@@ -1,0 +1,27 @@
+Running 2m test @ https://api.lvlvko.top/api/anthropic/v1/messages
+  4 threads and 30 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    23.87s    20.62s    1.92m    73.64%
+    Req/Sec     0.46      1.58    10.00     94.44%
+  Latency Distribution
+     50%   19.78s 
+     75%   32.20s 
+     90%    0.94m 
+     99%    1.32m 
+  109 requests in 2.00m, 31.59MB read
+Requests/sec:      0.91
+Transfer/sec:    269.36KB
+
+===== messages loadtest summary =====
+duration(s)     : 120.08
+requests        : 109
+errors          : 0
+latency avg(ms) : 23865.47
+latency p50(ms) : 19784.64
+latency p90(ms) : 56667.26
+latency p99(ms) : 79044.95
+body bytes      : 0
+status codes:
+core metric : 并发 SSE 长连接数 = wrk -c 值，逐档加压找稳定拐点
+ttft/stream : 从审计表 model_call_audits.first_token_latency_ms / stream_duration_ms 统计
+======================================

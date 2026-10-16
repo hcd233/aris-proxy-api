@@ -1,0 +1,27 @@
+Running 2m test @ https://api.lvlvko.top/api/openai/v1/responses
+  4 threads and 20 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    22.16s    15.95s    1.26m    70.83%
+    Req/Sec     0.38      0.97     5.00     92.22%
+  Latency Distribution
+     50%   19.06s 
+     75%   32.07s 
+     90%   43.03s 
+     99%    1.26m 
+  92 requests in 2.00m, 21.99MB read
+Requests/sec:      0.77
+Transfer/sec:    187.55KB
+
+===== responses loadtest summary =====
+duration(s)     : 120.07
+requests        : 92
+errors          : 0
+latency avg(ms) : 22157.97
+latency p50(ms) : 19062.85
+latency p90(ms) : 43034.54
+latency p99(ms) : 75388.53
+body bytes      : 0
+status codes:
+core metric : 并发 SSE 长连接数 = wrk -c 值，逐档加压找稳定拐点
+ttft/stream : 从审计表 model_call_audits.first_token_latency_ms / stream_duration_ms 统计
+========================================

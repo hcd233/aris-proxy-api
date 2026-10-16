@@ -1,0 +1,31 @@
+=== 压测开始: 2026-10-16T14:56:32Z ===
+--- mock-chat c=20 start 14:56:32Z ---
+--- mock-chat c=50 start 14:58:33Z ---
+--- mock-chat c=100 start 15:00:34Z ---
+--- mock-response c=20 start 15:02:36Z ---
+--- mock-response c=50 start 15:04:37Z ---
+--- mock-response c=100 start 15:06:39Z ---
+--- mock-messages c=20 start 15:08:41Z ---
+--- mock-messages c=50 start 15:10:42Z ---
+--- mock-messages c=100 start 15:12:44Z ---
+=== 压测结束: 2026-10-16T15:14:45Z ===
+=== 干净档位压测开始: 2026-10-16T15:21:41Z ===
+--- mock-chat c=10 start 15:21:41Z ---
+    冷却 60s（等令牌桶恢复）...
+--- mock-chat c=20 start 15:24:43Z ---
+    冷却 60s（等令牌桶恢复）...
+--- mock-chat c=30 start 15:27:44Z ---
+    冷却 60s（等令牌桶恢复）...
+--- mock-response c=10 start 15:30:46Z ---
+    冷却 60s（等令牌桶恢复）...
+--- mock-response c=20 start 15:33:47Z ---
+    冷却 60s（等令牌桶恢复）...
+--- mock-response c=30 start 15:36:48Z ---
+    冷却 60s（等令牌桶恢复）...
+--- mock-messages c=10 start 15:39:50Z ---
+    冷却 60s（等令牌桶恢复）...
+--- mock-messages c=20 start 15:42:51Z ---
+    冷却 60s（等令牌桶恢复）...
+--- mock-messages c=30 start 15:45:52Z ---
+    冷却 60s（等令牌桶恢复）...
+=== 结束: 2026-10-16T15:48:54Z ===

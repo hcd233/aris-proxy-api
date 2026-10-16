@@ -19,10 +19,14 @@ export MODEL=mock-chat          # 或 mock-response / mock-messages
 ```
 
 ```bash
-wrk -t4 -c100 -d5m --latency -s test/loadtest/chat_completions.lua "$TARGET_URL/api/openai/v1/chat/completions"
-wrk -t4 -c100 -d5m --latency -s test/loadtest/responses.lua        "$TARGET_URL/api/openai/v1/responses"
-wrk -t4 -c100 -d5m --latency -s test/loadtest/messages.lua         "$TARGET_URL/api/anthropic/v1/messages"
+wrk -t4 -c100 -d5m --timeout 300s --latency -s test/loadtest/chat_completions.lua "$TARGET_URL/api/openai/v1/chat/completions"
+wrk -t4 -c100 -d5m --timeout 300s --latency -s test/loadtest/responses.lua        "$TARGET_URL/api/openai/v1/responses"
+wrk -t4 -c100 -d5m --timeout 300s --latency -s test/loadtest/messages.lua         "$TARGET_URL/api/anthropic/v1/messages"
 ```
+
+> **`--timeout 300s` 必加**：wrk 默认超时 2 秒，而 mock 流平均 19 秒、最长 205 秒。
+> 不加会把绝大多数长流判成 `Socket errors: timeout`，测不出真实数据（实测 20 并发 120s
+> 窗口下漏 79 个连接）。
 
 ## 指标口径
 
@@ -33,7 +37,9 @@ wrk -t4 -c100 -d5m --latency -s test/loadtest/messages.lua         "$TARGET_URL/
   **能稳定维持的最大并发流数即核心结论。**
 - **TTFT 与流持续时间不在 wrk 侧测**（Lua 拿不到精确首字节时间戳），压测后查审计表：
   `model_call_audits.first_token_latency_ms` / `stream_duration_ms`，按 `api_key_id` 过滤。
-- 窗口 5 分钟 > 最长流 205 秒；连接超时须 > 205 秒。
+- **状态码分布也从审计表取**（`upstream_status_code`）：脚本里的 `response()` 回调在部分
+  wrk 构建（如 Alpine 包）中不会被调用，实测 `response called: 0`，故不依赖它。
+- 窗口须长于最长流；连接超时 `--timeout` 须 > 205 秒（见上）。
 
 ## 压测后必做
 
