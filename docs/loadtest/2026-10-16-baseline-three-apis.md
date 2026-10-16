@@ -27,7 +27,11 @@
 | 项 | 值 |
 |----|----|
 | 被测环境 | 生产 `api.lvlvko.top`（真实链路：鉴权 → 限流 → 触发词 → 模型解析 → 审计 → 落库） |
-| 服务版本 | git `a5086e8a`（含 mock 模型能力） |
+| 服务版本 | git `4de0f0bb`（含 mock 模型能力 + 周 CR 的 mock 随机源竞态修复） |
+
+> **版本可信度**：压测于 2026-10-16 15:21Z 执行，而 `4de0f0bb`（修复共享 `*rand.Rand`
+> 的并发 data race，改为 per-request 实例）的 CI 部署完成于 09:04Z、pod 启动于 09:04:52Z。
+> 即**压测跑在已修复竞态的镜像上**，数据不受该竞态影响。
 | 部署 | k3s 单节点（Ubuntu 24.04，kernel 6.8.0-31），2 replicas |
 | 资源配额 | CPU requests 50m / limits **300m**；Memory requests 128Mi / **512Mi** |
 | Mock 上游 | 进程内生成，不发外部 HTTP（`mock.upstream.enabled=true`） |
