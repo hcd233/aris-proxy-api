@@ -113,7 +113,7 @@ func (r *demoAccessAuditRepository) ListDistinctActions(ctx context.Context, key
 		query = query.Where(constant.WhereCreatedAtLTE, endTime)
 	}
 	if keyword != "" {
-		query = query.Where(constant.FieldAction+" LIKE ?", "%"+keyword+"%")
+		query = query.Where(constant.FieldAction+" LIKE ? ESCAPE '\\'", "%"+util.EscapeLikePattern(keyword)+"%")
 	}
 	var values []string
 	if err := query.Order(constant.FieldAction + " ASC").Limit(constant.CronAuditDistinctLimit).Scan(&values).Error; err != nil {
@@ -134,7 +134,7 @@ func (r *demoAccessAuditRepository) ListDistinctModules(ctx context.Context, key
 		query = query.Where(constant.WhereCreatedAtLTE, endTime)
 	}
 	if keyword != "" {
-		query = query.Where(constant.FieldModule+" LIKE ?", "%"+keyword+"%")
+		query = query.Where(constant.FieldModule+" LIKE ? ESCAPE '\\'", "%"+util.EscapeLikePattern(keyword)+"%")
 	}
 	var values []string
 	if err := query.Order(constant.FieldModule + " ASC").Limit(constant.CronAuditDistinctLimit).Scan(&values).Error; err != nil {

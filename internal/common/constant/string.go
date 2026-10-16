@@ -44,7 +44,10 @@ const (
 	OpenAPISchemasPath   = "/schemas"
 
 	// ── 数值常量 / 构建命令 ──
-	ParseFloat64BitSize       = 64
+	ParseFloat64BitSize = 64
+	// ParseIntBitSize strconv.ParseInt / ParseUint 的 bitSize（64 位整型）。
+	// 不要复用 ParseFloat64BitSize——数值相同但语义不同。
+	ParseIntBitSize           = 64
 	DecimalBase               = 10
 	GoCommand                 = "go"
 	GoAllPackagesPattern      = "./..."

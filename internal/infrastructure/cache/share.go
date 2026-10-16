@@ -174,7 +174,7 @@ func (s *shareCache) GetShareSessionID(ctx context.Context, shareID string) (uin
 		return 0, ierr.Wrap(ierr.ErrInternal, err, "failed to get share")
 	}
 
-	sessionID, parseErr := strconv.ParseUint(val, constant.DecimalBase, constant.ParseFloat64BitSize)
+	sessionID, parseErr := strconv.ParseUint(val, constant.DecimalBase, constant.ParseIntBitSize)
 	if parseErr != nil {
 		return 0, ierr.Wrap(ierr.ErrInternal, parseErr, "failed to parse session ID from share")
 	}

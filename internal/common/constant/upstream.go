@@ -17,8 +17,8 @@ const (
 	ResponseIDTemplate         = "resp_%s"
 	ResponseItemIDTemplate     = "msg_%s"
 
-	// Mock 上游（压测用）：Model 表 upstream_model 为 MockUpstreamModel 时，
-	// 网关不向上游发 HTTP，改由进程内随机流生成；见 transport.MockUpstreamModel 消费方。
+	// Mock 上游（压测用）：upstream_model 为 MockUpstreamModel 时，网关不向上游
+	// 发 HTTP，改由 transport.IsMock 命中的装饰器进程内随机流生成。
 	MockUpstreamModel = "mock-llm"
 	MockMaxChars      = 16384           // 随机内容长度上限（字符）
 	MockCharsPerToken = 4               // 1 token ≈ 4 字符

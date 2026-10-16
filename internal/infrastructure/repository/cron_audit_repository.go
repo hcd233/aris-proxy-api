@@ -149,7 +149,7 @@ func (r *cronCallAuditRepository) ListDistinctTypes(ctx context.Context, keyword
 		query = query.Where(constant.WhereCreatedAtLTE, endTime)
 	}
 	if keyword != "" {
-		query = query.Where(constant.CronAuditDistinctWhereType, "%"+keyword+"%")
+		query = query.Where(constant.CronAuditDistinctWhereType, "%"+util.EscapeLikePattern(keyword)+"%")
 	}
 
 	if err := query.Order(constant.CronAuditDistinctOrderType).Limit(constant.CronAuditDistinctLimit).Scan(&types).Error; err != nil {
@@ -180,7 +180,7 @@ func (r *cronCallAuditRepository) ListDistinctStatuses(ctx context.Context, keyw
 		query = query.Where(constant.WhereCreatedAtLTE, endTime)
 	}
 	if keyword != "" {
-		query = query.Where(constant.CronAuditDistinctWhereStatus, "%"+keyword+"%")
+		query = query.Where(constant.CronAuditDistinctWhereStatus, "%"+util.EscapeLikePattern(keyword)+"%")
 	}
 
 	if err := query.Order(constant.CronAuditDistinctOrderStatus).Limit(constant.CronAuditDistinctLimit).Scan(&statuses).Error; err != nil {

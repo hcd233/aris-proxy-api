@@ -12,10 +12,10 @@ local max_tok = tonumber(os.getenv("MAX_TOKENS") or "0") or 0
 
 wrk.method  = "POST"
 wrk.headers = {
-  ["Content-Type"]  = "application/json",
-  ["Authorization"]     = api_key,
-  ["User-Agent"]    = "aris-loadtest/1.0",
-  ["Accept"]        = "text/event-stream",
+  ["Content-Type"]     = "application/json",
+  ["Authorization"]    = api_key,
+  ["User-Agent"]       = "aris-loadtest/1.0",
+  ["Accept"]           = "text/event-stream",
   ["anthropic-version"] = "2023-06-01",
 }
 -- __LOADTEST__ 前缀保证 checksum 不与任何真实消息相同，防止清理时误删真实数据

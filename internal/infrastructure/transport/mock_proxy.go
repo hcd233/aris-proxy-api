@@ -18,9 +18,14 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 )
 
-// mockRNG mock 随机源；math/rand/v2 的 *rand.Rand 并发安全，可被并发请求共享。
-// 内容仅为压测用随机字符，非安全用途，故不使用 crypto/rand。
-var mockRNG = rand.New(rand.NewPCG(rand.Uint64(), rand.Uint64())) //nolint:gosec // mock content is not security-sensitive
+// newSpecFromBody 每次调用新建独立随机源。
+//
+// math/rand/v2 的 *rand.Rand（PCG 源）方法无锁读写内部状态，
+// 并非并发安全（并发安全的只有包级函数）；共享实例在并发压测下是 data race。
+// PCG 构造仅是几个 uint64 赋值，per-request 开销可忽略。
+func newMockRNG() *rand.Rand {
+	return rand.New(rand.NewPCG(rand.Uint64(), rand.Uint64())) //nolint:gosec // G404 mock content is not security-sensitive
+}
 
 // mockMaxTokensField 请求体中与输出 token 上限相关的字段。
 type mockMaxTokensField struct {
@@ -136,18 +141,7 @@ func (p *mockAnthropicProxy) ReadCreateMessageStream(ctx context.Context, stream
 		return p.inner.ReadCreateMessageStream(ctx, stream, onEvent)
 	}
 	defer func() { _ = stream.Close() }() //nolint:errcheck // ensure mock stream closed on return
-	if err := waitDelay(ctx, ms.Spec.TTFT); err != nil {
-		return nil, err
-	}
-	for _, ev := range BuildMessageStream(ms.Spec, ms.Model, mockID(constant.AnthropicMessageIDTemplate)) {
-		if err := onEvent(dto.AnthropicSSEEvent{Event: ev.Event, Data: ev.Data}); err != nil {
-			return nil, err
-		}
-		if err := waitDelay(ctx, ms.Spec.Interval); err != nil {
-			return nil, err
-		}
-	}
-	return BuildMessage(ms.Spec, ms.Model), nil
+	return emitMessageStream(ctx, ms, onEvent)
 }
 
 func (p *mockAnthropicProxy) ForwardCountTokens(ctx context.Context, ep vo.UpstreamEndpoint, body []byte) (*dto.AnthropicTokensCount, error) {
@@ -171,6 +165,26 @@ func emitChatStream(ctx context.Context, ms *mockStream, onChunk func(*dto.OpenA
 		}
 	}
 	return BuildChatCompletion(ms.Spec, ms.Model), nil
+}
+
+// emitMessageStream 按 Spec 的 TTFT/TPS 时序吐出 Anthropic SSE 事件并聚合出 message。
+// 返回 message 的 ID 与流内 message_start 的 ID 一致（同一响应对象）。
+func emitMessageStream(ctx context.Context, ms *mockStream, onEvent func(dto.AnthropicSSEEvent) error) (*dto.AnthropicMessage, error) {
+	if err := waitDelay(ctx, ms.Spec.TTFT); err != nil {
+		return nil, err
+	}
+	messageID := mockID(constant.AnthropicMessageIDTemplate)
+	for _, ev := range BuildMessageStream(ms.Spec, ms.Model, messageID) {
+		if err := onEvent(dto.AnthropicSSEEvent{Event: ev.Event, Data: ev.Data}); err != nil {
+			return nil, err
+		}
+		if err := waitDelay(ctx, ms.Spec.Interval); err != nil {
+			return nil, err
+		}
+	}
+	msg := BuildMessage(ms.Spec, ms.Model)
+	msg.ID = messageID
+	return msg, nil
 }
 
 // emitResponseStream 按时序吐出 Responses 事件。
@@ -220,7 +234,7 @@ func mockID(template string) string {
 
 // newSpecFromBody 从请求体构造 mock 参数：随机内容/时序 + 输入 token 估算。
 func newSpecFromBody(body []byte) MockSpec {
-	spec := NewMockSpec(mockRNG, maxTokensFromBody(body))
+	spec := NewMockSpec(newMockRNG(), maxTokensFromBody(body))
 	spec.InputTokens = estimateInputTokens(body)
 	return spec
 }

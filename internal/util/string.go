@@ -86,6 +86,20 @@ func SafeSortField(field string) string {
 	return ""
 }
 
+// likePatternEscaper 预编译的 LIKE/ILIKE 通配符转义器（单遍替换，不会递归转义）。
+var likePatternEscaper = strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
+
+// EscapeLikePattern 转义 SQL LIKE/ILIKE 模式中的通配符（\ % _），让用户输入按字面匹配。
+// 需配合 SQL 侧 ESCAPE '\' 子句（PG 的 LIKE 默认转义符就是反斜杠，显式声明防语义丢失）。
+//
+//	@param s string 用户输入的搜索词
+//	@return string
+//	@author centonhuang
+//	@update 2026-10-16 16:00:00
+func EscapeLikePattern(s string) string {
+	return likePatternEscaper.Replace(s)
+}
+
 // ExtractMessageText 从 UnifiedContent 中提取纯文本内容
 //
 //	@param c *vo.UnifiedContent

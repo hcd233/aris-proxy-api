@@ -136,7 +136,7 @@ func (r *auditRepository) ListDistinctUserNames(ctx context.Context, apiKeyIDs [
 		query = query.Where(constant.AuditDistinctWhereCreatedAtLTE, endTime)
 	}
 	if keyword != "" {
-		query = query.Where(constant.AuditDistinctWhereUser, "%"+keyword+"%", "%"+keyword+"%")
+		query = query.Where(constant.AuditDistinctWhereUser, "%"+util.EscapeLikePattern(keyword)+"%", "%"+util.EscapeLikePattern(keyword)+"%")
 	}
 
 	if err := query.Limit(constant.AuditDistinctLimit).Scan(&names).Error; err != nil {
@@ -170,7 +170,7 @@ func (r *auditRepository) ListDistinctModels(ctx context.Context, apiKeyIDs []ui
 		query = query.Where(constant.WhereCreatedAtLTE, endTime)
 	}
 	if keyword != "" {
-		query = query.Where(constant.AuditDistinctWhereModel, "%"+keyword+"%")
+		query = query.Where(constant.AuditDistinctWhereModel, "%"+util.EscapeLikePattern(keyword)+"%")
 	}
 
 	if err := query.Limit(constant.AuditDistinctLimit).Scan(&models).Error; err != nil {
@@ -237,7 +237,7 @@ func (r *auditRepository) ListDistinctUserAgents(ctx context.Context, apiKeyIDs 
 		query = query.Where(constant.WhereCreatedAtLTE, endTime)
 	}
 	if keyword != "" {
-		query = query.Where(constant.AuditDistinctWhereUA, "%"+keyword+"%")
+		query = query.Where(constant.AuditDistinctWhereUA, "%"+util.EscapeLikePattern(keyword)+"%")
 	}
 
 	if err := query.Limit(constant.AuditDistinctLimit).Scan(&agents).Error; err != nil {

@@ -253,7 +253,7 @@ var (
 	//   - 与「只搜用户消息」的产品语义一致，搜索面为 11.5K 行/127MB（全表 164K 行/1GB）；
 	//   - 与部分索引 idx_messages_user_content_trgm（WHERE role='user'）谓词对齐，才能走索引；
 	//   - 不搜 message 全文 JSON，避免 role/tool_call 等元数据造成误报（搜 "user" 命中全部用户消息）。
-	SessionKeywordMatchIDsSQL = "SELECT id FROM messages WHERE message::jsonb->>'role' = 'user' AND message::jsonb->>'content' ILIKE ?"
+	SessionKeywordMatchIDsSQL = "SELECT id FROM messages WHERE message::jsonb->>'role' = 'user' AND message::jsonb->>'content' ILIKE ? ESCAPE '\\'"
 
 	// SessionKeywordFilterSQL session 列表 keyword 过滤 SQL 片段（第二段）。
 	//
@@ -296,9 +296,9 @@ var (
 	AuditDistinctSelectUser      = "DISTINCT u.name"
 	AuditDistinctJoinAPIKey      = "JOIN proxy_api_keys pak ON mca.api_key_id = pak.id"
 	AuditDistinctJoinUser        = "JOIN users u ON pak.user_id = u.id"
-	AuditDistinctWhereUser       = "u.name LIKE ? OR u.email LIKE ?"
-	AuditDistinctWhereModel      = "model_id LIKE ?"
-	AuditDistinctWhereUA         = "user_agent LIKE ?"
+	AuditDistinctWhereUser       = "u.name LIKE ? ESCAPE '\\' OR u.email LIKE ? ESCAPE '\\'"
+	AuditDistinctWhereModel      = "model_id LIKE ? ESCAPE '\\'"
+	AuditDistinctWhereUA         = "user_agent LIKE ? ESCAPE '\\'"
 	AuditDistinctWhereUANotEmpty = "user_agent <> ''"
 	AuditDistinctSelectModel     = "DISTINCT model_id"
 	AuditDistinctSelectStatus    = "DISTINCT upstream_status_code::text"
@@ -329,7 +329,7 @@ var (
 	// ── Session distinct model query ──
 	SessionDistinctModelSelect = "DISTINCT jsonb_array_elements_text(model_ids::jsonb) AS model"
 	SessionDistinctModelWhere  = "model_ids IS NOT NULL AND model_ids::jsonb <> '[]'::jsonb"
-	SessionDistinctModelLike   = "jsonb_array_elements_text(model_ids::jsonb) ILIKE ?"
+	SessionDistinctModelLike   = "jsonb_array_elements_text(model_ids::jsonb) ILIKE ? ESCAPE '\\'"
 	SessionDistinctModelOrder  = "model ASC"
 	SessionDistinctModelLimit  = 50
 
@@ -378,10 +378,10 @@ var (
 	CronAuditDistinctWhereCreatedAtLTE = "cca.created_at <= ?"
 
 	CronAuditDistinctSelectType   = "DISTINCT cron_name"
-	CronAuditDistinctWhereType    = "cron_name LIKE ?"
+	CronAuditDistinctWhereType    = "cron_name LIKE ? ESCAPE '\\'"
 	CronAuditDistinctOrderType    = "cron_name ASC"
 	CronAuditDistinctSelectStatus = "DISTINCT status"
-	CronAuditDistinctWhereStatus  = "status LIKE ?"
+	CronAuditDistinctWhereStatus  = "status LIKE ? ESCAPE '\\'"
 	CronAuditDistinctOrderStatus  = "status ASC"
 	CronAuditDistinctLimit        = 50
 
