@@ -18,8 +18,7 @@ func BuildChatStream(spec MockSpec, model, chunkID string) []*dto.OpenAIChatComp
 	out := make([]*dto.OpenAIChatCompletionChunk, 0, len(pieces)+1)
 
 	for i, piece := range pieces {
-		content := piece
-		delta := &dto.OpenAIChatCompletionChunkDelta{Content: &content}
+		delta := &dto.OpenAIChatCompletionChunkDelta{Content: &piece}
 		if i == 0 {
 			delta.Role = enum.RoleAssistant
 		}

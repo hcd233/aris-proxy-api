@@ -4,10 +4,14 @@ import (
 	"context"
 	"io"
 	"strings"
+	"sync"
 	"testing"
+
+	"github.com/bytedance/sonic"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
@@ -171,5 +175,77 @@ func TestMockAnthropicProxy_CountTokens(t *testing.T) { //nolint:paralleltest //
 	}
 	if inner.called {
 		t.Fatal("inner proxy must not be called for mock target")
+	}
+}
+
+// TestMockProxy_ConcurrentSpecNoRace 回归：并发请求下 mock 参数生成无 data race。
+//
+// 旧实现共享全局 *rand.Rand（PCG 源无锁），并发压测（mock 的主场景）下是
+// data race；本用例需在 `go test -race` 下运行才能暴露，常规跑只验证功能。
+func TestMockProxy_ConcurrentSpecNoRace(t *testing.T) { //nolint:paralleltest // modifies global config
+	config.MockUpstreamEnabled = true
+	t.Cleanup(func() { config.MockUpstreamEnabled = false })
+
+	op := transport.NewMockOpenAIProxy(&fakeOpenAIProxy{})
+	ap := transport.NewMockAnthropicProxy(&fakeAnthropicProxy{})
+
+	var wg sync.WaitGroup
+	for range 32 {
+		wg.Go(func() {
+			rsp, err := op.ForwardChatCompletion(t.Context(), mockEndpoint(), []byte(`{"model":"mock-chat","max_tokens":32}`))
+			if err != nil || rsp == nil {
+				t.Errorf("chat mock failed: rsp=%v err=%v", rsp, err)
+			}
+			msg, err := ap.ForwardCreateMessage(t.Context(), mockEndpoint(), []byte(`{"model":"mock-messages"}`))
+			if err != nil || msg == nil {
+				t.Errorf("message mock failed: msg=%v err=%v", msg, err)
+			}
+		})
+	}
+	wg.Wait()
+}
+
+// TestMockAnthropicStream_MessageIDConsistent 验证流式返回的 message ID
+// 与流内 message_start 事件的 ID 一致（同一响应对象），且每次请求唯一。
+func TestMockAnthropicStream_MessageIDConsistent(t *testing.T) { //nolint:paralleltest // modifies global config
+	config.MockUpstreamEnabled = true
+	t.Cleanup(func() { config.MockUpstreamEnabled = false })
+
+	p := transport.NewMockAnthropicProxy(&fakeAnthropicProxy{})
+
+	var seenIDs []string
+	for range 2 {
+		stream, err := p.OpenCreateMessageStream(t.Context(), mockEndpoint(), []byte(`{"model":"mock-messages"}`))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var startID string
+		msg, err := p.ReadCreateMessageStream(t.Context(), stream, func(ev dto.AnthropicSSEEvent) error {
+			if ev.Event == enum.AnthropicSSEEventTypeMessageStart {
+				var payload struct {
+					Message struct {
+						ID string `json:"id"`
+					} `json:"message"`
+				}
+				if err := sonic.Unmarshal(ev.Data, &payload); err != nil {
+					return err
+				}
+				startID = payload.Message.ID
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if startID == "" {
+			t.Fatal("message_start event missing message id")
+		}
+		if msg.ID != startID {
+			t.Fatalf("final message id %q != stream message_start id %q", msg.ID, startID)
+		}
+		seenIDs = append(seenIDs, msg.ID)
+	}
+	if seenIDs[0] == seenIDs[1] {
+		t.Fatalf("message id must be unique per request, both got %q", seenIDs[0])
 	}
 }

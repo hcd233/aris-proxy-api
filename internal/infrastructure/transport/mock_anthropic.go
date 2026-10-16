@@ -62,9 +62,11 @@ func BuildMessageStream(spec MockSpec, model, messageID string) []MockResponseEv
 }
 
 // BuildMessage 生成非流式 Anthropic Message 响应。
+// ID 用与流式同一模板生成（每次唯一）；流式路径由 emitMessageStream 覆写为
+// 流内 message_start 的 ID，保证同一响应对象 ID 一致。
 func BuildMessage(spec MockSpec, model string) *dto.AnthropicMessage {
 	return &dto.AnthropicMessage{
-		ID:         constant.MockUpstreamModel + "-msg",
+		ID:         mockID(constant.AnthropicMessageIDTemplate),
 		Type:       enum.AnthropicMessageTypeMessage,
 		Role:       enum.RoleAssistant,
 		Model:      model,
