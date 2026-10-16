@@ -13,10 +13,17 @@
 
 ```bash
 export TARGET_URL=https://api.lvlvko.top
-export API_KEY=<压测专用 Key>
+export API_KEY=<压测专用 Key>       # 单 Key 模式
+# 或（绕过 100 次/分 per Key 限流，做容量压测时必需）：
+# export LT_KEYS="$K1,$K2,..."      # 多 Key 轮换模式，优先于 API_KEY
 export MODEL=mock-chat          # 或 mock-response / mock-messages
 # export MAX_TOKENS=2048        # 可选：约束输出长度（默认 0=不限制，长度 1~16384 字符）
 ```
+
+> **限流天花板**：LLM 转发限流为 **100 次/分钟 per API Key**。mock 流平均 19 秒，
+> 故**并发超过约 30 就会触发 429**。做容量压测必须用 `LT_KEYS` 多 Key 分摊
+> （实测 20 个 Key 可支撑 600+ 并发长流）。单 Key 高并发下会看到大量快速 429，
+> p50 骤降到几百毫秒——那是限流不是容量。
 
 ```bash
 wrk -t4 -c100 -d5m --timeout 300s --latency -s test/loadtest/chat_completions.lua "$TARGET_URL/api/openai/v1/chat/completions"

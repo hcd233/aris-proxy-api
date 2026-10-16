@@ -1,26 +1,43 @@
 -- chat_completions.lua 压测 POST /api/openai/v1/chat/completions（mock 模型随机字符流）
 --
+-- 支持单 Key 与多 Key 轮换（多 Key 用于绕过 100 req/min per Key 的限流天花板）：
+--   API_KEY=<单 Key>         单 Key 模式
+--   LT_KEYS=<k1,k2,...>      多 Key 轮换模式（优先于 API_KEY）
+--
 -- 执行：
 --   export TARGET_URL=https://api.lvlvko.top
---   export API_KEY=<压测专用 Key>
+--   export LT_KEYS="$K1,$K2,..."
 --   export MODEL=mock-chat
---   wrk -t4 -c100 -d5m --latency -s test/loadtest/chat_completions.lua "$TARGET_URL/api/openai/v1/chat/completions"
+--   wrk -t4 -c100 -d120s --timeout 300s --latency -s test/loadtest/chat_completions.lua "$TARGET_URL/api/openai/v1/chat/completions"
 
-local api_key = os.getenv("API_KEY") or ""
 local model   = os.getenv("MODEL") or "mock-chat"
 local max_tok = tonumber(os.getenv("MAX_TOKENS") or "0") or 0
 
-wrk.method  = "POST"
-wrk.headers = {
-  ["Content-Type"]  = "application/json",
-  ["Authorization"] = api_key,
-  ["User-Agent"]    = "aris-loadtest/1.0",
-  ["Accept"]        = "text/event-stream",
-}
--- __LOADTEST__ 前缀保证 checksum 不与任何真实消息相同，防止清理时误删真实数据
-wrk.body = string.format(
+-- Key 池：LT_KEYS 优先（逗号分隔），回退单 Key API_KEY
+local keys = {}
+local keys_raw = os.getenv("LT_KEYS")
+if keys_raw and #keys_raw > 0 then
+  for k in string.gmatch(keys_raw, "([^,]+)") do keys[#keys + 1] = k end
+else
+  keys[1] = os.getenv("API_KEY") or ""
+end
+
+-- 请求体固定（__LOADTEST__ 前缀保证 checksum 不与任何真实消息相同，防止清理时误删真实数据）
+local body = string.format(
   '{"model":"%s","stream":true,"max_tokens":%d,"messages":[{"role":"user","content":"__LOADTEST__ perf probe %s"}]}',
   model, max_tok, tostring(os.time()))
+
+-- 每请求轮换 Key（wrk 每线程独立 Lua 状态，故各线程独立轮换）
+local idx = 0
+function request()
+  idx = idx + 1
+  return wrk.format("POST", nil, {
+    ["Content-Type"]  = "application/json",
+    ["Authorization"] = keys[(idx % #keys) + 1],
+    ["User-Agent"]    = "aris-loadtest/1.0",
+    ["Accept"]        = "text/event-stream",
+  }, body)
+end
 
 local status_count = {}
 local body_bytes = 0

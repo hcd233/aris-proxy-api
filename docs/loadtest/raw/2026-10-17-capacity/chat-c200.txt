@@ -1,0 +1,28 @@
+Running 2m test @ https://api.lvlvko.top/api/openai/v1/chat/completions
+  4 threads and 200 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    39.28s    26.81s    1.96m    65.88%
+    Req/Sec     1.53      2.71    10.00     89.24%
+  Latency Distribution
+     50%   33.87s 
+     75%    0.95m 
+     90%    1.26m 
+     99%    1.84m 
+  296 requests in 2.00m, 125.13MB read
+  Socket errors: connect 5, read 13, write 0, timeout 0
+Requests/sec:      2.47
+Transfer/sec:      1.04MB
+
+===== chat/completions loadtest summary =====
+duration(s)     : 120.07
+requests        : 296
+errors          : 18
+latency avg(ms) : 39281.89
+latency p50(ms) : 33870.71
+latency p90(ms) : 75890.88
+latency p99(ms) : 110673.71
+body bytes      : 0
+status codes:
+core metric : 并发 SSE 长连接数 = wrk -c 值，逐档加压找稳定拐点
+ttft/stream : 从审计表 model_call_audits.first_token_latency_ms / stream_duration_ms 统计
+============================================
