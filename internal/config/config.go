@@ -198,7 +198,7 @@ var (
 	// MockUpstreamEnabled bool 是否启用 mock 上游（压测用）
 	//	开启后 Model 表 upstream_model = mock-llm 的请求改由进程内随机流生成，
 	//	不向上游发起 HTTP；默认关闭，避免生产误配后拿到假响应。
-	//	update 2026-10-15 10:00:00
+	//	@update 2026-10-15 10:00:00
 	MockUpstreamEnabled bool
 
 	// UpstreamCircuitEnabled bool 是否启用上游熔断

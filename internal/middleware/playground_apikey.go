@@ -37,7 +37,7 @@ func PlaygroundAPIKeyMiddleware(keys PlaygroundAPIKeyFinder) func(ctx huma.Conte
 		log := logger.WithCtx(ctx.Context())
 		userID := util.CtxValueUint(ctx.Context(), constant.CtxKeyUserID)
 		raw := ctx.Query(constant.QueryParamAPIKeyID)
-		keyID, err := strconv.ParseUint(raw, constant.DecimalBase, constant.ParseFloat64BitSize)
+		keyID, err := strconv.ParseUint(raw, constant.DecimalBase, constant.ParseIntBitSize)
 		// keyID 必须非零：仓储 FindByID 走 GORM struct 条件，零值主键会被忽略而退化成「取第一条」
 		if err != nil || keyID == 0 {
 			log.Info("[PlaygroundAPIKeyMiddleware] Invalid apiKeyID", zap.String("idParam", raw))

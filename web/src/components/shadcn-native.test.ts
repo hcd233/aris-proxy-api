@@ -6,6 +6,10 @@ import { describe, expect, it } from "vitest";
 /**
  * 源码契约：业务代码不再手写 shadcn 已提供的组件；生成的 shadcn 组件已按项目规范化
  * （cn 走 @/lib/utils、无 tw-animate 进出场类，动效交给 styles/motion-*.css 语法层）。
+ *
+ * 注意：本文件用「源码文本断言」（toContain 检查 JSX 字符串）做防回退守护，
+ * 对组件写法/className 重命名敏感——改样式或组件结构时需同步更新断言，
+ * 这是刻意的守护性契约，不是快照测试。
  */
 
 const SRC = fileURLToPath(new URL("..", import.meta.url));

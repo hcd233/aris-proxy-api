@@ -61,7 +61,7 @@ func (c *TriggerHitCache) PopAll(ctx context.Context) (map[uint]uint, error) {
 		case int64:
 			n = v
 		case string:
-			parsed, err := strconv.ParseInt(v, constant.DecimalBase, constant.ParseFloat64BitSize)
+			parsed, err := strconv.ParseInt(v, constant.DecimalBase, constant.ParseIntBitSize)
 			if err != nil {
 				continue
 			}
