@@ -227,7 +227,11 @@ html[data-theme="moonshot"][data-motion-tier="lite"] {
   }
 }
 
-/* ---- Dialogs「从黑暗中浮现」 (the stage dims via a focus pulse) ---- */
+/* ---- Dialogs「从黑暗中浮现」 (the stage dims via a focus pulse) ----
+ * 居中由 Tailwind 的 `-translate-x-1/2 -translate-y-1/2` 提供，v4 下它写的是独立
+ * 属性 `translate`；关键帧若动画 `translate` 会把居中顶掉（弹窗偏出半个自身尺寸），
+ * 所以这里只用 `scale` 与 `filter`。blur 留在弹窗自身，不要挪到祖先（祖先 filter
+ * 会成为 backdrop root，玻璃卡在入场期间失效）。 */
 [data-theme="moonshot"]
   :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"])[data-open] {
   animation: lunar-dialog-in 520ms var(--ease-orbit) backwards;
@@ -239,14 +243,14 @@ html[data-theme="moonshot"][data-motion-tier="lite"] {
 @keyframes lunar-dialog-in {
   from {
     opacity: 0;
-    transform: scale(0.92);
+    scale: 0.92;
     filter: blur(var(--lunar-blur-lg));
   }
 }
 @keyframes lunar-sink {
   to {
     opacity: 0;
-    transform: scale(0.96);
+    scale: 0.96;
     filter: blur(var(--lunar-blur));
   }
 }

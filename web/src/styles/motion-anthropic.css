@@ -89,7 +89,12 @@
   translate: 0 -2px;
 }
 
-/* ---- Dialogs「纸片落桌」 ---- */
+/* ---- Dialogs「纸片落桌」 ----
+ * 弹窗居中靠 Tailwind 的 `-translate-x-1/2 -translate-y-1/2`，而 v4 的 translate
+ * 工具写的是独立属性 `translate`（不是 `transform`）。因此关键帧只能动
+ * `transform` / `scale` / `rotate`：一旦关键帧里出现 `translate`，动画期间就会把
+ * 居中的 -50% -50% 整个顶掉，弹窗从右下方约半个自身尺寸处斜向滑入（Toast 的
+ * `rotate` 同理，见下方 atelier-slip）。 */
 [data-theme="anthropic"] :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"]) {
   box-shadow:
     0 0 0 1px rgb(31 26 20 / 0.1),
@@ -107,7 +112,9 @@
 @keyframes atelier-paper-drop {
   from {
     opacity: 0;
-    transform: translateY(12px) scale(0.985) rotate(-0.4deg);
+    transform: translateY(12px);
+    scale: 0.985;
+    rotate: -0.4deg;
     box-shadow:
       0 0 0 1px rgb(31 26 20 / 0.1),
       0 2px 4px -2px rgb(31 26 20 / 0);
@@ -116,7 +123,8 @@
 @keyframes atelier-paper-lift {
   to {
     opacity: 0;
-    transform: translateY(-6px) scale(0.995);
+    transform: translateY(-6px);
+    scale: 0.995;
   }
 }
 
