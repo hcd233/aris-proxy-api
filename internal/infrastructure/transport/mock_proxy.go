@@ -148,7 +148,7 @@ func (p *mockAnthropicProxy) ForwardCountTokens(ctx context.Context, ep vo.Upstr
 	if !IsMock(ep) {
 		return p.inner.ForwardCountTokens(ctx, ep, body)
 	}
-	return BuildTokensCount(newSpecFromBody(body)), nil
+	return BuildTokensCount(estimateInputTokens(body)), nil
 }
 
 // emitChatStream 按 Spec 的 TTFT/TPS 时序吐出 Chat chunk 并聚合出 completion。

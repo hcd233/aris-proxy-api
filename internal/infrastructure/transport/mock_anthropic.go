@@ -85,7 +85,8 @@ func BuildMessage(spec MockSpec, model string) *dto.AnthropicMessage {
 	}
 }
 
-// BuildTokensCount 生成 count_tokens 响应（按同口径估算）。
-func BuildTokensCount(spec MockSpec) *dto.AnthropicTokensCount {
-	return &dto.AnthropicTokensCount{InputTokens: spec.Tokens()}
+// BuildTokensCount 生成 count_tokens 响应：与 /messages 的 usage.input_tokens 同源
+// （都取请求体估算值），保证同一 body 的计数稳定、跨端点口径一致。
+func BuildTokensCount(inputTokens int) *dto.AnthropicTokensCount {
+	return &dto.AnthropicTokensCount{InputTokens: inputTokens}
 }

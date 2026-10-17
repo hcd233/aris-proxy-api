@@ -98,11 +98,11 @@ func TestBuildMessage_NonStream(t *testing.T) {
 	}
 }
 
-// TestBuildTokensCount 验证 count_tokens 响应按同口径估算。
+// TestBuildTokensCount 验证 count_tokens 返回请求体估算值（与 /messages 的
+// usage.input_tokens 同源，同一 body 计数稳定）。
 func TestBuildTokensCount(t *testing.T) {
 	t.Parallel()
-	spec := transport.MockSpec{Chars: []byte("abcdefgh")} // 8 字符 → 2 token
-	if got := transport.BuildTokensCount(spec).InputTokens; got != 2 {
-		t.Fatalf("input_tokens want 2, got %d", got)
+	if got := transport.BuildTokensCount(7).InputTokens; got != 7 {
+		t.Fatalf("input_tokens want 7, got %d", got)
 	}
 }
