@@ -21,10 +21,13 @@ type MockSpec struct {
 // NewMockSpec 抽取一次 mock 响应的随机参数。
 // maxTokens 是请求的 max_tokens（token 数）；<=0 表示不限制。
 // 随机长度单位为字符，范围 [1, MockMaxChars]；带 max_tokens 时按 token 数×MockCharsPerToken 收紧上限。
+//
+// maxTokens 来自请求体（用户可控），先按 MockMaxChars/MockCharsPerToken 钳制再乘：
+// 直接乘在 int64 上会回绕为负或零（2^61×4 溢出、2^62×4 归零），使 IntN 收到 n<=0 而 panic。
 func NewMockSpec(rng *rand.Rand, maxTokens int) MockSpec {
 	maxChars := constant.MockMaxChars
 	if maxTokens > 0 {
-		maxChars = min(maxTokens*constant.MockCharsPerToken, constant.MockMaxChars)
+		maxChars = min(maxTokens, constant.MockMaxChars/constant.MockCharsPerToken) * constant.MockCharsPerToken
 	}
 	n := rng.IntN(maxChars) + 1
 	tps := constant.MockMinTPS + rng.IntN(constant.MockMaxTPS-constant.MockMinTPS+1)
