@@ -18,14 +18,40 @@ type MockResponseEvent struct {
 	Data  []byte
 }
 
-// buildResponseItem 构造 mock 输出项：一条 assistant 文本消息。
-func buildResponseItem(spec MockSpec) *dto.ResponseInputItem {
+// buildResponseItem 构造输出项：一条完成的 assistant 文本消息。
+// content 用 output_text 数组形态（与真协议及本仓 fixture 一致）；字符串形态虽被
+// ResponseInputMessageContent.UnmarshalJSON 兼容，但严格 SDK 无法解析。
+func buildResponseItem(itemID string, spec MockSpec) *dto.ResponseInputItem {
 	msgType, role, status := enum.ResponseInputItemTypeMessage, enum.RoleAssistant, enum.ResponseStatusCompleted
+	text := string(spec.Chars)
 	return &dto.ResponseInputItem{
-		Type:    &msgType,
-		Role:    &role,
-		Status:  &status,
-		Content: &dto.ResponseInputMessageContent{Text: string(spec.Chars)},
+		Type:   &msgType,
+		ID:     &itemID,
+		Role:   &role,
+		Status: &status,
+		Content: &dto.ResponseInputMessageContent{
+			Parts: []*dto.ResponseInputContent{{Type: enum.ResponseContentTypeOutputText, Text: &text}},
+		},
+	}
+}
+
+// buildOutputItemAddedPayload 构造 output_item.added 负载：item 为 in_progress 占位
+// （content 为空数组，正文经后续 delta 到达），与真协议一致（converter 的
+// writeOutputItemAddedEvent 同形）。
+//
+// 用 map 而非 DTO 的原因：ResponseInputMessageContent.MarshalJSON 只在 Parts 非空时
+// 序列化成数组，空 Parts 会退化为字符串 ""；负载带 type 判别字段（严格 SDK 据此分发）。
+func buildOutputItemAddedPayload(itemID string) map[string]any {
+	return map[string]any{
+		constant.ResponseStreamFieldType:       enum.ResponseStreamEventOutputItemAdded,
+		constant.ResponseStreamFieldOutputItem: 0,
+		constant.ResponseStreamFieldItem: map[string]any{
+			constant.ResponseStreamFieldID:      itemID,
+			constant.ResponseStreamFieldType:    enum.ResponseInputItemTypeMessage,
+			constant.ResponseStreamFieldStatus:  enum.ResponseStatusInProgress,
+			constant.ResponseStreamFieldRole:    enum.RoleAssistant,
+			constant.ResponseStreamFieldContent: []any{},
+		},
 	}
 }
 
@@ -35,23 +61,24 @@ func buildResponseItem(spec MockSpec) *dto.ResponseInputItem {
 // （见 responseNativeStream.handleOutputItemDone / handleTerminalEvent）。
 func BuildResponseStream(spec MockSpec, model, responseID string) []MockResponseEvent {
 	pieces := spec.Chunks()
-	item := buildResponseItem(spec)
+	itemID := mockID(constant.ResponseItemIDTemplate)
+	item := buildResponseItem(itemID, spec)
 	out := make([]MockResponseEvent, 0, len(pieces)+4)
 
 	out = append(out,
 		mockEvent(enum.ResponseStreamEventCreated, map[string]any{
+			constant.ResponseStreamFieldType:   enum.ResponseStreamEventCreated,
 			constant.ResponseStreamFieldID:     responseID,
 			constant.ResponseStreamFieldObject: enum.CompletionObjectResponse,
 			constant.ResponseStreamFieldStatus: enum.ResponseStatusInProgress,
 			constant.ResponseStreamFieldModel:  model,
 		}),
-		mockEvent(enum.ResponseStreamEventOutputItemAdded, map[string]any{
-			constant.ResponseStreamFieldOutputIndex: 0,
-			constant.ResponseStreamFieldItem:        item,
-		}),
+		mockEvent(enum.ResponseStreamEventOutputItemAdded, buildOutputItemAddedPayload(itemID)),
 	)
 	for _, piece := range pieces {
 		out = append(out, mockEvent(enum.ResponseStreamEventOutputTextDelta, map[string]any{
+			constant.ResponseStreamFieldType:         enum.ResponseStreamEventOutputTextDelta,
+			constant.ResponseStreamFieldItemID:       itemID,
 			constant.ResponseStreamFieldOutputIndex:  0,
 			constant.ResponseStreamFieldContentIndex: 0,
 			constant.ResponseStreamFieldDelta:        piece,
@@ -79,7 +106,7 @@ func BuildResponse(spec MockSpec, model string) *dto.OpenAICreateResponseRsp {
 		CreatedAt: time.Now().Unix(),
 		Status:    enum.ResponseStatusCompleted,
 		Model:     model,
-		Output:    []*dto.ResponseInputItem{buildResponseItem(spec)},
+		Output:    []*dto.ResponseInputItem{buildResponseItem(mockID(constant.ResponseItemIDTemplate), spec)},
 		Usage:     buildResponseUsage(spec),
 	}
 }
