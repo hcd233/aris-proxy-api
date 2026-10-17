@@ -11,13 +11,23 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/transport"
 )
 
-// TestBuildMessageStream_Events 验证 Anthropic 流式事件序列：
+// collectMessageEvents 用按需 API 拼装完整事件序列（生产路径已改为逐事件按需生成，
+// 拼装仅便于对整条流做断言）。
+func collectMessageEvents(spec transport.MockSpec, model, messageID string) []transport.MockResponseEvent {
+	out := make([]transport.MockResponseEvent, 0, transport.MessageStreamLen(spec))
+	for i := range transport.MessageStreamLen(spec) {
+		out = append(out, transport.BuildMessageEventAt(spec, model, messageID, i))
+	}
+	return out
+}
+
+// TestBuildMessageEventAt_Events 验证 Anthropic 流式事件序列：
 // message_start → content_block_start → N×content_block_delta → content_block_stop →
 // message_delta → message_stop（均为聚合器已知类型，未知类型会报错）。
-func TestBuildMessageStream_Events(t *testing.T) {
+func TestBuildMessageEventAt_Events(t *testing.T) {
 	t.Parallel()
 	spec := transport.MockSpec{Chars: []byte("abcdefghijklmno")} // 15 字符 → 4 片
-	events := transport.BuildMessageStream(spec, "mock-messages", "msg-1")
+	events := collectMessageEvents(spec, "mock-messages", "msg-1")
 
 	if len(events) != 9 { // start + block_start + 4 delta + block_stop + msg_delta + msg_stop
 		t.Fatalf("want 9 events, got %d", len(events))
@@ -42,13 +52,13 @@ func TestBuildMessageStream_Events(t *testing.T) {
 	}
 }
 
-// TestBuildMessageStream_ContentBlockStartEmpty 验证 content_block_start 只声明块存在、
+// TestBuildMessageEventAt_ContentBlockStartEmpty 验证 content_block_start 只声明块存在、
 // text 为空串，正文全部走 content_block_delta——start 带全文会让 native 客户端按
 // 「start 初值 + delta 追加」累加出两倍正文。
-func TestBuildMessageStream_ContentBlockStartEmpty(t *testing.T) {
+func TestBuildMessageEventAt_ContentBlockStartEmpty(t *testing.T) {
 	t.Parallel()
 	spec := transport.MockSpec{Chars: []byte("abcdefgh")} // 8 字符 → 2 片
-	events := transport.BuildMessageStream(spec, "mock-messages", "msg-1")
+	events := collectMessageEvents(spec, "mock-messages", "msg-1")
 
 	var start *dto.AnthropicSSEContentBlockStart
 	var textBuilder strings.Builder

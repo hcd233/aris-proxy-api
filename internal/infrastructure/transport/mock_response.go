@@ -55,47 +55,49 @@ func buildOutputItemAddedPayload(itemID string) map[string]any {
 	}
 }
 
-// BuildResponseStream 生成 Responses API 流式事件序列：
-// created → output_item.added → N×output_text.delta → output_item.done → completed。
-// 其中 output_item.done 与 completed 承载完整 item/response，是存储链路的内容来源
-// （见 responseNativeStream.handleOutputItemDone / handleTerminalEvent）。
-func BuildResponseStream(spec MockSpec, model, responseID string) []MockResponseEvent {
-	pieces := spec.Chunks()
-	itemID := mockID(constant.ResponseItemIDTemplate)
-	item := buildResponseItem(itemID, spec)
-	out := make([]MockResponseEvent, 0, len(pieces)+4)
+// ResponseStreamLen 流式事件总数：created + output_item.added + N×delta +
+// output_item.done + completed。
+func ResponseStreamLen(spec MockSpec) int { return spec.ChunkCount() + 4 }
 
-	out = append(out,
-		mockEvent(enum.ResponseStreamEventCreated, map[string]any{
+// BuildResponseEventAt 按需构造第 i 个流式事件（i ∈ [0, ResponseStreamLen)）：
+// created → output_item.added → N×output_text.delta → output_item.done → completed。
+// itemID 由调用方生成并传入，保证 added/delta/done 三条事件归属同一 item；
+// output_item.done 与 completed 承载完整 item/response，是存储链路的内容来源
+// （见 responseNativeStream.handleOutputItemDone / handleTerminalEvent）。
+// 逐事件按需构造，不预物化整条流（16K 字符上限 = 4096 个 delta）。
+func BuildResponseEventAt(spec MockSpec, model, responseID, itemID string, i int) MockResponseEvent {
+	chunkCount := spec.ChunkCount()
+	switch {
+	case i == 0:
+		return mockEvent(enum.ResponseStreamEventCreated, map[string]any{
 			constant.ResponseStreamFieldType:   enum.ResponseStreamEventCreated,
 			constant.ResponseStreamFieldID:     responseID,
 			constant.ResponseStreamFieldObject: enum.CompletionObjectResponse,
 			constant.ResponseStreamFieldStatus: enum.ResponseStatusInProgress,
 			constant.ResponseStreamFieldModel:  model,
-		}),
-		mockEvent(enum.ResponseStreamEventOutputItemAdded, buildOutputItemAddedPayload(itemID)),
-	)
-	for _, piece := range pieces {
-		out = append(out, mockEvent(enum.ResponseStreamEventOutputTextDelta, map[string]any{
+		})
+	case i == 1:
+		return mockEvent(enum.ResponseStreamEventOutputItemAdded, buildOutputItemAddedPayload(itemID))
+	case i < chunkCount+2:
+		return mockEvent(enum.ResponseStreamEventOutputTextDelta, map[string]any{
 			constant.ResponseStreamFieldType:         enum.ResponseStreamEventOutputTextDelta,
 			constant.ResponseStreamFieldItemID:       itemID,
 			constant.ResponseStreamFieldOutputIndex:  0,
 			constant.ResponseStreamFieldContentIndex: 0,
-			constant.ResponseStreamFieldDelta:        piece,
-		}))
-	}
-	out = append(out,
-		mockEvent(enum.ResponseStreamEventOutputItemDone, &dto.ResponseStreamOutputItemDoneEvent{
+			constant.ResponseStreamFieldDelta:        spec.ChunkAt(i - 2),
+		})
+	case i == chunkCount+2:
+		return mockEvent(enum.ResponseStreamEventOutputItemDone, &dto.ResponseStreamOutputItemDoneEvent{
 			Type:        enum.ResponseStreamEventOutputItemDone,
 			OutputIndex: 0,
-			Item:        item,
-		}),
-		mockEvent(enum.ResponseStreamEventCompleted, &dto.ResponseStreamTerminalEvent{
+			Item:        buildResponseItem(itemID, spec),
+		})
+	default:
+		return mockEvent(enum.ResponseStreamEventCompleted, &dto.ResponseStreamTerminalEvent{
 			Type:     enum.ResponseStreamEventCompleted,
 			Response: BuildResponse(spec, model),
-		}),
-	)
-	return out
+		})
+	}
 }
 
 // BuildResponse 生成非流式 Responses 响应。

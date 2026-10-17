@@ -4,14 +4,25 @@ import (
 	"testing"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/transport"
 )
 
-// TestBuildChatStream_Shape 验证流式 chunk 序列：首片带 role、中间带 content、末片带 stop+usage。
-func TestBuildChatStream_Shape(t *testing.T) {
+// collectChatChunks 用按需 API 拼装完整 chunk 序列（生产路径已改为逐片按需生成，
+// 拼装仅便于对整条流做断言）。
+func collectChatChunks(spec transport.MockSpec, model, chunkID string) []*dto.OpenAIChatCompletionChunk {
+	out := make([]*dto.OpenAIChatCompletionChunk, 0, transport.ChatStreamLen(spec))
+	for i := range transport.ChatStreamLen(spec) {
+		out = append(out, transport.BuildChatChunkAt(spec, model, chunkID, 0, i))
+	}
+	return out
+}
+
+// TestBuildChatChunkAt_Shape 验证流式 chunk 序列：首片带 role、中间带 content、末片带 stop+usage。
+func TestBuildChatChunkAt_Shape(t *testing.T) {
 	t.Parallel()
 	spec := transport.MockSpec{Chars: []byte("abcdefghijklmno")} // 15 字符 → 4 片
-	chunks := transport.BuildChatStream(spec, "mock-chat", "chunk-1")
+	chunks := collectChatChunks(spec, "mock-chat", "chunk-1")
 
 	if len(chunks) != 5 { // 4 内容片 + 1 结束片
 		t.Fatalf("want 5 chunks, got %d", len(chunks))

@@ -24,18 +24,26 @@ func buildEmptyMessageBlock() *dto.AnthropicContentBlock {
 	return &dto.AnthropicContentBlock{Type: enum.AnthropicContentBlockTypeText, Text: lo.ToPtr("")}
 }
 
-// BuildMessageStream 生成 Anthropic Messages 流式事件序列：
+// MessageStreamLen 流式事件总数：message_start + content_block_start + N×delta +
+// content_block_stop + message_delta + message_stop。
+func MessageStreamLen(spec MockSpec) int { return spec.ChunkCount() + 5 }
+
+// buildMessageUsage 非流式 message 与流内 message_delta 共用的 usage（同口径）。
+func buildMessageUsage(spec MockSpec) *dto.AnthropicUsage {
+	return &dto.AnthropicUsage{InputTokens: spec.InputTokens, OutputTokens: spec.Tokens()}
+}
+
+// BuildMessageEventAt 按需构造第 i 个流式事件（i ∈ [0, MessageStreamLen)）：
 // message_start → content_block_start（空块）→ N×content_block_delta（正文）→
 // content_block_stop → message_delta → message_stop。
 // 事件类型须全在聚合器已知集合内（processAnthropicSSEEvent 对未知类型报错）；
 // content_block_start 的 Index 与 delta 的 Index 必须对应，否则聚合器报 unknown index。
-func BuildMessageStream(spec MockSpec, model, messageID string) []MockResponseEvent {
-	pieces := spec.Chunks()
-	msg := BuildMessage(spec, model)
-	out := make([]MockResponseEvent, 0, len(pieces)+5)
-
-	out = append(out,
-		mockEvent(enum.AnthropicSSEEventTypeMessageStart, &dto.AnthropicSSEMessageStart{
+// 逐事件按需构造，不预物化整条流（16K 字符上限 = 4096 个 delta）。
+func BuildMessageEventAt(spec MockSpec, model, messageID string, i int) MockResponseEvent {
+	chunkCount := spec.ChunkCount()
+	switch {
+	case i == 0:
+		return mockEvent(enum.AnthropicSSEEventTypeMessageStart, &dto.AnthropicSSEMessageStart{
 			Message: &dto.AnthropicMessage{
 				ID:    messageID,
 				Type:  enum.AnthropicMessageTypeMessage,
@@ -43,31 +51,31 @@ func BuildMessageStream(spec MockSpec, model, messageID string) []MockResponseEv
 				Model: model,
 				Usage: &dto.AnthropicUsage{InputTokens: spec.InputTokens},
 			},
-		}),
-		mockEvent(enum.AnthropicSSEEventTypeContentBlockStart, &dto.AnthropicSSEContentBlockStart{
+		})
+	case i == 1:
+		return mockEvent(enum.AnthropicSSEEventTypeContentBlockStart, &dto.AnthropicSSEContentBlockStart{
 			Index:        0,
 			ContentBlock: buildEmptyMessageBlock(),
-		}),
-	)
-	for _, piece := range pieces {
-		out = append(out, mockEvent(enum.AnthropicSSEEventTypeContentBlockDelta, &dto.AnthropicSSEContentBlockDelta{
+		})
+	case i < chunkCount+2:
+		return mockEvent(enum.AnthropicSSEEventTypeContentBlockDelta, &dto.AnthropicSSEContentBlockDelta{
 			Index: 0,
-			Delta: dto.AnthropicSSEContentBlockDeltaPayload{Type: enum.AnthropicDeltaTypeTextDelta, Text: piece},
-		}))
-	}
-	out = append(out,
-		mockEvent(enum.AnthropicSSEEventTypeContentBlockStop, map[string]any{
+			Delta: dto.AnthropicSSEContentBlockDeltaPayload{Type: enum.AnthropicDeltaTypeTextDelta, Text: spec.ChunkAt(i - 2)},
+		})
+	case i == chunkCount+2:
+		return mockEvent(enum.AnthropicSSEEventTypeContentBlockStop, map[string]any{
 			constant.ResponseStreamFieldType: enum.AnthropicSSEEventTypeContentBlockStop,
-		}),
-		mockEvent(enum.AnthropicSSEEventTypeMessageDelta, &dto.AnthropicSSEMessageDelta{
+		})
+	case i == chunkCount+3:
+		return mockEvent(enum.AnthropicSSEEventTypeMessageDelta, &dto.AnthropicSSEMessageDelta{
 			Delta: dto.AnthropicSSEMessageDeltaPayload{StopReason: lo.ToPtr(enum.AnthropicStopReasonEndTurn)},
-			Usage: msg.Usage,
-		}),
-		mockEvent(enum.AnthropicSSEEventTypeMessageStop, map[string]any{
+			Usage: buildMessageUsage(spec),
+		})
+	default:
+		return mockEvent(enum.AnthropicSSEEventTypeMessageStop, map[string]any{
 			constant.ResponseStreamFieldType: enum.AnthropicSSEEventTypeMessageStop,
-		}),
-	)
-	return out
+		})
+	}
 }
 
 // BuildMessage 生成非流式 Anthropic Message 响应。
@@ -81,7 +89,7 @@ func BuildMessage(spec MockSpec, model string) *dto.AnthropicMessage {
 		Model:      model,
 		Content:    []*dto.AnthropicContentBlock{buildMessageBlock(spec)},
 		StopReason: lo.ToPtr(enum.AnthropicStopReasonEndTurn),
-		Usage:      &dto.AnthropicUsage{InputTokens: spec.InputTokens, OutputTokens: spec.Tokens()},
+		Usage:      buildMessageUsage(spec),
 	}
 }
 

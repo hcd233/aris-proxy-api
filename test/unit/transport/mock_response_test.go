@@ -11,13 +11,23 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/transport"
 )
 
-// TestBuildResponseStream_Events 验证 Responses 流式事件序列：
+// collectResponseEvents 用按需 API 拼装完整事件序列（生产路径已改为逐事件按需生成，
+// 拼装仅便于对整条流做断言）。
+func collectResponseEvents(spec transport.MockSpec, model, responseID string) []transport.MockResponseEvent {
+	out := make([]transport.MockResponseEvent, 0, transport.ResponseStreamLen(spec))
+	for i := range transport.ResponseStreamLen(spec) {
+		out = append(out, transport.BuildResponseEventAt(spec, model, responseID, "msg-test", i))
+	}
+	return out
+}
+
+// TestBuildResponseEventAt_Events 验证 Responses 流式事件序列：
 // created → output_item.added → N×output_text.delta → output_item.done → completed。
 // 其中 output_item.done 与 completed 承载完整 item/response，是存储链路的内容来源。
-func TestBuildResponseStream_Events(t *testing.T) {
+func TestBuildResponseEventAt_Events(t *testing.T) {
 	t.Parallel()
 	spec := transport.MockSpec{Chars: []byte("abcdefghijklmno")} // 15 字符 → 4 片
-	events := transport.BuildResponseStream(spec, "mock-response", "resp-1")
+	events := collectResponseEvents(spec, "mock-response", "resp-1")
 
 	if len(events) != 8 { // created + added + 4 delta + output_item.done + completed
 		t.Fatalf("want 8 events, got %d", len(events))
@@ -50,14 +60,14 @@ func TestBuildResponseStream_Events(t *testing.T) {
 	}
 }
 
-// TestBuildResponseStream_PayloadShape 断言事件负载符合 Responses 协议形态：
+// TestBuildResponseEventAt_PayloadShape 断言事件负载符合 Responses 协议形态：
 // 每个事件带 type 判别字段（等于事件名）、output_item.added 的 item 为 in_progress +
 // 空 content 数组且带 id、delta 带同一 item_id、done 的 item content 为 output_text 数组
 // （而非字符串）。
-func TestBuildResponseStream_PayloadShape(t *testing.T) {
+func TestBuildResponseEventAt_PayloadShape(t *testing.T) {
 	t.Parallel()
 	spec := transport.MockSpec{Chars: []byte("abcdefgh")} // 8 字符 → 2 片
-	events := transport.BuildResponseStream(spec, "mock-response", "resp-1")
+	events := collectResponseEvents(spec, "mock-response", "resp-1")
 
 	payloads := make([]map[string]any, 0, len(events))
 	for _, e := range events {

@@ -54,10 +54,25 @@ func (s MockSpec) Tokens() int {
 
 // Chunks 把内容切成 4 字符一片（≈1 token）的序列，末片可短。
 func (s MockSpec) Chunks() []string {
-	size := constant.MockCharsPerToken
-	out := make([]string, 0, (len(s.Chars)+size-1)/size)
-	for i := 0; i < len(s.Chars); i += size {
-		out = append(out, string(s.Chars[i:min(i+size, len(s.Chars))]))
+	out := make([]string, 0, s.ChunkCount())
+	for i := range s.ChunkCount() {
+		out = append(out, s.ChunkAt(i))
 	}
 	return out
+}
+
+// ChunkCount 内容分片数（每片 MockCharsPerToken 字符，末片可短）。
+func (s MockSpec) ChunkCount() int {
+	return (len(s.Chars) + constant.MockCharsPerToken - 1) / constant.MockCharsPerToken
+}
+
+// ChunkAt 第 i 片内容（越界返回空串）。流式路径逐片按需取用，不预物化整个切片：
+// 16K 字符上限对应 4096 片，全部持有会按并发数线性放大内存（压测时污染服务自身
+// 的内存曲线）。
+func (s MockSpec) ChunkAt(i int) string {
+	start := i * constant.MockCharsPerToken
+	if start < 0 || start >= len(s.Chars) {
+		return ""
+	}
+	return string(s.Chars[start:min(start+constant.MockCharsPerToken, len(s.Chars))])
 }

@@ -156,8 +156,10 @@ func emitChatStream(ctx context.Context, ms *mockStream, onChunk func(*dto.OpenA
 	if err := waitDelay(ctx, ms.Spec.TTFT); err != nil {
 		return nil, err
 	}
-	for _, chunk := range BuildChatStream(ms.Spec, ms.Model, mockID(constant.OpenAIChunkIDTemplate)) {
-		if err := onChunk(chunk); err != nil {
+	chunkID := mockID(constant.OpenAIChunkIDTemplate)
+	created := time.Now().Unix()
+	for i := range ChatStreamLen(ms.Spec) {
+		if err := onChunk(BuildChatChunkAt(ms.Spec, ms.Model, chunkID, created, i)); err != nil {
 			return nil, err
 		}
 		if err := waitDelay(ctx, ms.Spec.Interval); err != nil {
@@ -174,7 +176,8 @@ func emitMessageStream(ctx context.Context, ms *mockStream, onEvent func(dto.Ant
 		return nil, err
 	}
 	messageID := mockID(constant.AnthropicMessageIDTemplate)
-	for _, ev := range BuildMessageStream(ms.Spec, ms.Model, messageID) {
+	for i := range MessageStreamLen(ms.Spec) {
+		ev := BuildMessageEventAt(ms.Spec, ms.Model, messageID, i)
 		if err := onEvent(dto.AnthropicSSEEvent{Event: ev.Event, Data: ev.Data}); err != nil {
 			return nil, err
 		}
@@ -192,7 +195,10 @@ func emitResponseStream(ctx context.Context, ms *mockStream, onEvent func(event 
 	if err := waitDelay(ctx, ms.Spec.TTFT); err != nil {
 		return err
 	}
-	for _, ev := range BuildResponseStream(ms.Spec, ms.Model, mockID(constant.ResponseIDTemplate)) {
+	responseID := mockID(constant.ResponseIDTemplate)
+	itemID := mockID(constant.ResponseItemIDTemplate)
+	for i := range ResponseStreamLen(ms.Spec) {
+		ev := BuildResponseEventAt(ms.Spec, ms.Model, responseID, itemID, i)
 		if err := onEvent(ev.Event, ev.Data); err != nil {
 			return err
 		}
