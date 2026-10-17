@@ -70,7 +70,11 @@ k8s/secret.yaml.local
 .understand-anything/intermediate/
 .understand-anything/tmp/
 migrate_think_extract
+# IDE / agent 本地配置（常含 env、Token 与权限项，不入库）
 .codebuddy/settings.local.json
+.claude/settings.local.json
+.zcode/settings.local.json
+.workbuddy/settings.local.json
 .worktrees/
 .serena
 
