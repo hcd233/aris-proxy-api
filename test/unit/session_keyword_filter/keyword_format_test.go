@@ -87,6 +87,40 @@ func TestEscapeLikePattern(t *testing.T) {
 	}
 }
 
+// TestKeywordLikePattern 断言 LIKE 模式与缓存 key 同源：归一化 + 通配符转义 + 两侧 %。
+//
+//	@author centonhuang
+//	@update 2026-10-17 22:00:00
+func TestKeywordLikePattern(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{"wraps and normalizes", "  Shadcn ", "%shadcn%"},
+		{"percent escaped", "100%", `%100\%%`},
+		{"underscore escaped", "a_b", `%a\_b%`},
+		{"backslash escaped", `a\b`, `%a\\b%`},
+		{"empty stays wildcard", "", "%%"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			if got := repository.KeywordLikePattern(tc.in); got != tc.want {
+				t.Errorf("KeywordLikePattern(%q) = %q, want %q", tc.in, got, tc.want)
+			}
+		})
+	}
+
+	t.Run("normalized variants share pattern and key", func(t *testing.T) {
+		t.Parallel()
+		if repository.KeywordLikePattern("Shadcn") != repository.KeywordLikePattern("  shadcn ") {
+			t.Error("normalized variants must share like pattern")
+		}
+	})
+}
+
 // TestKeywordCacheKeyFragment 断言缓存 key 片段：摘要稳定、归一化后大小写
 // 与空白变体命中同一 key（对齐 ILIKE 大小写不敏感语义）、用户输入不原样进 key。
 //

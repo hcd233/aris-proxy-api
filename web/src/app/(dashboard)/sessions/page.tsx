@@ -384,6 +384,7 @@ export default function SessionsPage() {
                               checked={isSelected}
                               onCheckedChange={() => toggleSelect(s.id)}
                               onClick={(e) => e.stopPropagation()}
+                              aria-label={t("sessions.select_aria").replace("{id}", String(s.id))}
                             />
                           </ItemMedia>
                           <ItemContent className="min-w-0">
@@ -466,6 +467,7 @@ export default function SessionsPage() {
                           <Checkbox
                             checked={sessions.length > 0 && selected.size === sessions.length}
                             onCheckedChange={toggleSelectAll}
+                            aria-label={t("sessions.select_all_aria")}
                           />
                         </TableHead>
                         <TableHead>{t("common.id")}</TableHead>
@@ -517,6 +519,7 @@ export default function SessionsPage() {
                                 checked={isSelected}
                                 onCheckedChange={() => toggleSelect(s.id)}
                                 onClick={(e) => e.stopPropagation()}
+                                aria-label={t("sessions.select_aria").replace("{id}", String(s.id))}
                               />
                             </TableCell>
                             <TableCell className="font-mono text-xs">{s.id}</TableCell>

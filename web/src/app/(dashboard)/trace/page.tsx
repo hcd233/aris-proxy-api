@@ -275,6 +275,7 @@ export default function TracePage() {
                           <Checkbox
                             checked={traces.length > 0 && selected.size === traces.length}
                             onCheckedChange={toggleSelectAll}
+                            aria-label={t("trace.select_all_aria")}
                           />
                         </TableHead>
                         <TableHead className="w-16">{t("common.id")}</TableHead>
@@ -299,6 +300,7 @@ export default function TracePage() {
                             <Checkbox
                               checked={selected.has(tr.id)}
                               onCheckedChange={() => toggleSelect(tr.id)}
+                              aria-label={t("trace.select_aria").replace("{id}", String(tr.id))}
                             />
                           </TableCell>
                           <TableCell className="font-mono text-xs">{tr.id}</TableCell>

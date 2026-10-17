@@ -414,7 +414,7 @@ function MobileTopBar() {
         variant="ghost"
         size="icon-sm"
         onClick={toggleSidebar}
-        aria-label={t("layout.aris_proxy")}
+        aria-label={t("layout.sidebar_toggle")}
         className="text-foreground/60 hover:text-foreground hover:bg-secondary"
       >
         <Menu className="size-5" />
@@ -531,7 +531,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               size="icon-sm"
               onClick={toggleCollapsed}
               disabled={isSessionDetail}
-              aria-label={t("layout.aris_proxy")}
+              aria-label={t("layout.sidebar_toggle")}
               className={
                 collapsed
                   ? "mx-auto text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent"

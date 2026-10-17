@@ -121,8 +121,10 @@ describe("③ 组合修正", () => {
     },
   );
 
-  it("列表分页导航靠右对齐", () => {
-    expect(read("components/pagination-bar.tsx")).toContain('<Pagination className="mx-0 w-auto">');
+  it("列表分页导航桌面靠右、移动端居中", () => {
+    const src = read("components/pagination-bar.tsx");
+    expect(src).toContain("md:justify-between");
+    expect(src).toContain('<Pagination className="mx-auto w-auto md:mx-0">');
   });
 
   it("权限拦截页用 Empty", () => {

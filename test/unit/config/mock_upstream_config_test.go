@@ -10,9 +10,12 @@ import (
 
 // TestMockUpstreamDisabledByDefault 验证 mock 开关默认关闭，
 // 保证生产上不会误配 mock 模型后拿到假响应。
+//
+// 不调 InitEnvironment 重置：默认值在包 init 时已加载，直接读即可；在父进程
+// 重置会写全局 config，与并行测试的读取构成 data race（-race 下必现）。
+// 需要验证环境变量覆盖的用例统一走子进程模式（见下方 TestMockUpstreamEnvOverride）。
 func TestMockUpstreamDisabledByDefault(t *testing.T) {
 	t.Parallel()
-	config.InitEnvironment()
 	if config.MockUpstreamEnabled {
 		t.Fatal("MockUpstreamEnabled must default to false")
 	}

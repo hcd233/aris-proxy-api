@@ -7,6 +7,7 @@ import (
 	"math/rand/v2"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/bytedance/sonic"
@@ -18,7 +19,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 )
 
-// newSpecFromBody 每次调用新建独立随机源。
+// newMockRNG 每次调用新建独立随机源。
 //
 // math/rand/v2 的 *rand.Rand（PCG 源）方法无锁读写内部状态，
 // 并非并发安全（并发安全的只有包级函数）；共享实例在并发压测下是 data race。
@@ -89,7 +90,7 @@ func (p *mockOpenAIProxy) ForwardCreateResponse(ctx context.Context, ep vo.Upstr
 	if !IsMock(ep) {
 		return p.inner.ForwardCreateResponse(ctx, ep, body)
 	}
-	return sonic.Marshal(BuildResponse(newSpecFromBody(body), ep.Model))
+	return sonic.Marshal(BuildResponse(newSpecFromBody(body), ep.Model, mockID(constant.ResponseIDTemplate)))
 }
 
 // ForwardCreateDecision 不在 mock 范围（mock Endpoint 不开该能力），原样透传。
@@ -148,7 +149,7 @@ func (p *mockAnthropicProxy) ForwardCountTokens(ctx context.Context, ep vo.Upstr
 	if !IsMock(ep) {
 		return p.inner.ForwardCountTokens(ctx, ep, body)
 	}
-	return BuildTokensCount(newSpecFromBody(body)), nil
+	return BuildTokensCount(estimateInputTokens(body)), nil
 }
 
 // emitChatStream 按 Spec 的 TTFT/TPS 时序吐出 Chat chunk 并聚合出 completion。
@@ -156,8 +157,10 @@ func emitChatStream(ctx context.Context, ms *mockStream, onChunk func(*dto.OpenA
 	if err := waitDelay(ctx, ms.Spec.TTFT); err != nil {
 		return nil, err
 	}
-	for _, chunk := range BuildChatStream(ms.Spec, ms.Model, mockID(constant.OpenAIChunkIDTemplate)) {
-		if err := onChunk(chunk); err != nil {
+	chunkID := mockID(constant.OpenAIChunkIDTemplate)
+	created := time.Now().Unix()
+	for i := range ChatStreamLen(ms.Spec) {
+		if err := onChunk(BuildChatChunkAt(ms.Spec, ms.Model, chunkID, created, i)); err != nil {
 			return nil, err
 		}
 		if err := waitDelay(ctx, ms.Spec.Interval); err != nil {
@@ -174,7 +177,8 @@ func emitMessageStream(ctx context.Context, ms *mockStream, onEvent func(dto.Ant
 		return nil, err
 	}
 	messageID := mockID(constant.AnthropicMessageIDTemplate)
-	for _, ev := range BuildMessageStream(ms.Spec, ms.Model, messageID) {
+	for i := range MessageStreamLen(ms.Spec) {
+		ev := BuildMessageEventAt(ms.Spec, ms.Model, messageID, i)
 		if err := onEvent(dto.AnthropicSSEEvent{Event: ev.Event, Data: ev.Data}); err != nil {
 			return nil, err
 		}
@@ -192,7 +196,10 @@ func emitResponseStream(ctx context.Context, ms *mockStream, onEvent func(event 
 	if err := waitDelay(ctx, ms.Spec.TTFT); err != nil {
 		return err
 	}
-	for _, ev := range BuildResponseStream(ms.Spec, ms.Model, mockID(constant.ResponseIDTemplate)) {
+	responseID := mockID(constant.ResponseIDTemplate)
+	itemID := mockID(constant.ResponseItemIDTemplate)
+	for i := range ResponseStreamLen(ms.Spec) {
+		ev := BuildResponseEventAt(ms.Spec, ms.Model, responseID, itemID, i)
 		if err := onEvent(ev.Event, ev.Data); err != nil {
 			return err
 		}
@@ -227,9 +234,14 @@ func maxTokensFromBody(body []byte) int {
 	return max(req.MaxTokens, req.MaxOutputTokens)
 }
 
-// mockID 用给定模板生成 mock 对象 ID（纳秒时间戳保证每次请求唯一）。
+// mockIDSeq mock 对象 ID 的进程内序号：纳秒时间戳在同一纳秒的多并发调用下会撞，
+// 序号兜底保证唯一。
+var mockIDSeq atomic.Uint64
+
+// mockID 用给定模板生成 mock 对象 ID（纳秒时间戳 + 进程内原子序号）。
 func mockID(template string) string {
-	return fmt.Sprintf(template, strconv.FormatInt(time.Now().UnixNano(), 10))
+	seq := strconv.FormatUint(mockIDSeq.Add(1), 10)
+	return fmt.Sprintf(template, strconv.FormatInt(time.Now().UnixNano(), 10)+"-"+seq)
 }
 
 // newSpecFromBody 从请求体构造 mock 参数：随机内容/时序 + 输入 token 估算。

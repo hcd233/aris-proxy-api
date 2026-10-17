@@ -10,37 +10,34 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 )
 
-// BuildChatStream 生成 Chat Completions 流式 chunk 序列（不含时序等待）。
-// 结构：首个 chunk 带 role，中间片带 content，末片带 finish_reason + usage。
-func BuildChatStream(spec MockSpec, model, chunkID string) []*dto.OpenAIChatCompletionChunk {
-	pieces := spec.Chunks()
-	created := time.Now().Unix()
-	out := make([]*dto.OpenAIChatCompletionChunk, 0, len(pieces)+1)
+// ChatStreamLen 流式 chunk 总数：N 个内容片 + 1 个收尾片（finish_reason + usage）。
+func ChatStreamLen(spec MockSpec) int { return spec.ChunkCount() + 1 }
 
-	for i, piece := range pieces {
-		delta := &dto.OpenAIChatCompletionChunkDelta{Content: &piece}
-		if i == 0 {
-			delta.Role = enum.RoleAssistant
-		}
-		out = append(out, &dto.OpenAIChatCompletionChunk{
-			ID:      chunkID,
-			Created: created,
-			Model:   model,
-			Object:  enum.CompletionObjectChatCompletionChunk,
-			Choices: []*dto.OpenAIChatCompletionChunkChoice{{Index: 0, Delta: delta}},
-		})
-	}
-
-	stop := enum.FinishReasonStop
-	out = append(out, &dto.OpenAIChatCompletionChunk{
+// BuildChatChunkAt 按需构造第 i 个 chunk（i ∈ [0, ChatStreamLen)）：
+// 内容片带 delta.content（首片带 role），收尾片带 finish_reason 与 usage。
+//
+// created 由调用方统一传入，保证同一响应所有 chunk 的时间戳一致；逐片按需构造
+// 而非预生成切片，避免每流持有全部 chunk（16K 字符上限 = 4096 片）。
+func BuildChatChunkAt(spec MockSpec, model, chunkID string, created int64, i int) *dto.OpenAIChatCompletionChunk {
+	chunk := &dto.OpenAIChatCompletionChunk{
 		ID:      chunkID,
 		Created: created,
 		Model:   model,
 		Object:  enum.CompletionObjectChatCompletionChunk,
-		Choices: []*dto.OpenAIChatCompletionChunkChoice{{Index: 0, FinishReason: &stop}},
-		Usage:   BuildChatUsage(spec),
-	})
-	return out
+	}
+	if i >= spec.ChunkCount() {
+		stop := enum.FinishReasonStop
+		chunk.Choices = []*dto.OpenAIChatCompletionChunkChoice{{Index: 0, FinishReason: &stop}}
+		chunk.Usage = BuildChatUsage(spec)
+		return chunk
+	}
+	piece := spec.ChunkAt(i)
+	delta := &dto.OpenAIChatCompletionChunkDelta{Content: &piece}
+	if i == 0 {
+		delta.Role = enum.RoleAssistant
+	}
+	chunk.Choices = []*dto.OpenAIChatCompletionChunkChoice{{Index: 0, Delta: delta}}
+	return chunk
 }
 
 // BuildChatCompletion 生成非流式 Chat Completions 响应。

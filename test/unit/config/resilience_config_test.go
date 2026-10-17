@@ -63,9 +63,9 @@ func TestUpstreamCircuitWindowClamp(t *testing.T) {
 }
 
 // TestUpstreamCircuitDefaults 验证未配置时使用 spec 默认值。
+// 不调 InitEnvironment 重置（避免父进程写全局与并行读取竞态），Env 覆盖见同文件子进程用例。
 func TestUpstreamCircuitDefaults(t *testing.T) {
 	t.Parallel()
-	config.InitEnvironment()
 	if !config.UpstreamCircuitEnabled {
 		t.Fatal("UpstreamCircuitEnabled = false, want true")
 	}

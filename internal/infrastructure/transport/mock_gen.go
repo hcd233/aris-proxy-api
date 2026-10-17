@@ -21,10 +21,13 @@ type MockSpec struct {
 // NewMockSpec 抽取一次 mock 响应的随机参数。
 // maxTokens 是请求的 max_tokens（token 数）；<=0 表示不限制。
 // 随机长度单位为字符，范围 [1, MockMaxChars]；带 max_tokens 时按 token 数×MockCharsPerToken 收紧上限。
+//
+// maxTokens 来自请求体（用户可控），先按 MockMaxChars/MockCharsPerToken 钳制再乘：
+// 直接乘在 int64 上会回绕为负或零（2^61×4 溢出、2^62×4 归零），使 IntN 收到 n<=0 而 panic。
 func NewMockSpec(rng *rand.Rand, maxTokens int) MockSpec {
 	maxChars := constant.MockMaxChars
 	if maxTokens > 0 {
-		maxChars = min(maxTokens*constant.MockCharsPerToken, constant.MockMaxChars)
+		maxChars = min(maxTokens, constant.MockMaxChars/constant.MockCharsPerToken) * constant.MockCharsPerToken
 	}
 	n := rng.IntN(maxChars) + 1
 	tps := constant.MockMinTPS + rng.IntN(constant.MockMaxTPS-constant.MockMinTPS+1)
@@ -51,10 +54,25 @@ func (s MockSpec) Tokens() int {
 
 // Chunks 把内容切成 4 字符一片（≈1 token）的序列，末片可短。
 func (s MockSpec) Chunks() []string {
-	size := constant.MockCharsPerToken
-	out := make([]string, 0, (len(s.Chars)+size-1)/size)
-	for i := 0; i < len(s.Chars); i += size {
-		out = append(out, string(s.Chars[i:min(i+size, len(s.Chars))]))
+	out := make([]string, 0, s.ChunkCount())
+	for i := range s.ChunkCount() {
+		out = append(out, s.ChunkAt(i))
 	}
 	return out
+}
+
+// ChunkCount 内容分片数（每片 MockCharsPerToken 字符，末片可短）。
+func (s MockSpec) ChunkCount() int {
+	return (len(s.Chars) + constant.MockCharsPerToken - 1) / constant.MockCharsPerToken
+}
+
+// ChunkAt 第 i 片内容（越界返回空串）。流式路径逐片按需取用，不预物化整个切片：
+// 16K 字符上限对应 4096 片，全部持有会按并发数线性放大内存（压测时污染服务自身
+// 的内存曲线）。
+func (s MockSpec) ChunkAt(i int) string {
+	start := i * constant.MockCharsPerToken
+	if start < 0 || start >= len(s.Chars) {
+		return ""
+	}
+	return string(s.Chars[start:min(start+constant.MockCharsPerToken, len(s.Chars))])
 }

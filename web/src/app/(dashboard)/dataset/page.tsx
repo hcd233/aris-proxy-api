@@ -45,13 +45,24 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 
 hljs.registerLanguage("json", json);
 
+/** 退出出口是 dangerouslySetInnerHTML，而 hljs 只在成功路径转义。JSON.parse 失败时
+ * 直接回吐原文 = 把后端下发内容（源自用户会话文本）当 HTML 自渲染 → 存储型 XSS。
+ * 兜底分支同样只渲染文本，这里做最小 HTML 转义（顺序：& 必须最先）。 */
+function escapeHtml(text: string): string {
+  return text
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
 function formatAndHighlight(jsonStr: string): string {
   try {
     const parsed = JSON.parse(jsonStr);
     const prettified = JSON.stringify(parsed, null, 2);
     return hljs.highlight(prettified, { language: "json" }).value;
   } catch {
-    return jsonStr;
+    return escapeHtml(jsonStr);
   }
 }
 

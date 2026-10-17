@@ -35,7 +35,9 @@ if [ -f script/sync-agent-instructions-symlinks.sh ]; then
         printf "$INFO agent instructions symlinks changed after sync (auto-staging):\n"
         echo "$AGENTS_LINK_CHANGES" | sed 's/^/       /'
         echo ""
-        git add CODEBUDDY.md CLAUDE.md
+        if ! git add CODEBUDDY.md CLAUDE.md; then
+            fail "git add failed for agent instruction symlinks"
+        fi
     fi
 else
     printf "$INFO script/sync-agent-instructions-symlinks.sh not found — skipping\n"
@@ -57,7 +59,13 @@ if [ -f script/sync-skills-symlinks.sh ]; then
         printf "$INFO skills symlinks changed after sync (auto-staging):\n"
         echo "$SKILLS_CHANGES" | sed 's/^/       /'
         echo ""
-        git add .claude/skills .codebuddy/skills .workbuddy/skills .zcode/skills
+        # 只暂存「已跟踪项的变更」+「软链本身」：这 4 个目录同时被 IDE 当作个人
+        # skill / 配置区，整目录 `git add` 会把未跟踪的个人文件一并带入提交。
+        if ! git add -u -- .claude/skills .codebuddy/skills .workbuddy/skills .zcode/skills; then
+            fail "git add -u failed for skills symlink dirs"
+        fi
+        find .claude/skills .codebuddy/skills .workbuddy/skills .zcode/skills -type l -print0 2>/dev/null \
+            | xargs -0 git add -- || fail "git add failed for new skill symlinks"
     fi
 else
     printf "$INFO script/sync-skills-symlinks.sh not found — skipping\n"

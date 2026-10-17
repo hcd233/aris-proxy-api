@@ -1,6 +1,7 @@
 package transport_test
 
 import (
+	"math"
 	"math/rand/v2"
 	"testing"
 	"time"
@@ -42,6 +43,31 @@ func TestNewMockSpec_MaxTokensCapsLength(t *testing.T) {
 		if len(s.Chars) > 10*constant.MockCharsPerToken {
 			t.Fatalf("chars %d exceeds max_tokens*%d", len(s.Chars), constant.MockCharsPerToken)
 		}
+	}
+}
+
+// TestNewMockSpec_MaxTokensOverflowClamp 验证超大 max_tokens 不触发 int 溢出致
+// IntN panic：2^61×4 回绕为负、2^62×4 归零，修复前两者均 panic。
+func TestNewMockSpec_MaxTokensOverflowClamp(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name      string
+		maxTokens int
+	}{
+		{"int64 回绕为负 (2^61)", 1 << 61},
+		{"int64 回绕为零 (2^62)", 1 << 62},
+		{"int 最大值", math.MaxInt},
+		{"恰好为上限", constant.MockMaxChars / constant.MockCharsPerToken},
+		{"略超上限", constant.MockMaxChars/constant.MockCharsPerToken + 1},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			spec := transport.NewMockSpec(fixedRNG(), tc.maxTokens)
+			if n := len(spec.Chars); n < 1 || n > constant.MockMaxChars {
+				t.Fatalf("maxTokens=%d: chars %d out of [1,%d]", tc.maxTokens, n, constant.MockMaxChars)
+			}
+		})
 	}
 }
 
