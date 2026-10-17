@@ -59,7 +59,7 @@ export function PaginationBar({
   };
 
   return (
-    <div className={cn("mt-4 flex flex-wrap items-center justify-between gap-4", className)}>
+    <div className={cn("mt-4 flex flex-wrap items-center gap-4 md:justify-between", className)}>
       <div className="hidden items-center gap-3 md:flex">
         <DropdownMenu>
           <DropdownMenuTrigger
@@ -90,7 +90,9 @@ export function PaginationBar({
         </p>
       </div>
 
-      <Pagination className="mx-0 w-auto">
+      {/* 移动端左侧工具组不渲染（hidden md:flex），此时靠 mx-auto 居中；md 起交给
+       * 容器的 justify-between 右贴边。 */}
+      <Pagination className="mx-auto w-auto md:mx-0">
         <PaginationContent className="gap-2">
           <PaginationItem>
             <Button
