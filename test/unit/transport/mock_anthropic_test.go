@@ -1,9 +1,13 @@
 package transport_test
 
 import (
+	"strings"
 	"testing"
 
+	"github.com/bytedance/sonic"
+
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/transport"
 )
 
@@ -35,6 +39,43 @@ func TestBuildMessageStream_Events(t *testing.T) {
 	}
 	if deltaCount != 4 {
 		t.Fatalf("want 4 content_block_delta events, got %d", deltaCount)
+	}
+}
+
+// TestBuildMessageStream_ContentBlockStartEmpty 验证 content_block_start 只声明块存在、
+// text 为空串，正文全部走 content_block_delta——start 带全文会让 native 客户端按
+// 「start 初值 + delta 追加」累加出两倍正文。
+func TestBuildMessageStream_ContentBlockStartEmpty(t *testing.T) {
+	t.Parallel()
+	spec := transport.MockSpec{Chars: []byte("abcdefgh")} // 8 字符 → 2 片
+	events := transport.BuildMessageStream(spec, "mock-messages", "msg-1")
+
+	var start *dto.AnthropicSSEContentBlockStart
+	var textBuilder strings.Builder
+	for _, e := range events {
+		switch e.Event {
+		case enum.AnthropicSSEEventTypeContentBlockStart:
+			var payload dto.AnthropicSSEContentBlockStart
+			if err := sonic.Unmarshal(e.Data, &payload); err != nil {
+				t.Fatalf("unmarshal content_block_start: %v", err)
+			}
+			start = &payload
+		case enum.AnthropicSSEEventTypeContentBlockDelta:
+			var payload dto.AnthropicSSEContentBlockDelta
+			if err := sonic.Unmarshal(e.Data, &payload); err != nil {
+				t.Fatalf("unmarshal delta: %v", err)
+			}
+			textBuilder.WriteString(payload.Delta.Text)
+		}
+	}
+	if start == nil || start.ContentBlock == nil || start.ContentBlock.Text == nil {
+		t.Fatal("content_block_start missing content_block.text")
+	}
+	if *start.ContentBlock.Text != "" {
+		t.Fatalf("content_block_start text must be empty, got %q", *start.ContentBlock.Text)
+	}
+	if got := textBuilder.String(); got != string(spec.Chars) {
+		t.Fatalf("delta text concat = %q, want %q", got, spec.Chars)
 	}
 }
 

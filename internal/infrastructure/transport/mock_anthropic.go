@@ -8,20 +8,29 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 )
 
-// buildMessageBlock 构造 mock 内容块：一条 text block。
+// buildMessageBlock 构造承载完整正文的 text block（非流式响应与流内 message_done 用）。
 func buildMessageBlock(spec MockSpec) *dto.AnthropicContentBlock {
 	text := string(spec.Chars)
 	return &dto.AnthropicContentBlock{Type: enum.AnthropicContentBlockTypeText, Text: &text}
 }
 
+// buildEmptyMessageBlock 构造 content_block_start 的占位块：只声明块存在，text 为空串。
+//
+// 真协议与本仓 OpenAI→Anthropic 转换器（converter/openai.go handleTextDelta）都发空串，
+// 正文全部走 content_block_delta。若 start 带全文，native 路径逐字转发后，客户端（官方
+// SDK 的累加语义）会得到两倍正文；网关自身聚合因覆盖语义恰好掩盖该缺陷，落库与
+// 既有单测都发现不了。
+func buildEmptyMessageBlock() *dto.AnthropicContentBlock {
+	return &dto.AnthropicContentBlock{Type: enum.AnthropicContentBlockTypeText, Text: lo.ToPtr("")}
+}
+
 // BuildMessageStream 生成 Anthropic Messages 流式事件序列：
-// message_start → content_block_start → N×content_block_delta → content_block_stop
-// → message_delta → message_stop。
+// message_start → content_block_start（空块）→ N×content_block_delta（正文）→
+// content_block_stop → message_delta → message_stop。
 // 事件类型须全在聚合器已知集合内（processAnthropicSSEEvent 对未知类型报错）；
 // content_block_start 的 Index 与 delta 的 Index 必须对应，否则聚合器报 unknown index。
 func BuildMessageStream(spec MockSpec, model, messageID string) []MockResponseEvent {
 	pieces := spec.Chunks()
-	block := buildMessageBlock(spec)
 	msg := BuildMessage(spec, model)
 	out := make([]MockResponseEvent, 0, len(pieces)+5)
 
@@ -37,7 +46,7 @@ func BuildMessageStream(spec MockSpec, model, messageID string) []MockResponseEv
 		}),
 		mockEvent(enum.AnthropicSSEEventTypeContentBlockStart, &dto.AnthropicSSEContentBlockStart{
 			Index:        0,
-			ContentBlock: block,
+			ContentBlock: buildEmptyMessageBlock(),
 		}),
 	)
 	for _, piece := range pieces {
