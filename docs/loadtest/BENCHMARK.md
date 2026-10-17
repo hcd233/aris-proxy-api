@@ -178,3 +178,30 @@
 pod CPU/内存与宿主 load 均已摘录到 §3 与 §4.1 的表格中。
 
 复现方式见 §2，脚本在 `test/loadtest/`。
+
+## 5. 压测前后必做
+
+### 5.1 压测前
+
+1. **新建专用 API Key**，命名 `loadtest-<date>`（`name` 必须以 `loadtest-` 开头，清理脚本按此前缀做守卫）。**严禁使用主 Key（id=1）或任何真实用户 Key 压测**——清理脚本会按 `api_key_id` 软删 + 硬删该 Key 的全部会话与消息，用错 Key 就是不可逆的误删。
+2. 开启 mock 上游开关：`MOCK_UPSTREAM_ENABLED=true`（`api.env` + ConfigMap + 滚动重启三件套，见 `update-prod-config`）。
+3. 确认压测脚本参数：`LT_KEYS` 多 Key 轮换、`--timeout 300s` 必加（§2）。
+
+### 5.2 压测后（缺一不可）
+
+1. **关闭 mock 开关**：`MOCK_UPSTREAM_ENABLED=false`（同样三件套）。这是本设计唯一的生产配置改动，长期开启会让误配到 `mock-llm` 的真实模型别名返回假响应且照常计费、照常落库。
+2. **软删压测 Key**（写操作，需授权）。
+3. **清理压测数据**：
+
+   ```sh
+   # 先预览：-v dry_run=1 会打印完整删除量（与真实删除同源），不写任何数据
+   psql "$PROD_DATABASE_URL" \
+     -v api_key_id=<压测 Key ID> -v confirm=delete-loadtest-data -v dry_run=1 \
+     -f scripts/loadtest-cleanup.sql
+   # 确认无误后执行（去掉 dry_run）
+   ```
+
+   脚本内置守卫：Key 必须存在且未软删、`name` 以 `loadtest-` 开头、必须带 `confirm`，任一不满足即非 0 退出。
+4. **复核残留为 0**（脚本 Step 7 输出的 `audits_left` / `sessions_left`）。
+
+> 压测会话以普通 assistant 文本结尾，既不会被 `SoftDeletePurge`（只处理已软删 session）也不会被 `SessionTerminalCleanup`（只处理末条为 assistant + tool_calls 的会话）自动回收——清理必须手工执行，没有 cron 兜底。`__LOADTEST__` 前缀（保证 checksum 不与真实消息冲突）只保护「不误删真实数据」，不提供自动回收。
