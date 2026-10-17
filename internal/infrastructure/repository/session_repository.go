@@ -232,6 +232,14 @@ func KeywordCacheKeyFragment(keyword string) string {
 	return hex.EncodeToString(sum[:])
 }
 
+// KeywordLikePattern 把 keyword 归一化为 LIKE/ILIKE 模式：归一化 + 通配符转义 + 两侧 %。
+//
+// 必须与 KeywordCacheKeyFragment 共用 NormalizeKeyword：命中集缓存按归一化值共享，
+// 模式与 key 不同源时同一缓存条目会承载不同结果集（如 "  foo " 与 "foo"）。
+func KeywordLikePattern(keyword string) string {
+	return "%" + util.EscapeLikePattern(NormalizeKeyword(keyword)) + "%"
+}
+
 // FormatBigIntArray 把 id 集合序列化为 PG bigint[] 字面量（"{1,2,3}"）
 //
 // 纯数字拼接，无 SQL 注入面；供 SessionKeywordFilterSQL 的 = ANY(?::bigint[]) 使用。
@@ -253,7 +261,7 @@ func (r *sessionReadRepository) keywordMessageIDs(ctx context.Context, keyword s
 		constant.ReadCacheKeywordIDsTTL, constant.ReadCacheKeywordIDsTTLJitter,
 		func(loadCtx context.Context) (mo.Option[[]uint], error) {
 			var ids []uint
-			if err := r.db.WithContext(loadCtx).Raw(constant.SessionKeywordMatchIDsSQL, "%"+keyword+"%").Scan(&ids).Error; err != nil {
+			if err := r.db.WithContext(loadCtx).Raw(constant.SessionKeywordMatchIDsSQL, KeywordLikePattern(keyword)).Scan(&ids).Error; err != nil {
 				return mo.None[[]uint](), ierr.Wrap(ierr.ErrDBQuery, err, "match keyword message ids")
 			}
 			if len(ids) == 0 {
@@ -689,7 +697,7 @@ func (r *sessionReadRepository) ListDistinctModels(ctx context.Context, ownerIDs
 		query = query.Where(constant.WhereCreatedAtLTE, endTime)
 	}
 	if keyword != "" {
-		query = query.Where(constant.SessionDistinctModelLike, "%"+keyword+"%")
+		query = query.Where(constant.SessionDistinctModelLike, KeywordLikePattern(keyword))
 	}
 
 	if err := query.Order(constant.SessionDistinctModelOrder).Limit(constant.SessionDistinctModelLimit).Scan(&models).Error; err != nil {

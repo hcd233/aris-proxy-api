@@ -221,7 +221,7 @@ func (r *cronCallAuditRepository) applyKeywordSearch(db, sql *gorm.DB, query str
 	if query == "" || len(queryFields) == 0 {
 		return sql
 	}
-	like := "%" + query + "%"
+	like := "%" + util.EscapeLikePattern(query) + "%"
 	expressions := lo.FilterMap(queryFields, func(field string, _ int) (clause.Expression, bool) {
 		if field == "" {
 			return nil, false

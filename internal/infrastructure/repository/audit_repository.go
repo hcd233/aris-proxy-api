@@ -396,7 +396,7 @@ func (r *auditRepository) applyKeywordSearch(db, sql *gorm.DB, query string) *go
 	if query == "" || len(constant.AuditQueryFields) == 0 {
 		return sql
 	}
-	like := "%" + query + "%"
+	like := "%" + util.EscapeLikePattern(query) + "%"
 	expressions := lo.FilterMap(constant.AuditQueryFields, func(field string, _ int) (clause.Expression, bool) {
 		if field == "" {
 			return nil, false
