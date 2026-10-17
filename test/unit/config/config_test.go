@@ -31,9 +31,9 @@ func TestHTTPClientTimeoutEnv(t *testing.T) {
 }
 
 // TestHTTPClientTimeoutDefault 验证未配置时使用默认 5min。
+// 不调 InitEnvironment 重置（避免父进程写全局与并行读取竞态），Env 覆盖见上方子进程用例。
 func TestHTTPClientTimeoutDefault(t *testing.T) {
 	t.Parallel()
-	config.InitEnvironment()
 	if config.HTTPClientTimeout != 5*time.Minute {
 		t.Fatalf("HTTPClientTimeout = %v, want 5m", config.HTTPClientTimeout)
 	}

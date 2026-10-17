@@ -37,9 +37,9 @@ func TestHTTPBodyLimitEnv(t *testing.T) {
 }
 
 // TestHTTPBodyLimitDefault 验证未配置时使用默认 16MB。
+// 不调 InitEnvironment 重置（避免父进程写全局与并行读取竞态），Env 覆盖见同文件子进程用例。
 func TestHTTPBodyLimitDefault(t *testing.T) {
 	t.Parallel()
-	config.InitEnvironment()
 	if config.HTTPBodyLimit != constant.MaxHTTPBodyBytes {
 		t.Fatalf("HTTPBodyLimit = %d, want %d", config.HTTPBodyLimit, constant.MaxHTTPBodyBytes)
 	}
