@@ -7,6 +7,7 @@ import (
 	"math/rand/v2"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/bytedance/sonic"
@@ -18,7 +19,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 )
 
-// newSpecFromBody 每次调用新建独立随机源。
+// newMockRNG 每次调用新建独立随机源。
 //
 // math/rand/v2 的 *rand.Rand（PCG 源）方法无锁读写内部状态，
 // 并非并发安全（并发安全的只有包级函数）；共享实例在并发压测下是 data race。
@@ -89,7 +90,7 @@ func (p *mockOpenAIProxy) ForwardCreateResponse(ctx context.Context, ep vo.Upstr
 	if !IsMock(ep) {
 		return p.inner.ForwardCreateResponse(ctx, ep, body)
 	}
-	return sonic.Marshal(BuildResponse(newSpecFromBody(body), ep.Model))
+	return sonic.Marshal(BuildResponse(newSpecFromBody(body), ep.Model, mockID(constant.ResponseIDTemplate)))
 }
 
 // ForwardCreateDecision 不在 mock 范围（mock Endpoint 不开该能力），原样透传。
@@ -233,9 +234,14 @@ func maxTokensFromBody(body []byte) int {
 	return max(req.MaxTokens, req.MaxOutputTokens)
 }
 
-// mockID 用给定模板生成 mock 对象 ID（纳秒时间戳保证每次请求唯一）。
+// mockIDSeq mock 对象 ID 的进程内序号：纳秒时间戳在同一纳秒的多并发调用下会撞，
+// 序号兜底保证唯一。
+var mockIDSeq atomic.Uint64
+
+// mockID 用给定模板生成 mock 对象 ID（纳秒时间戳 + 进程内原子序号）。
 func mockID(template string) string {
-	return fmt.Sprintf(template, strconv.FormatInt(time.Now().UnixNano(), 10))
+	seq := strconv.FormatUint(mockIDSeq.Add(1), 10)
+	return fmt.Sprintf(template, strconv.FormatInt(time.Now().UnixNano(), 10)+"-"+seq)
 }
 
 // newSpecFromBody 从请求体构造 mock 参数：随机内容/时序 + 输入 token 估算。

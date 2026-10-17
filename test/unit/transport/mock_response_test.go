@@ -119,11 +119,42 @@ func TestBuildResponseEventAt_PayloadShape(t *testing.T) {
 	}
 }
 
+// TestBuildResponseEventAt_ResponseIDConsistent 验证同一流内 created 与 completed
+// 事件携带同一 response id（同一响应对象在整条流内必须同 ID）。
+func TestBuildResponseEventAt_ResponseIDConsistent(t *testing.T) {
+	t.Parallel()
+	spec := transport.MockSpec{Chars: []byte("abcdefgh")} // 2 片
+	events := collectResponseEvents(spec, "mock-response", "resp-123")
+
+	var createdID string
+	var completed dto.ResponseStreamTerminalEvent
+	for _, e := range events {
+		switch e.Event {
+		case enum.ResponseStreamEventCreated:
+			var payload map[string]any
+			if err := sonic.Unmarshal(e.Data, &payload); err != nil {
+				t.Fatalf("unmarshal created: %v", err)
+			}
+			createdID, _ = payload[constant.ResponseStreamFieldID].(string)
+		case enum.ResponseStreamEventCompleted:
+			if err := sonic.Unmarshal(e.Data, &completed); err != nil {
+				t.Fatalf("unmarshal completed: %v", err)
+			}
+		}
+	}
+	if createdID != "resp-123" {
+		t.Fatalf("created id = %q, want resp-123", createdID)
+	}
+	if completed.Response == nil || completed.Response.ID != createdID {
+		t.Fatalf("completed response = %+v, want id %q", completed.Response, createdID)
+	}
+}
+
 // TestBuildResponse_NonStream 验证非流式响应：status=completed、output 非空、usage 有值。
 func TestBuildResponse_NonStream(t *testing.T) {
 	t.Parallel()
 	spec := transport.MockSpec{Chars: []byte("abcdefgh")} // 8 字符 → 2 token
-	rsp := transport.BuildResponse(spec, "mock-response")
+	rsp := transport.BuildResponse(spec, "mock-response", "resp-nonstream")
 	if rsp.Status != enum.ResponseStatusCompleted {
 		t.Fatalf("status want completed, got %s", rsp.Status)
 	}

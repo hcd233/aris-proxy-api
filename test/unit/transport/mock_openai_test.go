@@ -93,7 +93,7 @@ func TestBuildChatUsage_IncludesInputTokens(t *testing.T) {
 func TestBuildResponseUsage_IncludesInputTokens(t *testing.T) {
 	t.Parallel()
 	spec := transport.MockSpec{Chars: []byte("abcdefgh"), InputTokens: 7}
-	rsp := transport.BuildResponse(spec, "mock-response")
+	rsp := transport.BuildResponse(spec, "mock-response", "resp-nonstream")
 	if rsp.Usage.InputTokens != 7 {
 		t.Fatalf("input_tokens want 7, got %d", rsp.Usage.InputTokens)
 	}

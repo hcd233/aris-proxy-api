@@ -1,11 +1,10 @@
 package transport
 
 import (
-	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/bytedance/sonic"
+	"github.com/samber/lo"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
@@ -95,15 +94,17 @@ func BuildResponseEventAt(spec MockSpec, model, responseID, itemID string, i int
 	default:
 		return mockEvent(enum.ResponseStreamEventCompleted, &dto.ResponseStreamTerminalEvent{
 			Type:     enum.ResponseStreamEventCompleted,
-			Response: BuildResponse(spec, model),
+			Response: BuildResponse(spec, model, responseID),
 		})
 	}
 }
 
-// BuildResponse 生成非流式 Responses 响应。
-func BuildResponse(spec MockSpec, model string) *dto.OpenAICreateResponseRsp {
+// BuildResponse 生成非流式 Responses 响应。responseID 由调用方指定：非流式路径用
+// mockID(ResponseIDTemplate)，流内 completed 事件传入与 created 一致的 ID（同一响应
+// 对象在整条流内必须保持同一 ID）。
+func BuildResponse(spec MockSpec, model, responseID string) *dto.OpenAICreateResponseRsp {
 	return &dto.OpenAICreateResponseRsp{
-		ID:        fmt.Sprintf(constant.ResponseIDTemplate, strconv.FormatInt(time.Now().UnixNano(), 10)),
+		ID:        responseID,
 		Object:    enum.CompletionObjectResponse,
 		CreatedAt: time.Now().Unix(),
 		Status:    enum.ResponseStatusCompleted,
@@ -125,9 +126,5 @@ func buildResponseUsage(spec MockSpec) *dto.ResponseUsage {
 
 // mockEvent 把事件负载序列化为 SSE data 字段。
 func mockEvent(event string, payload any) MockResponseEvent {
-	data, err := sonic.Marshal(payload)
-	if err != nil {
-		panic(err) // 负载为本包内构造的结构体/字面量，序列化失败属编程错误
-	}
-	return MockResponseEvent{Event: event, Data: data}
+	return MockResponseEvent{Event: event, Data: lo.Must1(sonic.Marshal(payload))}
 }
