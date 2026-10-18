@@ -43,7 +43,14 @@ import {
 } from "./shared";
 import type { EndpointForm, ModelForm } from "./shared";
 import type { ModelCapability, PricingDTO } from "@/lib/types";
+import type { EndpointAuthType } from "@/lib/types";
 import { EndpointDialog } from "./endpoint-dialog";
+import {
+  authSelectionForDialog,
+  emptyOAuthAuthorizeForm,
+  parseOAuthCodeInput,
+  type OAuthAuthorizeForm,
+} from "./oauth-form";
 import { ModelDialog } from "./model-dialog";
 import { PricingDialog } from "./pricing-dialog";
 import { GroupedView } from "./grouped-view";
@@ -83,6 +90,12 @@ export default function UpstreamPage() {
 
   // 端点弹窗状态
   const [endpointDialogOpen, setEndpointDialogOpen] = useState(false);
+  // ── 订阅账号 OAuth 流程状态（与 API Key 表单并存：null 表示走原表单） ──
+  const [oauthMode, setOauthMode] = useState<"create" | "reauth" | null>(null);
+  const [oauthForm, setOauthForm] = useState<OAuthAuthorizeForm>(emptyOAuthAuthorizeForm);
+  const [oauthAuthorizeURL, setOauthAuthorizeURL] = useState<string | null>(null);
+  const [oauthBusy, setOauthBusy] = useState(false);
+  const [reauthTarget, setReauthTarget] = useState<UpstreamEndpointItem | null>(null);
   const [editingEndpointId, setEditingEndpointId] = useState<number | null>(null);
   const [endpointForm, setEndpointForm] = useState<EndpointForm>(emptyEndpointForm);
   // admin 代建下拉的候选用户（懒加载）
@@ -373,6 +386,99 @@ export default function UpstreamPage() {
       showErrorToast(err, { title: t("endpoints.save_error") });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const resetOAuthFlow = () => {
+    setOauthMode(null);
+    setOauthForm(emptyOAuthAuthorizeForm);
+    setOauthAuthorizeURL(null);
+    setReauthTarget(null);
+  };
+
+  /** 发起授权：取链接、新窗口打开、记录 state（flow 由服务端保存） */
+  const startOAuthAuthorize = async (provider: "anthropic" | "openai") => {
+    setOauthBusy(true);
+    try {
+      const rsp = await api.authorizeOAuthEndpoint(provider);
+      setOauthAuthorizeURL(rsp.authorizeURL);
+      setOauthForm((f) => ({ ...f, state: rsp.state, code: "" }));
+      window.open(rsp.authorizeURL, "_blank", "noopener");
+    } catch (err) {
+      showErrorToast(err, { title: t("oauth.authorize_error") });
+    } finally {
+      setOauthBusy(false);
+    }
+  };
+
+  /** 新建弹窗的认证类型切换：api_key 回退原表单；订阅账号立即发起授权 */
+  const handleSelectAuth = (v: EndpointAuthType) => {
+    if (v === "api_key") {
+      setOauthMode(null);
+      setOauthAuthorizeURL(null);
+      return;
+    }
+    const provider: "anthropic" | "openai" = v === "oauth_openai" ? "openai" : "anthropic";
+    setOauthForm({ ...emptyOAuthAuthorizeForm, provider });
+    setOauthMode("create");
+    setOauthAuthorizeURL(null);
+    void startOAuthAuthorize(provider);
+  };
+
+  /** 提交授权码：create=绑定新端点；reauth=复活既有端点 */
+  const handleSubmitOAuth = async () => {
+    const parsed = parseOAuthCodeInput(oauthForm.code);
+    if (!parsed) {
+      showErrorToast(new Error(t("oauth.code_invalid")), { title: t("oauth.submit_error") });
+      return;
+    }
+    setSaving(true);
+    try {
+      const state = parsed.state || oauthForm.state;
+      if (oauthMode === "reauth" && reauthTarget) {
+        await api.reauthOAuthEndpoint(reauthTarget.id, { code: parsed.code, state });
+        toast.success(t("oauth.reauth_success"));
+      } else {
+        await api.exchangeOAuthEndpoint({
+          name: endpointForm.name,
+          provider: oauthForm.provider,
+          code: parsed.code,
+          state,
+          ownerUserID: isAdmin() && endpointForm.ownerUserID ? endpointForm.ownerUserID : undefined,
+        });
+        toast.success(t("oauth.created_success"));
+      }
+      resetOAuthFlow();
+      setEndpointDialogOpen(false);
+      refreshAll();
+    } catch (err) {
+      showErrorToast(err, { title: t("oauth.submit_error") });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /** 打开重新授权弹窗（凭据失效恢复入口） */
+  const handleOpenReauth = (ep: UpstreamEndpointItem) => {
+    const provider: "anthropic" | "openai" =
+      ep.authType === "oauth_openai" ? "openai" : "anthropic";
+    setEndpointForm((f) => ({ ...f, name: ep.name }));
+    setReauthTarget(ep);
+    setOauthMode("reauth");
+    setOauthForm({ ...emptyOAuthAuthorizeForm, provider });
+    setOauthAuthorizeURL(null);
+    setEndpointDialogOpen(true);
+    void startOAuthAuthorize(provider);
+  };
+
+  /** 手动刷新订阅额度快照 */
+  const handleProbeOAuthQuota = async (ep: UpstreamEndpointItem) => {
+    try {
+      await api.probeOAuthQuota(ep.id);
+      toast.success(t("oauth.probe_success"));
+      refreshAll();
+    } catch (err) {
+      showErrorToast(err, { title: t("oauth.probe_error") });
     }
   };
 
@@ -669,6 +775,8 @@ export default function UpstreamPage() {
                       onToggleEnabled={(m) => toggleEnabled.apply(m, { enabled: !m.enabled })}
                       onEditEndpoint={openEditEndpoint}
                       onDeleteEndpoint={(ep) => deleteEndpointConfirm.openDelete(ep)}
+                      onReauthOAuth={handleOpenReauth}
+                      onProbeOAuthQuota={handleProbeOAuthQuota}
                       onAddModel={openCreateModel}
                       onEditModel={openEditModel}
                       onPricingModel={openPricing}
@@ -754,7 +862,12 @@ export default function UpstreamPage() {
 
           <EndpointDialog
             open={endpointDialogOpen}
-            onOpenChange={setEndpointDialogOpen}
+            onOpenChange={(v) => {
+              setEndpointDialogOpen(v);
+              if (!v) {
+                resetOAuthFlow();
+              }
+            }}
             editingId={editingEndpointId}
             form={endpointForm}
             setForm={setEndpointForm}
@@ -762,6 +875,19 @@ export default function UpstreamPage() {
             isAdmin={isAdmin()}
             saving={saving}
             onSave={handleSaveEndpoint}
+            authSelection={authSelectionForDialog(
+              oauthMode,
+              oauthForm.provider,
+              reauthTarget?.authType ?? null,
+            )}
+            onSelectAuth={handleSelectAuth}
+            oauthMode={oauthMode}
+            oauthForm={oauthForm}
+            setOAuthForm={setOauthForm}
+            oauthAuthorizeURL={oauthAuthorizeURL}
+            oauthBusy={oauthBusy}
+            onStartOAuth={() => void startOAuthAuthorize(oauthForm.provider)}
+            onSubmitOAuth={() => void handleSubmitOAuth()}
           />
 
           {/* key 重挂载：每次打开弹窗重置 ModelDialog 本地状态（dirty/提示/折叠） */}

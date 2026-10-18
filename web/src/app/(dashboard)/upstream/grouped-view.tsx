@@ -41,9 +41,18 @@ import {
   UpstreamModelCell,
 } from "./shared";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { oauthBadgeKey, quotaPercent } from "./oauth-form";
 
-/** 组头的连通详情悬浮层：URL 可完整换行，不占列表列宽 */
-function EndpointDetailPopover({ endpoint }: { endpoint: UpstreamEndpointItem }) {
+/** 组头的连通详情悬浮层：URL 可完整换行，不占列表列宽；订阅端点附账号/额度与运维动作 */
+function EndpointDetailPopover({
+  endpoint,
+  onReauthOAuth,
+  onProbeOAuthQuota,
+}: {
+  endpoint: UpstreamEndpointItem;
+  onReauthOAuth: (ep: UpstreamEndpointItem) => void;
+  onProbeOAuthQuota: (ep: UpstreamEndpointItem) => void;
+}) {
   const t = useT();
 
   // copyable=false 的字段（掩码凭据、创建日期）复制无意义，渲染为纯文本
@@ -91,6 +100,62 @@ function EndpointDetailPopover({ endpoint }: { endpoint: UpstreamEndpointItem })
           {field("OpenAI", endpoint.openaiBaseURL)}
           {field("Anthropic", endpoint.anthropicBaseURL)}
           {field(t("endpoints.api_key"), endpoint.maskedAPIKey, false)}
+          {endpoint.oauth && (
+            <div className="min-w-0 rounded-md border border-border bg-background px-2 py-1.5">
+              <p className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground">
+                {t("oauth.account")}
+              </p>
+              <p className="mt-0.5 text-[11px] break-all text-foreground">
+                {endpoint.oauth.accountEmail || "—"}
+                {endpoint.oauth.planType ? ` · ${endpoint.oauth.planType}` : ""}
+              </p>
+              <p className="mt-0.5 text-[11px]">
+                <span
+                  className={
+                    endpoint.oauth.status === "active"
+                      ? "text-muted-foreground"
+                      : "font-medium text-destructive"
+                  }
+                >
+                  {endpoint.oauth.status === "active"
+                    ? t("oauth.status_active")
+                    : t("oauth.status_reauth")}
+                </span>
+              </p>
+              {(endpoint.oauth.quota?.windows ?? []).map((w) => (
+                <div key={w.key} className="mt-1.5">
+                  <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                    <span>{t(`oauth.window_${w.key}`)}</span>
+                    <span>{quotaPercent(w.usedPercent)}%</span>
+                  </div>
+                  <div className="mt-0.5 h-1 w-full rounded bg-muted">
+                    <div
+                      className="h-1 rounded bg-primary"
+                      style={{ width: `${quotaPercent(w.usedPercent)}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+              <div className="mt-2 flex gap-1.5">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-6 px-2 text-[11px]"
+                  onClick={() => onReauthOAuth(endpoint)}
+                >
+                  {t("oauth.reauth_action")}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-6 px-2 text-[11px]"
+                  onClick={() => onProbeOAuthQuota(endpoint)}
+                >
+                  {t("oauth.probe_action")}
+                </Button>
+              </div>
+            </div>
+          )}
           {field(
             t("upstream.created_at"),
             endpoint.createdAt ? new Date(endpoint.createdAt).toLocaleDateString() : "",
@@ -131,6 +196,8 @@ export interface GroupedViewProps {
   onToggleEnabled: (m: UpstreamModelItem) => void;
   onEditEndpoint: (ep: UpstreamEndpointItem) => void;
   onDeleteEndpoint: (ep: UpstreamEndpointItem) => void;
+  onReauthOAuth: (ep: UpstreamEndpointItem) => void;
+  onProbeOAuthQuota: (ep: UpstreamEndpointItem) => void;
   onAddModel: (ep: UpstreamEndpointItem) => void;
   onEditModel: (m: UpstreamModelItem, ep: UpstreamEndpointItem) => void;
   onPricingModel: (m: UpstreamModelItem) => void;
@@ -155,6 +222,8 @@ export function GroupedView({
   onToggleEnabled,
   onEditEndpoint,
   onDeleteEndpoint,
+  onReauthOAuth,
+  onProbeOAuthQuota,
   onAddModel,
   onEditModel,
   onPricingModel,
@@ -204,7 +273,21 @@ export function GroupedView({
                     </TooltipContent>
                   </TooltipRoot>
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <EndpointDetailPopover endpoint={ep} />
+                    {oauthBadgeKey(ep.authType) && (
+                      <Badge variant="secondary" className="px-1.5 py-0 text-[10px] font-normal">
+                        {t(oauthBadgeKey(ep.authType) ?? "")}
+                      </Badge>
+                    )}
+                    {ep.oauth?.status === "reauth_required" && (
+                      <Badge variant="destructive" className="px-1.5 py-0 text-[10px] font-normal">
+                        {t("oauth.status_reauth")}
+                      </Badge>
+                    )}
+                    <EndpointDetailPopover
+                      endpoint={ep}
+                      onReauthOAuth={onReauthOAuth}
+                      onProbeOAuthQuota={onProbeOAuthQuota}
+                    />
                     <span className="text-xs text-muted-foreground">
                       {t("upstream.model_count").replace("{count}", String(group.modelCount))}
                     </span>
@@ -432,7 +515,11 @@ export function GroupedView({
                           />
                         )}
                       </span>
-                      <EndpointDetailPopover endpoint={ep} />
+                      <EndpointDetailPopover
+                        endpoint={ep}
+                        onReauthOAuth={onReauthOAuth}
+                        onProbeOAuthQuota={onProbeOAuthQuota}
+                      />
                       {group.truncated && (
                         <Badge variant="outline" className="shrink-0 text-[10px] font-normal">
                           {t("upstream.truncated_detail")

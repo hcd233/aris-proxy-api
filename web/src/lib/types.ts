@@ -373,6 +373,70 @@ export interface ListAPIKeysRsp extends CommonRsp {
 
 // ─── Endpoint ──────────────────────────────────────────────────────────────────
 
+/** 端点认证类型：API Key 直连 / Claude 订阅 OAuth / Codex 订阅 OAuth */
+export type EndpointAuthType = "api_key" | "oauth_anthropic" | "oauth_openai";
+
+/** 订阅账号提供方（发起授权时选择） */
+export type OAuthProviderChoice = "anthropic" | "openai";
+
+export interface OAuthQuotaWindowDTO {
+  key: string;
+  usedPercent: number;
+  resetsAt: string;
+  windowMinutes: number;
+}
+
+export interface OAuthQuotaSnapshotDTO {
+  windows: OAuthQuotaWindowDTO[];
+  planType?: string;
+  capturedAt: string;
+}
+
+/** 订阅端点凭据投影（仅展示字段；token 永不下发） */
+export interface UpstreamOAuthView {
+  accountEmail?: string;
+  planType?: string;
+  /** active / reauth_required */
+  status: string;
+  lastError?: string;
+  quota?: OAuthQuotaSnapshotDTO;
+  quotaUpdatedAt?: string;
+}
+
+export interface AuthorizeOAuthReqBody {
+  provider: OAuthProviderChoice;
+}
+
+export interface AuthorizeOAuthRspBody {
+  authorizeURL: string;
+  state: string;
+}
+
+export interface ExchangeOAuthReqBody {
+  ownerUserID?: number;
+  name: string;
+  provider: OAuthProviderChoice;
+  code: string;
+  state?: string;
+}
+
+export interface ExchangeOAuthRspBody {
+  endpointID: number;
+}
+
+export interface ReauthOAuthReqBody {
+  code: string;
+  state?: string;
+}
+
+export interface OAuthQuotaRspBody {
+  status: string;
+  planType?: string;
+  lastError?: string;
+  quota?: OAuthQuotaSnapshotDTO;
+  quotaUpdatedAt?: string;
+}
+
 export interface CreateEndpointReqBody {
   ownerUserID?: number;
   name: string;
@@ -411,6 +475,10 @@ export interface UpstreamEndpointItem {
   openaiBaseURL: string;
   anthropicBaseURL: string;
   maskedAPIKey: string;
+  /** 认证类型（api_key / oauth_anthropic / oauth_openai） */
+  authType: EndpointAuthType;
+  /** 订阅端点凭据投影；仅 OAuth 端点非空 */
+  oauth?: UpstreamOAuthView;
   supportOpenAIChatCompletion: boolean;
   supportOpenAIResponse: boolean;
   supportAnthropicMessage: boolean;
