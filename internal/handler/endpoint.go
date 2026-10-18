@@ -24,6 +24,7 @@ type EndpointHandler interface {
 	HandleExchangeOAuth(ctx context.Context, req *dto.ExchangeOAuthReq) (*dto.HTTPResponse[*dto.ExchangeOAuthRspBody], error)
 	HandleReauthOAuth(ctx context.Context, req *dto.ReauthOAuthReq) (*dto.HTTPResponse[*dto.EmptyRsp], error)
 	HandleGetOAuthQuota(ctx context.Context, req *dto.GetOAuthQuotaReq) (*dto.HTTPResponse[*dto.GetOAuthQuotaRspBody], error)
+	HandleProbeOAuthQuota(ctx context.Context, req *dto.ProbeOAuthQuotaReq) (*dto.HTTPResponse[*dto.GetOAuthQuotaRspBody], error)
 }
 
 type EndpointDependencies struct {
@@ -34,6 +35,7 @@ type EndpointDependencies struct {
 	Exchange port.ExchangeOAuthHandler
 	Reauth   port.ReauthOAuthHandler
 	Quota    port.GetOAuthQuotaHandler
+	Probe    port.ProbeOAuthQuotaHandler
 }
 
 type endpointHandler struct {
@@ -44,6 +46,7 @@ type endpointHandler struct {
 	exchange port.ExchangeOAuthHandler
 	reauth   port.ReauthOAuthHandler
 	quota    port.GetOAuthQuotaHandler
+	probe    port.ProbeOAuthQuotaHandler
 }
 
 func NewEndpointHandler(deps EndpointDependencies) EndpointHandler {
@@ -55,6 +58,7 @@ func NewEndpointHandler(deps EndpointDependencies) EndpointHandler {
 		exchange: deps.Exchange,
 		reauth:   deps.Reauth,
 		quota:    deps.Quota,
+		probe:    deps.Probe,
 	}
 }
 
@@ -224,6 +228,28 @@ func toOAuthQuotaDTO(view *port.OAuthQuotaSnapshotView) *dto.OAuthQuotaSnapshot 
 		PlanType:   view.PlanType,
 		CapturedAt: view.CapturedAt,
 	}
+}
+
+// HandleProbeOAuthQuota 手动触发一次额度探测（同步；服务端处理超时见 constant.OAuthProbeTimeout）
+func (h *endpointHandler) HandleProbeOAuthQuota(ctx context.Context, req *dto.ProbeOAuthQuotaReq) (*dto.HTTPResponse[*dto.GetOAuthQuotaRspBody], error) {
+	scope, err := scopeFor(ctx, util.CtxValuePermission(ctx))
+	if err != nil {
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrUnauthorized.BizError())
+	}
+	probeCtx, cancel := context.WithTimeout(ctx, constant.OAuthProbeTimeout)
+	defer cancel()
+
+	view, err := h.probe.Handle(probeCtx, port.ProbeOAuthQuotaCommand{ScopeUserID: scope, EndpointID: req.ID})
+	if err != nil {
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
+	}
+	return apiutil.WrapHTTPResponse(&dto.GetOAuthQuotaRspBody{
+		Status:         view.Status,
+		PlanType:       view.PlanType,
+		LastError:      view.LastError,
+		Quota:          toOAuthQuotaDTO(view.Quota),
+		QuotaUpdatedAt: view.QuotaUpdatedAt,
+	}, nil)
 }
 
 // scopeFor 多租户隔离 scope 计算：admin 返回 nil（不过滤），其余用户限定自身。

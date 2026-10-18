@@ -85,6 +85,7 @@ var ApplicationModule = fx.Module(constant.DigNameApplicationModule,
 		NewOAuthExchangeHandler,
 		NewOAuthReauthHandler,
 		NewGetOAuthQuotaHandler,
+		NewOAuthProbeHandler,
 		NewCreateModelHandler,
 		NewUpdateModelHandler,
 		NewDeleteModelHandler,
@@ -252,6 +253,10 @@ func NewOAuthReauthHandler(flowStore llmproxyservice.OAuthFlowStore, clients map
 
 func NewGetOAuthQuotaHandler(endpointRepo llmproxy.EndpointRepository, credRepo llmproxy.OAuthCredentialRepository) endpointport.GetOAuthQuotaHandler {
 	return endpointquery.NewGetOAuthQuotaHandler(endpointRepo, credRepo)
+}
+
+func NewOAuthProbeHandler(endpointRepo llmproxy.EndpointRepository, credRepo llmproxy.OAuthCredentialRepository, tokens llmproxyservice.OAuthTokenProvider, clients map[enum.OAuthProvider]llmproxyservice.OAuthProviderClient) endpointport.ProbeOAuthQuotaHandler {
+	return endpointcommand.NewOAuthProbeHandler(endpointRepo, credRepo, tokens, clients)
 }
 
 func NewCreateModelHandler(endpointRepo llmproxy.EndpointRepository, modelRepo llmproxy.ModelRepository) modelport.CreateModelHandler {

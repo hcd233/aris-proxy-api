@@ -72,6 +72,11 @@ type GetOAuthQuotaReq struct {
 	ID uint `query:"id" required:"true" minimum:"1" doc:"Endpoint ID"`
 }
 
+// ProbeOAuthQuotaReq 手动触发订阅端点额度探测请求（同步，超时 15s）
+type ProbeOAuthQuotaReq struct {
+	ID uint `query:"id" required:"true" minimum:"1" doc:"Endpoint ID"`
+}
+
 // GetOAuthQuotaRspBody 额度查询响应体（凭据本身永不下发，仅状态与用量快照）
 type GetOAuthQuotaRspBody struct {
 	Status         string              `json:"status" doc:"凭据状态（active/reauth_required）"`

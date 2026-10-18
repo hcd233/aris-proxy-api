@@ -180,6 +180,9 @@ var (
 	//	@update 2026-06-02 10:00:00
 	CronThinkExtractEnabled bool
 
+	// CronOAuthMaintenanceEnabled bool 是否启用订阅账号维护定时任务（临期 token 刷新 + 额度探测）
+	CronOAuthMaintenanceEnabled bool
+
 	// UpstreamRetryMaxAttempts int 上游请求重试最大次数（不含首次请求）
 	//	@update 2026-06-23 10:00:00
 	UpstreamRetryMaxAttempts int
@@ -326,6 +329,7 @@ func InitEnvironment() {
 	config.SetDefault("trusted.proxies", "172.18.0.1")
 	config.SetDefault("cron.session.terminal_cleanup.enabled", true)
 	config.SetDefault("cron.soft.delete.purge.enabled", true)
+	config.SetDefault("cron.oauth.maintenance.enabled", true)
 
 	config.SetDefault("upstream.retry.max_attempts", 5)
 	config.SetDefault("upstream.retry.initial_backoff", 500*time.Millisecond)
@@ -415,6 +419,7 @@ func InitEnvironment() {
 	CronSessionTerminalCleanupEnabled = config.GetBool("cron.session.terminal_cleanup.enabled")
 	CronSoftDeletePurgeEnabled = config.GetBool("cron.soft.delete.purge.enabled")
 	CronThinkExtractEnabled = config.GetBool("cron.think.extract.enabled")
+	CronOAuthMaintenanceEnabled = config.GetBool("cron.oauth.maintenance.enabled")
 
 	UpstreamRetryMaxAttempts = config.GetInt("upstream.retry.max_attempts")
 	UpstreamRetryInitialBackoff = config.GetDuration("upstream.retry.initial_backoff")

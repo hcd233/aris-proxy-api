@@ -209,3 +209,9 @@ var OAuthCodexUpstreamRejectedFields = []string{
 	"prompt_cache_retention", "safety_identifier", "stream_options",
 	"truncation", "stop_sequences",
 }
+
+// OAuthQuotaProbeInterval 额度探测节流间隔（同一凭据在此窗口内只探测一次）
+const OAuthQuotaProbeInterval = 30 * time.Minute
+
+// OAuthProbeTimeout 手动探测接口的服务端处理超时
+const OAuthProbeTimeout = 15 * time.Second

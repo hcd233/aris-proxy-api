@@ -82,3 +82,16 @@ type OAuthQuotaView struct {
 type GetOAuthQuotaHandler interface {
 	Handle(ctx context.Context, q GetOAuthQuotaQuery) (*OAuthQuotaView, error)
 }
+
+// ProbeOAuthQuotaCommand 手动触发一次额度探测（同步，超时由 handler 控制）
+//
+// ScopeUserID 多租户隔离三态：nil（admin）不过滤；非 nil 精确匹配 user_id。
+type ProbeOAuthQuotaCommand struct {
+	ScopeUserID *uint
+	EndpointID  uint
+}
+
+// ProbeOAuthQuotaHandler 订阅端点额度探测处理器（返回探测后的最新视图）
+type ProbeOAuthQuotaHandler interface {
+	Handle(ctx context.Context, cmd ProbeOAuthQuotaCommand) (*OAuthQuotaView, error)
+}

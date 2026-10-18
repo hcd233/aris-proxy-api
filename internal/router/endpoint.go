@@ -104,6 +104,21 @@ func initEndpointRouter(endpointGroup huma.API, endpointHandler handler.Endpoint
 	}, endpointHandler.HandleGetOAuthQuota)
 
 	huma.Register(endpointGroup, huma.Operation{
+		OperationID: "probeOAuthQuota",
+		Method:      http.MethodPost,
+		Path:        "/oauth/probe",
+		Summary:     "ProbeOAuthQuota",
+		Description: "Probe subscription endpoint quota synchronously and return the fresh snapshot",
+		Tags:        []string{constant.TagEndpoint},
+		Security: []map[string][]string{
+			{constant.SecuritySchemeJWT: {}},
+		},
+		Middlewares: huma.Middlewares{
+			middleware.LimitUserPermissionMiddleware("probeOAuthQuota", enum.PermissionUser),
+		},
+	}, endpointHandler.HandleProbeOAuthQuota)
+
+	huma.Register(endpointGroup, huma.Operation{
 		OperationID: "deleteEndpoint",
 		Method:      http.MethodDelete,
 		Path:        "",
