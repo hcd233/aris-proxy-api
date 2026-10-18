@@ -72,6 +72,8 @@ const (
 	OAuthClaudeUsageURL = "https://api.anthropic.com/api/oauth/usage"
 	// OAuthClaudeBetaHeader OAuth 调用必需的 anthropic-beta 值
 	OAuthClaudeBetaHeader = "oauth-2025-04-20"
+	// OAuthClaudeUpstreamBaseURL Claude OAuth 端点的转发 baseURL（transport 拼 /messages）
+	OAuthClaudeUpstreamBaseURL = "https://api.anthropic.com/v1"
 
 	// ── OpenAI（Codex 订阅）──
 
@@ -89,6 +91,8 @@ const (
 	OAuthOpenAIRefreshScope = "openid profile email"
 	// OAuthOpenAIUsageURL Codex 订阅窗口用量查询
 	OAuthOpenAIUsageURL = "https://chatgpt.com/backend-api/wham/usage"
+	// OAuthOpenAIUpstreamBaseURL Codex OAuth 端点的转发 baseURL（transport 拼 /responses）
+	OAuthOpenAIUpstreamBaseURL = "https://chatgpt.com/backend-api/codex"
 )
 
 // 订阅账号 OAuth 生命周期与熵参数

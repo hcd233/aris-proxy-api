@@ -43,12 +43,12 @@ func (r *oauthCredentialRepository) FindByEndpointID(ctx context.Context, endpoi
 		}
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "find oauth credential by endpoint id")
 	}
-	return r.toAggregate(record)
+	return buildOAuthCredentialAggregate(record)
 }
 
 // Save 按 endpoint_id upsert（创建与更新共用同一入口）。
 func (r *oauthCredentialRepository) Save(ctx context.Context, cred *aggregate.OAuthCredential) error {
-	record, err := r.toModel(cred)
+	record, err := buildOAuthCredentialModel(cred)
 	if err != nil {
 		return err
 	}
@@ -81,7 +81,7 @@ func (r *oauthCredentialRepository) ListActive(ctx context.Context) ([]*aggregat
 	}
 	creds := make([]*aggregate.OAuthCredential, 0, len(records))
 	for _, record := range records {
-		cred, err := r.toAggregate(record)
+		cred, err := buildOAuthCredentialAggregate(record)
 		if err != nil {
 			return nil, err
 		}
@@ -91,7 +91,7 @@ func (r *oauthCredentialRepository) ListActive(ctx context.Context) ([]*aggregat
 }
 
 // toModel 聚合 → DB 模型（token 加密）
-func (r *oauthCredentialRepository) toModel(cred *aggregate.OAuthCredential) (*dbmodel.EndpointOAuthCredential, error) {
+func buildOAuthCredentialModel(cred *aggregate.OAuthCredential) (*dbmodel.EndpointOAuthCredential, error) {
 	key := config.OAuthCredentialKey
 	if len(key) == 0 {
 		return nil, ierr.New(ierr.ErrInternal, "oauth credential key is not configured")
@@ -122,7 +122,7 @@ func (r *oauthCredentialRepository) toModel(cred *aggregate.OAuthCredential) (*d
 }
 
 // toAggregate DB 模型 → 聚合（token 解密）
-func (r *oauthCredentialRepository) toAggregate(record *dbmodel.EndpointOAuthCredential) (*aggregate.OAuthCredential, error) {
+func buildOAuthCredentialAggregate(record *dbmodel.EndpointOAuthCredential) (*aggregate.OAuthCredential, error) {
 	key := config.OAuthCredentialKey
 	if len(key) == 0 {
 		return nil, ierr.New(ierr.ErrInternal, "oauth credential key is not configured")

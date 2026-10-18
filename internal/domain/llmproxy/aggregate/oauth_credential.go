@@ -81,9 +81,8 @@ func newOAuthCredential(endpointID uint, provider enum.OAuthProvider, accessToke
 }
 
 func (c *OAuthCredential) validate() error {
-	if c.endpointID == 0 {
-		return ierr.New(ierr.ErrValidation, "oauth credential endpoint id is required")
-	}
+	// endpointID 允许为 0：创建路径先建端点、事务内回填（见 SetEndpointID）；
+	// 恢复路径不校验。归属完整性由凭据行 endpoint_id 唯一索引保证。
 	switch c.provider {
 	case enum.OAuthProviderAnthropic, enum.OAuthProviderOpenAI:
 	default:
@@ -97,6 +96,9 @@ func (c *OAuthCredential) validate() error {
 	}
 	return nil
 }
+
+// SetEndpointID 绑定所属端点 ID（创建路径在端点落库后回填）
+func (c *OAuthCredential) SetEndpointID(endpointID uint) { c.endpointID = endpointID }
 
 // ApplyTokens 刷新成功后更新令牌。
 //

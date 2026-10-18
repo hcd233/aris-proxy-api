@@ -438,3 +438,36 @@ func toEndpointProjection(ep *dbmodel.Endpoint) *llmproxy.EndpointProjection {
 		SupportAnthropicMessage:     ep.SupportAnthropicMessage,
 	}
 }
+
+// CreateWithOAuthCredential 在单事务内创建 OAuth 端点与其凭据（llmproxy.OAuthEndpointRepository）。
+//
+// 端点与凭据必须原子落库：分两次写会留下「OAuth 端点无凭据行」的中间态，
+// 该状态下解析层按 reauth_required 剔除、用户端表现为端点不可用。
+func (r *endpointRepository) CreateWithOAuthCredential(ctx context.Context, ep *aggregate.Endpoint, cred *aggregate.OAuthCredential, ownerUserID uint) (uint, error) {
+	db := r.db.WithContext(ctx)
+	var endpointID uint
+	if err := db.Transaction(func(tx *gorm.DB) error {
+		record := toEndpointModel(ep)
+		record.UserID = ownerUserID
+		if err := tx.Create(record).Error; err != nil {
+			return ierr.Wrap(ierr.ErrDBCreate, err, "create oauth endpoint")
+		}
+		endpointID = record.ID
+
+		cred.SetEndpointID(endpointID)
+		credRecord, err := buildOAuthCredentialModel(cred)
+		if err != nil {
+			return err
+		}
+		if err := tx.Create(credRecord).Error; err != nil {
+			return ierr.Wrap(ierr.ErrDBCreate, err, "create oauth credential")
+		}
+		return nil
+	}); err != nil {
+		return 0, err
+	}
+	r.cache.InvalidateAll(ctx)
+	return endpointID, nil
+}
+
+var _ llmproxy.OAuthEndpointRepository = (*endpointRepository)(nil)

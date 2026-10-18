@@ -13,6 +13,8 @@ import (
 )
 
 // TestCreateOAuthCredentialRejectsMissingFields 必填字段缺失必须拒绝。
+//
+// endpointID=0 合法：创建路径在端点落库后由 SetEndpointID 回填（事务内绑定）。
 func TestCreateOAuthCredentialRejectsMissingFields(t *testing.T) {
 	t.Parallel()
 
@@ -24,7 +26,7 @@ func TestCreateOAuthCredentialRejectsMissingFields(t *testing.T) {
 		refresh   string
 		wantError bool
 	}{
-		{name: "zero endpoint id", endpoint: 0, access: "at", refresh: "rt", wantError: true},
+		{name: "zero endpoint id allowed before binding", endpoint: 0, access: "at", refresh: "rt", wantError: false},
 		{name: "empty access token", endpoint: 1, access: "", refresh: "rt", wantError: true},
 		{name: "empty refresh token", endpoint: 1, access: "at", refresh: "", wantError: true},
 		{name: "valid", endpoint: 1, access: "at", refresh: "rt", wantError: false},

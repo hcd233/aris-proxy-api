@@ -86,6 +86,15 @@ type OAuthCredentialRepository interface {
 	ListActive(ctx context.Context) ([]*aggregate.OAuthCredential, error)
 }
 
+// OAuthEndpointRepository 订阅账号端点的原子创建接口（由 endpointRepository 一并实现）
+//
+// 端点与凭据必须同事务落库：分两次写会留下「OAuth 端点无凭据」的中间态，
+// 该状态下解析层按 reauth_required 剔除、用户端表现为端点不可用且无法修复。
+type OAuthEndpointRepository interface {
+	// CreateWithOAuthCredential 在单事务内创建 OAuth 端点与其凭据（凭据落库加密）。
+	CreateWithOAuthCredential(ctx context.Context, endpoint *aggregate.Endpoint, credential *aggregate.OAuthCredential, ownerUserID uint) (uint, error)
+}
+
 // ModelListFilter 模型列表筛选条件（零值表示该维度不过滤）
 //
 // Status 取 constant.ModelStatusEnabled / ModelStatusDisabled，其余值视为不过滤；
