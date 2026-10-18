@@ -39,6 +39,13 @@ const (
 	RuntimeMetricsInstancesKey = "metrics:runtime:instances"
 	// RuntimeMetricsDataKeyTemplate 运行时指标-单实例快照时序（ZSET：member=快照payload, score=快照unix秒），%s = instanceID
 	RuntimeMetricsDataKeyTemplate = "metrics:runtime:data:%s"
+
+	// OAuthFlowKeyTemplate 订阅账号授权流临时记录（%s = state；一次性 Take，防重放）
+	OAuthFlowKeyTemplate = "oauth:flow:%s"
+	// OAuthAccessKeyTemplate 订阅账号 access token 缓存（%d = endpointID）
+	OAuthAccessKeyTemplate = "oauth:access:%d"
+	// OAuthRefreshLockKeyTemplate 订阅账号刷新互斥锁（%d = endpointID）
+	OAuthRefreshLockKeyTemplate = "oauth:refresh:%d"
 )
 
 const RedisZRangePositiveInfinity = "+inf"
