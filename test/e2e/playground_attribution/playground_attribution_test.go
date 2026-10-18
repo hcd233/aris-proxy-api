@@ -186,7 +186,7 @@ func newFixture(t *testing.T) *fixture {
 	resolver := llmproxyservice.NewEndpointResolver(repository.NewEndpointRepository(db), repository.NewModelRepository(db), false, nil)
 	openAIUC := usecase.NewOpenAIUseCase(resolver, usecase.NewListOpenAIModels(repository.NewEndpointReadRepository(db)),
 		transport.NewOpenAIProxy(tracker, guard), transport.NewAnthropicProxy(tracker, guard),
-		submitter, noopTriggerChecker{}, metrics.NewTokenUsageCounter(registry), nil)
+		submitter, noopTriggerChecker{}, metrics.NewTokenUsageCounter(registry), nil, nil)
 	playgroundHandler := handler.NewPlaygroundHandler(handler.PlaygroundDependencies{UseCase: openAIUC, SSEGauge: metrics.NewSSEGauge(registry)})
 
 	signer := jwt.NewAccessTokenSigner()

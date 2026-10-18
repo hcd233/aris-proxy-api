@@ -122,6 +122,10 @@ const (
 	OAuthReasonRefreshInProgress  = "refresh in progress elsewhere"
 	OAuthReasonRefreshFailed      = "refresh failed: "
 
+	// OAuthEndpointStableKeyTemplate OAuth 端点稳定身份（%d = endpointID）：
+	// 熔断/并发隔离键与指标 label 的替代输入，避免 token 轮换导致键漂移
+	OAuthEndpointStableKeyTemplate = "oauth:%d"
+
 	// OAuthClaudeVerifierBytes Claude PKCE verifier 随机字节数（base64url 后 43 字符）
 	OAuthClaudeVerifierBytes = 32
 	// OAuthOpenAIVerifierBytes OpenAI PKCE verifier 随机字节数（hex 后 128 字符）

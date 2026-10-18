@@ -166,6 +166,7 @@ func newFixture(t *testing.T, withCache bool, modelCount int) *fixture {
 		noopTriggerChecker{},
 		tokenMetrics,
 		nil,
+		nil,
 	)
 	anthropicUC := usecase.NewAnthropicUseCase(
 		llmproxyservice.NewEndpointResolver(endpointRepo, modelRepo, false, nil),
@@ -176,6 +177,7 @@ func newFixture(t *testing.T, withCache bool, modelCount int) *fixture {
 		noopTaskSubmitter{},
 		noopTriggerChecker{},
 		tokenMetrics,
+		nil,
 		nil,
 	)
 	modelHandler := handler.NewModelHandler(handler.ModelDependencies{

@@ -37,7 +37,10 @@ func (u *anthropicUseCase) forwardMessageViaChat(ctx context.Context, req *dto.A
 		return nil, proxyutil.SendAnthropicModelNotFoundError(exposedModel)
 	}
 	stream := req.Body.Stream != nil && *req.Body.Stream
-	upstream := toTransportEndpoint(m, ep, false)
+	upstream, err := u.buildTransportEndpoint(ctx, m, ep, false)
+	if err != nil {
+		return nil, err
+	}
 	body := proxyutil.MarshalOpenAIChatCompletionBodyForModel(chatReq, upstream.Model)
 	if stream {
 		return u.forwardMessageViaChatStream(ctx, req, m, upstream, exposedModel, ep.Name(), body)

@@ -25,11 +25,17 @@ import (
 // APIKey 经 SHA-256 截断哈希后才进入 key：该 key 会作为 Prometheus 指标 label
 // 与 CircuitOpenError 错误消息对外暴露，明文写入会造成凭据泄漏。
 //
+// OAuth 端点（StableKey 非空）改用稳定身份：access token 每次刷新都会轮换，
+// 以 token 摘要做键会让熔断状态随刷新归零、指标 label 序列无限增长。
+//
 //	@param ep vo.UpstreamEndpoint
 //	@return string
 //	@author centonhuang
-//	@update 2026-08-21 10:00:00
+//	@update 2026-10-18 20:00:00
 func EndpointKey(ep vo.UpstreamEndpoint) string {
+	if ep.StableKey != "" {
+		return ep.BaseURL + "|" + ep.StableKey
+	}
 	sum := sha256.Sum256([]byte(ep.APIKey))
 	return ep.BaseURL + "|" + hex.EncodeToString(sum[:])[:8]
 }

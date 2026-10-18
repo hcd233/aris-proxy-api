@@ -92,7 +92,7 @@ func TestFallbackAuditsOnlyFinalOutcome(t *testing.T) {
 			submitter := &recordingTaskSubmitter{}
 			proxy := &sequencedDecisionProxy{errs: tc.errs}
 			resolver := &multiCandidateResolver{cands: []service.Candidate{decisionCandidate(t, 1, "ep-a"), decisionCandidate(t, 2, "ep-b")}}
-			uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, submitter, nil, nil, nil)
+			uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, submitter, nil, nil, nil, nil)
 
 			_, err := uc.CreateDecision(context.Background(), newDecisionRequest())
 			if (err == nil) != tc.wantSuccess {
@@ -122,7 +122,7 @@ func TestFallbackStopsWhenRequestCanceled(t *testing.T) {
 		nil,
 	}}
 	resolver := &multiCandidateResolver{cands: []service.Candidate{decisionCandidate(t, 1, "ep-a"), decisionCandidate(t, 2, "ep-b")}}
-	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, submitter, nil, nil, nil)
+	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, submitter, nil, nil, nil, nil)
 
 	if _, err := uc.CreateDecision(ctx, newDecisionRequest()); err == nil {
 		t.Fatal("请求已取消时应返回错误")

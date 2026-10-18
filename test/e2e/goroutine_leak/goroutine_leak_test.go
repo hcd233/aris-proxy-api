@@ -146,7 +146,7 @@ func newLeakFixture(t *testing.T) *leakFixture {
 	listModels := usecase.NewListOpenAIModels(repository.NewEndpointReadRepository(db))
 
 	openAIUC := usecase.NewOpenAIUseCase(resolver, listModels, openAIProxy, anthropicProxy,
-		noopTaskSubmitter{}, noopTriggerChecker{}, metrics.NewTokenUsageCounter(registry), nil)
+		noopTaskSubmitter{}, noopTriggerChecker{}, metrics.NewTokenUsageCounter(registry), nil, nil)
 	sseGauge := metrics.NewSSEGauge(registry)
 	openAIHandler := handler.NewOpenAIHandler(handler.OpenAIDependencies{
 		UseCase:  openAIUC,
