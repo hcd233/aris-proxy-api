@@ -71,6 +71,21 @@ type ModelRepository interface {
 	UpdateWithHistorySync(ctx context.Context, m *aggregate.Model, oldModelID string) (ModelIDSyncCounts, error)
 }
 
+// OAuthCredentialRepository 订阅账号 OAuth 凭据仓储接口
+//
+// 加解密是持久化层职责：聚合持明文令牌，实现负责落库前加密、读出后解密。
+// 加密密钥缺失时读写直接失败（fail-closed），API Key 端点不受影响。
+type OAuthCredentialRepository interface {
+	// FindByEndpointID 按端点查询凭据；不存在返回 (nil, nil)。
+	FindByEndpointID(ctx context.Context, endpointID uint) (*aggregate.OAuthCredential, error)
+	// Save 按 endpoint_id upsert（创建与更新共用同一入口）。
+	Save(ctx context.Context, cred *aggregate.OAuthCredential) error
+	// DeleteByEndpointID 删除指定端点的凭据（幂等，不存在不报错）。
+	DeleteByEndpointID(ctx context.Context, endpointID uint) error
+	// ListActive 列出全部 active 状态凭据（cron 维护：临期刷新与额度探测）。
+	ListActive(ctx context.Context) ([]*aggregate.OAuthCredential, error)
+}
+
 // ModelListFilter 模型列表筛选条件（零值表示该维度不过滤）
 //
 // Status 取 constant.ModelStatusEnabled / ModelStatusDisabled，其余值视为不过滤；

@@ -1,19 +1,20 @@
 package dao
 
 var (
-	userDAOSingleton           *UserDAO
-	messageDAOSingleton        *MessageDAO
-	sessionDAOSingleton        *SessionDAO
-	toolDAOSingleton           *ToolDAO
-	endpointDAOSingleton       *EndpointDAO
-	modelDAOSingleton          *ModelDAO
-	proxyAPIKeyDAOSingleton    *ProxyAPIKeyDAO
-	modelCallAuditDAOSingleton *ModelCallAuditDAO
-	triggerDAOSingleton        *TriggerDAO
-	cronJobDAOSingleton        *CronJobDAO
-	cronCallAuditDAOSingleton  *CronCallAuditDAO
-	traceDAOSingleton          *TraceDAO
-	eventDAOSingleton          *EventDAO
+	userDAOSingleton            *UserDAO
+	messageDAOSingleton         *MessageDAO
+	sessionDAOSingleton         *SessionDAO
+	toolDAOSingleton            *ToolDAO
+	endpointDAOSingleton        *EndpointDAO
+	oauthCredentialDAOSingleton *EndpointOAuthCredentialDAO
+	modelDAOSingleton           *ModelDAO
+	proxyAPIKeyDAOSingleton     *ProxyAPIKeyDAO
+	modelCallAuditDAOSingleton  *ModelCallAuditDAO
+	triggerDAOSingleton         *TriggerDAO
+	cronJobDAOSingleton         *CronJobDAO
+	cronCallAuditDAOSingleton   *CronCallAuditDAO
+	traceDAOSingleton           *TraceDAO
+	eventDAOSingleton           *EventDAO
 )
 
 func init() {
@@ -22,6 +23,7 @@ func init() {
 	sessionDAOSingleton = &SessionDAO{}
 	toolDAOSingleton = &ToolDAO{}
 	endpointDAOSingleton = &EndpointDAO{}
+	oauthCredentialDAOSingleton = &EndpointOAuthCredentialDAO{}
 	modelDAOSingleton = &ModelDAO{}
 	proxyAPIKeyDAOSingleton = &ProxyAPIKeyDAO{}
 	modelCallAuditDAOSingleton = &ModelCallAuditDAO{}
@@ -71,6 +73,11 @@ func GetToolDAO() *ToolDAO {
 // GetEndpointDAO 获取Endpoint表DAO
 func GetEndpointDAO() *EndpointDAO {
 	return endpointDAOSingleton
+}
+
+// GetEndpointOAuthCredentialDAO 获取OAuth凭据表DAO
+func GetEndpointOAuthCredentialDAO() *EndpointOAuthCredentialDAO {
+	return oauthCredentialDAOSingleton
 }
 
 // GetModelDAO 获取Model表DAO

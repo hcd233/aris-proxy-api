@@ -154,6 +154,20 @@ var (
 	ModelRepoFieldsFull  = []string{FieldID, FieldUserID, FieldAlias, FieldModelID, FieldModelUpstreamModel, FieldEndpointID, FieldEnabled, FieldModelPriority, FieldModelWeight, FieldModelContextLength, FieldModelMaxOutputTokens, FieldModelCapabilities, FieldModelPricingRules, FieldPricingCurrency, FieldCreatedAt, FieldUpdatedAt}
 	ModelRepoFieldsAlias = []string{FieldAlias}
 
+	OAuthCredentialRepoFieldsFull = []string{FieldID, FieldOAuthCredentialEndpointID, FieldOAuthCredentialProvider,
+		FieldOAuthCredentialAccessTokenEnc, FieldOAuthCredentialRefreshTokenEnc, FieldOAuthCredentialExpiresAt,
+		FieldOAuthCredentialAccountRef, FieldOAuthCredentialAccountEmail, FieldOAuthCredentialPlanType,
+		FieldOAuthCredentialStatus, FieldOAuthCredentialLastError, FieldOAuthCredentialQuotaSnapshot,
+		FieldOAuthCredentialQuotaUpdatedAt, FieldCreatedAt, FieldUpdatedAt}
+
+	// OAuthCredentialUpdateColumns upsert 冲突时更新的列（endpoint_id 为冲突键，不在列内；
+	// 最早创建时间不被覆盖，故不含 created_at）
+	OAuthCredentialUpdateColumns = []string{FieldOAuthCredentialProvider, FieldOAuthCredentialAccessTokenEnc,
+		FieldOAuthCredentialRefreshTokenEnc, FieldOAuthCredentialExpiresAt, FieldOAuthCredentialAccountRef,
+		FieldOAuthCredentialAccountEmail, FieldOAuthCredentialPlanType, FieldOAuthCredentialStatus,
+		FieldOAuthCredentialLastError, FieldOAuthCredentialQuotaSnapshot, FieldOAuthCredentialQuotaUpdatedAt,
+		FieldUpdatedAt}
+
 	ProxyAPIKeyRepoFieldsFull = []string{FieldID, FieldUserID, FieldName, FieldKey, FieldCreatedAt}
 
 	// ProxyAPIKeyRepoFieldsAuth 鉴权路径投影。
@@ -215,6 +229,9 @@ var (
 	// 必须用 "user_id = ?" 而非 Where("user_id", v)：GORM 的 Where("col", v) 在
 	// 无占位符时 v 会被静默丢弃（v=0 时退化为 WHERE user_id，语义完全错误）。
 	WhereUserIDEquals = "user_id = ?"
+
+	// WhereOAuthCredentialStatusEquals OAuth 凭据状态显式等值条件
+	WhereOAuthCredentialStatusEquals = "status = ?"
 
 	// ── replaceHistoricalModelIDs（由 UpdateWithHistorySync 在事务内调用）条件与块大小 ──
 	WhereModelIDEquals = "model_id = ?"
