@@ -20,11 +20,12 @@ type oauthReauthHandler struct {
 	clients      map[enum.OAuthProvider]service.OAuthProviderClient
 	endpointRepo llmproxy.EndpointRepository
 	credRepo     llmproxy.OAuthCredentialRepository
+	accessCache  service.OAuthAccessCache
 }
 
 // NewOAuthReauthHandler 构造订阅账号重新授权处理器
-func NewOAuthReauthHandler(flowStore service.OAuthFlowStore, clients map[enum.OAuthProvider]service.OAuthProviderClient, endpointRepo llmproxy.EndpointRepository, credRepo llmproxy.OAuthCredentialRepository) port.ReauthOAuthHandler {
-	return &oauthReauthHandler{flowStore: flowStore, clients: clients, endpointRepo: endpointRepo, credRepo: credRepo}
+func NewOAuthReauthHandler(flowStore service.OAuthFlowStore, clients map[enum.OAuthProvider]service.OAuthProviderClient, endpointRepo llmproxy.EndpointRepository, credRepo llmproxy.OAuthCredentialRepository, accessCache service.OAuthAccessCache) port.ReauthOAuthHandler {
+	return &oauthReauthHandler{flowStore: flowStore, clients: clients, endpointRepo: endpointRepo, credRepo: credRepo, accessCache: accessCache}
 }
 
 // Handle 重新授权既有订阅端点：更新凭据并恢复 active。
@@ -96,6 +97,9 @@ func (h *oauthReauthHandler) Handle(ctx context.Context, cmd port.ReauthOAuthCom
 		log.Error("[OAuthReauth] Save credential failed", zap.Error(err))
 		return err
 	}
+	// 旧 access token 可能已被上游吊销：必须失效缓存，否则缓存命中会让
+	// "重新授权恢复"在旧 token 的剩余 TTL 内继续使用死 token（C1 修复）
+	h.accessCache.Delete(ctx, cmd.EndpointID)
 	log.Info("[OAuthReauth] OAuth endpoint reauthorized",
 		zap.Uint("endpointID", cmd.EndpointID), zap.String("provider", string(provider)))
 	return nil

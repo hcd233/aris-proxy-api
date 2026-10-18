@@ -1,6 +1,7 @@
 package transport_test
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -36,15 +37,22 @@ func TestCodexOAuthUpstreamTransform(t *testing.T) {
 	proxy := transport.NewOpenAIProxy(inflight.NewTracker(), guard)
 	ep := vo.NewUpstreamEndpointFromCredential("gpt-5-codex", "codex-token-1", mock.URL, enum.EndpointAuthOAuthOpenAI, "acc-1", "oauth:9")
 
-	body := []byte(`{"model":"gpt-5-codex","store":true,"stream":false,"temperature":0.9,"top_p":0.5,"max_output_tokens":1234,"reasoning":{"effort":"medium"},"input":"hello"}`)
-	stream, err := proxy.OpenCreateResponseStream(t.Context(), ep, body)
+	// 模拟客户端透传 aris 侧密钥（Review Focus 3：OAuth 转发必须删除，不得到达上游）
+	ctx := context.WithValue(t.Context(), constant.CtxKeyPassthroughHeaders, map[string]string{
+		constant.HTTPHeaderAPIKey: "sk-aris-secret",
+	})
+	body := []byte(`{"model":"gpt-5-codex","store":true,"stream":false,"temperature":0.9,"top_p":0.5,"max_output_tokens":1234,"metadata":{"k":"v"},"user":"u","truncation":"auto","prompt_cache_retention":"24h","safety_identifier":"s","stream_options":{"include_usage":true},"reasoning":{"effort":"medium"},"input":"hello"}`)
+	stream, err := proxy.OpenCreateResponseStream(ctx, ep, body)
 	if err != nil {
 		t.Fatalf("open response stream: %v", err)
 	}
 	_, _ = io.Copy(io.Discard, stream) //nolint:errcheck // 读尽以便服务端断言完成
 	_ = stream.Close()                 //nolint:errcheck // 测试辅助关闭
 
-	// headers：Codex 身份与账户头
+	// headers：Codex 身份与账户头；x-api-key 必须被删除
+	if got := gotHeader.Get(constant.HTTPHeaderAPIKey); got != "" {
+		t.Fatalf("x-api-key must be dropped for codex oauth upstream, got %q", got)
+	}
 	if got := gotHeader.Get(constant.HTTPHeaderChatGPTAccountID); got != "acc-1" {
 		t.Fatalf("chatgpt-account-id = %q", got)
 	}
@@ -68,7 +76,7 @@ func TestCodexOAuthUpstreamTransform(t *testing.T) {
 	if stream_, _ := gotBody["stream"].(bool); !stream_ {
 		t.Fatalf("stream must be forced true, got %#v", gotBody["stream"])
 	}
-	for _, field := range []string{"temperature", "top_p", "max_output_tokens"} {
+	for _, field := range []string{"temperature", "top_p", "max_output_tokens", "metadata", "user", "truncation", "prompt_cache_retention", "safety_identifier", "stream_options"} {
 		if _, ok := gotBody[field]; ok {
 			t.Fatalf("field %q must be stripped for codex oauth", field)
 		}

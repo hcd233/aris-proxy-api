@@ -123,8 +123,12 @@ func TestSweepOAuthMaintenanceContinuesAfterProbeFailure(t *testing.T) {
 	if client.probeCalls != 2 {
 		t.Fatalf("probe calls = %d, want 2 (loop must continue)", client.probeCalls)
 	}
-	if repo.saveCalls != 0 {
-		t.Fatalf("save calls = %d, want 0 (failed probes must not persist)", repo.saveCalls)
+	// M1：探测失败写 last_error 供展示（不改状态机），每个失败账号 save 一次
+	if repo.saveCalls != 2 {
+		t.Fatalf("save calls = %d, want 2 (probe error must be persisted)", repo.saveCalls)
+	}
+	if repo.creds[0].LastError() == "" || repo.creds[0].Status() != enum.OAuthCredentialStatusActive {
+		t.Fatalf("probe failure must set last_error without changing status: %q/%q", repo.creds[0].LastError(), repo.creds[0].Status())
 	}
 }
 

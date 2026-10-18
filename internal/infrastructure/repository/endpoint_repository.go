@@ -213,12 +213,16 @@ func (r *endpointRepository) Delete(ctx context.Context, id uint, scopeUserID *u
 	return nil
 }
 
-// DeleteCascade 级联删除端点及其关联模型（事务保护；scopeUserID 非 nil 时精确匹配 user_id）
+// DeleteCascade 级联删除端点及其关联模型与 OAuth 凭据（事务保护；scopeUserID 非 nil 时精确匹配 user_id）
 func (r *endpointRepository) DeleteCascade(ctx context.Context, id uint, scopeUserID *uint) error {
 	db := r.db.WithContext(ctx)
 	if err := db.Transaction(func(tx *gorm.DB) error {
 		if err := r.modelDAO.BatchDeleteByField(tx, constant.FieldEndpointID, []uint{id}); err != nil {
 			return ierr.Wrap(ierr.ErrDBDelete, err, "cascade delete models by endpoint id")
+		}
+		// 凭据随端点删除：密文 token 不留存（安全预期），同时避免维护 cron 持续刷新孤儿凭据
+		if err := tx.Where(constant.WhereEndpointIDEquals, id).Delete(&dbmodel.EndpointOAuthCredential{}).Error; err != nil {
+			return ierr.Wrap(ierr.ErrDBDelete, err, "cascade delete oauth credential by endpoint id")
 		}
 		if err := r.endpointDAO.Delete(scopedDB(tx, scopeUserID), &dbmodel.Endpoint{ID: id}); err != nil {
 			return ierr.Wrap(ierr.ErrDBDelete, err, "delete endpoint")

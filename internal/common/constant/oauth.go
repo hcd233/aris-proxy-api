@@ -128,6 +128,11 @@ const (
 	OAuthReasonRefreshInProgress  = "refresh in progress elsewhere"
 	OAuthReasonRefreshFailed      = "refresh failed: "
 
+	// OAuthReasonQuotaProbeFailed 额度探测失败写入 last_error 的前缀
+	OAuthReasonQuotaProbeFailed = "quota probe failed: "
+	// OAuthErrorReasonMaxLength 上游错误摘要最大长度（落库/展示前的清洗上限）
+	OAuthErrorReasonMaxLength = 200
+
 	// OAuthEndpointStableKeyTemplate OAuth 端点稳定身份（%d = endpointID）：
 	// 熔断/并发隔离键与指标 label 的替代输入，避免 token 轮换导致键漂移
 	OAuthEndpointStableKeyTemplate = "oauth:%d"

@@ -17,7 +17,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/inflight"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
-	commonutil "github.com/hcd233/aris-proxy-api/internal/common/util"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/httpclient"
@@ -192,7 +191,7 @@ func (p *openAIProxy) sendUpstreamRequestOnce(ctx context.Context, ep vo.Upstrea
 
 	log.Info("[OpenAIProxy] Send upstream request", zap.String("upstreamURL", upstreamURL),
 		zap.String("upstreamModel", ep.Model),
-		zap.String("upstreamAPIKey", commonutil.MaskSecret(ep.APIKey)),
+		zap.String("upstreamCredential", upstreamCredLabel(ep)),
 		zap.Any("upstreamHeaders", util.MaskHTTPHeadersForLog(req.Header)),
 		zap.Any("upstreamRequestSummary", parseUpstreamRequestSummary(body)),
 	)

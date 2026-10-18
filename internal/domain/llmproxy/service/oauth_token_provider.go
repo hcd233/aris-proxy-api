@@ -34,4 +34,7 @@ type OAuthAccessCache interface {
 	Get(ctx context.Context, endpointID uint) (OAuthAccess, bool)
 	// Put 写入缓存（ttl 由调用方按剩余有效期计算）
 	Put(ctx context.Context, endpointID uint, access OAuthAccess, ttl time.Duration)
+	// Delete 失效缓存（重新授权后必须调用：旧 token 可能已被上游吊销，
+	// 缓存命中会让"重授权恢复"在 TTL 内失效）
+	Delete(ctx context.Context, endpointID uint)
 }

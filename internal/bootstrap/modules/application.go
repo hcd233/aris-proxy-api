@@ -247,8 +247,8 @@ func NewOAuthExchangeHandler(flowStore llmproxyservice.OAuthFlowStore, clients m
 	return endpointcommand.NewOAuthExchangeHandler(flowStore, clients, repo)
 }
 
-func NewOAuthReauthHandler(flowStore llmproxyservice.OAuthFlowStore, clients map[enum.OAuthProvider]llmproxyservice.OAuthProviderClient, endpointRepo llmproxy.EndpointRepository, credRepo llmproxy.OAuthCredentialRepository) endpointport.ReauthOAuthHandler {
-	return endpointcommand.NewOAuthReauthHandler(flowStore, clients, endpointRepo, credRepo)
+func NewOAuthReauthHandler(flowStore llmproxyservice.OAuthFlowStore, clients map[enum.OAuthProvider]llmproxyservice.OAuthProviderClient, endpointRepo llmproxy.EndpointRepository, credRepo llmproxy.OAuthCredentialRepository, accessCache llmproxyservice.OAuthAccessCache) endpointport.ReauthOAuthHandler {
+	return endpointcommand.NewOAuthReauthHandler(flowStore, clients, endpointRepo, credRepo, accessCache)
 }
 
 func NewGetOAuthQuotaHandler(endpointRepo llmproxy.EndpointRepository, credRepo llmproxy.OAuthCredentialRepository) endpointport.GetOAuthQuotaHandler {

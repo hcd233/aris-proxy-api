@@ -154,6 +154,23 @@ func (f *fakeOAuthCredRepo) ListActive(context.Context) ([]*aggregate.OAuthCrede
 
 var _ llmproxy.OAuthCredentialRepository = (*fakeOAuthCredRepo)(nil)
 
+// fakeReauthAccessCache 记录 Delete 调用（C1：重新授权必须失效 access 缓存）
+type fakeReauthAccessCache struct {
+	deleteCalls []uint
+}
+
+func (f *fakeReauthAccessCache) Get(context.Context, uint) (service.OAuthAccess, bool) {
+	return service.OAuthAccess{}, false
+}
+
+func (f *fakeReauthAccessCache) Put(context.Context, uint, service.OAuthAccess, time.Duration) {}
+
+func (f *fakeReauthAccessCache) Delete(_ context.Context, endpointID uint) {
+	f.deleteCalls = append(f.deleteCalls, endpointID)
+}
+
+var _ service.OAuthAccessCache = (*fakeReauthAccessCache)(nil)
+
 // ── 测试 ──
 
 // TestExchangeCreatesOAuthEndpointAndCredential 成功路径：固定连接字段写入 + 凭据落库。
@@ -276,7 +293,8 @@ func TestReauthUpdatesExistingCredential(t *testing.T) {
 
 	ender := &fakeEndpointFinder{stubEndpointRepoForOAuth: &stubEndpointRepoForOAuth{}, endpoint: ep}
 	credRepo := &fakeOAuthCredRepo{cred: existing}
-	handler := command.NewOAuthReauthHandler(store, newProviderMap(provider), ender, credRepo)
+	accessCache := &fakeReauthAccessCache{}
+	handler := command.NewOAuthReauthHandler(store, newProviderMap(provider), ender, credRepo, accessCache)
 	if err := store.Put(t.Context(), "st-4", vo.OAuthFlow{UserID: 9, Provider: enum.OAuthProviderAnthropic, Verifier: "v-4", CreatedAt: time.Now()}); err != nil {
 		t.Fatalf("seed flow: %v", err)
 	}
@@ -294,6 +312,10 @@ func TestReauthUpdatesExistingCredential(t *testing.T) {
 	if credRepo.cred.AccessToken() != "at-new" || credRepo.cred.Status() != enum.OAuthCredentialStatusActive || credRepo.cred.LastError() != "" {
 		t.Fatalf("credential not refreshed: status=%q err=%q", credRepo.cred.Status(), credRepo.cred.LastError())
 	}
+	// C1：旧 access token 可能已被吊销，重新授权必须失效缓存（否则死 token 在 TTL 内继续被使用）
+	if len(accessCache.deleteCalls) != 1 || accessCache.deleteCalls[0] != 5 {
+		t.Fatalf("reauth must invalidate access cache for endpoint 5, got %v", accessCache.deleteCalls)
+	}
 }
 
 // TestReauthRejectsNonOAuthEndpoint 非 OAuth 端点拒绝重新授权。
@@ -307,7 +329,7 @@ func TestReauthRejectsNonOAuthEndpoint(t *testing.T) {
 		t.Fatalf("create endpoint: %v", err)
 	}
 	ender := &fakeEndpointFinder{stubEndpointRepoForOAuth: &stubEndpointRepoForOAuth{}, endpoint: apiKeyEp}
-	handler := command.NewOAuthReauthHandler(store, newProviderMap(provider), ender, &fakeOAuthCredRepo{})
+	handler := command.NewOAuthReauthHandler(store, newProviderMap(provider), ender, &fakeOAuthCredRepo{}, &fakeReauthAccessCache{})
 	if err := store.Put(t.Context(), "st-5", vo.OAuthFlow{UserID: 9, Provider: enum.OAuthProviderAnthropic, Verifier: "v", CreatedAt: time.Now()}); err != nil {
 		t.Fatalf("seed flow: %v", err)
 	}

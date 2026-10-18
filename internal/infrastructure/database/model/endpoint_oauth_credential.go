@@ -21,7 +21,6 @@ type EndpointOAuthCredential struct {
 	LastError       string             `json:"last_error" gorm:"column:last_error;not null;default:'';comment:最近错误(脱敏展示)"`
 	QuotaSnapshot   OAuthQuotaSnapshot `json:"quota_snapshot" gorm:"column:quota_snapshot;not null;default:'{}';serializer:json;comment:额度快照JSON"`
 	QuotaUpdatedAt  time.Time          `json:"quota_updated_at" gorm:"column:quota_updated_at;comment:额度快照时间"`
-	DeletedAt       int64              `json:"deleted_at" gorm:"column:deleted_at;default:0;comment:删除时间"`
 }
 
 // OAuthQuotaSnapshot 额度快照 DB 形态（与 domain vo.QuotaSnapshot 字段对齐）

@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/bytedance/sonic"
@@ -69,7 +70,7 @@ func protocolError(resp *http.Response) *service.OAuthProtocolError {
 	if parsed.Error == "" {
 		parsed.Error = string(raw)
 	}
-	return &service.OAuthProtocolError{StatusCode: resp.StatusCode, Reason: parsed.Error}
+	return &service.OAuthProtocolError{StatusCode: resp.StatusCode, Reason: sanitizeErrorReason(parsed.Error)}
 }
 
 // parseTimeBestEffort 解析 RFC3339 时间；失败返回零值（展示用途，不阻断探测）
@@ -268,4 +269,13 @@ func (c *anthropicOAuthClient) ProbeQuota(ctx context.Context, accessToken, _ st
 	appendWindow(constant.OAuthQuotaWindowSevenDay, constant.OAuthQuotaWindowSevenDayMinutes, parsed.SevenDay)
 	appendWindow(constant.OAuthQuotaWindowSevenDaySonnet, constant.OAuthQuotaWindowSevenDayMinutes, parsed.SevenDaySonnet)
 	return &vo.QuotaSnapshot{Windows: windows, CapturedAt: time.Now()}, nil
+}
+
+// sanitizeErrorReason 清洗上游错误摘要：去换行、限长（该值会经 last_error 落库并下发管理端）。
+func sanitizeErrorReason(raw string) string {
+	cleaned := strings.TrimSpace(strings.NewReplacer("\n", " ", "\r", " ").Replace(raw))
+	if len(cleaned) > constant.OAuthErrorReasonMaxLength {
+		cleaned = cleaned[:constant.OAuthErrorReasonMaxLength]
+	}
+	return cleaned
 }

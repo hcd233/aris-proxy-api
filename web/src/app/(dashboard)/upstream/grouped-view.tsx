@@ -46,10 +46,12 @@ import { oauthBadgeKey, quotaPercent } from "./oauth-form";
 /** 组头的连通详情悬浮层：URL 可完整换行，不占列表列宽；订阅端点附账号/额度与运维动作 */
 function EndpointDetailPopover({
   endpoint,
+  isDemo,
   onReauthOAuth,
   onProbeOAuthQuota,
 }: {
   endpoint: UpstreamEndpointItem;
+  isDemo: boolean;
   onReauthOAuth: (ep: UpstreamEndpointItem) => void;
   onProbeOAuthQuota: (ep: UpstreamEndpointItem) => void;
 }) {
@@ -141,6 +143,8 @@ function EndpointDetailPopover({
                   size="sm"
                   variant="outline"
                   className="h-6 px-2 text-[11px]"
+                  disabled={isDemo}
+                  title={isDemo ? t("common.demo_locked") : undefined}
                   onClick={() => onReauthOAuth(endpoint)}
                 >
                   {t("oauth.reauth_action")}
@@ -149,6 +153,8 @@ function EndpointDetailPopover({
                   size="sm"
                   variant="outline"
                   className="h-6 px-2 text-[11px]"
+                  disabled={isDemo}
+                  title={isDemo ? t("common.demo_locked") : undefined}
                   onClick={() => onProbeOAuthQuota(endpoint)}
                 >
                   {t("oauth.probe_action")}
@@ -285,6 +291,7 @@ export function GroupedView({
                     )}
                     <EndpointDetailPopover
                       endpoint={ep}
+                      isDemo={isDemo}
                       onReauthOAuth={onReauthOAuth}
                       onProbeOAuthQuota={onProbeOAuthQuota}
                     />
@@ -517,6 +524,7 @@ export function GroupedView({
                       </span>
                       <EndpointDetailPopover
                         endpoint={ep}
+                        isDemo={isDemo}
                         onReauthOAuth={onReauthOAuth}
                         onProbeOAuthQuota={onProbeOAuthQuota}
                       />

@@ -642,11 +642,6 @@ class ApiClient {
     });
   }
 
-  /** 读取订阅端点凭据状态与额度快照 */
-  async getOAuthQuota(id: number): Promise<OAuthQuotaRspBody> {
-    return this.request<OAuthQuotaRspBody>(`${API_PREFIX}/endpoint/oauth/quota?id=${id}`);
-  }
-
   /** 手动触发一次额度探测（同步返回最新快照） */
   async probeOAuthQuota(id: number): Promise<OAuthQuotaRspBody> {
     return this.request<OAuthQuotaRspBody>(`${API_PREFIX}/endpoint/oauth/probe?id=${id}`, {

@@ -135,7 +135,7 @@ func newFixture(t *testing.T) *fixture {
 		Delete:   endpointcommand.NewDeleteEndpointHandler(endpointRepo),
 		OAuth:    endpointcommand.NewOAuthAuthorizeHandler(flowStore, clients),
 		Exchange: endpointcommand.NewOAuthExchangeHandler(flowStore, clients, oauthEndpointRepo),
-		Reauth:   endpointcommand.NewOAuthReauthHandler(flowStore, clients, endpointRepo, credRepo),
+		Reauth:   endpointcommand.NewOAuthReauthHandler(flowStore, clients, endpointRepo, credRepo, cache.NewOAuthAccessCache(rdb)),
 		Quota:    endpointquery.NewGetOAuthQuotaHandler(endpointRepo, credRepo),
 		Probe:    endpointcommand.NewOAuthProbeHandler(endpointRepo, credRepo, tokens, clients),
 	})

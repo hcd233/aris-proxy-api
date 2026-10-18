@@ -96,6 +96,10 @@ export default function UpstreamPage() {
   const [oauthAuthorizeURL, setOauthAuthorizeURL] = useState<string | null>(null);
   const [oauthBusy, setOauthBusy] = useState(false);
   const [reauthTarget, setReauthTarget] = useState<UpstreamEndpointItem | null>(null);
+  // 编辑中的端点认证类型：OAuth 端点的连接字段是服务端固定值，保存时仅提交 name
+  const [editingEndpointAuthType, setEditingEndpointAuthType] = useState<EndpointAuthType | null>(
+    null,
+  );
   const [editingEndpointId, setEditingEndpointId] = useState<number | null>(null);
   const [endpointForm, setEndpointForm] = useState<EndpointForm>(emptyEndpointForm);
   // admin 代建下拉的候选用户（懒加载）
@@ -327,6 +331,7 @@ export default function UpstreamPage() {
 
   const openCreateEndpoint = () => {
     setEditingEndpointId(null);
+    setEditingEndpointAuthType(null);
     setEndpointForm(emptyEndpointForm);
     if (isAdmin()) void ensureUserOptions();
     setEndpointDialogOpen(true);
@@ -334,6 +339,7 @@ export default function UpstreamPage() {
 
   const openEditEndpoint = (ep: UpstreamEndpointItem) => {
     setEditingEndpointId(ep.id);
+    setEditingEndpointAuthType(ep.authType);
     setEndpointForm({
       name: ep.name,
       openaiBaseURL: ep.openaiBaseURL,
@@ -355,16 +361,25 @@ export default function UpstreamPage() {
     setSaving(true);
     try {
       if (editingEndpointId) {
-        await api.updateEndpoint(editingEndpointId, {
-          name: endpointForm.name,
-          openaiBaseURL: endpointForm.openaiBaseURL || undefined,
-          anthropicBaseURL: endpointForm.anthropicBaseURL || undefined,
-          apiKey: endpointForm.apiKey || undefined,
-          supportOpenAIChatCompletion: endpointForm.supportOpenAIChatCompletion,
-          supportOpenAIResponse: endpointForm.supportOpenAIResponse,
-          supportAnthropicMessage: endpointForm.supportAnthropicMessage,
-          supportOpenAIDecision: endpointForm.supportOpenAIDecision,
-        });
+        // OAuth 端点的连接字段/能力标记由服务端固定：仅提交 name，
+        // 否则会命中「connection fields are immutable」校验（评审 I4）
+        const isOAuthEndpoint =
+          editingEndpointAuthType !== null && editingEndpointAuthType !== "api_key";
+        await api.updateEndpoint(
+          editingEndpointId,
+          isOAuthEndpoint
+            ? { name: endpointForm.name }
+            : {
+                name: endpointForm.name,
+                openaiBaseURL: endpointForm.openaiBaseURL || undefined,
+                anthropicBaseURL: endpointForm.anthropicBaseURL || undefined,
+                apiKey: endpointForm.apiKey || undefined,
+                supportOpenAIChatCompletion: endpointForm.supportOpenAIChatCompletion,
+                supportOpenAIResponse: endpointForm.supportOpenAIResponse,
+                supportAnthropicMessage: endpointForm.supportAnthropicMessage,
+                supportOpenAIDecision: endpointForm.supportOpenAIDecision,
+              },
+        );
         toast.success(t("endpoints.updated_success"));
       } else {
         await api.createEndpoint({
@@ -875,6 +890,7 @@ export default function UpstreamPage() {
             isAdmin={isAdmin()}
             saving={saving}
             onSave={handleSaveEndpoint}
+            editingOAuth={editingEndpointAuthType !== null && editingEndpointAuthType !== "api_key"}
             authSelection={authSelectionForDialog(
               oauthMode,
               oauthForm.provider,

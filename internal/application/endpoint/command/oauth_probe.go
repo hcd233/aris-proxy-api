@@ -2,11 +2,13 @@ package command
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"go.uber.org/zap"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/endpoint/port"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
@@ -68,6 +70,11 @@ func (h *oauthProbeHandler) Handle(ctx context.Context, cmd port.ProbeOAuthQuota
 	snapshot, err := client.ProbeQuota(ctx, access.Token, access.AccountRef)
 	if err != nil {
 		log.Warn("[OAuthProbe] Quota probe failed", zap.Uint("endpointID", cmd.EndpointID), zap.Error(err))
+		// 写 last_error 供管理端展示（不改状态机，区别于刷新失败的 MarkReauth）
+		cred.SetLastError(fmt.Sprintf(constant.OAuthReasonQuotaProbeFailed+"%v", err))
+		if saveErr := h.credRepo.Save(ctx, cred); saveErr != nil {
+			log.Error("[OAuthProbe] Persist probe error failed", zap.Error(saveErr))
+		}
 		return nil, err
 	}
 	now := time.Now()

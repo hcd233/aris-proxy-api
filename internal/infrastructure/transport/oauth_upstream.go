@@ -12,6 +12,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	commonutil "github.com/hcd233/aris-proxy-api/internal/common/util"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 )
@@ -146,7 +147,9 @@ func stableHexDigest(input string) string {
 //
 // Authorization 覆盖为 Bearer <access token>；补 chatgpt-account-id（账号路由）、
 // originator/UA（客户端身份协议事实）、accept: text/event-stream（Codex 仅支持流式）。
+// Del x-api-key 与 Claude 分支同理：黑名单式透传会把 aris 侧密钥带给上游（安全项）。
 func applyOpenAIOAuthUpstream(header http.Header, ep vo.UpstreamEndpoint) {
+	header.Del(constant.HTTPHeaderAPIKey)
 	header.Set(constant.HTTPHeaderAuthorization, constant.HTTPAuthBearerPrefix+ep.APIKey)
 	header.Set(constant.HTTPHeaderChatGPTAccountID, ep.OAuthAccountID)
 	header.Set(constant.HTTPHeaderOriginator, constant.OAuthCodexOriginator)
@@ -156,8 +159,9 @@ func applyOpenAIOAuthUpstream(header http.Header, ep vo.UpstreamEndpoint) {
 
 // transformCodexOAuthBody 应用 Codex OAuth 端点的 body 特化（最小必要集，规格 §4.3）：
 //  1. 强制 store=false、stream=true（Codex 后端约束）；
-//  2. 删除上游不接受的字段——在 DTO 上置 nil（omitempty 后不再输出）；清单中不在
-//     DTO 内的字段（frequency_penalty 等）经 DTO 往返本就自然消失；
+//  2. 删除上游不接受的字段——在 DTO 上逐一置 nil（omitempty 后不再输出）；
+//     清单见 constant.OAuthCodexUpstreamRejectedFields（评审发现：仅清 3 项会漏掉
+//     metadata/truncation 等客户端可能携带的字段）；
 //  3. reasoning 存在时补 include=["reasoning.encrypted_content"]。
 //
 // instructions 保持客户端原值（未带则不填）：不引入来源不明的默认文本，
@@ -172,12 +176,28 @@ func transformCodexOAuthBody(body []byte) ([]byte, error) {
 	req.Store = &storeFalse
 	req.Stream = &streamTrue
 
+	// 删除清单中 DTO 存在的字段（其余如 frequency_penalty 不在 DTO，往返自然消失）
 	req.MaxOutputTokens = nil
 	req.Temperature = nil
 	req.TopP = nil
+	req.Metadata = nil
+	req.User = nil
+	req.PromptCacheRetention = nil
+	req.SafetyIdentifier = nil
+	req.StreamOptions = nil
+	req.Truncation = nil
 
 	if req.Reasoning != nil && !slices.Contains(req.Include, constant.OAuthCodexReasoningEncryptedInclude) {
 		req.Include = append(req.Include, constant.OAuthCodexReasoningEncryptedInclude)
 	}
 	return sonic.Marshal(&req)
+}
+
+// upstreamCredLabel 上游凭据的日志标签（键名避开 Key/Token 等敏感词，值经 OAuth 占位符化）：OAuth 端点的 APIKey 字段承载 access token，
+// 整体占位符化（MaskSecret 会暴露首尾各 4 字符，违背 token 不进日志的承诺）。
+func upstreamCredLabel(ep vo.UpstreamEndpoint) string {
+	if ep.AuthType.IsOAuth() {
+		return constant.MaskSecretPlaceholder
+	}
+	return commonutil.MaskSecret(ep.APIKey)
 }

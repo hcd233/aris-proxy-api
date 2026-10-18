@@ -41,6 +41,8 @@ export interface EndpointDialogProps {
   isAdmin: boolean;
   saving: boolean;
   onSave: () => void;
+  /** 编辑态目标为 OAuth 端点：连接字段服务端固定，仅名称可改 */
+  editingOAuth: boolean;
   /** 新建时的认证类型选择（api_key 走原表单；oauth_* 走授权面板） */
   authSelection: EndpointAuthType;
   onSelectAuth: (v: EndpointAuthType) => void;
@@ -65,6 +67,7 @@ export function EndpointDialog({
   isAdmin,
   saving,
   onSave,
+  editingOAuth,
   authSelection,
   onSelectAuth,
   oauthMode,
@@ -174,7 +177,7 @@ export function EndpointDialog({
               </Field>
             </>
           )}
-          {oauthMode === null && (
+          {oauthMode === null && !editingOAuth && (
             <Field>
               <FieldLabel htmlFor="ep-openai-url">{t("endpoints.openai_base_url")}</FieldLabel>
               <Input
@@ -185,7 +188,7 @@ export function EndpointDialog({
               />
             </Field>
           )}
-          {oauthMode === null && (
+          {oauthMode === null && !editingOAuth && (
             <Field>
               <FieldLabel htmlFor="ep-anthropic-url">
                 {t("endpoints.anthropic_base_url")}
@@ -198,7 +201,7 @@ export function EndpointDialog({
               />
             </Field>
           )}
-          {oauthMode === null && (
+          {oauthMode === null && !editingOAuth && (
             <Field>
               <FieldLabel htmlFor="ep-apikey">{t("endpoints.api_key")}</FieldLabel>
               <Input
@@ -210,7 +213,7 @@ export function EndpointDialog({
               />
             </Field>
           )}
-          {oauthMode === null && (
+          {oauthMode === null && !editingOAuth && (
             <FieldSet>
               <FieldLegend variant="label">{t("endpoints.capabilities")}</FieldLegend>
               <FieldGroup className="gap-2">

@@ -50,3 +50,8 @@ func (c *oauthAccessCache) Put(ctx context.Context, endpointID uint, access serv
 	}
 	_ = c.rdb.Set(ctx, fmt.Sprintf(constant.OAuthAccessKeyTemplate, endpointID), payload, ttl).Err() //nolint:errcheck // 缓存写失败仅降级到 DB 路径
 }
+
+// Delete 失效缓存（重新授权后调用）；失败仅降级（该端点下一次请求会重新走 DB）
+func (c *oauthAccessCache) Delete(ctx context.Context, endpointID uint) {
+	_ = c.rdb.Del(ctx, fmt.Sprintf(constant.OAuthAccessKeyTemplate, endpointID)).Err() //nolint:errcheck // 删除失败仅降级
+}

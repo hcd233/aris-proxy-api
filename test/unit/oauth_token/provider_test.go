@@ -21,10 +21,16 @@ import (
 
 type fakeCredRepo struct {
 	cred     *aggregate.OAuthCredential
+	second   *aggregate.OAuthCredential // 非 nil 时第二次 Find 返回它（锁内双检场景）
+	findCall int
 	saveCall int
 }
 
 func (f *fakeCredRepo) FindByEndpointID(context.Context, uint) (*aggregate.OAuthCredential, error) {
+	f.findCall++
+	if f.findCall > 1 && f.second != nil {
+		return f.second, nil
+	}
 	return f.cred, nil
 }
 
@@ -57,6 +63,8 @@ func (f *fakeAccessCache) Put(_ context.Context, _ uint, access service.OAuthAcc
 	f.putCall++
 	f.access, f.present, f.lastTTL = access, true, ttl
 }
+
+func (f *fakeAccessCache) Delete(context.Context, uint) {}
 
 type fakeLocker struct{ locked bool }
 
@@ -229,4 +237,11 @@ func TestReauthRequiredFastFails(t *testing.T) {
 	if client.refreshCall != 0 {
 		t.Fatal("reauth_required must not attempt refresh")
 	}
+}
+
+// isSwitchable 断言错误可切换（OAuthCredentialError 已在 CanSwitchEndpoint 白名单）
+func isSwitchable(t *testing.T, err error) bool {
+	t.Helper()
+	var oauthErr *model.OAuthCredentialError
+	return errors.As(err, &oauthErr)
 }
