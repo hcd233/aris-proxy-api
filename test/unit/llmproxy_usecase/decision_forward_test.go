@@ -72,7 +72,7 @@ func (s *decisionTaskSubmitter) SubmitMessageStoreTask(task *dto.MessageStoreTas
 var _ usecase.TaskSubmitter = (*decisionTaskSubmitter)(nil)
 
 func buildDecisionEndpoint() *aggregate.Endpoint {
-	ep, _ := aggregate.CreateEndpoint(5, "decision-endpoint", "https://api.openai.com", "", "sk-test", false, false, false, true)
+	ep, _ := aggregate.CreateEndpoint(5, "decision-endpoint", "https://api.openai.com", "", "sk-test", false, false, false, true, enum.EndpointAuthAPIKey)
 	return ep
 }
 

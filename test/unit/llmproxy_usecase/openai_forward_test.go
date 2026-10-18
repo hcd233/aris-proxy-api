@@ -180,7 +180,7 @@ func buildCompatEndpoint(name string, supportChat, supportResponse, supportMessa
 	if supportMessage {
 		anthropicBaseURL = "https://api.anthropic.com"
 	}
-	ep, _ := aggregate.CreateEndpoint(1, name, openaiBaseURL, anthropicBaseURL, "test-api-key", supportChat, supportResponse, supportMessage, false)
+	ep, _ := aggregate.CreateEndpoint(1, name, openaiBaseURL, anthropicBaseURL, "test-api-key", supportChat, supportResponse, supportMessage, false, enum.EndpointAuthAPIKey)
 	return ep
 }
 
@@ -680,12 +680,12 @@ func TestOpenAICreateChatCompletion_ViaAnthropicStream_OpenErrorSkipsRead(t *tes
 func TestSelectCompatRoute_DecisionNativeOnly(t *testing.T) {
 	t.Parallel()
 
-	decisionEp, _ := aggregate.CreateEndpoint(3, "decision-only", "https://api.openai.com", "", "sk-test", false, false, false, true)
+	decisionEp, _ := aggregate.CreateEndpoint(3, "decision-only", "https://api.openai.com", "", "sk-test", false, false, false, true, enum.EndpointAuthAPIKey)
 	if route := usecase.SelectCompatRoute(enum.ProxyAPIOpenAIDecision, decisionEp); route != enum.CompatRouteNative {
 		t.Fatalf("decision-only route = %v, want native", route)
 	}
 
-	chatEp, _ := aggregate.CreateEndpoint(4, "chat-only", "https://api.openai.com", "", "sk-test", true, false, false, false)
+	chatEp, _ := aggregate.CreateEndpoint(4, "chat-only", "https://api.openai.com", "", "sk-test", true, false, false, false, enum.EndpointAuthAPIKey)
 	if route := usecase.SelectCompatRoute(enum.ProxyAPIOpenAIDecision, chatEp); route != enum.CompatRouteUnsupported {
 		t.Fatalf("chat-only route = %v, want unsupported", route)
 	}

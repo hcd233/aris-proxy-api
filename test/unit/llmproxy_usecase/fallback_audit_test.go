@@ -63,7 +63,7 @@ func (p *sequencedDecisionProxy) ForwardCreateDecision(_ context.Context, _ vo.U
 
 func decisionCandidate(t *testing.T, id uint, name string) service.Candidate {
 	t.Helper()
-	ep, err := aggregate.CreateEndpoint(id, name, "https://api.openai.com", "", "sk-test", false, false, false, true)
+	ep, err := aggregate.CreateEndpoint(id, name, "https://api.openai.com", "", "sk-test", false, false, false, true, enum.EndpointAuthAPIKey)
 	if err != nil {
 		t.Fatalf("CreateEndpoint: %v", err)
 	}

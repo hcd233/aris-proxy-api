@@ -143,6 +143,7 @@ const (
 	FieldEndpointOpenaiBaseURL               = "openai_base_url"
 	FieldEndpointAnthropicBaseURL            = "anthropic_base_url"
 	FieldEndpointAPIKey                      = "api_key"
+	FieldEndpointAuthType                    = "auth_type"
 	FieldEndpointSupportOpenAIChatCompletion = "support_openai_chat_completion"
 	FieldEndpointSupportOpenAIResponse       = "support_openai_response"
 	FieldEndpointSupportAnthropicMessage     = "support_anthropic_message"

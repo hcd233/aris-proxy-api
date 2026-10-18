@@ -11,6 +11,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
@@ -98,6 +99,7 @@ func toEndpointAggregate(m *dbmodel.Endpoint) *aggregate.Endpoint {
 		m.SupportOpenAIResponse,
 		m.SupportAnthropicMessage,
 		m.SupportOpenAIDecision,
+		enum.EndpointAuthType(m.AuthType),
 	)
 	ep.SetUserID(m.UserID)
 	ep.SetTimestamps(m.CreatedAt, m.UpdatedAt)
@@ -115,6 +117,7 @@ func toEndpointModel(ep *aggregate.Endpoint) *dbmodel.Endpoint {
 		SupportOpenAIResponse:       ep.SupportOpenAIResponse(),
 		SupportAnthropicMessage:     ep.SupportAnthropicMessage(),
 		SupportOpenAIDecision:       ep.SupportOpenAIDecision(),
+		AuthType:                    string(ep.AuthType()),
 	}
 }
 
