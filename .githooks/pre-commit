@@ -45,7 +45,8 @@ fi
 printf "$PASS agent instructions symlink sync\n"
 
 # --------------------------------------------------------------------------
-# 0b. skills symlink sync — mirror .agents/skills into IDE skill directories
+# 0b. skills symlink sync — mirror .agents/skills into agent skill directories
+#     (.claude/.codebuddy/.workbuddy/.zcode/.dsh；DSH 只认 .dsh/skills 的直接子级)
 # --------------------------------------------------------------------------
 printf "$INFO Running skills symlink sync ...\n"
 
@@ -54,17 +55,17 @@ if [ -f script/sync-skills-symlinks.sh ]; then
     if ! sh script/sync-skills-symlinks.sh; then
         fail "skills symlink sync failed. Please fix the issues above before committing."
     fi
-    SKILLS_CHANGES=$(git status --porcelain -- .claude/skills .codebuddy/skills .workbuddy/skills .zcode/skills)
+    SKILLS_CHANGES=$(git status --porcelain -- .claude/skills .codebuddy/skills .workbuddy/skills .zcode/skills .dsh/skills)
     if [ -n "$SKILLS_CHANGES" ]; then
         printf "$INFO skills symlinks changed after sync (auto-staging):\n"
         echo "$SKILLS_CHANGES" | sed 's/^/       /'
         echo ""
-        # 只暂存「已跟踪项的变更」+「软链本身」：这 4 个目录同时被 IDE 当作个人
+        # 只暂存「已跟踪项的变更」+「软链本身」：这 5 个目录同时被各 agent 当作个人
         # skill / 配置区，整目录 `git add` 会把未跟踪的个人文件一并带入提交。
-        if ! git add -u -- .claude/skills .codebuddy/skills .workbuddy/skills .zcode/skills; then
+        if ! git add -u -- .claude/skills .codebuddy/skills .workbuddy/skills .zcode/skills .dsh/skills; then
             fail "git add -u failed for skills symlink dirs"
         fi
-        find .claude/skills .codebuddy/skills .workbuddy/skills .zcode/skills -type l -print0 2>/dev/null \
+        find .claude/skills .codebuddy/skills .workbuddy/skills .zcode/skills .dsh/skills -type l -print0 2>/dev/null \
             | xargs -0 git add -- || fail "git add failed for new skill symlinks"
     fi
 else
