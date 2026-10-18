@@ -63,18 +63,30 @@ type UpstreamUserItem struct {
 //	@author centonhuang
 //	@update 2026-08-27 10:00:00
 type UpstreamEndpointItem struct {
-	ID                          uint              `json:"id" doc:"Endpoint ID"`
-	User                        *UpstreamUserItem `json:"user,omitempty" doc:"归属用户信息（用户缺失或已删除时缺省）"`
-	Name                        string            `json:"name" doc:"Endpoint 名称"`
-	OpenaiBaseURL               string            `json:"openaiBaseURL" doc:"OpenAI Base URL"`
-	AnthropicBaseURL            string            `json:"anthropicBaseURL" doc:"Anthropic Base URL"`
-	MaskedAPIKey                string            `json:"maskedAPIKey" doc:"Masked API Key"`
-	SupportOpenAIChatCompletion bool              `json:"supportOpenAIChatCompletion" doc:"是否支持 OpenAI Chat Completion"`
-	SupportOpenAIResponse       bool              `json:"supportOpenAIResponse" doc:"是否支持 OpenAI Response"`
-	SupportAnthropicMessage     bool              `json:"supportAnthropicMessage" doc:"是否支持 Anthropic Message"`
-	SupportOpenAIDecision       bool              `json:"supportOpenAIDecision" doc:"是否支持 OpenAI Decision"`
-	CreatedAt                   time.Time         `json:"createdAt" doc:"创建时间"`
-	UpdatedAt                   time.Time         `json:"updatedAt" doc:"更新时间"`
+	ID                          uint               `json:"id" doc:"Endpoint ID"`
+	User                        *UpstreamUserItem  `json:"user,omitempty" doc:"归属用户信息（用户缺失或已删除时缺省）"`
+	Name                        string             `json:"name" doc:"Endpoint 名称"`
+	OpenaiBaseURL               string             `json:"openaiBaseURL" doc:"OpenAI Base URL"`
+	AnthropicBaseURL            string             `json:"anthropicBaseURL" doc:"Anthropic Base URL"`
+	MaskedAPIKey                string             `json:"maskedAPIKey" doc:"Masked API Key"`
+	AuthType                    string             `json:"authType" doc:"认证类型(api_key/oauth_anthropic/oauth_openai)"`
+	OAuth                       *UpstreamOAuthItem `json:"oauth,omitempty" doc:"订阅凭据投影（仅 OAuth 端点）"`
+	SupportOpenAIChatCompletion bool               `json:"supportOpenAIChatCompletion" doc:"是否支持 OpenAI Chat Completion"`
+	SupportOpenAIResponse       bool               `json:"supportOpenAIResponse" doc:"是否支持 OpenAI Response"`
+	SupportAnthropicMessage     bool               `json:"supportAnthropicMessage" doc:"是否支持 Anthropic Message"`
+	SupportOpenAIDecision       bool               `json:"supportOpenAIDecision" doc:"是否支持 OpenAI Decision"`
+	CreatedAt                   time.Time          `json:"createdAt" doc:"创建时间"`
+	UpdatedAt                   time.Time          `json:"updatedAt" doc:"更新时间"`
+}
+
+// UpstreamOAuthItem 订阅端点凭据投影（仅展示字段；token 永不下发）
+type UpstreamOAuthItem struct {
+	AccountEmail   string              `json:"accountEmail,omitempty" doc:"账号邮箱"`
+	PlanType       string              `json:"planType,omitempty" doc:"订阅类型"`
+	Status         string              `json:"status" doc:"凭据状态(active/reauth_required)"`
+	LastError      string              `json:"lastError,omitempty" doc:"最近错误（脱敏展示）"`
+	Quota          *OAuthQuotaSnapshot `json:"quota,omitempty" doc:"额度快照"`
+	QuotaUpdatedAt *time.Time          `json:"quotaUpdatedAt,omitempty" doc:"额度快照采集时间"`
 }
 
 // UpstreamModelItem 组内 Model 条目

@@ -100,6 +100,8 @@ func toUpstreamEndpointItem(v *upstreamport.UpstreamEndpointView) *dto.UpstreamE
 		OpenaiBaseURL:               v.OpenaiBaseURL,
 		AnthropicBaseURL:            v.AnthropicBaseURL,
 		MaskedAPIKey:                v.MaskedAPIKey,
+		AuthType:                    v.AuthType,
+		OAuth:                       toUpstreamOAuthItem(v.OAuth),
 		SupportOpenAIChatCompletion: v.SupportOpenAIChatCompletion,
 		SupportOpenAIResponse:       v.SupportOpenAIResponse,
 		SupportAnthropicMessage:     v.SupportAnthropicMessage,
@@ -107,6 +109,38 @@ func toUpstreamEndpointItem(v *upstreamport.UpstreamEndpointView) *dto.UpstreamE
 		CreatedAt:                   v.CreatedAt,
 		UpdatedAt:                   v.UpdatedAt,
 	}
+}
+
+// toUpstreamOAuthItem 订阅凭据投影 → DTO（额度扁平结构逐字段映射，无 domain 依赖）
+func toUpstreamOAuthItem(v *upstreamport.UpstreamOAuthView) *dto.UpstreamOAuthItem {
+	if v == nil {
+		return nil
+	}
+	item := &dto.UpstreamOAuthItem{
+		AccountEmail:   v.AccountEmail,
+		PlanType:       v.PlanType,
+		Status:         v.Status,
+		LastError:      v.LastError,
+		QuotaUpdatedAt: v.QuotaUpdatedAt,
+	}
+	if v.Quota != nil {
+		// 用 for-range 逐字段映射（不显式引用 domain vo 类型，规避 handler 层 domain 依赖规则）
+		windows := make([]dto.OAuthQuotaWindow, 0, len(v.Quota.Windows))
+		for _, w := range v.Quota.Windows {
+			windows = append(windows, dto.OAuthQuotaWindow{
+				Key:           w.Key,
+				UsedPercent:   w.UsedPercent,
+				ResetsAt:      w.ResetsAt,
+				WindowMinutes: w.WindowMinutes,
+			})
+		}
+		item.Quota = &dto.OAuthQuotaSnapshot{
+			Windows:    windows,
+			PlanType:   v.Quota.PlanType,
+			CapturedAt: v.Quota.CapturedAt,
+		}
+	}
+	return item
 }
 
 func toUpstreamModelItem(v *upstreamport.UpstreamModelView) *dto.UpstreamModelItem {
