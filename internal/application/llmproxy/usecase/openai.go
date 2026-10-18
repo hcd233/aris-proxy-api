@@ -247,7 +247,13 @@ func (u *openAIUseCase) CreateResponse(ctx context.Context, req *dto.OpenAICreat
 	var compatRoute enum.CompatRoute
 	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
 	affKey, _ := AffinityKey(ctx, model, firstUserTextResponse(req.Body.Input))
+	isStream := lo.FromPtr(req.Body.Stream)
 	cands, err := u.resolver.ResolveCandidatesWithAffinity(ctx, userID, vo.EndpointAlias(model), affKey, func(ep *aggregate.Endpoint) bool {
+		// Codex 订阅端点要求 stream=true（上游约束）：非流式请求排除该候选，
+		// 让 api_key 端点兜底；全部候选被排除时按 model not found 语义返回。
+		if ep.AuthType() == enum.EndpointAuthOAuthOpenAI && !isStream {
+			return false
+		}
 		return SelectCompatRoute(enum.ProxyAPIOpenAIResponse, ep) != enum.CompatRouteUnsupported
 	})
 	if err != nil {

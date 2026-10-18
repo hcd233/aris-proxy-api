@@ -139,3 +139,45 @@ func stableHexDigest(input string) string {
 	sum := sha256.Sum256([]byte(input))
 	return hex.EncodeToString(sum[:8])
 }
+
+// ──────────────────────────── Codex（oauth_openai）────────────────────────────
+
+// applyOpenAIOAuthUpstream 应用 Codex OAuth 端点的请求头特化。
+//
+// Authorization 覆盖为 Bearer <access token>；补 chatgpt-account-id（账号路由）、
+// originator/UA（客户端身份协议事实）、accept: text/event-stream（Codex 仅支持流式）。
+func applyOpenAIOAuthUpstream(header http.Header, ep vo.UpstreamEndpoint) {
+	header.Set(constant.HTTPHeaderAuthorization, constant.HTTPAuthBearerPrefix+ep.APIKey)
+	header.Set(constant.HTTPHeaderChatGPTAccountID, ep.OAuthAccountID)
+	header.Set(constant.HTTPHeaderOriginator, constant.OAuthCodexOriginator)
+	header.Set(constant.HTTPHeaderUserAgent, constant.OAuthCodexUserAgent)
+	header.Set(constant.HTTPHeaderAccept, constant.HTTPContentTypeEventStream)
+}
+
+// transformCodexOAuthBody 应用 Codex OAuth 端点的 body 特化（最小必要集，规格 §4.3）：
+//  1. 强制 store=false、stream=true（Codex 后端约束）；
+//  2. 删除上游不接受的字段——在 DTO 上置 nil（omitempty 后不再输出）；清单中不在
+//     DTO 内的字段（frequency_penalty 等）经 DTO 往返本就自然消失；
+//  3. reasoning 存在时补 include=["reasoning.encrypted_content"]。
+//
+// instructions 保持客户端原值（未带则不填）：不引入来源不明的默认文本，
+// 若实测上游拒绝空 instructions，再从 Apache-2.0 许可的 openai/codex 取文案补充。
+func transformCodexOAuthBody(body []byte) ([]byte, error) {
+	var req dto.OpenAICreateResponseReq
+	if err := sonic.Unmarshal(body, &req); err != nil {
+		return nil, ierr.Wrap(ierr.ErrProxyRequest, err, "decode codex body for oauth transform")
+	}
+	storeFalse := false
+	streamTrue := true
+	req.Store = &storeFalse
+	req.Stream = &streamTrue
+
+	req.MaxOutputTokens = nil
+	req.Temperature = nil
+	req.TopP = nil
+
+	if req.Reasoning != nil && !slices.Contains(req.Include, constant.OAuthCodexReasoningEncryptedInclude) {
+		req.Include = append(req.Include, constant.OAuthCodexReasoningEncryptedInclude)
+	}
+	return sonic.Marshal(&req)
+}

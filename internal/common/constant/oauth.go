@@ -173,6 +173,8 @@ const (
 	OAuthCodexOriginator = "codex_cli_rs"
 	// OAuthCodexUserAgent Codex 客户端 UA（转发路径同用；版本低于 0.144.0 上游返回 404）
 	OAuthCodexUserAgent = "codex_cli_rs/0.146.0 (Mac OS 15.0; arm64) terminal"
+	// OAuthCodexReasoningEncryptedInclude reasoning 存在时需补的 include 项
+	OAuthCodexReasoningEncryptedInclude = "reasoning.encrypted_content"
 )
 
 // 订阅额度窗口标识与窗口时长（vo.QuotaWindow.Key 的取值；时长用于展示）
@@ -198,3 +200,12 @@ const (
 	// OAuthSecondsPerMinute 秒转分钟换算基数（窗口时长从秒归一为展示分钟）
 	OAuthSecondsPerMinute = 60
 )
+
+// OAuthCodexUpstreamRejectedFields Codex 后端不接受的请求字段清单（规格 §4.3 删除清单；
+// 文档性清单：不在 aris DTO 内的字段经往返序列化自然不输出，实测被拒时按此清单对照排查）。
+var OAuthCodexUpstreamRejectedFields = []string{
+	"max_output_tokens", "max_completion_tokens", "temperature", "top_p",
+	"frequency_penalty", "presence_penalty", "user", "metadata",
+	"prompt_cache_retention", "safety_identifier", "stream_options",
+	"truncation", "stop_sequences",
+}
