@@ -196,6 +196,10 @@ func CanSwitchEndpoint(err error) bool {
 	if errors.As(err, &bulkheadErr) {
 		return true
 	}
+	var oauthErr *model.OAuthCredentialError
+	if errors.As(err, &oauthErr) {
+		return true
+	}
 	var proxyErr *port.ProxyError
 	if errors.As(err, &proxyErr) && proxyErr.Cause != nil {
 		return CanSwitchEndpoint(proxyErr.Cause)

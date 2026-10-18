@@ -103,6 +103,25 @@ const (
 	// OAuthTokenRefreshSkew access token 刷新提前量（请求路径判定"即将过期"即刷新）
 	OAuthTokenRefreshSkew = 3 * time.Minute
 
+	// OAuthTokenRefreshProactiveSkew cron 主动刷新提前量（大于请求路径提前量，
+	// 把刷新挪到低峰，降低请求路径的刷新概率）
+	OAuthTokenRefreshProactiveSkew = 30 * time.Minute
+
+	// OAuthRefreshLockTTL 刷新互斥锁 TTL（防持锁实例崩溃后的死锁）
+	OAuthRefreshLockTTL = 60 * time.Second
+
+	// OAuthAccessCacheGuard access token 缓存的安全余量（缓存 TTL = 剩余有效期 - 该值）
+	OAuthAccessCacheGuard = 60 * time.Second
+
+	// OAuthErrorInvalidGrant OAuth 上游"刷新令牌失效"错误码（标记需重新授权）
+	OAuthErrorInvalidGrant = "invalid_grant"
+
+	// OAuthCredentialError reason 文案（OAuthCredentialError 的 Reason 字段前缀）
+	OAuthReasonCredentialNotFound = "credential not found"
+	OAuthReasonReauthRequired     = "reauthorization required: "
+	OAuthReasonRefreshInProgress  = "refresh in progress elsewhere"
+	OAuthReasonRefreshFailed      = "refresh failed: "
+
 	// OAuthClaudeVerifierBytes Claude PKCE verifier 随机字节数（base64url 后 43 字符）
 	OAuthClaudeVerifierBytes = 32
 	// OAuthOpenAIVerifierBytes OpenAI PKCE verifier 随机字节数（hex 后 128 字符）
