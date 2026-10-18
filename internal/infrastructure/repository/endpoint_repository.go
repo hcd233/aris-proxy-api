@@ -471,3 +471,10 @@ func (r *endpointRepository) CreateWithOAuthCredential(ctx context.Context, ep *
 }
 
 var _ llmproxy.OAuthEndpointRepository = (*endpointRepository)(nil)
+
+// NewOAuthEndpointRepository 构造订阅端点原子创建仓储。
+//
+// 与 NewEndpointRepository 是同一实现的独立接口视图（fx 按接口类型分别注入）。
+func NewOAuthEndpointRepository(db *gorm.DB) llmproxy.OAuthEndpointRepository {
+	return &endpointRepository{endpointDAO: dao.GetEndpointDAO(), modelDAO: dao.GetModelDAO(), db: db}
+}

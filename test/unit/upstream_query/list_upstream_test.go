@@ -191,7 +191,7 @@ func testTime() time.Time { return time.Unix(1756000000, 0) }
 
 func newHandler(t *testing.T, eps map[uint]*llmagg.Endpoint, models []*llmagg.Model, users map[uint]*useragg.User) port.ListUpstreamHandler {
 	t.Helper()
-	return query.NewListUpstreamHandler(&fakeEndpointRepo{endpoints: eps}, &fakeModelRepo{models: models}, &fakeUserRepo{users: users})
+	return query.NewListUpstreamHandler(&fakeEndpointRepo{endpoints: eps}, &fakeModelRepo{models: models}, &fakeUserRepo{users: users}, &fakeOAuthCredRepo{})
 }
 
 func alice(t *testing.T) *useragg.User {

@@ -25,9 +25,11 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/jwt"
 	infraoauth "github.com/hcd233/aris-proxy-api/internal/infrastructure/oauth2"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/oauthprovider"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/transport"
+	"github.com/hcd233/aris-proxy-api/internal/lock"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/fx"
@@ -46,6 +48,12 @@ var RepositoryModule = fx.Module(constant.DigNameRepositoryModule,
 		NewEndpointRepository,
 		NewModelRepository,
 		NewEndpointReadRepository,
+		NewOAuthEndpointRepository,
+		NewOAuthCredentialRepository,
+		NewOAuthFlowStore,
+		NewOAuthAccessCache,
+		NewOAuthClients,
+		NewOAuthTokenProvider,
 		NewAudioDirCreator,
 		NewShareCache,
 		fx.Annotate(
@@ -120,6 +128,41 @@ func NewModelRepository(db *gorm.DB, readCache *cache.ReadCache) llmproxy.ModelR
 
 func NewEndpointReadRepository(db *gorm.DB, readCache *cache.ReadCache) llmproxy.EndpointReadRepository {
 	return repository.NewCachedEndpointReadRepository(db, readCache)
+}
+
+// NewOAuthEndpointRepository 订阅端点原子创建仓储（OAuthEndpointRepository 接口视图）
+func NewOAuthEndpointRepository(db *gorm.DB) llmproxy.OAuthEndpointRepository {
+	return repository.NewOAuthEndpointRepository(db)
+}
+
+// NewOAuthCredentialRepository 订阅账号凭据仓储（token 密文读写）
+func NewOAuthCredentialRepository(db *gorm.DB) llmproxy.OAuthCredentialRepository {
+	return repository.NewOAuthCredentialRepository(db)
+}
+
+// NewOAuthFlowStore 订阅账号授权流存储（Redis，一次性 Take）
+func NewOAuthFlowStore(redisClient *redis.Client) llmproxyservice.OAuthFlowStore {
+	return cache.NewOAuthFlowCache(redisClient)
+}
+
+// NewOAuthAccessCache 订阅账号 access token 缓存（Redis）
+func NewOAuthAccessCache(redisClient *redis.Client) llmproxyservice.OAuthAccessCache {
+	return cache.NewOAuthAccessCache(redisClient)
+}
+
+// NewOAuthClients 订阅账号 provider 客户端集合（Claude / Codex）
+func NewOAuthClients() map[enum.OAuthProvider]llmproxyservice.OAuthProviderClient {
+	return oauthprovider.NewClients()
+}
+
+// NewOAuthTokenProvider 订阅账号 token 提供者（锁/缓存/刷新）
+func NewOAuthTokenProvider(
+	credRepo llmproxy.OAuthCredentialRepository,
+	clients map[enum.OAuthProvider]llmproxyservice.OAuthProviderClient,
+	accessCache llmproxyservice.OAuthAccessCache,
+	redisClient *redis.Client,
+) llmproxyservice.OAuthTokenProvider {
+	return oauthprovider.NewOAuthTokenProvider(credRepo, clients, accessCache, lock.NewLocker(redisClient))
 }
 
 func NewAudioDirCreator() oauthport.ObjectStorageDirCreator {

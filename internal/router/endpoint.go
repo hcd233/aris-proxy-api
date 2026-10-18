@@ -47,6 +47,63 @@ func initEndpointRouter(endpointGroup huma.API, endpointHandler handler.Endpoint
 	}, endpointHandler.HandleUpdateEndpoint)
 
 	huma.Register(endpointGroup, huma.Operation{
+		OperationID: "authorizeOAuthEndpoint",
+		Method:      http.MethodPost,
+		Path:        "/oauth/authorize",
+		Summary:     "AuthorizeOAuthEndpoint",
+		Description: "Start subscription-account OAuth authorization and return the authorize URL",
+		Tags:        []string{constant.TagEndpoint},
+		Security: []map[string][]string{
+			{constant.SecuritySchemeJWT: {}},
+		},
+		Middlewares: huma.Middlewares{
+			middleware.LimitUserPermissionMiddleware("authorizeOAuthEndpoint", enum.PermissionUser),
+		},
+	}, endpointHandler.HandleAuthorizeOAuth)
+
+	huma.Register(endpointGroup, huma.Operation{
+		OperationID: "exchangeOAuthEndpoint",
+		Method:      http.MethodPost,
+		Path:        "/oauth/exchange",
+		Summary:     "ExchangeOAuthEndpoint",
+		Description: "Bind a subscription account as an endpoint using the authorization code",
+		Tags:        []string{constant.TagEndpoint},
+		Security: []map[string][]string{
+			{constant.SecuritySchemeJWT: {}},
+		},
+		Middlewares: huma.Middlewares{
+			middleware.LimitUserPermissionMiddleware("exchangeOAuthEndpoint", enum.PermissionUser),
+		},
+	}, endpointHandler.HandleExchangeOAuth)
+
+	huma.Register(endpointGroup, huma.Operation{
+		OperationID: "reauthOAuthEndpoint",
+		Method:      http.MethodPost,
+		Path:        "/oauth/reauth",
+		Summary:     "ReauthOAuthEndpoint",
+		Description: "Reauthorize an existing subscription endpoint with a fresh authorization code",
+		Tags:        []string{constant.TagEndpoint},
+		Security: []map[string][]string{
+			{constant.SecuritySchemeJWT: {}},
+		},
+		Middlewares: huma.Middlewares{
+			middleware.LimitUserPermissionMiddleware("reauthOAuthEndpoint", enum.PermissionUser),
+		},
+	}, endpointHandler.HandleReauthOAuth)
+
+	huma.Register(endpointGroup, huma.Operation{
+		OperationID: "getOAuthQuota",
+		Method:      http.MethodGet,
+		Path:        "/oauth/quota",
+		Summary:     "GetOAuthQuota",
+		Description: "Get subscription endpoint credential status and quota snapshot",
+		Tags:        []string{constant.TagEndpoint},
+		Security: []map[string][]string{
+			{constant.SecuritySchemeJWT: {}},
+		},
+	}, endpointHandler.HandleGetOAuthQuota)
+
+	huma.Register(endpointGroup, huma.Operation{
 		OperationID: "deleteEndpoint",
 		Method:      http.MethodDelete,
 		Path:        "",

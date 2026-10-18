@@ -25,12 +25,24 @@ type UpstreamEndpointView struct {
 	OpenaiBaseURL               string
 	AnthropicBaseURL            string
 	MaskedAPIKey                string
+	AuthType                    string             // api_key / oauth_anthropic / oauth_openai
+	OAuth                       *UpstreamOAuthView // 仅 OAuth 端点非 nil（凭据字段永不下发）
 	SupportOpenAIChatCompletion bool
 	SupportOpenAIResponse       bool
 	SupportAnthropicMessage     bool
 	SupportOpenAIDecision       bool
 	CreatedAt                   time.Time
 	UpdatedAt                   time.Time
+}
+
+// UpstreamOAuthView 订阅端点凭据投影（只含展示字段与额度快照；token 永不出现在视图）
+type UpstreamOAuthView struct {
+	AccountEmail   string // demo 视角掩码
+	PlanType       string
+	Status         string            // active / reauth_required
+	LastError      string            // demo 视角置空
+	Quota          *vo.QuotaSnapshot // 额度快照（未探测为 empty 窗口）
+	QuotaUpdatedAt *time.Time
 }
 
 // UpstreamModelView Model 只读投影（组内行）

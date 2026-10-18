@@ -125,7 +125,7 @@ func newCrossTenantFixture(t *testing.T) *crossTenantFixture {
 		Delete: modelcommand.NewDeleteModelHandler(modelRepo),
 	})
 	upstreamHandler := handler.NewUpstreamHandler(handler.UpstreamDependencies{
-		List: upstreamquery.NewListUpstreamHandler(endpointRepo, modelRepo, userRepo),
+		List: upstreamquery.NewListUpstreamHandler(endpointRepo, modelRepo, userRepo, repository.NewOAuthCredentialRepository(db)),
 	})
 
 	app := fiber.New()

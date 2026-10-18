@@ -9,12 +9,14 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/application/upstream/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	commonutil "github.com/hcd233/aris-proxy-api/internal/common/util"
 	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
 	identityaggregate "github.com/hcd233/aris-proxy-api/internal/domain/identity/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	llmagg "github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
+	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
@@ -22,11 +24,12 @@ type listUpstreamHandler struct {
 	endpointRepo llmproxy.EndpointRepository
 	modelRepo    llmproxy.ModelRepository
 	userRepo     identity.UserRepository
+	credRepo     llmproxy.OAuthCredentialRepository
 }
 
 // NewListUpstreamHandler 构造 upstream 分组列表查询处理器
-func NewListUpstreamHandler(endpointRepo llmproxy.EndpointRepository, modelRepo llmproxy.ModelRepository, userRepo identity.UserRepository) port.ListUpstreamHandler {
-	return &listUpstreamHandler{endpointRepo: endpointRepo, modelRepo: modelRepo, userRepo: userRepo}
+func NewListUpstreamHandler(endpointRepo llmproxy.EndpointRepository, modelRepo llmproxy.ModelRepository, userRepo identity.UserRepository, credRepo llmproxy.OAuthCredentialRepository) port.ListUpstreamHandler {
+	return &listUpstreamHandler{endpointRepo: endpointRepo, modelRepo: modelRepo, userRepo: userRepo, credRepo: credRepo}
 }
 
 // Handle 执行分组列表查询：endpoint 组分页，组内模型随组全量返回。
@@ -96,11 +99,12 @@ func (h *listUpstreamHandler) Handle(ctx context.Context, q port.ListUpstreamQue
 	pageIDs := matchedIDs[start:end]
 
 	usersByID := h.loadUsers(ctx, epsByID, modelsByEp)
+	credsByEp := h.loadOAuthCredentials(ctx, pageIDs, epsByID)
 
 	groups := make([]*port.UpstreamGroupView, 0, len(pageIDs))
 	var modelTotal int64
 	for _, id := range pageIDs {
-		groups = append(groups, h.toGroupView(ctx, epsByID[id], modelsByEp[id], usersByID, q.IsDemo))
+		groups = append(groups, h.toGroupView(ctx, epsByID[id], modelsByEp[id], usersByID, credsByEp[id], q.IsDemo))
 	}
 	// modelTotal 口径跟随当前筛选范围的全量模型数（含非当前页组），不受组内截断影响。
 	for _, id := range matchedIDs {
@@ -132,7 +136,27 @@ func (h *listUpstreamHandler) loadUsers(ctx context.Context, epsByID map[uint]*l
 	return users
 }
 
-func (h *listUpstreamHandler) toGroupView(ctx context.Context, ep *llmagg.Endpoint, models []*llmagg.Model, usersByID map[uint]*identityaggregate.User, isDemo bool) *port.UpstreamGroupView {
+// loadOAuthCredentials 拉取本页 OAuth 端点的凭据投影；查询失败 fail-soft（该组 OAuth 视图缺省）。
+func (h *listUpstreamHandler) loadOAuthCredentials(ctx context.Context, pageIDs []uint, epsByID map[uint]*llmagg.Endpoint) map[uint]*llmagg.OAuthCredential {
+	creds := make(map[uint]*llmagg.OAuthCredential)
+	for _, id := range pageIDs {
+		ep := epsByID[id]
+		if ep == nil || !ep.AuthType().IsOAuth() {
+			continue
+		}
+		cred, err := h.credRepo.FindByEndpointID(ctx, id)
+		if err != nil {
+			logger.WithCtx(ctx).Warn("[UpstreamQuery] Load oauth credential failed", zap.Uint("endpointID", id), zap.Error(err))
+			continue
+		}
+		if cred != nil {
+			creds[id] = cred
+		}
+	}
+	return creds
+}
+
+func (h *listUpstreamHandler) toGroupView(ctx context.Context, ep *llmagg.Endpoint, models []*llmagg.Model, usersByID map[uint]*identityaggregate.User, cred *llmagg.OAuthCredential, isDemo bool) *port.UpstreamGroupView {
 	mvs := lo.Map(models, func(m *llmagg.Model, _ int) *port.UpstreamModelView {
 		return toModelView(m, usersByID, isDemo)
 	})
@@ -149,7 +173,7 @@ func (h *listUpstreamHandler) toGroupView(ctx context.Context, ep *llmagg.Endpoi
 			zap.Int("limit", constant.UpstreamGroupModelLimit))
 	}
 	return &port.UpstreamGroupView{
-		Endpoint:        toEndpointView(ep, usersByID, isDemo),
+		Endpoint:        toEndpointView(ep, usersByID, cred, isDemo),
 		Models:          mvs,
 		ModelCount:      len(mvs),
 		TotalModelCount: totalModelCount,
@@ -157,7 +181,7 @@ func (h *listUpstreamHandler) toGroupView(ctx context.Context, ep *llmagg.Endpoi
 	}
 }
 
-func toEndpointView(ep *llmagg.Endpoint, usersByID map[uint]*identityaggregate.User, isDemo bool) *port.UpstreamEndpointView {
+func toEndpointView(ep *llmagg.Endpoint, usersByID map[uint]*identityaggregate.User, cred *llmagg.OAuthCredential, isDemo bool) *port.UpstreamEndpointView {
 	if ep == nil {
 		return nil
 	}
@@ -175,6 +199,8 @@ func toEndpointView(ep *llmagg.Endpoint, usersByID map[uint]*identityaggregate.U
 		OpenaiBaseURL:               openaiBaseURL,
 		AnthropicBaseURL:            anthropicBaseURL,
 		MaskedAPIKey:                commonutil.MaskSecret(ep.APIKey()),
+		AuthType:                    string(ep.AuthType()),
+		OAuth:                       toOAuthView(ep.AuthType(), cred, isDemo),
 		SupportOpenAIChatCompletion: ep.SupportOpenAIChatCompletion(),
 		SupportOpenAIResponse:       ep.SupportOpenAIResponse(),
 		SupportAnthropicMessage:     ep.SupportAnthropicMessage(),
@@ -182,6 +208,41 @@ func toEndpointView(ep *llmagg.Endpoint, usersByID map[uint]*identityaggregate.U
 		CreatedAt:                   ep.CreatedAt(),
 		UpdatedAt:                   ep.UpdatedAt(),
 	}
+}
+
+// toOAuthView 装配订阅凭据投影。
+//
+// token 字段不在视图内（聚合投影天然隔离）；demo 视角掩码邮箱并隐藏错误细节。
+// 缺凭据行时同样返回视图（status=reauth_required）——与解析层 fail-closed 口径一致，
+// 前端才能显示"需重新授权"而非静默无数据。
+func toOAuthView(authType enum.EndpointAuthType, cred *llmagg.OAuthCredential, isDemo bool) *port.UpstreamOAuthView {
+	if !authType.IsOAuth() {
+		return nil
+	}
+	if cred == nil {
+		return &port.UpstreamOAuthView{
+			Status: string(enum.OAuthCredentialStatusReauthRequired),
+			Quota:  &vo.QuotaSnapshot{Windows: []vo.QuotaWindow{}},
+		}
+	}
+	email := cred.AccountEmail()
+	lastError := cred.LastError()
+	if isDemo {
+		email = commonutil.MaskIdentity(email)
+		lastError = ""
+	}
+	quota := cred.Quota()
+	view := &port.UpstreamOAuthView{
+		AccountEmail: email,
+		PlanType:     cred.PlanType(),
+		Status:       string(cred.Status()),
+		LastError:    lastError,
+		Quota:        &quota,
+	}
+	if updatedAt := cred.QuotaUpdatedAt(); !updatedAt.IsZero() {
+		view.QuotaUpdatedAt = &updatedAt
+	}
+	return view
 }
 
 func toModelView(m *llmagg.Model, usersByID map[uint]*identityaggregate.User, isDemo bool) *port.UpstreamModelView {
