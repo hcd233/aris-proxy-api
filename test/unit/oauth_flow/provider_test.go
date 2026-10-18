@@ -11,6 +11,7 @@ import (
 
 	"github.com/bytedance/sonic"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/httpclient"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/oauthprovider"
@@ -116,7 +117,7 @@ func TestProbeQuotaMapping(t *testing.T) {
 	t.Run("claude", func(t *testing.T) {
 		t.Parallel()
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Header.Get("anthropic-beta") != "oauth-2025-04-20" {
+			if r.Header.Get(constant.HTTPHeaderAnthropicBeta) != constant.OAuthClaudeBetaHeader {
 				t.Errorf("missing oauth beta header: %v", r.Header)
 			}
 			w.Header().Set("Content-Type", "application/json")
@@ -137,7 +138,7 @@ func TestProbeQuotaMapping(t *testing.T) {
 	t.Run("openai", func(t *testing.T) {
 		t.Parallel()
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Header.Get("chatgpt-account-id") != "acc-1" {
+			if r.Header.Get(constant.HTTPHeaderChatGPTAccountID) != "acc-1" {
 				t.Errorf("missing account header: %v", r.Header)
 			}
 			w.Header().Set("Content-Type", "application/json")

@@ -3,6 +3,8 @@ package port
 
 import (
 	"context"
+
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 )
 
 // CreateEndpointCommand 创建 Endpoint 命令
@@ -62,4 +64,23 @@ type DeleteEndpointCommand struct {
 // DeleteEndpointHandler 删除命令处理器
 type DeleteEndpointHandler interface {
 	Handle(ctx context.Context, cmd DeleteEndpointCommand) error
+}
+
+// AuthorizeOAuthCommand 发起订阅账号 OAuth 授权
+//
+// UserID 由 handler 层从 JWT 注入；授权流记录归属该用户，回调兑换时校验。
+type AuthorizeOAuthCommand struct {
+	UserID   uint
+	Provider enum.OAuthProvider
+}
+
+// AuthorizeOAuthResult 授权发起结果（前端据此打开授权链接）
+type AuthorizeOAuthResult struct {
+	AuthorizeURL string
+	State        string
+}
+
+// AuthorizeOAuthHandler 订阅账号授权发起处理器
+type AuthorizeOAuthHandler interface {
+	Handle(ctx context.Context, cmd AuthorizeOAuthCommand) (*AuthorizeOAuthResult, error)
 }
