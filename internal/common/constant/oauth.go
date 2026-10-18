@@ -72,6 +72,12 @@ const (
 	OAuthClaudeUsageURL = "https://api.anthropic.com/api/oauth/usage"
 	// OAuthClaudeBetaHeader OAuth 调用必需的 anthropic-beta 值
 	OAuthClaudeBetaHeader = "oauth-2025-04-20"
+	// OAuthClaudeUserAgent Claude OAuth 转发 UA（协议事实：OAuth 调用需伪装官方 CLI 形态，规格 §4.3）
+	OAuthClaudeUserAgent = "claude-cli/2.1.7 (external, cli)"
+	// OAuthClaudeXApp Claude 客户端标识头值
+	OAuthClaudeXApp = "cli"
+	// OAuthClaudeSystemBlock system 首块身份声明（协议事实：OAuth 调用需声明 Claude Code 身份）
+	OAuthClaudeSystemBlock = "You are Claude Code, Anthropic's official CLI for Claude."
 	// OAuthClaudeUpstreamBaseURL Claude OAuth 端点的转发 baseURL（transport 拼 /messages）
 	OAuthClaudeUpstreamBaseURL = "https://api.anthropic.com/v1"
 

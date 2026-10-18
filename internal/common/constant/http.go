@@ -26,6 +26,7 @@ const (
 	HTTPHeaderAnthropicBeta       = "anthropic-beta"
 	HTTPHeaderChatGPTAccountID    = "chatgpt-account-id"
 	HTTPHeaderOriginator          = "Originator"
+	HTTPHeaderXApp                = "x-app"
 	HTTPHeaderCacheControl        = "Cache-Control"
 	HTTPHeaderConnection          = "Connection"
 	HTTPHeaderContentLength       = "Content-Length"
