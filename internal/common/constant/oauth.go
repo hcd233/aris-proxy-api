@@ -111,3 +111,57 @@ const (
 	OAuthCallbackParamCode  = "code"
 	OAuthCallbackParamState = "state"
 )
+
+// OAuth 协议参数名与取值（标准 OAuth2 / PKCE）
+const (
+	OAuthParamClientID               = "client_id"
+	OAuthParamGrantType              = "grant_type"
+	OAuthParamResponseType           = "response_type"
+	OAuthParamRedirectURI            = "redirect_uri"
+	OAuthParamScope                  = "scope"
+	OAuthParamCodeChallenge          = "code_challenge"
+	OAuthParamCodeChallengeMethod    = "code_challenge_method"
+	OAuthParamCodeVerifier           = "code_verifier"
+	OAuthParamRefreshToken           = "refresh_token"
+	OAuthParamValueAuthorizationCode = "authorization_code"
+	OAuthParamValueRefreshToken      = "refresh_token"
+	OAuthParamValueS256              = "S256"
+
+	// OAuthOpenAIBoolTrue OpenAI 授权链接的布尔参数值
+	OAuthOpenAIBoolTrue = "true"
+	// OAuthOpenAIAddOrganizationsParam / OAuthOpenAISimplifiedFlowParam OpenAI 授权链接附加参数名
+	OAuthOpenAIAddOrganizationsParam = "id_token_add_organizations"
+	OAuthOpenAISimplifiedFlowParam   = "codex_cli_simplified_flow"
+)
+
+// Codex 客户端身份常量（token 端点与上游转发路径共用；版本与 UA 形态见设计文档 §4.3）
+const (
+	// OAuthCodexOriginator Codex 请求来源标识（上游按此判定客户端合法性）
+	OAuthCodexOriginator = "codex_cli_rs"
+	// OAuthCodexUserAgent Codex 客户端 UA（转发路径同用；版本低于 0.144.0 上游返回 404）
+	OAuthCodexUserAgent = "codex_cli_rs/0.146.0 (Mac OS 15.0; arm64) terminal"
+)
+
+// 订阅额度窗口标识与窗口时长（vo.QuotaWindow.Key 的取值；时长用于展示）
+const (
+	OAuthQuotaWindowFiveHour       = "five_hour"
+	OAuthQuotaWindowSevenDay       = "seven_day"
+	OAuthQuotaWindowSevenDaySonnet = "seven_day_sonnet"
+	OAuthQuotaWindowPrimary        = "primary"
+	OAuthQuotaWindowSecondary      = "secondary"
+
+	OAuthQuotaWindowFiveHourMinutes = 300
+	OAuthQuotaWindowSevenDayMinutes = 10080
+)
+
+// OAuth 错误与响应体限制
+const (
+	// OAuthErrorBodyLimit 上游错误响应读取上限（字节，防异常大响应拖垮内存）
+	OAuthErrorBodyLimit = 8192
+
+	// OAuthIDTokenSegmentCount JWT（id_token）标准段数：header.payload.signature
+	OAuthIDTokenSegmentCount = 3
+
+	// OAuthSecondsPerMinute 秒转分钟换算基数（窗口时长从秒归一为展示分钟）
+	OAuthSecondsPerMinute = 60
+)
