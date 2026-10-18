@@ -101,6 +101,9 @@ const (
 	WhereModelEnabledEquals = "enabled = ?"
 	// WhereEndpointIDEquals 按所属端点筛选
 	WhereEndpointIDEquals = "endpoint_id = ?"
+
+	// WhereEndpointIDIn 按所属端点集合筛选（批量填充 OAuth 凭据状态等）
+	WhereEndpointIDIn = "endpoint_id IN (?)"
 	// WhereCapabilitiesLike 按输入模态筛选（capabilities 是 text 列 + serializer:json）
 	WhereCapabilitiesLike = "capabilities LIKE ?"
 

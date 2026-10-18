@@ -8,6 +8,7 @@ import (
 	"slices"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
@@ -155,6 +156,11 @@ func (r *endpointResolver) collectCandidates(ctx context.Context, userID uint, a
 			return nil, findErr
 		}
 		if ep == nil {
+			continue
+		}
+		// OAuth 订阅端点凭据失效（reauth_required 或缺凭据行）时 fail-closed 剔除：
+		// 失效 token 每请求必失败，剔除让 fallback 立即切备选端点（效果同端点被禁用）。
+		if ep.AuthType().IsOAuth() && ep.OAuthStatus() != enum.OAuthCredentialStatusActive {
 			continue
 		}
 		if matcher == nil || matcher(ep) {

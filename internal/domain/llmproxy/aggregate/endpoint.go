@@ -25,8 +25,11 @@ type Endpoint struct {
 	supportOpenAIResponse       bool
 	supportAnthropicMessage     bool
 	supportOpenAIDecision       bool
-	createdAt                   time.Time
-	updatedAt                   time.Time
+	// oauthStatus 凭据状态只读投影：repository 读路径填充（零值 = 非 OAuth 或未加载）。
+	// OAuth 端点凭据失效时解析层据此 fail-closed 剔除候选。
+	oauthStatus enum.OAuthCredentialStatus
+	createdAt   time.Time
+	updatedAt   time.Time
 }
 
 // CreateEndpoint 构造 Endpoint 聚合根
@@ -130,6 +133,12 @@ func (e *Endpoint) SupportAnthropicMessage() bool     { return e.supportAnthropi
 func (e *Endpoint) SupportOpenAIDecision() bool       { return e.supportOpenAIDecision }
 func (e *Endpoint) CreatedAt() time.Time              { return e.createdAt }
 func (e *Endpoint) UpdatedAt() time.Time              { return e.updatedAt }
+
+// SetOAuthStatus 设置凭据状态投影（repository 读路径填充）
+func (e *Endpoint) SetOAuthStatus(status enum.OAuthCredentialStatus) { e.oauthStatus = status }
+
+// OAuthStatus 返回凭据状态投影；零值表示非 OAuth 端点或状态未加载
+func (e *Endpoint) OAuthStatus() enum.OAuthCredentialStatus { return e.oauthStatus }
 
 // SetUserID 设置归属用户 ID（repository 从 DB 恢复时使用）
 func (e *Endpoint) SetUserID(userID uint) { e.userID = userID }

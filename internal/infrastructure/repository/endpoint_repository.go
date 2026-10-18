@@ -63,7 +63,11 @@ func (r *endpointRepository) FindByID(ctx context.Context, id uint, scopeUserID 
 		}
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "find endpoint by id")
 	}
-	return toEndpointAggregate(ep), nil
+	agg := toEndpointAggregate(ep)
+	if err := r.fillOAuthStatus(ctx, []*aggregate.Endpoint{agg}); err != nil {
+		return nil, err
+	}
+	return agg, nil
 }
 
 // BatchFindByIDs 按 ID 集合一次性查询端点，返回以 ID 索引的 map；ids 为空时返回空 map 且不打 SQL。
@@ -77,10 +81,56 @@ func (r *endpointRepository) BatchFindByIDs(ctx context.Context, ids []uint) (ma
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "batch find endpoints by ids")
 	}
+	aggs := make([]*aggregate.Endpoint, 0, len(records))
 	for _, rec := range records {
-		out[rec.ID] = toEndpointAggregate(rec)
+		aggs = append(aggs, toEndpointAggregate(rec))
+	}
+	if err := r.fillOAuthStatus(ctx, aggs); err != nil {
+		return nil, err
+	}
+	out = make(map[uint]*aggregate.Endpoint, len(aggs))
+	for _, agg := range aggs {
+		out[agg.AggregateID()] = agg
 	}
 	return out, nil
+}
+
+// fillOAuthStatus 为 OAuth 类型端点批量填充凭据状态投影（一次 IN 查询；无 OAuth 端点不打 SQL）。
+//
+// 缺凭据行的 OAuth 端点保守标记为 reauth_required（配置不完整不可用，fail-closed）——
+// 只跳过填充会让解析层把零值当"非 OAuth"放行，失效端点仍会被选中。
+func (r *endpointRepository) fillOAuthStatus(ctx context.Context, eps []*aggregate.Endpoint) error {
+	oauthIDs := make([]uint, 0, len(eps))
+	for _, ep := range eps {
+		if ep.AuthType().IsOAuth() {
+			oauthIDs = append(oauthIDs, ep.AggregateID())
+		}
+	}
+	if len(oauthIDs) == 0 {
+		return nil
+	}
+	var records []*dbmodel.EndpointOAuthCredential
+	if err := r.db.WithContext(ctx).
+		Where(constant.WhereEndpointIDIn, oauthIDs).
+		Where(constant.DBConditionDeletedAtZero).
+		Find(&records).Error; err != nil {
+		return ierr.Wrap(ierr.ErrDBQuery, err, "fill oauth credential status")
+	}
+	statusByEndpoint := make(map[uint]enum.OAuthCredentialStatus, len(records))
+	for _, record := range records {
+		statusByEndpoint[record.EndpointID] = enum.OAuthCredentialStatus(record.Status)
+	}
+	for _, ep := range eps {
+		if !ep.AuthType().IsOAuth() {
+			continue
+		}
+		status, ok := statusByEndpoint[ep.AggregateID()]
+		if !ok {
+			status = enum.OAuthCredentialStatusReauthRequired
+		}
+		ep.SetOAuthStatus(status)
+	}
+	return nil
 }
 
 // toEndpointAggregate 从 DB 记录恢复聚合根。
