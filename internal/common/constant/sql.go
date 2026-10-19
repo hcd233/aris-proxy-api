@@ -101,6 +101,9 @@ const (
 	WhereModelEnabledEquals = "enabled = ?"
 	// WhereEndpointIDEquals 按所属端点筛选
 	WhereEndpointIDEquals = "endpoint_id = ?"
+
+	// WhereEndpointIDIn 按所属端点集合筛选（批量填充 OAuth 凭据状态等）
+	WhereEndpointIDIn = "endpoint_id IN (?)"
 	// WhereCapabilitiesLike 按输入模态筛选（capabilities 是 text 列 + serializer:json）
 	WhereCapabilitiesLike = "capabilities LIKE ?"
 
@@ -147,12 +150,31 @@ var (
 	// 消息数桶固定边界（不含动态上限），与 SessionMessageCountBucketCase 对齐；末桶上限由动态 max 截断
 	SessionMessageCountBucketEdges = []int{10, 50, 100, 200, 500}
 
-	EndpointRepoFieldsFull = []string{FieldID, FieldUserID, FieldName, FieldOpenaiBaseURL, FieldAnthropicBaseURL, FieldAPIKey,
+	EndpointRepoFieldsFull = []string{FieldID, FieldUserID, FieldName, FieldOpenaiBaseURL, FieldAnthropicBaseURL, FieldAPIKey, FieldEndpointAuthType,
 		FieldSupportOpenAIChatCompletion, FieldSupportOpenAIResponse, FieldSupportAnthropicMessage, FieldSupportOpenAIDecision,
 		FieldCreatedAt, FieldUpdatedAt}
 
 	ModelRepoFieldsFull  = []string{FieldID, FieldUserID, FieldAlias, FieldModelID, FieldModelUpstreamModel, FieldEndpointID, FieldEnabled, FieldModelPriority, FieldModelWeight, FieldModelContextLength, FieldModelMaxOutputTokens, FieldModelCapabilities, FieldModelPricingRules, FieldPricingCurrency, FieldCreatedAt, FieldUpdatedAt}
 	ModelRepoFieldsAlias = []string{FieldAlias}
+
+	OAuthCredentialRepoFieldsFull = []string{FieldID, FieldOAuthCredentialEndpointID, FieldOAuthCredentialProvider,
+		FieldOAuthCredentialAccessTokenEnc, FieldOAuthCredentialRefreshTokenEnc, FieldOAuthCredentialExpiresAt,
+		FieldOAuthCredentialAccountRef, FieldOAuthCredentialAccountEmail, FieldOAuthCredentialPlanType,
+		FieldOAuthCredentialStatus, FieldOAuthCredentialLastError, FieldOAuthCredentialQuotaSnapshot,
+		FieldOAuthCredentialQuotaUpdatedAt, FieldCreatedAt, FieldUpdatedAt}
+
+	// OAuthCredentialRepoFieldsDisplay 凭据展示投影列（不含 token 密文列，读取时无需解密）
+	OAuthCredentialRepoFieldsDisplay = []string{FieldOAuthCredentialEndpointID, FieldOAuthCredentialProvider,
+		FieldOAuthCredentialAccountEmail, FieldOAuthCredentialPlanType, FieldOAuthCredentialStatus,
+		FieldOAuthCredentialLastError, FieldOAuthCredentialQuotaSnapshot, FieldOAuthCredentialQuotaUpdatedAt}
+
+	// OAuthCredentialUpdateColumns upsert 冲突时更新的列（endpoint_id 为冲突键，不在列内；
+	// 最早创建时间不被覆盖，故不含 created_at）
+	OAuthCredentialUpdateColumns = []string{FieldOAuthCredentialProvider, FieldOAuthCredentialAccessTokenEnc,
+		FieldOAuthCredentialRefreshTokenEnc, FieldOAuthCredentialExpiresAt, FieldOAuthCredentialAccountRef,
+		FieldOAuthCredentialAccountEmail, FieldOAuthCredentialPlanType, FieldOAuthCredentialStatus,
+		FieldOAuthCredentialLastError, FieldOAuthCredentialQuotaSnapshot, FieldOAuthCredentialQuotaUpdatedAt,
+		FieldUpdatedAt}
 
 	ProxyAPIKeyRepoFieldsFull = []string{FieldID, FieldUserID, FieldName, FieldKey, FieldCreatedAt}
 
@@ -215,6 +237,9 @@ var (
 	// 必须用 "user_id = ?" 而非 Where("user_id", v)：GORM 的 Where("col", v) 在
 	// 无占位符时 v 会被静默丢弃（v=0 时退化为 WHERE user_id，语义完全错误）。
 	WhereUserIDEquals = "user_id = ?"
+
+	// WhereOAuthCredentialStatusEquals OAuth 凭据状态显式等值条件
+	WhereOAuthCredentialStatusEquals = "status = ?"
 
 	// ── replaceHistoricalModelIDs（由 UpdateWithHistorySync 在事务内调用）条件与块大小 ──
 	WhereModelIDEquals = "model_id = ?"

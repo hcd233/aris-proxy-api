@@ -36,6 +36,7 @@ type anthropicUseCase struct {
 	triggerChecker   TriggerChecker
 	tokenMetrics     *metrics.TokenUsageCounter
 	affinity         service.EndpointAffinity
+	tokenProvider    service.OAuthTokenProvider
 }
 
 func NewAnthropicUseCase(
@@ -48,6 +49,7 @@ func NewAnthropicUseCase(
 	triggerChecker TriggerChecker,
 	tokenMetrics *metrics.TokenUsageCounter,
 	affinity service.EndpointAffinity,
+	tokenProvider service.OAuthTokenProvider,
 ) port.AnthropicUseCase {
 	return &anthropicUseCase{
 		resolver:         resolver,
@@ -59,7 +61,13 @@ func NewAnthropicUseCase(
 		triggerChecker:   triggerChecker,
 		tokenMetrics:     tokenMetrics,
 		affinity:         affinity,
+		tokenProvider:    tokenProvider,
 	}
+}
+
+// buildTransportEndpoint 组装传输层端点（OAuth 端点在此注入 access token 与稳定身份）。
+func (u *anthropicUseCase) buildTransportEndpoint(ctx context.Context, m *aggregate.Model, ep *aggregate.Endpoint, isAnthropic bool) (vo.UpstreamEndpoint, error) {
+	return buildTransportEndpointWithToken(ctx, m, ep, isAnthropic, u.tokenProvider)
 }
 
 func (u *anthropicUseCase) ListModels(ctx context.Context) (*dto.AnthropicListModelsRsp, error) {
@@ -135,7 +143,10 @@ func (u *anthropicUseCase) dispatchMessage(ctx context.Context, req *dto.Anthrop
 	switch SelectCompatRoute(enum.ProxyAPIAnthropicMessage, ep) {
 	case enum.CompatRouteNative:
 		stream := req.Body.Stream != nil && *req.Body.Stream
-		upstream := toTransportEndpoint(m, ep, true)
+		upstream, err := u.buildTransportEndpoint(ctx, m, ep, true)
+		if err != nil {
+			return nil, err
+		}
 		return u.forwardMessageNative(ctx, req, m, ep, upstream, exposedModel, stream)
 	case enum.CompatRouteViaOpenAIChat:
 		return u.forwardMessageViaChat(ctx, req, m, ep, exposedModel)

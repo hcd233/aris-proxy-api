@@ -2,6 +2,7 @@ package llmproxy
 
 import (
 	"context"
+	"time"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
@@ -69,6 +70,40 @@ type ModelRepository interface {
 	// 的消息」（见 spec 2026-09-04-model-id-history-sync §5.4）。替换以模型归属 user
 	// （m.UserID()）为界，不排除已删除的 API Key。
 	UpdateWithHistorySync(ctx context.Context, m *aggregate.Model, oldModelID string) (ModelIDSyncCounts, error)
+}
+
+// OAuthCredentialRepository 订阅账号 OAuth 凭据仓储接口
+//
+// 加解密是持久化层职责：聚合持明文令牌，实现负责落库前加密、读出后解密。
+// 加密密钥缺失时读写直接失败（fail-closed），API Key 端点不受影响。
+//
+// 额度与错误摘要只走窄列更新（UpdateQuota / UpdateLastError）：Save 是按 endpoint_id
+// 的整行 upsert，维护任务在刷新之后调用会把新 token 覆盖回内存快照里的旧值。
+type OAuthCredentialRepository interface {
+	// FindByEndpointID 按端点查询凭据；不存在返回 (nil, nil)。
+	FindByEndpointID(ctx context.Context, endpointID uint) (*aggregate.OAuthCredential, error)
+	// Save 按 endpoint_id upsert（创建与更新共用同一入口）。
+	Save(ctx context.Context, cred *aggregate.OAuthCredential) error
+	// ListActive 列出全部 active 状态凭据（cron 维护：临期刷新与额度探测）。
+	ListActive(ctx context.Context) ([]*aggregate.OAuthCredential, error)
+	// ListDisplayByEndpointIDs 批量读取一组端点的凭据展示投影（不含 token，不解密）。
+	//
+	// 供 upstream 列表等只读场景使用：避免逐端点查询（N+1）与逐行解密 token。
+	// 未命中的 endpointID 不出现在返回 map 中。
+	ListDisplayByEndpointIDs(ctx context.Context, endpointIDs []uint) (map[uint]vo.OAuthCredentialDisplay, error)
+	// UpdateQuota 只更新额度快照与采集时间（不触碰 token/状态列）。
+	UpdateQuota(ctx context.Context, endpointID uint, snapshot vo.QuotaSnapshot, at time.Time) error
+	// UpdateLastError 只更新最近错误摘要（不触碰 token/状态列）。
+	UpdateLastError(ctx context.Context, endpointID uint, lastError string) error
+}
+
+// OAuthEndpointRepository 订阅账号端点的原子创建接口（由 endpointRepository 一并实现）
+//
+// 端点与凭据必须同事务落库：分两次写会留下「OAuth 端点无凭据」的中间态，
+// 该状态下解析层按 reauth_required 剔除、用户端表现为端点不可用且无法修复。
+type OAuthEndpointRepository interface {
+	// CreateWithOAuthCredential 在单事务内创建 OAuth 端点与其凭据（凭据落库加密）。
+	CreateWithOAuthCredential(ctx context.Context, endpoint *aggregate.Endpoint, credential *aggregate.OAuthCredential, ownerUserID uint) (uint, error)
 }
 
 // ModelListFilter 模型列表筛选条件（零值表示该维度不过滤）

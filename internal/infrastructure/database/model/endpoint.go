@@ -9,6 +9,7 @@ type Endpoint struct {
 	OpenaiBaseURL               string `json:"openai_base_url" gorm:"column:openai_base_url;not null;comment:OpenAI协议baseURL"`
 	AnthropicBaseURL            string `json:"anthropic_base_url" gorm:"column:anthropic_base_url;not null;comment:Anthropic协议baseURL"`
 	APIKey                      string `json:"api_key" gorm:"column:api_key;not null;comment:上游API密钥"`
+	AuthType                    string `json:"auth_type" gorm:"column:auth_type;not null;default:'api_key';comment:认证类型(api_key/oauth_anthropic/oauth_openai)"`
 	SupportOpenAIChatCompletion bool   `json:"support_openai_chat_completion" gorm:"column:support_openai_chat_completion;not null;default:true;comment:支持/chat/completions"`
 	SupportOpenAIResponse       bool   `json:"support_openai_response" gorm:"column:support_openai_response;not null;default:false;comment:支持/responses"`
 	SupportAnthropicMessage     bool   `json:"support_anthropic_message" gorm:"column:support_anthropic_message;not null;default:false;comment:支持/messages"`

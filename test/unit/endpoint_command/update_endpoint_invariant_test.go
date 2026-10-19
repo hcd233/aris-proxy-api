@@ -8,6 +8,7 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/application/endpoint/command"
 	"github.com/hcd233/aris-proxy-api/internal/application/endpoint/port"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
@@ -52,7 +53,7 @@ var _ llmproxy.EndpointRepository = (*endpointRepoStub)(nil)
 
 // inconsistentEndpoint 复刻事故行的持久化状态：OpenAI 侧齐全、Anthropic 能力未开且 baseURL 为空。
 func inconsistentEndpoint() *aggregate.Endpoint {
-	return aggregate.RehydrateEndpoint(6, "tokenhub", "https://tokenhub.example.com/v1", "", "sk-test", true, true, false, false)
+	return aggregate.RehydrateEndpoint(6, "tokenhub", "https://tokenhub.example.com/v1", "", "sk-test", true, true, false, false, enum.EndpointAuthAPIKey)
 }
 
 // TestUpdateEndpoint_RejectsCapabilityWithoutBaseURL 回归 2026-10-12 tokenhub 事故：

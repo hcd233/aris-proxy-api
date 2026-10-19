@@ -13,10 +13,10 @@ import (
 
 	proxyutil "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/inflight"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
-	commonutil "github.com/hcd233/aris-proxy-api/internal/common/util"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/httpclient"
@@ -162,6 +162,16 @@ func (p *openAIProxy) sendUpstreamRequestOnce(ctx context.Context, ep vo.Upstrea
 
 	upstreamURL := strings.TrimRight(ep.BaseURL, "/") + pathSuffix
 
+	// OAuth 订阅端点：强制 store=false/stream=true 并清理上游不接受的字段（构造请求前改写）
+	if ep.AuthType == enum.EndpointAuthOAuthOpenAI {
+		transformed, terr := transformCodexOAuthBody(body)
+		if terr != nil {
+			log.Error("[OpenAIProxy] OAuth body transform error", zap.Error(terr))
+			return nil, terr
+		}
+		body = transformed
+	}
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, upstreamURL, bytes.NewReader(body))
 	if err != nil {
 		log.Error("[OpenAIProxy] New request error", zap.String("upstreamURL", upstreamURL), zap.Error(err))
@@ -172,11 +182,16 @@ func (p *openAIProxy) sendUpstreamRequestOnce(ctx context.Context, ep vo.Upstrea
 	applyPassthroughRequestHeaders(ctx, req.Header)
 
 	req.Header.Set(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
-	req.Header.Set(constant.HTTPHeaderAuthorization, constant.HTTPAuthBearerPrefix+ep.APIKey)
+	if ep.AuthType == enum.EndpointAuthOAuthOpenAI {
+		// OAuth 分支：Authorization 覆盖 + chatgpt-account-id/originator/UA/accept
+		applyOpenAIOAuthUpstream(req.Header, ep)
+	} else {
+		req.Header.Set(constant.HTTPHeaderAuthorization, constant.HTTPAuthBearerPrefix+ep.APIKey)
+	}
 
 	log.Info("[OpenAIProxy] Send upstream request", zap.String("upstreamURL", upstreamURL),
 		zap.String("upstreamModel", ep.Model),
-		zap.String("upstreamAPIKey", commonutil.MaskSecret(ep.APIKey)),
+		zap.String("upstreamCredential", upstreamCredLabel(ep)),
 		zap.Any("upstreamHeaders", util.MaskHTTPHeadersForLog(req.Header)),
 		zap.Any("upstreamRequestSummary", parseUpstreamRequestSummary(body)),
 	)

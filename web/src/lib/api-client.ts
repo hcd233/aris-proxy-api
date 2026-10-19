@@ -4,6 +4,8 @@ import type {
   AddDemoSessionsReqBody,
   AuditOptionListReq,
   AuditOptionListRsp,
+  AuthorizeOAuthRspBody,
+  AuthorizeOAuthReqBody,
   CallbackReqBody,
   CallbackRsp,
   CommonRsp,
@@ -14,6 +16,11 @@ import type {
   CreateShareReqBody,
   CreateShareRsp,
   CreateTriggerReqBody,
+  ExchangeOAuthReqBody,
+  ExchangeOAuthRspBody,
+  OAuthProviderChoice,
+  OAuthQuotaRspBody,
+  ReauthOAuthReqBody,
   CronCallAuditOptionListReq,
   CronCallAuditOptionListRsp,
   DatasetExportSSEData,
@@ -606,6 +613,39 @@ class ApiClient {
   async deleteEndpoint(id: number): Promise<void> {
     await this.request(`${API_PREFIX}/endpoint?id=${id}`, {
       method: "DELETE",
+    });
+  }
+
+  // ─── Endpoints · OAuth 订阅账号（Claude Code / Codex） ──────────────────────
+
+  /** 发起订阅账号授权，返回授权链接与一次性 state */
+  async authorizeOAuthEndpoint(provider: OAuthProviderChoice): Promise<AuthorizeOAuthRspBody> {
+    return this.request<AuthorizeOAuthRspBody>(`${API_PREFIX}/endpoint/oauth/authorize`, {
+      method: "POST",
+      body: JSON.stringify({ provider } satisfies AuthorizeOAuthReqBody),
+    });
+  }
+
+  /** 用授权码完成订阅账号绑定（创建 OAuth 端点） */
+  async exchangeOAuthEndpoint(body: ExchangeOAuthReqBody): Promise<ExchangeOAuthRspBody> {
+    return this.request<ExchangeOAuthRspBody>(`${API_PREFIX}/endpoint/oauth/exchange`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  }
+
+  /** 重新授权既有订阅端点（凭据失效恢复） */
+  async reauthOAuthEndpoint(id: number, body: ReauthOAuthReqBody): Promise<void> {
+    await this.request(`${API_PREFIX}/endpoint/oauth/reauth?id=${id}`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  }
+
+  /** 手动触发一次额度探测（同步返回最新快照） */
+  async probeOAuthQuota(id: number): Promise<OAuthQuotaRspBody> {
+    return this.request<OAuthQuotaRspBody>(`${API_PREFIX}/endpoint/oauth/probe?id=${id}`, {
+      method: "POST",
     });
   }
 

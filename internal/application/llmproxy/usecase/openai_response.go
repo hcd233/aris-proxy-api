@@ -38,7 +38,10 @@ func (u *openAIUseCase) forwardResponseViaChat(ctx context.Context, req *dto.Ope
 		logger.WithCtx(ctx).Error("[OpenAIUseCase] Failed to convert response request to chat", zap.Error(convErr))
 		return nil, proxyutil.SendOpenAIModelNotFoundError(lo.FromPtr(req.Body.Model))
 	}
-	upstream := toTransportEndpoint(m, ep, false)
+	upstream, err := u.buildTransportEndpoint(ctx, m, ep, false)
+	if err != nil {
+		return nil, err
+	}
 	body := proxyutil.MarshalOpenAIChatCompletionBodyForModel(chatReq, upstream.Model)
 	stream := req.Body.Stream != nil && *req.Body.Stream
 	if stream {
@@ -54,7 +57,10 @@ func (u *openAIUseCase) forwardResponseViaAnthropic(ctx context.Context, req *dt
 		logger.WithCtx(ctx).Error("[OpenAIUseCase] Failed to convert response request to anthropic", zap.Error(convErr))
 		return nil, proxyutil.SendOpenAIModelNotFoundError(lo.FromPtr(req.Body.Model))
 	}
-	upstream := toTransportEndpoint(m, ep, true)
+	upstream, err := u.buildTransportEndpoint(ctx, m, ep, true)
+	if err != nil {
+		return nil, err
+	}
 	body := proxyutil.MarshalAnthropicMessageBodyForModel(anthropicReq, upstream.Model)
 	stream := req.Body.Stream != nil && *req.Body.Stream
 	if stream {

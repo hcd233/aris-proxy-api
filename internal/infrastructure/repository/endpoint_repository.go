@@ -11,6 +11,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
@@ -62,7 +63,11 @@ func (r *endpointRepository) FindByID(ctx context.Context, id uint, scopeUserID 
 		}
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "find endpoint by id")
 	}
-	return toEndpointAggregate(ep), nil
+	agg := toEndpointAggregate(ep)
+	if err := r.fillOAuthStatus(ctx, []*aggregate.Endpoint{agg}); err != nil {
+		return nil, err
+	}
+	return agg, nil
 }
 
 // BatchFindByIDs 按 ID 集合一次性查询端点，返回以 ID 索引的 map；ids 为空时返回空 map 且不打 SQL。
@@ -76,10 +81,56 @@ func (r *endpointRepository) BatchFindByIDs(ctx context.Context, ids []uint) (ma
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "batch find endpoints by ids")
 	}
+	aggs := make([]*aggregate.Endpoint, 0, len(records))
 	for _, rec := range records {
-		out[rec.ID] = toEndpointAggregate(rec)
+		aggs = append(aggs, toEndpointAggregate(rec))
+	}
+	if err := r.fillOAuthStatus(ctx, aggs); err != nil {
+		return nil, err
+	}
+	out = make(map[uint]*aggregate.Endpoint, len(aggs))
+	for _, agg := range aggs {
+		out[agg.AggregateID()] = agg
 	}
 	return out, nil
+}
+
+// fillOAuthStatus 为 OAuth 类型端点批量填充凭据状态投影（一次 IN 查询；无 OAuth 端点不打 SQL）。
+//
+// 缺凭据行的 OAuth 端点保守标记为 reauth_required（配置不完整不可用，fail-closed）——
+// 只跳过填充会让解析层把零值当"非 OAuth"放行，失效端点仍会被选中。
+func (r *endpointRepository) fillOAuthStatus(ctx context.Context, eps []*aggregate.Endpoint) error {
+	oauthIDs := make([]uint, 0, len(eps))
+	for _, ep := range eps {
+		if ep.AuthType().IsOAuth() {
+			oauthIDs = append(oauthIDs, ep.AggregateID())
+		}
+	}
+	if len(oauthIDs) == 0 {
+		return nil
+	}
+	var records []*dbmodel.EndpointOAuthCredential
+	if err := r.db.WithContext(ctx).
+		Where(constant.WhereEndpointIDIn, oauthIDs).
+		Where(constant.DBConditionDeletedAtZero).
+		Find(&records).Error; err != nil {
+		return ierr.Wrap(ierr.ErrDBQuery, err, "fill oauth credential status")
+	}
+	statusByEndpoint := make(map[uint]enum.OAuthCredentialStatus, len(records))
+	for _, record := range records {
+		statusByEndpoint[record.EndpointID] = enum.OAuthCredentialStatus(record.Status)
+	}
+	for _, ep := range eps {
+		if !ep.AuthType().IsOAuth() {
+			continue
+		}
+		status, ok := statusByEndpoint[ep.AggregateID()]
+		if !ok {
+			status = enum.OAuthCredentialStatusReauthRequired
+		}
+		ep.SetOAuthStatus(status)
+	}
+	return nil
 }
 
 // toEndpointAggregate 从 DB 记录恢复聚合根。
@@ -98,6 +149,7 @@ func toEndpointAggregate(m *dbmodel.Endpoint) *aggregate.Endpoint {
 		m.SupportOpenAIResponse,
 		m.SupportAnthropicMessage,
 		m.SupportOpenAIDecision,
+		enum.EndpointAuthType(m.AuthType),
 	)
 	ep.SetUserID(m.UserID)
 	ep.SetTimestamps(m.CreatedAt, m.UpdatedAt)
@@ -115,6 +167,7 @@ func toEndpointModel(ep *aggregate.Endpoint) *dbmodel.Endpoint {
 		SupportOpenAIResponse:       ep.SupportOpenAIResponse(),
 		SupportAnthropicMessage:     ep.SupportAnthropicMessage(),
 		SupportOpenAIDecision:       ep.SupportOpenAIDecision(),
+		AuthType:                    string(ep.AuthType()),
 	}
 }
 
@@ -160,12 +213,18 @@ func (r *endpointRepository) Delete(ctx context.Context, id uint, scopeUserID *u
 	return nil
 }
 
-// DeleteCascade 级联删除端点及其关联模型（事务保护；scopeUserID 非 nil 时精确匹配 user_id）
+// DeleteCascade 级联删除端点及其关联模型与 OAuth 凭据（事务保护；scopeUserID 非 nil 时精确匹配 user_id）
 func (r *endpointRepository) DeleteCascade(ctx context.Context, id uint, scopeUserID *uint) error {
 	db := r.db.WithContext(ctx)
 	if err := db.Transaction(func(tx *gorm.DB) error {
 		if err := r.modelDAO.BatchDeleteByField(tx, constant.FieldEndpointID, []uint{id}); err != nil {
 			return ierr.Wrap(ierr.ErrDBDelete, err, "cascade delete models by endpoint id")
+		}
+		// 凭据随端点删除：本项目 deleted_at 是 int64 自定义软删标记，GORM 只对
+		// gorm.DeletedAt 类型启用软删，故此处 DELETE 即物理删除——密文 token 不残留，
+		// 同时避免维护 cron 持续刷新孤儿凭据。
+		if err := tx.Where(constant.WhereEndpointIDEquals, id).Delete(&dbmodel.EndpointOAuthCredential{}).Error; err != nil {
+			return ierr.Wrap(ierr.ErrDBDelete, err, "cascade delete oauth credential by endpoint id")
 		}
 		if err := r.endpointDAO.Delete(scopedDB(tx, scopeUserID), &dbmodel.Endpoint{ID: id}); err != nil {
 			return ierr.Wrap(ierr.ErrDBDelete, err, "delete endpoint")
@@ -384,4 +443,46 @@ func toEndpointProjection(ep *dbmodel.Endpoint) *llmproxy.EndpointProjection {
 		SupportOpenAIResponse:       ep.SupportOpenAIResponse,
 		SupportAnthropicMessage:     ep.SupportAnthropicMessage,
 	}
+}
+
+// CreateWithOAuthCredential 在单事务内创建 OAuth 端点与其凭据（llmproxy.OAuthEndpointRepository）。
+//
+// 端点与凭据必须原子落库：分两次写会留下「OAuth 端点无凭据行」的中间态，
+// 该状态下解析层按 reauth_required 剔除、用户端表现为端点不可用。
+func (r *endpointRepository) CreateWithOAuthCredential(ctx context.Context, ep *aggregate.Endpoint, cred *aggregate.OAuthCredential, ownerUserID uint) (uint, error) {
+	db := r.db.WithContext(ctx)
+	var endpointID uint
+	if err := db.Transaction(func(tx *gorm.DB) error {
+		record := toEndpointModel(ep)
+		record.UserID = ownerUserID
+		if err := tx.Create(record).Error; err != nil {
+			return ierr.Wrap(ierr.ErrDBCreate, err, "create oauth endpoint")
+		}
+		endpointID = record.ID
+
+		cred.SetEndpointID(endpointID)
+		credRecord, err := buildOAuthCredentialModel(cred)
+		if err != nil {
+			return err
+		}
+		if err := tx.Create(credRecord).Error; err != nil {
+			return ierr.Wrap(ierr.ErrDBCreate, err, "create oauth credential")
+		}
+		return nil
+	}); err != nil {
+		return 0, err
+	}
+	r.cache.InvalidateAll(ctx)
+	return endpointID, nil
+}
+
+var _ llmproxy.OAuthEndpointRepository = (*endpointRepository)(nil)
+
+// NewOAuthEndpointRepository 构造订阅端点原子创建仓储。
+//
+// 与 NewEndpointRepository 是同一实现的独立接口视图（fx 按接口类型分别注入），
+// 必须同样注入读缓存：CreateWithOAuthCredential 成功后要清读缓存，
+// 缺省 readCache 会让这次失效静默变成 no-op（InvalidateAll 对 nil 接收者直接返回）。
+func NewOAuthEndpointRepository(db *gorm.DB, readCache *cache.ReadCache) llmproxy.OAuthEndpointRepository {
+	return &endpointRepository{endpointDAO: dao.GetEndpointDAO(), modelDAO: dao.GetModelDAO(), db: db, cache: readCache}
 }

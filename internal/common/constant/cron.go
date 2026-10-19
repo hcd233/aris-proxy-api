@@ -52,3 +52,13 @@ const (
 	CronReloadActionDisable = "disable"
 	CronReloadActionEnable  = "enable"
 )
+
+// OAuth 订阅账号维护任务常量
+const (
+	// CronModuleOAuthMaintenance 订阅账号维护任务的模块名
+	CronModuleOAuthMaintenance = "OAuthMaintenanceCron"
+	// CronSpecOAuthMaintenance 订阅账号维护任务调度（每 10 分钟）
+	CronSpecOAuthMaintenance = "*/10 * * * *"
+	// CronDescriptionOAuthMaintenance 订阅账号维护任务描述
+	CronDescriptionOAuthMaintenance = "Refresh expiring subscription tokens and probe quota windows"
+)

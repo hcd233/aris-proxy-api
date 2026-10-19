@@ -3,6 +3,7 @@ package aggregate
 import (
 	"time"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	commonagg "github.com/hcd233/aris-proxy-api/internal/domain/common/aggregate"
 )
@@ -16,6 +17,7 @@ type Endpoint struct {
 
 	name                        string
 	userID                      uint // 归属用户 ID（多租户隔离；由 repository 从 DB 恢复或 Create 时写入）
+	authType                    enum.EndpointAuthType
 	openaiBaseURL               string
 	anthropicBaseURL            string
 	apiKey                      string
@@ -23,8 +25,11 @@ type Endpoint struct {
 	supportOpenAIResponse       bool
 	supportAnthropicMessage     bool
 	supportOpenAIDecision       bool
-	createdAt                   time.Time
-	updatedAt                   time.Time
+	// oauthStatus 凭据状态只读投影：repository 读路径填充（零值 = 非 OAuth 或未加载）。
+	// OAuth 端点凭据失效时解析层据此 fail-closed 剔除候选。
+	oauthStatus enum.OAuthCredentialStatus
+	createdAt   time.Time
+	updatedAt   time.Time
 }
 
 // CreateEndpoint 构造 Endpoint 聚合根
@@ -32,8 +37,9 @@ func CreateEndpoint(
 	id uint,
 	name, openaiBaseURL, anthropicBaseURL, apiKey string,
 	supportChatCompletion, supportResponse, supportMessage, supportDecision bool,
+	authType enum.EndpointAuthType,
 ) (*Endpoint, error) {
-	ep := newEndpoint(id, name, openaiBaseURL, anthropicBaseURL, apiKey, supportChatCompletion, supportResponse, supportMessage, supportDecision)
+	ep := newEndpoint(id, name, openaiBaseURL, anthropicBaseURL, apiKey, supportChatCompletion, supportResponse, supportMessage, supportDecision, authType)
 	if err := ep.validate(); err != nil {
 		return nil, err
 	}
@@ -51,17 +57,20 @@ func RehydrateEndpoint(
 	id uint,
 	name, openaiBaseURL, anthropicBaseURL, apiKey string,
 	supportChatCompletion, supportResponse, supportMessage, supportDecision bool,
+	authType enum.EndpointAuthType,
 ) *Endpoint {
-	return newEndpoint(id, name, openaiBaseURL, anthropicBaseURL, apiKey, supportChatCompletion, supportResponse, supportMessage, supportDecision)
+	return newEndpoint(id, name, openaiBaseURL, anthropicBaseURL, apiKey, supportChatCompletion, supportResponse, supportMessage, supportDecision, authType)
 }
 
 func newEndpoint(
 	id uint,
 	name, openaiBaseURL, anthropicBaseURL, apiKey string,
 	supportChatCompletion, supportResponse, supportMessage, supportDecision bool,
+	authType enum.EndpointAuthType,
 ) *Endpoint {
 	ep := &Endpoint{
 		name:                        name,
+		authType:                    authType.Normalize(),
 		openaiBaseURL:               openaiBaseURL,
 		anthropicBaseURL:            anthropicBaseURL,
 		apiKey:                      apiKey,
@@ -75,11 +84,26 @@ func newEndpoint(
 }
 
 // validate 校验能力标记与对应 baseURL 的一致性；创建与更新共用同一套规则。
+//
+// OAuth 类型（订阅账号）先走 provider 专属规则：必须开启本 provider 的协议能力，
+// 且沿用「能力已开、对应 baseURL 非空」的一致性检查（2026-10-12 tokenhub 事故
+// 同类脏行必须挡在写路径外）；同时豁免 API Key 非空要求（凭据在 credentials 表）。
 func (e *Endpoint) validate() error {
 	if e.name == "" {
 		return ierr.New(ierr.ErrValidation, "endpoint name cannot be empty")
 	}
-	if e.apiKey == "" {
+	switch e.authType {
+	case enum.EndpointAuthOAuthAnthropic:
+		if !e.supportAnthropicMessage {
+			return ierr.New(ierr.ErrValidation, "oauth_anthropic endpoint must enable anthropic message capability")
+		}
+	case enum.EndpointAuthOAuthOpenAI:
+		if !e.supportOpenAIResponse {
+			return ierr.New(ierr.ErrValidation, "oauth_openai endpoint must enable openai response capability")
+		}
+	default:
+	}
+	if e.apiKey == "" && !e.authType.IsOAuth() {
 		return ierr.New(ierr.ErrValidation, "endpoint apiKey cannot be empty")
 	}
 	if e.openaiBaseURL == "" && e.anthropicBaseURL == "" {
@@ -99,6 +123,7 @@ func (e *Endpoint) validate() error {
 
 func (e *Endpoint) Name() string                      { return e.name }
 func (e *Endpoint) UserID() uint                      { return e.userID }
+func (e *Endpoint) AuthType() enum.EndpointAuthType   { return e.authType }
 func (e *Endpoint) OpenaiBaseURL() string             { return e.openaiBaseURL }
 func (e *Endpoint) AnthropicBaseURL() string          { return e.anthropicBaseURL }
 func (e *Endpoint) APIKey() string                    { return e.apiKey }
@@ -108,6 +133,12 @@ func (e *Endpoint) SupportAnthropicMessage() bool     { return e.supportAnthropi
 func (e *Endpoint) SupportOpenAIDecision() bool       { return e.supportOpenAIDecision }
 func (e *Endpoint) CreatedAt() time.Time              { return e.createdAt }
 func (e *Endpoint) UpdatedAt() time.Time              { return e.updatedAt }
+
+// SetOAuthStatus 设置凭据状态投影（repository 读路径填充）
+func (e *Endpoint) SetOAuthStatus(status enum.OAuthCredentialStatus) { e.oauthStatus = status }
+
+// OAuthStatus 返回凭据状态投影；零值表示非 OAuth 端点或状态未加载
+func (e *Endpoint) OAuthStatus() enum.OAuthCredentialStatus { return e.oauthStatus }
 
 // SetUserID 设置归属用户 ID（repository 从 DB 恢复时使用）
 func (e *Endpoint) SetUserID(userID uint) { e.userID = userID }
@@ -124,6 +155,15 @@ func (e *Endpoint) SetTimestamps(createdAt, updatedAt time.Time) {
 // 「能力已开、对应 baseURL 为空」写进库的地方——2026-10-12 tokenhub 事故
 // 正是从这条缺校验的路径进入，之后该 endpoint 的每次读取都失败。
 func (e *Endpoint) Update(name, openaiBaseURL, anthropicBaseURL, apiKey *string, supportChatCompletion, supportResponse, supportMessage, supportDecision *bool) error {
+	// OAuth 端点（订阅账号）的连接字段是服务端固定值：凭据在 credentials 表，
+	// baseURL 指向官方端点，能力标记决定转发路由。放开修改会让端点静默失联。
+	if e.authType.IsOAuth() {
+		touchesConnection := openaiBaseURL != nil || anthropicBaseURL != nil || apiKey != nil
+		touchesCapability := supportChatCompletion != nil || supportResponse != nil || supportMessage != nil || supportDecision != nil
+		if touchesConnection || touchesCapability {
+			return ierr.New(ierr.ErrValidation, "oauth endpoint connection fields are immutable")
+		}
+	}
 	next := *e
 	if name != nil {
 		next.name = *name

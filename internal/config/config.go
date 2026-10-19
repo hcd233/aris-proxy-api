@@ -2,6 +2,7 @@
 package config
 
 import (
+	"encoding/hex"
 	"strings"
 	"time"
 
@@ -179,6 +180,10 @@ var (
 	//	@update 2026-06-02 10:00:00
 	CronThinkExtractEnabled bool
 
+	// CronOAuthMaintenanceEnabled bool 是否启用订阅账号维护定时任务（临期 token 刷新 + 额度探测）
+	//	@update 2026-10-18 10:00:00
+	CronOAuthMaintenanceEnabled bool
+
 	// UpstreamRetryMaxAttempts int 上游请求重试最大次数（不含首次请求）
 	//	@update 2026-06-23 10:00:00
 	UpstreamRetryMaxAttempts int
@@ -200,6 +205,11 @@ var (
 	//	不向上游发起 HTTP；默认关闭，避免生产误配后拿到假响应。
 	//	@update 2026-10-15 10:00:00
 	MockUpstreamEnabled bool
+
+	// OAuthCredentialKey []byte 订阅账号 OAuth 凭据加密密钥（AES-256-GCM）
+	//	hex 64 字符（openssl rand -hex 32）；空或非法时 OAuth 凭据读写 fail-closed
+	//	（不影响 API Key 端点）。密钥丢失 = 已绑定订阅账号需全部重新授权。
+	OAuthCredentialKey []byte
 
 	// UpstreamCircuitEnabled bool 是否启用上游熔断
 	//	@update 2026-08-20 10:00:00
@@ -278,6 +288,18 @@ func init() {
 	InitEnvironment()
 }
 
+// parseOAuthCredentialKey 解析 hex 编码的凭据加密密钥。
+//
+// 空串或非法值（非 hex / 长度不为 32 字节）返回 nil：OAuth 凭据读写路径据此
+// fail-closed，绝不在密钥异常时降级为明文存储。
+func parseOAuthCredentialKey(raw string) []byte {
+	key, err := hex.DecodeString(strings.TrimSpace(raw))
+	if err != nil || len(key) != constant.SecretBoxKeyLength {
+		return nil
+	}
+	return key
+}
+
 // InitEnvironment 从环境变量重新加载配置（包 init 时自动调用；测试中可重复调用以验证环境变量覆盖）。
 //
 //	@author centonhuang
@@ -308,6 +330,7 @@ func InitEnvironment() {
 	config.SetDefault("trusted.proxies", "172.18.0.1")
 	config.SetDefault("cron.session.terminal_cleanup.enabled", true)
 	config.SetDefault("cron.soft.delete.purge.enabled", true)
+	config.SetDefault("cron.oauth.maintenance.enabled", true)
 
 	config.SetDefault("upstream.retry.max_attempts", 5)
 	config.SetDefault("upstream.retry.initial_backoff", 500*time.Millisecond)
@@ -315,6 +338,8 @@ func InitEnvironment() {
 	config.SetDefault("upstream.retry.jitter_factor", 0.3)
 
 	config.SetDefault("mock.upstream.enabled", false)
+
+	config.SetDefault("oauth.credential_key", "")
 
 	config.SetDefault("upstream.circuit.enabled", true)
 	config.SetDefault("upstream.circuit.window", 60*time.Second)
@@ -395,6 +420,7 @@ func InitEnvironment() {
 	CronSessionTerminalCleanupEnabled = config.GetBool("cron.session.terminal_cleanup.enabled")
 	CronSoftDeletePurgeEnabled = config.GetBool("cron.soft.delete.purge.enabled")
 	CronThinkExtractEnabled = config.GetBool("cron.think.extract.enabled")
+	CronOAuthMaintenanceEnabled = config.GetBool("cron.oauth.maintenance.enabled")
 
 	UpstreamRetryMaxAttempts = config.GetInt("upstream.retry.max_attempts")
 	UpstreamRetryInitialBackoff = config.GetDuration("upstream.retry.initial_backoff")
@@ -402,6 +428,8 @@ func InitEnvironment() {
 	UpstreamRetryJitterFactor = config.GetFloat64("upstream.retry.jitter_factor")
 
 	MockUpstreamEnabled = config.GetBool("mock.upstream.enabled")
+
+	OAuthCredentialKey = parseOAuthCredentialKey(config.GetString("oauth.credential_key"))
 
 	UpstreamCircuitEnabled = config.GetBool("upstream.circuit.enabled")
 	UpstreamCircuitWindow = max(config.GetDuration("upstream.circuit.window"), constant.ResilienceMinWindow)

@@ -36,6 +36,7 @@ type openAIUseCase struct {
 	triggerChecker TriggerChecker
 	tokenMetrics   *metrics.TokenUsageCounter
 	affinity       service.EndpointAffinity
+	tokenProvider  service.OAuthTokenProvider
 }
 
 func NewOpenAIUseCase(
@@ -47,6 +48,7 @@ func NewOpenAIUseCase(
 	triggerChecker TriggerChecker,
 	tokenMetrics *metrics.TokenUsageCounter,
 	affinity service.EndpointAffinity,
+	tokenProvider service.OAuthTokenProvider,
 ) port.OpenAIUseCase {
 	return &openAIUseCase{
 		resolver:       resolver,
@@ -57,6 +59,7 @@ func NewOpenAIUseCase(
 		triggerChecker: triggerChecker,
 		tokenMetrics:   tokenMetrics,
 		affinity:       affinity,
+		tokenProvider:  tokenProvider,
 	}
 }
 
@@ -117,7 +120,10 @@ func (u *openAIUseCase) CreateDecision(ctx context.Context, req *dto.OpenAICreat
 // forwardDecision 向单个候选端点转发 Decision 请求（单端点单次尝试）。
 func (u *openAIUseCase) forwardDecision(ctx context.Context, req *dto.OpenAICreateDecisionRequest, m *aggregate.Model, ep *aggregate.Endpoint) (port.Result, error) {
 	model := req.Body.Model
-	upstream := toTransportEndpoint(m, ep, false)
+	upstream, err := u.buildTransportEndpoint(ctx, m, ep, false)
+	if err != nil {
+		return nil, err
+	}
 	body := proxyutil.MarshalOpenAIDecisionBodyForModel(req.Body, upstream.Model)
 
 	startTime := time.Now()
@@ -222,7 +228,10 @@ func (u *openAIUseCase) dispatchChat(ctx context.Context, req *dto.OpenAIChatCom
 	switch SelectCompatRoute(enum.ProxyAPIOpenAIChat, ep) {
 	case enum.CompatRouteNative:
 		stream := lo.FromPtr(req.Body.Stream)
-		upstream := toTransportEndpoint(m, ep, false)
+		upstream, err := u.buildTransportEndpoint(ctx, m, ep, false)
+		if err != nil {
+			return nil, err
+		}
 		return u.forwardChatNative(ctx, req, m, ep, upstream, stream)
 	case enum.CompatRouteViaAnthropicMessage:
 		return u.forwardChatViaAnthropic(ctx, req, m, ep, req.Body.Model)
@@ -238,7 +247,13 @@ func (u *openAIUseCase) CreateResponse(ctx context.Context, req *dto.OpenAICreat
 	var compatRoute enum.CompatRoute
 	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
 	affKey, _ := AffinityKey(ctx, model, firstUserTextResponse(req.Body.Input))
+	isStream := lo.FromPtr(req.Body.Stream)
 	cands, err := u.resolver.ResolveCandidatesWithAffinity(ctx, userID, vo.EndpointAlias(model), affKey, func(ep *aggregate.Endpoint) bool {
+		// Codex 订阅端点要求 stream=true（上游约束）：非流式请求排除该候选，
+		// 让 api_key 端点兜底；全部候选被排除时按 model not found 语义返回。
+		if ep.AuthType() == enum.EndpointAuthOAuthOpenAI && !isStream {
+			return false
+		}
 		return SelectCompatRoute(enum.ProxyAPIOpenAIResponse, ep) != enum.CompatRouteUnsupported
 	})
 	if err != nil {
@@ -299,7 +314,10 @@ func (u *openAIUseCase) dispatchResponse(ctx context.Context, req *dto.OpenAICre
 	switch SelectCompatRoute(enum.ProxyAPIOpenAIResponse, ep) {
 	case enum.CompatRouteNative:
 		stream := lo.FromPtr(req.Body.Stream)
-		upstream := toTransportEndpoint(m, ep, false)
+		upstream, err := u.buildTransportEndpoint(ctx, m, ep, false)
+		if err != nil {
+			return nil, err
+		}
 		return u.forwardResponseNative(ctx, req, m, ep, upstream, stream)
 	case enum.CompatRouteViaOpenAIChat:
 		return u.forwardResponseViaChat(ctx, req, m, ep)
@@ -310,7 +328,7 @@ func (u *openAIUseCase) dispatchResponse(ctx context.Context, req *dto.OpenAICre
 	}
 }
 
-func toTransportEndpoint(m *aggregate.Model, ep *aggregate.Endpoint, isAnthropic bool) vo.UpstreamEndpoint {
-	baseURL := lo.Ternary(isAnthropic, ep.AnthropicBaseURL(), ep.OpenaiBaseURL())
-	return vo.NewUpstreamEndpointFromCredential(m.UpstreamModel(), ep.APIKey(), baseURL)
+// buildTransportEndpoint 组装传输层端点（OAuth 端点在此注入 access token 与稳定身份）。
+func (u *openAIUseCase) buildTransportEndpoint(ctx context.Context, m *aggregate.Model, ep *aggregate.Endpoint, isAnthropic bool) (vo.UpstreamEndpoint, error) {
+	return buildTransportEndpointWithToken(ctx, m, ep, isAnthropic, u.tokenProvider)
 }

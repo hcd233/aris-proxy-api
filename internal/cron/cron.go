@@ -17,6 +17,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/config"
 	"github.com/hcd233/aris-proxy-api/internal/domain/conversation"
 	cachepkg "github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/oauthprovider"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
@@ -190,6 +191,21 @@ func buildRegistryEntries() []CronRegistryEntry {
 				triggerRepo := repository.NewTriggerRepository(db)
 				hitCache := cachepkg.NewTriggerHitCache(cache)
 				return NewTriggerHitSyncCron(db, triggerRepo, hitCache, cache)
+			},
+		},
+		{
+			Name:        constant.CronModuleOAuthMaintenance,
+			Type:        constant.CronTypeFunctional,
+			Spec:        constant.CronSpecOAuthMaintenance,
+			Description: constant.CronDescriptionOAuthMaintenance,
+			Enabled:     func() bool { return config.CronOAuthMaintenanceEnabled },
+			Factory: func(db *gorm.DB, _ *pool.PoolManager, cache *redis.Client, _ conversation.ThinkExtractRepository) Cron {
+				credRepo := repository.NewOAuthCredentialRepository(db)
+				providers := oauthprovider.NewClients()
+				// 与 fx 容器共用同一装配入口（oauthprovider.NewDefaultTokenProvider），
+				// 避免此处手工拼装与容器侧漂移
+				tokens := oauthprovider.NewDefaultTokenProvider(credRepo, cache)
+				return NewOAuthMaintenanceCron(credRepo, tokens, providers, cache)
 			},
 		},
 	}

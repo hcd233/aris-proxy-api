@@ -13,10 +13,10 @@ import (
 
 	proxyutil "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/inflight"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
-	commonutil "github.com/hcd233/aris-proxy-api/internal/common/util"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/httpclient"
@@ -186,6 +186,16 @@ func (p *anthropicProxy) sendRequestOnce(ctx context.Context, ep vo.UpstreamEndp
 
 	upstreamURL := strings.TrimRight(ep.BaseURL, "/") + path
 
+	// OAuth 订阅端点：body 前置身份声明与 metadata（在构造请求前改写，日志记录真实上游请求）
+	if ep.AuthType == enum.EndpointAuthOAuthAnthropic {
+		transformed, terr := transformAnthropicOAuthBody(body, ep)
+		if terr != nil {
+			log.Error("[AnthropicProxy] OAuth body transform error", zap.Error(terr))
+			return nil, terr
+		}
+		body = transformed
+	}
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, upstreamURL, bytes.NewReader(body))
 	if err != nil {
 		log.Error("[AnthropicProxy] New request error", zap.String("upstreamURL", upstreamURL), zap.Error(err))
@@ -195,14 +205,19 @@ func (p *anthropicProxy) sendRequestOnce(ctx context.Context, ep vo.UpstreamEndp
 	// 透传客户端请求头
 	applyPassthroughRequestHeaders(ctx, req.Header)
 
-	req.Header.Set(constant.HTTPHeaderAuthorization, constant.HTTPAuthBearerPrefix+ep.APIKey)
+	if ep.AuthType == enum.EndpointAuthOAuthAnthropic {
+		// OAuth 分支：删除透传 x-api-key、覆盖 Authorization、合并 beta、伪装官方 CLI UA
+		applyAnthropicOAuthUpstream(req.Header, ep)
+	} else {
+		req.Header.Set(constant.HTTPHeaderAuthorization, constant.HTTPAuthBearerPrefix+ep.APIKey)
+		req.Header.Set(constant.HTTPHeaderAPIKey, ep.APIKey)
+	}
 	req.Header.Set(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
-	req.Header.Set(constant.HTTPHeaderAPIKey, ep.APIKey)
 	req.Header.Set(constant.HTTPHeaderAnthropicVersion, constant.AnthropicAPIVersion)
 
 	log.Info("[AnthropicProxy] Send upstream request", zap.String("upstreamURL", upstreamURL),
 		zap.String("upstreamModel", ep.Model),
-		zap.String("upstreamAPIKey", commonutil.MaskSecret(ep.APIKey)),
+		zap.String("upstreamCredential", upstreamCredLabel(ep)),
 		zap.Any("upstreamHeaders", util.MaskHTTPHeadersForLog(req.Header)),
 		zap.Any("upstreamRequestSummary", parseUpstreamRequestSummary(body)),
 	)

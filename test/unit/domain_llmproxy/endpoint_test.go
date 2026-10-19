@@ -6,6 +6,7 @@ import (
 
 	"github.com/samber/lo"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 )
@@ -52,6 +53,7 @@ func TestCreateEndpoint_AllowsSingleProtocolEndpoint(t *testing.T) {
 				tc.supportOpenAIResponse,
 				tc.supportAnthropicMessage,
 				tc.supportOpenAIDecision,
+				enum.EndpointAuthAPIKey,
 			)
 			if err != nil {
 				t.Fatalf("CreateEndpoint() error: %v", err)
@@ -106,6 +108,7 @@ func TestCreateEndpoint_RejectsMissingSupportedProtocolBaseURL(t *testing.T) {
 				tc.supportOpenAIResponse,
 				tc.supportAnthropicMessage,
 				tc.supportOpenAIDecision,
+				enum.EndpointAuthAPIKey,
 			)
 			if !errors.Is(err, ierr.ErrValidation) {
 				t.Fatalf("CreateEndpoint() error = %v, want ErrValidation", err)
@@ -119,6 +122,7 @@ func TestCreateEndpoint_RejectsBothEmptyBaseURL(t *testing.T) {
 	_, err := aggregate.CreateEndpoint(
 		1, "test", "", "", "sk-test",
 		false, false, false, false,
+		enum.EndpointAuthAPIKey,
 	)
 	if !errors.Is(err, ierr.ErrValidation) {
 		t.Fatalf("CreateEndpoint() error = %v, want ErrValidation", err)
@@ -130,6 +134,7 @@ func TestCreateEndpoint_RejectsNoCapability(t *testing.T) {
 	_, err := aggregate.CreateEndpoint(
 		1, "test", "https://api.openai.com", "https://api.anthropic.com", "sk-test",
 		false, false, false, false,
+		enum.EndpointAuthAPIKey,
 	)
 	if !errors.Is(err, ierr.ErrValidation) {
 		t.Fatalf("CreateEndpoint() error = %v, want ErrValidation", err)
@@ -142,7 +147,7 @@ func TestCreateEndpoint_RejectsNoCapability(t *testing.T) {
 // 放行即写库，而仓库写全部字段，之后该端点每次读取都失败（列表、代理、修复入口全挂）。
 func TestUpdate_RejectsCapabilityWithoutBaseURL(t *testing.T) {
 	t.Parallel()
-	ep := aggregate.RehydrateEndpoint(6, "tokenhub", "https://tokenhub.example.com/v1", "", "sk-test", true, true, false, false)
+	ep := aggregate.RehydrateEndpoint(6, "tokenhub", "https://tokenhub.example.com/v1", "", "sk-test", true, true, false, false, enum.EndpointAuthAPIKey)
 
 	err := ep.Update(lo.ToPtr("tokenhub"), nil, nil, nil, nil, nil, lo.ToPtr(true), nil)
 	if !errors.Is(err, ierr.ErrValidation) {
@@ -166,7 +171,7 @@ func TestUpdate_RejectsCapabilityWithoutBaseURL(t *testing.T) {
 // TestUpdate_RejectsClearingBaseURLWhileCapabilityOn 能力开着时清空 baseURL 同样拒绝。
 func TestUpdate_RejectsClearingBaseURLWhileCapabilityOn(t *testing.T) {
 	t.Parallel()
-	ep := aggregate.RehydrateEndpoint(1, "ep", "https://o.example.com", "https://a.example.com", "sk-test", true, false, true, false)
+	ep := aggregate.RehydrateEndpoint(1, "ep", "https://o.example.com", "https://a.example.com", "sk-test", true, false, true, false, enum.EndpointAuthAPIKey)
 
 	if err := ep.Update(nil, nil, lo.ToPtr(""), nil, nil, nil, nil, nil); !errors.Is(err, ierr.ErrValidation) {
 		t.Fatalf("Update() error = %v, want ErrValidation", err)
@@ -180,7 +185,7 @@ func TestUpdate_RejectsClearingBaseURLWhileCapabilityOn(t *testing.T) {
 // 库侧直改出的坏行必须仍读得出，否则连接口都进不去，只能手改数据库。
 func TestRehydrateEndpoint_ToleratesInconsistentRow(t *testing.T) {
 	t.Parallel()
-	ep := aggregate.RehydrateEndpoint(6, "tokenhub", "https://tokenhub.example.com/v1", "", "sk-test", true, true, true, false)
+	ep := aggregate.RehydrateEndpoint(6, "tokenhub", "https://tokenhub.example.com/v1", "", "sk-test", true, true, true, false, enum.EndpointAuthAPIKey)
 
 	if ep.AggregateID() != 6 || ep.Name() != "tokenhub" || ep.APIKey() != "sk-test" {
 		t.Fatalf("恢复应忠实拷贝持久化状态: id=%d name=%q", ep.AggregateID(), ep.Name())

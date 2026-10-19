@@ -1,0 +1,174 @@
+package constant
+
+import "time"
+
+// 订阅账号 OAuth（Claude Code / Codex）协议与生命周期常量。
+//
+// 与 oauth.go 中的「Web 登录 OAuth2」（GitHub / Google 登录态）是两套互不相干的语义，
+// 故分文件承载，避免 OAuthStateBytes 这类登录态常量与订阅账号常量混排。
+//
+// 协议取值为上游协议事实（授权端点、client_id、scope 等），来源为官方客户端公开行为
+// （见设计文档 docs/superpowers/specs/2026-10-18-oauth-subscription-pooling-design.md §4.1）；
+// 上游变更时只改本文件，禁止把字面量散落到业务代码。
+const (
+	// ── Anthropic（Claude Code 订阅）──
+
+	// OAuthClaudeClientID Claude Code 公开 OAuth 客户端 ID
+	OAuthClaudeClientID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
+	// OAuthClaudeAuthorizeURL Claude 授权页
+	OAuthClaudeAuthorizeURL = "https://claude.com/cai/oauth/authorize"
+	// OAuthClaudeTokenURL Claude token 端点（换取与刷新共用）
+	OAuthClaudeTokenURL = "https://platform.claude.com/v1/oauth/token"
+	// OAuthClaudeRedirectURI Claude 固定回调（页面展示 code，用户手动回贴）
+	OAuthClaudeRedirectURI = "https://platform.claude.com/oauth/code/callback"
+	// OAuthClaudeScope Claude 授权 scope（空格连接）
+	OAuthClaudeScope = "user:profile user:inference user:sessions:claude_code user:mcp_servers user:file_upload"
+	// OAuthClaudeUsageURL Claude 订阅窗口用量查询
+	OAuthClaudeUsageURL = "https://api.anthropic.com/api/oauth/usage"
+	// OAuthClaudeBetaHeader OAuth 调用必需的 anthropic-beta 值
+	OAuthClaudeBetaHeader = "oauth-2025-04-20"
+	// OAuthClaudeUserAgent Claude OAuth 转发 UA（协议事实：OAuth 调用需伪装官方 CLI 形态，规格 §4.3）
+	OAuthClaudeUserAgent = "claude-cli/2.1.7 (external, cli)"
+	// OAuthClaudeXApp Claude 客户端标识头值
+	OAuthClaudeXApp = "cli"
+	// OAuthClaudeSystemBlock system 首块身份声明（协议事实：OAuth 调用需声明 Claude Code 身份）
+	OAuthClaudeSystemBlock = "You are Claude Code, Anthropic's official CLI for Claude."
+	// OAuthClaudeUpstreamBaseURL Claude OAuth 端点的转发 baseURL（transport 拼 /messages）
+	OAuthClaudeUpstreamBaseURL = "https://api.anthropic.com/v1"
+
+	// ── OpenAI（Codex 订阅）──
+
+	// OAuthOpenAIClientID Codex CLI 公开 OAuth 客户端 ID
+	OAuthOpenAIClientID = "app_EMoamEEZ73f0CkXaXp7hrann"
+	// OAuthOpenAIAuthorizeURL OpenAI 授权页
+	OAuthOpenAIAuthorizeURL = "https://auth.openai.com/oauth/authorize"
+	// OAuthOpenAITokenURL OpenAI token 端点（换取与刷新共用）
+	OAuthOpenAITokenURL = "https://auth.openai.com/oauth/token"
+	// OAuthOpenAIRedirectURI Codex 固定回调（浏览器打不开 localhost 时用户从地址栏复制整段 URL）
+	OAuthOpenAIRedirectURI = "http://localhost:1455/auth/callback"
+	// OAuthOpenAIScope OpenAI 换取授权码时的 scope
+	OAuthOpenAIScope = "openid profile email offline_access"
+	// OAuthOpenAIRefreshScope OpenAI 刷新 token 时的 scope（不含 offline_access）
+	OAuthOpenAIRefreshScope = "openid profile email"
+	// OAuthOpenAIUsageURL Codex 订阅窗口用量查询
+	OAuthOpenAIUsageURL = "https://chatgpt.com/backend-api/wham/usage"
+	// OAuthOpenAIUpstreamBaseURL Codex OAuth 端点的转发 baseURL（transport 拼 /responses）
+	OAuthOpenAIUpstreamBaseURL = "https://chatgpt.com/backend-api/codex"
+)
+
+// 订阅账号 OAuth 生命周期与熵参数
+const (
+	// OAuthFlowTTL 授权流临时记录存活时间（用户需在此窗口内完成浏览器授权并回贴 code）
+	OAuthFlowTTL = 10 * time.Minute
+
+	// OAuthTokenRefreshSkew access token 刷新提前量（请求路径判定"即将过期"即刷新）
+	OAuthTokenRefreshSkew = 3 * time.Minute
+
+	// OAuthTokenRefreshProactiveSkew cron 主动刷新提前量（大于请求路径提前量，
+	// 把刷新挪到低峰，降低请求路径的刷新概率）
+	OAuthTokenRefreshProactiveSkew = 30 * time.Minute
+
+	// OAuthRefreshLockTTL 刷新互斥锁 TTL（防持锁实例崩溃后的死锁）
+	OAuthRefreshLockTTL = 60 * time.Second
+
+	// OAuthAccessCacheGuard access token 缓存的安全余量（缓存 TTL = 剩余有效期 - 该值；
+	// 读取侧同样按该余量判定，TTL 与判定共用同一常量，避免两者漂移）
+	OAuthAccessCacheGuard = 60 * time.Second
+
+	// OAuthErrorInvalidGrant OAuth 上游"刷新令牌失效"错误码（标记需重新授权）
+	OAuthErrorInvalidGrant = "invalid_grant"
+
+	// OAuthCredentialError reason 文案（OAuthCredentialError 的 Reason 字段前缀）
+	OAuthReasonCredentialNotFound = "credential not found"
+	OAuthReasonReauthRequired     = "reauthorization required: "
+	OAuthReasonRefreshInProgress  = "refresh in progress elsewhere"
+	OAuthReasonRefreshFailed      = "refresh failed: "
+
+	// OAuthReasonQuotaProbeFailed 额度探测失败写入 last_error 的前缀
+	OAuthReasonQuotaProbeFailed = "quota probe failed: "
+	// OAuthErrorReasonMaxLength 上游错误摘要最大字符数（落库/展示前的清洗上限，按 rune 计）
+	OAuthErrorReasonMaxLength = 200
+
+	// OAuthEndpointStableKeyTemplate OAuth 端点稳定身份（%d = endpointID）：
+	// 熔断/并发隔离键与指标 label 的替代输入，避免 token 轮换导致键漂移
+	OAuthEndpointStableKeyTemplate = "oauth:%d"
+
+	// OAuthClaudeVerifierBytes Claude PKCE verifier 随机字节数（base64url 后 43 字符）
+	OAuthClaudeVerifierBytes = 32
+	// OAuthOpenAIVerifierBytes OpenAI PKCE verifier 随机字节数（hex 后 128 字符）
+	OAuthOpenAIVerifierBytes = 64
+
+	// OAuthURLSchemeHTTPPrefix / OAuthURLSchemeHTTPSPrefix 回调 URL 形态判定前缀
+	OAuthURLSchemeHTTPPrefix  = "http://"
+	OAuthURLSchemeHTTPSPrefix = "https://"
+	// OAuthCallbackParamCode / OAuthCallbackParamState 回调 URL 的 query 参数名
+	OAuthCallbackParamCode  = "code"
+	OAuthCallbackParamState = "state"
+)
+
+// OAuth 协议参数名与取值（标准 OAuth2 / PKCE）
+const (
+	OAuthParamClientID               = "client_id"
+	OAuthParamGrantType              = "grant_type"
+	OAuthParamResponseType           = "response_type"
+	OAuthParamRedirectURI            = "redirect_uri"
+	OAuthParamScope                  = "scope"
+	OAuthParamCodeChallenge          = "code_challenge"
+	OAuthParamCodeChallengeMethod    = "code_challenge_method"
+	OAuthParamCodeVerifier           = "code_verifier"
+	OAuthParamRefreshToken           = "refresh_token"
+	OAuthParamValueAuthorizationCode = "authorization_code"
+	OAuthParamValueRefreshToken      = "refresh_token"
+	OAuthParamValueS256              = "S256"
+
+	// OAuthOpenAIBoolTrue OpenAI 授权链接的布尔参数值
+	OAuthOpenAIBoolTrue = "true"
+	// OAuthOpenAIAddOrganizationsParam / OAuthOpenAISimplifiedFlowParam OpenAI 授权链接附加参数名
+	OAuthOpenAIAddOrganizationsParam = "id_token_add_organizations"
+	OAuthOpenAISimplifiedFlowParam   = "codex_cli_simplified_flow"
+)
+
+// Codex 客户端身份常量（token 端点与上游转发路径共用；版本与 UA 形态见设计文档 §4.3）
+const (
+	// OAuthCodexOriginator Codex 请求来源标识（上游按此判定客户端合法性）
+	OAuthCodexOriginator = "codex_cli_rs"
+	// OAuthCodexUserAgent Codex 客户端 UA（转发路径同用；版本低于 0.144.0 上游返回 404）
+	OAuthCodexUserAgent = "codex_cli_rs/0.146.0 (Mac OS 15.0; arm64) terminal"
+	// OAuthCodexReasoningEncryptedInclude reasoning 存在时需补的 include 项
+	OAuthCodexReasoningEncryptedInclude = "reasoning.encrypted_content"
+)
+
+// 订阅额度窗口标识与窗口时长（vo.QuotaWindow.Key 的取值；时长用于展示）
+const (
+	OAuthQuotaWindowFiveHour       = "five_hour"
+	OAuthQuotaWindowSevenDay       = "seven_day"
+	OAuthQuotaWindowSevenDaySonnet = "seven_day_sonnet"
+	OAuthQuotaWindowPrimary        = "primary"
+	OAuthQuotaWindowSecondary      = "secondary"
+
+	// OAuthQuotaWindowFiveHourMinutes / OAuthQuotaWindowSevenDayMinutes 额度窗口时长（分钟，用于展示）
+	OAuthQuotaWindowFiveHourMinutes = 300
+	OAuthQuotaWindowSevenDayMinutes = 10080
+
+	// OAuthPercentScale 额度比例 → 百分比换算（Anthropic utilization 为 0.0~1.0 比例，
+	// OpenAI used_percent 为 0~100 百分比；统一归一为 0~100 后再进 vo.QuotaWindow）
+	OAuthPercentScale = 100.0
+)
+
+// OAuth 错误与响应体限制
+const (
+	// OAuthErrorBodyLimit 上游错误响应读取上限（字节，防异常大响应拖垮内存）
+	OAuthErrorBodyLimit = 8192
+
+	// OAuthIDTokenSegmentCount JWT（id_token）标准段数：header.payload.signature
+	OAuthIDTokenSegmentCount = 3
+
+	// OAuthSecondsPerMinute 秒转分钟换算基数（窗口时长从秒归一为展示分钟）
+	OAuthSecondsPerMinute = 60
+)
+
+// OAuthQuotaProbeInterval 额度探测节流间隔（同一凭据在此窗口内只探测一次）
+const OAuthQuotaProbeInterval = 30 * time.Minute
+
+// OAuthProbeTimeout 手动探测接口的服务端处理超时
+const OAuthProbeTimeout = 15 * time.Second

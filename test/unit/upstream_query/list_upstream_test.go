@@ -167,7 +167,7 @@ const (
 
 func mustEndpoint(t *testing.T, id, userID uint, name string) *llmagg.Endpoint {
 	t.Helper()
-	ep, err := llmagg.CreateEndpoint(id, name, "https://o.example.com", "https://a.example.com", "sk-secret", true, false, false, false)
+	ep, err := llmagg.CreateEndpoint(id, name, "https://o.example.com", "https://a.example.com", "sk-secret", true, false, false, false, enum.EndpointAuthAPIKey)
 	if err != nil {
 		t.Fatalf("CreateEndpoint(%d): %v", id, err)
 	}
@@ -191,7 +191,7 @@ func testTime() time.Time { return time.Unix(1756000000, 0) }
 
 func newHandler(t *testing.T, eps map[uint]*llmagg.Endpoint, models []*llmagg.Model, users map[uint]*useragg.User) port.ListUpstreamHandler {
 	t.Helper()
-	return query.NewListUpstreamHandler(&fakeEndpointRepo{endpoints: eps}, &fakeModelRepo{models: models}, &fakeUserRepo{users: users})
+	return query.NewListUpstreamHandler(&fakeEndpointRepo{endpoints: eps}, &fakeModelRepo{models: models}, &fakeUserRepo{users: users}, &fakeOAuthCredRepo{})
 }
 
 func alice(t *testing.T) *useragg.User {

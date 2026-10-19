@@ -2,6 +2,9 @@ package constant
 
 import "time"
 
+// Web 登录 OAuth2（GitHub / Google）常量。
+//
+// 订阅账号（Claude Code / Codex）的协议常量在 oauth_subscription.go，两者语义无关。
 const (
 	GithubUserURL      = "https://api.github.com/user"
 	GithubUserEmailURL = "https://api.github.com/user/emails"
@@ -28,9 +31,6 @@ const (
 	// StateProviderPrefix + platform + StateProviderSeparator + random hex
 	StateProviderPrefix    = "provider:"
 	StateProviderSeparator = ":"
-
-	// RedisOAuthStateKeyPrefix OAuth state 的 Redis key 前缀
-	RedisOAuthStateKeyPrefix = "oauth:state:"
 
 	// RedisOAuthStateVerifyScript Lua 脚本：原子地 GET + DEL
 	// 如果 key 不存在返回空，存在则删除并返回创建时间戳

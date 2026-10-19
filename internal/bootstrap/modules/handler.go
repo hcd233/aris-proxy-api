@@ -191,8 +191,8 @@ func NewCronDependencies(
 	}
 }
 
-func NewEndpointDependencies(create endpointport.CreateEndpointHandler, update endpointport.UpdateEndpointHandler, deleteHandler endpointport.DeleteEndpointHandler) handler.EndpointDependencies {
-	return handler.EndpointDependencies{Create: create, Update: update, Delete: deleteHandler}
+func NewEndpointDependencies(create endpointport.CreateEndpointHandler, update endpointport.UpdateEndpointHandler, deleteHandler endpointport.DeleteEndpointHandler, authorize endpointport.AuthorizeOAuthHandler, exchange endpointport.ExchangeOAuthHandler, reauth endpointport.ReauthOAuthHandler, quota endpointport.GetOAuthQuotaHandler, probe endpointport.ProbeOAuthQuotaHandler) handler.EndpointDependencies {
+	return handler.EndpointDependencies{Create: create, Update: update, Delete: deleteHandler, OAuth: authorize, Exchange: exchange, Reauth: reauth, Quota: quota, Probe: probe}
 }
 
 func NewModelDependencies(create modelport.CreateModelHandler, update modelport.UpdateModelHandler, deleteHandler modelport.DeleteModelHandler, list modelport.ListModelHandler, prefill modelport.PrefillSpecHandler) handler.ModelDependencies {

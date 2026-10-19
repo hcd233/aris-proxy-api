@@ -72,7 +72,7 @@ func (s *decisionTaskSubmitter) SubmitMessageStoreTask(task *dto.MessageStoreTas
 var _ usecase.TaskSubmitter = (*decisionTaskSubmitter)(nil)
 
 func buildDecisionEndpoint() *aggregate.Endpoint {
-	ep, _ := aggregate.CreateEndpoint(5, "decision-endpoint", "https://api.openai.com", "", "sk-test", false, false, false, true)
+	ep, _ := aggregate.CreateEndpoint(5, "decision-endpoint", "https://api.openai.com", "", "sk-test", false, false, false, true, enum.EndpointAuthAPIKey)
 	return ep
 }
 
@@ -95,7 +95,7 @@ func newDecisionRequest() *dto.OpenAICreateDecisionRequest {
 
 func newDecisionUseCase(proxy *mockOpenAIProxy, submitter *decisionTaskSubmitter) port.OpenAIUseCase {
 	resolver := &mockResolver{resolveEndpoint: buildDecisionEndpoint(), resolveModel: buildTestModel()}
-	return usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, submitter, nil, nil, nil)
+	return usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, submitter, nil, nil, nil, nil)
 }
 
 func TestCreateDecision_NativeForwardRewritesModelAndStoresSession(t *testing.T) {
@@ -215,7 +215,7 @@ func TestCreateDecision_ModelNotSupported(t *testing.T) {
 	proxy := &mockOpenAIProxy{}
 	submitter := &decisionTaskSubmitter{}
 	resolver := &mockResolver{resolveEndpoint: buildCompatEndpoint("chat-only", true, false, false), resolveModel: buildTestModel()}
-	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, submitter, nil, nil, nil)
+	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, submitter, nil, nil, nil, nil)
 
 	_, err := uc.CreateDecision(t.Context(), newDecisionRequest())
 	if err == nil {
@@ -307,7 +307,7 @@ var _ usecase.TriggerChecker = (*stubTriggerChecker)(nil)
 
 func newInterceptDecisionUseCase(proxy *mockOpenAIProxy, submitter *decisionTaskSubmitter, checker *stubTriggerChecker) port.OpenAIUseCase {
 	resolver := &mockResolver{resolveEndpoint: buildDecisionEndpoint(), resolveModel: buildTestModel()}
-	return usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, submitter, checker, nil, nil)
+	return usecase.NewOpenAIUseCase(resolver, &mockListModels{}, proxy, &mockAnthropicProxyForOpenAI{}, submitter, checker, nil, nil, nil)
 }
 
 func TestCreateDecision_DenyReturnsRefusalPerQuestion(t *testing.T) {

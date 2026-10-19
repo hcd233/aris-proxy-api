@@ -23,6 +23,7 @@ import (
 	demoauditquery "github.com/hcd233/aris-proxy-api/internal/application/demoaccessaudit/query"
 	endpointcommand "github.com/hcd233/aris-proxy-api/internal/application/endpoint/command"
 	endpointport "github.com/hcd233/aris-proxy-api/internal/application/endpoint/port"
+	endpointquery "github.com/hcd233/aris-proxy-api/internal/application/endpoint/query"
 	identitycommand "github.com/hcd233/aris-proxy-api/internal/application/identity/command"
 	identityport "github.com/hcd233/aris-proxy-api/internal/application/identity/port"
 	identityquery "github.com/hcd233/aris-proxy-api/internal/application/identity/query"
@@ -48,12 +49,14 @@ import (
 	upstreamport "github.com/hcd233/aris-proxy-api/internal/application/upstream/port"
 	upstreamquery "github.com/hcd233/aris-proxy-api/internal/application/upstream/query"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	cronpkg "github.com/hcd233/aris-proxy-api/internal/cron"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
 	apikeyservice "github.com/hcd233/aris-proxy-api/internal/domain/apikey/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
 	identityservice "github.com/hcd233/aris-proxy-api/internal/domain/identity/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
+	llmproxyservice "github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall"
 	oauthsvc "github.com/hcd233/aris-proxy-api/internal/domain/oauth2/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/session"
@@ -78,6 +81,11 @@ var ApplicationModule = fx.Module(constant.DigNameApplicationModule,
 		NewCreateEndpointHandler,
 		NewUpdateEndpointHandler,
 		NewDeleteEndpointHandler,
+		NewOAuthAuthorizeHandler,
+		NewOAuthExchangeHandler,
+		NewOAuthReauthHandler,
+		NewGetOAuthQuotaHandler,
+		NewOAuthProbeHandler,
 		NewCreateModelHandler,
 		NewUpdateModelHandler,
 		NewDeleteModelHandler,
@@ -231,6 +239,26 @@ func NewDeleteEndpointHandler(endpointRepo llmproxy.EndpointRepository) endpoint
 	return endpointcommand.NewDeleteEndpointHandler(endpointRepo)
 }
 
+func NewOAuthAuthorizeHandler(flowStore llmproxyservice.OAuthFlowStore, clients map[enum.OAuthProvider]llmproxyservice.OAuthProviderClient) endpointport.AuthorizeOAuthHandler {
+	return endpointcommand.NewOAuthAuthorizeHandler(flowStore, clients)
+}
+
+func NewOAuthExchangeHandler(flowStore llmproxyservice.OAuthFlowStore, clients map[enum.OAuthProvider]llmproxyservice.OAuthProviderClient, repo llmproxy.OAuthEndpointRepository) endpointport.ExchangeOAuthHandler {
+	return endpointcommand.NewOAuthExchangeHandler(flowStore, clients, repo)
+}
+
+func NewOAuthReauthHandler(flowStore llmproxyservice.OAuthFlowStore, clients map[enum.OAuthProvider]llmproxyservice.OAuthProviderClient, endpointRepo llmproxy.EndpointRepository, credRepo llmproxy.OAuthCredentialRepository, accessCache llmproxyservice.OAuthAccessCache) endpointport.ReauthOAuthHandler {
+	return endpointcommand.NewOAuthReauthHandler(flowStore, clients, endpointRepo, credRepo, accessCache)
+}
+
+func NewGetOAuthQuotaHandler(endpointRepo llmproxy.EndpointRepository, credRepo llmproxy.OAuthCredentialRepository) endpointport.GetOAuthQuotaHandler {
+	return endpointquery.NewGetOAuthQuotaHandler(endpointRepo, credRepo)
+}
+
+func NewOAuthProbeHandler(endpointRepo llmproxy.EndpointRepository, credRepo llmproxy.OAuthCredentialRepository, tokens llmproxyservice.OAuthTokenProvider, clients map[enum.OAuthProvider]llmproxyservice.OAuthProviderClient) endpointport.ProbeOAuthQuotaHandler {
+	return endpointcommand.NewOAuthProbeHandler(endpointRepo, credRepo, tokens, clients)
+}
+
 func NewCreateModelHandler(endpointRepo llmproxy.EndpointRepository, modelRepo llmproxy.ModelRepository) modelport.CreateModelHandler {
 	return modelcommand.NewCreateModelHandler(endpointRepo, modelRepo)
 }
@@ -252,8 +280,8 @@ func NewPrefillSpecHandler(provider modelport.ModelSpecProvider) modelport.Prefi
 	return modelquery.NewPrefillSpecHandler(provider)
 }
 
-func NewListUpstreamHandler(endpointRepo llmproxy.EndpointRepository, modelRepo llmproxy.ModelRepository, userRepo identity.UserRepository) upstreamport.ListUpstreamHandler {
-	return upstreamquery.NewListUpstreamHandler(endpointRepo, modelRepo, userRepo)
+func NewListUpstreamHandler(endpointRepo llmproxy.EndpointRepository, modelRepo llmproxy.ModelRepository, userRepo identity.UserRepository, credRepo llmproxy.OAuthCredentialRepository) upstreamport.ListUpstreamHandler {
+	return upstreamquery.NewListUpstreamHandler(endpointRepo, modelRepo, userRepo, credRepo)
 }
 
 func NewUpdateProfileHandler(repo identity.UserRepository) identityport.UpdateProfileHandler {

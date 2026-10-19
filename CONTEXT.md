@@ -51,6 +51,10 @@ _Avoid_: model name, exposed name
 调用上游 LLM 所需的 BaseURL 与 APIKey。由 EndpointResolver 根据请求协议（OpenAI / Anthropic）从 `Endpoint` 表取对应协议的 Base URL + 共享 API Key 组合而成，与 `Model`（上游真实模型名）一同返回给 UseCase。
 _Avoid_: connection info, auth config
 
+**SubscriptionCredential（订阅凭据）**:
+Claude Code / Codex 订阅账号经 OAuth 授权得到的 access + refresh token 组合，密文存 `endpoint_oauth_credentials`（AES-256-GCM），与 Endpoint 一对一。运行时 access token 由 OAuthTokenProvider 按需刷新后注入 `vo.UpstreamEndpoint.APIKey` 字段——该字段的语义是「最终鉴权凭据」，api_key 端点放上游密钥、订阅端点放 access token，两类端点共用同一转发链路。凭据状态（`active` / `reauth_required`）与额度快照走独立只读投影，token 永不出现在管理端接口与日志中。
+_Avoid_: oauth token, api key, access key
+
 **ProtocolType（协议类型）**:
 网关支持的四种上游 LLM 协议：`openai-chat-completion`（OpenAI Chat Completions）、`openai-response`（OpenAI Response API）、`anthropic-message`（Anthropic Messages）、`openai-decision`（OpenAI Decision API）。决定请求的序列化/反序列化方式和传输通道。网关支持跨协议转换（如 OpenAI 接口调用 Anthropic 上游），但 **Decision 仅支持原生转发**：predicate/choice/score 在 Chat/Anthropic 协议中没有等价语义。
 _Avoid_: provider type, api type
@@ -114,6 +118,26 @@ _Avoid_: price import, auto pricing, autofill
 **ConfigMissing（配置缺失检测）**:
 模型配置健康标记（聚合方法 `MissingConfig`）：`pricing`（未计价，`pricing_currency` 为空；免费模型不算）与 `spec`（未填规格，`context_length` 为 0）。`model/list` 与 `upstream/list` 响应项携带 `config_missing` 数组，前端以徽标展示并可「仅看缺失」筛选（`missingOnly` query 参数，SQL 级过滤保分页语义）。补齐动作复用 SpecPrefill 按钮与定价弹窗。
 _Avoid_: config health, incomplete model
+
+**EndpointAuthType（端点认证类型）**:
+`api_key`（默认，存量全部）与 `oauth_anthropic` / `oauth_openai`（订阅账号）。订阅端点的连接字段（baseURL/能力标记）是服务端固定值，Update 路径不可修改（`oauth endpoint connection fields are immutable`）；凭据为 **OAuthCredential**。订阅端点的协议入口受能力矩阵约束：oauth_anthropic 支持 Messages 原生与 Chat/Response 跨协议转换，oauth_openai 仅接受 Responses 协议且必须 `stream=true`（非流式请求经候选过滤回落到 api_key 端点，Codex CLI/IDE 均为 Responses 流式）。
+_Avoid_: auth mode, credential type
+
+**OAuthCredential（订阅账号凭据）**:
+订阅端点的一对一凭据（`endpoint_oauth_credentials` 表）：access/refresh token 以 AES-256-GCM 密文存储（密钥 `OAUTH_CREDENTIAL_KEY`，hex 64 字符，缺省时读写 fail-closed；密钥丢失 = 全部订阅账号需重新授权），并含账号标识、邮箱、订阅类型与状态（`active` / `reauth_required`）。刷新失败（invalid_grant / 401 / 403）标记 `reauth_required`，该端点即从解析候选中剔除（fail-closed），由 fallback 切备选端点；重新授权（reauth）恢复。token 字段永不出现在任何 API 响应与日志中。
+_Avoid_: oauth token, subscription credential
+
+**OAuthFlow（授权流记录）**:
+授权发起时生成的一次性记录（Redis `oauth:flow:{state}`，TTL 10 分钟）：state → {userID, provider, PKCE verifier}。用户在官方页面完成授权后回贴 code（Claude 为 `code#state` 页面文本；Codex 为完整回调 URL），回调兑换即取即删（GetDel）防重放；verifier 只在服务端流转，绝不随授权链接下发。
+_Avoid_: oauth session, pending auth
+
+**QuotaSnapshot（订阅额度快照）**:
+订阅窗口用量快照（`windows`：Claude five_hour / seven_day / seven_day_sonnet；Codex primary / secondary），由额度维护 cron（`OAuthMaintenanceCron`，每 10 分钟扫 active 凭据，单账号 30 分钟节流）或手动探测接口（`/endpoint/oauth/probe`）写入。仅展示与监控用途，不参与调度决策（限额耗尽由上游 429 + 现有 fallback 兜底）。
+_Avoid_: usage snapshot, quota cache
+
+**SubscriptionUpstream（订阅上游特化）**:
+OAuth 端点的转发特化（transport 层 `oauth_upstream.go`，最小必要集）：Claude 侧删除透传 x-api-key（防 aris 密钥泄漏给上游）、覆盖 Authorization、**合并** anthropic-beta（不丢客户端 beta）、伪装官方 CLI UA，body 前置 Claude Code 身份块并补 metadata.user_id；Codex 侧补 chatgpt-account-id / originator / UA / accept，强制 `store=false`、`stream=true` 并清理上游不接受字段。access token 由 **OAuthTokenProvider** 注入（请求路径按需刷新：3 分钟提前量 + Redis 锁 + 双检），OAuth 端点的熔断/隔离键使用稳定身份 `oauth:{endpointID}`（token 轮换不重置熔断状态）。被上游拒绝时按设计文档 §4.3 差异清单增量补。
+_Avoid_: oauth mimic, upstream patch
 
 **Playground（模型调试台）**:
 Web 端内置调试入口（`POST /api/web/v1/playground/chat`，JWT、权限 ≥ user，demo 天然拒绝）：复用 OpenAI Chat 契约走 LLM 转发全链路（别名解析、跨协议转换、Guard、触发词），调用须经 query `apiKeyID` 指定**本人名下**的 API Key：审计按该 Key 归属（与 `api_key_id` 口径的审计/成本视图一致），请求数与 token 两个令牌桶与 `/api/openai/v1` 共用该 Key 的配额；**仅落审计不落会话**（注入 `CtxKeySkipStore`，与 Trigger omit 共用同一存储分流机制）。前端 `/playground` 页把**模型别名与计费 Key 的选择放进输入区**（不设参数侧栏；无 Key 时引导创建），采样参数固定不暴露（temperature 0.7、max_tokens 64834、stream 恒为真），支持多轮消息编辑、SSE 流式渲染（助手消息带模型 icon 与模型名，并折叠展示上游思考内容 `reasoning_content`）与中途停止。

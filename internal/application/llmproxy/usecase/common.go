@@ -13,10 +13,12 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/common/ratelimit"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/service"
+	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/metrics"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
@@ -196,11 +198,39 @@ func CanSwitchEndpoint(err error) bool {
 	if errors.As(err, &bulkheadErr) {
 		return true
 	}
+	var oauthErr *model.OAuthCredentialError
+	if errors.As(err, &oauthErr) {
+		return true
+	}
 	var proxyErr *port.ProxyError
 	if errors.As(err, &proxyErr) && proxyErr.Cause != nil {
 		return CanSwitchEndpoint(proxyErr.Cause)
 	}
 	return false
+}
+
+// buildTransportEndpointWithToken 组装传输层端点（含 OAuth access token 注入）。
+//
+// api_key 端点行为与改造前一致；OAuth 端点取（必要时刷新）access token 并携带
+// 稳定身份 StableKey——失败返回可切换错误（*model.OAuthCredentialError），
+// 由 runWithFallback 切到备选端点。
+func buildTransportEndpointWithToken(ctx context.Context, m *aggregate.Model, ep *aggregate.Endpoint, isAnthropic bool, tokens service.OAuthTokenProvider) (vo.UpstreamEndpoint, error) {
+	baseURL := ep.OpenaiBaseURL()
+	if isAnthropic {
+		baseURL = ep.AnthropicBaseURL()
+	}
+	if !ep.AuthType().IsOAuth() {
+		return vo.NewUpstreamEndpointFromCredential(m.UpstreamModel(), ep.APIKey(), baseURL, ep.AuthType(), "", ""), nil
+	}
+	if tokens == nil {
+		return vo.UpstreamEndpoint{}, ierr.New(ierr.ErrInternal, "oauth token provider is not wired")
+	}
+	access, err := tokens.GetAccessToken(ctx, ep.AggregateID())
+	if err != nil {
+		return vo.UpstreamEndpoint{}, err
+	}
+	stableKey := fmt.Sprintf(constant.OAuthEndpointStableKeyTemplate, ep.AggregateID())
+	return vo.NewUpstreamEndpointFromCredential(m.UpstreamModel(), access.Token, baseURL, ep.AuthType(), access.AccountRef, stableKey), nil
 }
 
 // runWithFallback 按候选顺序转发，失败且 CanSwitchEndpoint 时切换到下一个端点。

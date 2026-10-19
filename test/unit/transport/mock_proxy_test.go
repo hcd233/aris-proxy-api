@@ -75,11 +75,11 @@ func (f *fakeAnthropicProxy) ForwardCountTokens(ctx context.Context, ep vo.Upstr
 }
 
 func mockEndpoint() vo.UpstreamEndpoint {
-	return vo.NewUpstreamEndpointFromCredential(constant.MockUpstreamModel, "k", "http://mock.invalid")
+	return vo.NewUpstreamEndpointFromCredential(constant.MockUpstreamModel, "k", "http://mock.invalid", enum.EndpointAuthAPIKey, "", "")
 }
 
 func realEndpoint() vo.UpstreamEndpoint {
-	return vo.NewUpstreamEndpointFromCredential("gpt-4o", "k", "http://real.example")
+	return vo.NewUpstreamEndpointFromCredential("gpt-4o", "k", "http://real.example", enum.EndpointAuthAPIKey, "", "")
 }
 
 // TestIsMock_DisabledByDefault 验证开关关闭时即使模型是 mock 标记也不走 mock。

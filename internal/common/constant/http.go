@@ -17,11 +17,16 @@ const (
 	BulkheadRetryAfterSeconds = 5
 
 	// HTTPHeader HTTP 头部常量（全部使用标准 Title-Case 格式）
+	HTTPHeaderAccept              = "Accept"
 	HTTPHeaderAcceptEncoding      = "Accept-Encoding"
 	HTTPHeaderAcceptLanguage      = "Accept-Language"
 	HTTPHeaderAuthorization       = "Authorization"
 	HTTPHeaderAPIKey              = "X-Api-Key"
 	HTTPHeaderAnthropicVersion    = "Anthropic-Version"
+	HTTPHeaderAnthropicBeta       = "anthropic-beta"
+	HTTPHeaderChatGPTAccountID    = "chatgpt-account-id"
+	HTTPHeaderOriginator          = "Originator"
+	HTTPHeaderXApp                = "x-app"
 	HTTPHeaderCacheControl        = "Cache-Control"
 	HTTPHeaderConnection          = "Connection"
 	HTTPHeaderContentLength       = "Content-Length"
@@ -57,6 +62,8 @@ const (
 	HTTPContentTypeProblemJSON     = "application/problem+json"
 	HTTPContentTypeEventStream     = "text/event-stream"
 	HTTPContentTypeTextPlain       = "text/plain; charset=utf-8"
+	HTTPContentTypeFormURLEncoded  = "application/x-www-form-urlencoded"
+	HTTPAcceptJSONAny              = "application/json, text/plain, */*"
 	HTTPAttachmentFilenameTemplate = "attachment; filename=%q"
 	HTTPCacheControlNoCache        = "no-cache"
 	HTTPCacheControlNoStore        = "no-store"
