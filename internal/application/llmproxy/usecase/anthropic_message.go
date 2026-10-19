@@ -58,7 +58,7 @@ func (u *anthropicUseCase) forwardMessageNativeStream(ctx context.Context, req *
 	}
 	return &port.StreamResult{
 		Protocol: enum.ProtocolKindAnthropic,
-		Open: func(ctx context.Context) (port.Stream, error) {
+		Open: func(context.Context) (port.Stream, error) {
 			return &anthropicMessageNativeStream{
 				u:        u,
 				ctx:      ctx,
@@ -114,7 +114,7 @@ func (u *anthropicUseCase) forwardMessageViaChatStream(ctx context.Context, req 
 	}
 	return &port.StreamResult{
 		Protocol: enum.ProtocolKindAnthropic,
-		Open: func(ctx context.Context) (port.Stream, error) {
+		Open: func(context.Context) (port.Stream, error) {
 			return &anthropicMessageViaChatStream{
 				u:        u,
 				ctx:      ctx,
@@ -203,7 +203,7 @@ func (s *anthropicMessageNativeStream) Read(ctx context.Context, sink port.Event
 		proxyutil.WriteUpstreamSSEError(ctx, sink, err, enum.ProtocolKindAnthropic)
 	}
 
-	s.u.storeAnthropicFromMsg(ctx, s.req, anthropicMsg, err, s.m.ModelID())
+	s.u.storeAnthropicFromMsg(s.ctx, s.req, anthropicMsg, err, s.m.ModelID())
 	recordModelCall(ctx, s.u.taskSubmitter, s.u.tokenMetrics, callOutcome{
 		model:               s.m,
 		endpoint:            s.endpoint,
@@ -259,7 +259,7 @@ func (s *anthropicMessageViaChatStream) Read(ctx context.Context, sink port.Even
 	s.timer.finish()
 	anthropicMsg := s.finalizeAnthropicChatStream(ctx, sink, completion, err)
 
-	s.u.storeAnthropicFromMsg(ctx, s.req, anthropicMsg, err, s.m.ModelID())
+	s.u.storeAnthropicFromMsg(s.ctx, s.req, anthropicMsg, err, s.m.ModelID())
 
 	var usage *dto.OpenAICompletionUsage
 	if completion != nil {

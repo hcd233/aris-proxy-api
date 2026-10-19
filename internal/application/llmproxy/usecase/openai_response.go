@@ -79,7 +79,7 @@ func (u *openAIUseCase) forwardResponseNativeStream(ctx context.Context, req *dt
 	}
 	return &port.StreamResult{
 		Protocol: enum.ProtocolKindOpenAI,
-		Open: func(ctx context.Context) (port.Stream, error) {
+		Open: func(context.Context) (port.Stream, error) {
 			return &responseNativeStream{
 				u:                 u,
 				ctx:               ctx,
@@ -146,7 +146,7 @@ func (u *openAIUseCase) forwardResponseViaChatStream(ctx context.Context, req *d
 	}
 	return &port.StreamResult{
 		Protocol: enum.ProtocolKindOpenAI,
-		Open: func(ctx context.Context) (port.Stream, error) {
+		Open: func(context.Context) (port.Stream, error) {
 			return &responseViaChatStream{
 				u:          u,
 				ctx:        ctx,
@@ -220,7 +220,7 @@ func (u *openAIUseCase) forwardResponseViaAnthropicStream(ctx context.Context, r
 	}
 	return &port.StreamResult{
 		Protocol: enum.ProtocolKindOpenAI,
-		Open: func(ctx context.Context) (port.Stream, error) {
+		Open: func(context.Context) (port.Stream, error) {
 			return newResponseViaAnthropicStream(ctx, u, req, m, stream, endpoint), nil
 		},
 	}, nil
@@ -434,7 +434,7 @@ func (s *responseViaChatStream) Read(ctx context.Context, sink port.EventSink) e
 	} else {
 		rsp = converter.FinalizeResponseFromChatCompletion(sink, completion, s.exposedModel, s.responseID, s.conv)
 	}
-	s.u.storeResponseFromRsp(ctx, s.req, rsp, err, s.m.ModelID())
+	s.u.storeResponseFromRsp(s.ctx, s.req, rsp, err, s.m.ModelID())
 	recordModelCall(ctx, s.u.taskSubmitter, s.u.tokenMetrics, callOutcome{
 		model:               s.m,
 		endpoint:            s.endpoint,

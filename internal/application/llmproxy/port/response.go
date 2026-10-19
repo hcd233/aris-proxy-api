@@ -78,6 +78,9 @@ type StreamResult struct {
 	// Headers 是允许透传给客户端的 header（如 X-Accel-Buffering: no）。
 	Headers map[string]string
 	// Open 建立上游流并返回 Stream；adapter 在写出 SSE headers 之后调用。
+	//
+	// 入参 ctx 是 adapter 的父 ctx，看不到 usecase 注入的 context 值（如 CtxKeySkipStore）；
+	// 实现方必须改用构造时捕获的 usecase ctx，否则这些值会在 Read 阶段的存储上丢失。
 	Open func(ctx context.Context) (Stream, error)
 }
 
