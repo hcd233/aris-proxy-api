@@ -24,11 +24,9 @@ import {
   CapabilityBadges,
   ConfigMissingBadges,
   ModelActionsCell,
-  ModelAliasCell,
-  ModelIdCell,
+  ModelIdentityCell,
   PricingInline,
   SpecBadges,
-  UpstreamModelCell,
 } from "./shared";
 
 /**
@@ -78,17 +76,20 @@ function SortableHead({
   sortField,
   sort,
   onSort,
+  className,
 }: {
   label: string;
   field: ModelListSortField;
   sortField: ModelListSortField;
   sort: "asc" | "desc";
   onSort: (f: ModelListSortField) => void;
+  /** 自适应列宽预算：与普通表头一样用 w-* 声明 */
+  className?: string;
 }) {
   const t = useT();
   const active = sortField === field;
   return (
-    <TableHead>
+    <TableHead className={className}>
       <Button
         type="button"
         variant="ghost"
@@ -231,21 +232,13 @@ export function FlatView({
   }
 
   return (
-    <Table>
+    <Table fit>
       <TableHeader>
         <TableRow>
+          {/* 主列不声明宽度：固定列宽预算之和之外的空间全归它（端点名并入次行） */}
           <SortableHead
             label={t("upstream.col_model")}
             field="alias"
-            sortField={sortField}
-            sort={sort}
-            onSort={onSort}
-          />
-          <TableHead>{t("upstream.col_id")}</TableHead>
-          <TableHead>{t("upstream.col_upstream")}</TableHead>
-          <SortableHead
-            label={t("upstream.col_endpoint")}
-            field="endpoint_id"
             sortField={sortField}
             sort={sort}
             onSort={onSort}
@@ -256,15 +249,17 @@ export function FlatView({
             sortField={sortField}
             sort={sort}
             onSort={onSort}
+            className="w-[10rem]"
           />
-          <TableHead>{t("upstream.col_capabilities")}</TableHead>
-          <TableHead>{t("upstream.col_pricing")}</TableHead>
+          <TableHead className="w-[9rem]">{t("upstream.col_capabilities")}</TableHead>
+          <TableHead className="w-[7rem]">{t("upstream.col_pricing")}</TableHead>
           <SortableHead
             label={t("upstream.col_status")}
             field="enabled"
             sortField={sortField}
             sort={sort}
             onSort={onSort}
+            className="w-[3.5rem]"
           />
           <SortableHead
             label={t("upstream.col_created")}
@@ -272,24 +267,23 @@ export function FlatView({
             sortField={sortField}
             sort={sort}
             onSort={onSort}
+            className="w-[5.5rem]"
           />
-          <TableHead className="text-right">{t("upstream.col_actions")}</TableHead>
+          <TableHead className="w-[7.5rem] text-right">{t("upstream.col_actions")}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {items.map((m) => (
           <TableRow key={m.id} className="hover:bg-muted/40">
             {/* 停用行只降权内容列，操作列保持可点的视觉 */}
-            <ModelAliasCell alias={m.alias} enabled={m.enabled} onCopyAlias={onCopyAlias} />
-            <ModelIdCell modelId={m.modelId} alias={m.alias} enabled={m.enabled} />
-            <UpstreamModelCell upstreamModel={m.upstreamModel} enabled={m.enabled} />
-            <TableCell className={cn(!m.enabled && "opacity-45")}>
-              {m.endpoint ? (
-                <EndpointOwnerCell name={m.endpoint.name} user={m.user} />
-              ) : (
-                <span className="text-muted-foreground">—</span>
-              )}
-            </TableCell>
+            <ModelIdentityCell
+              alias={m.alias}
+              modelId={m.modelId}
+              upstreamModel={m.upstreamModel}
+              endpointName={m.endpoint?.name}
+              enabled={m.enabled}
+              onCopyAlias={onCopyAlias}
+            />
             <TableCell className={cn(!m.enabled && "opacity-45")}>
               <SpecBadges contextLength={m.contextLength} maxOutputTokens={m.maxOutputTokens} />
             </TableCell>

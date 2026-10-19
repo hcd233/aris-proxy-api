@@ -36,6 +36,14 @@ _Avoid_: font zoom, cjk shrink
 按布局类型分别约束高度：表格表头不换行 + 单行单元格截断带提示；卡片网格等高 + 描述限两行；对话框正文按最长语言的行数预留最小高度。自由描述文本不受约束。
 _Avoid_: row lock, height freeze
 
+**Table Fit（表格列宽自适应）**:
+列多的表格不再靠横向滚动看全内容，而是把列宽按预算固定、单元格内容收在自己的列内。开启后主列吃掉剩余空间，其余列宽由声明值决定。
+_Avoid_: responsive table, auto-width table
+
+**Column Budget（列宽预算）**:
+一张 `Table fit` 表所有列宽声明之和必须小于容器可用宽度，否则 fixed 布局会溢出成横向滚动。时间戳一类不可截断的等宽内容按实测宽度给足（不足会被静默裁掉），可截断内容一律配 Tooltip。
+_Avoid_: column width, col size
+
 ## Dataset Page（训练数据页）
 
 **Stepper（向导步骤指示器）**:

@@ -48,6 +48,9 @@ export default function DemoAccessAuditPage() {
     no_demo_user: t("demo_access_audit.reason_no_demo_user"),
     module_closed: t("demo_access_audit.reason_module_closed"),
   };
+  // 模块名与 Demo 配置页共用 demo.module_* 文案（后端存的是模块键，直接展示会露出 sessions/audit 这类键名）；
+  // 未知模块回退键名，后端新增模块时前端不至于显示空白
+  const moduleLabel = (module: string) => (module ? t(`demo.module_${module}`, module) : "—");
 
   const [persistedPage, setPersistedPage] = usePersistentState("dashboard.demoAccessAudit.page", 1);
   const [persistedPageSize, setPersistedPageSize] = usePersistentState(
@@ -69,7 +72,8 @@ export default function DemoAccessAuditPage() {
     (field: "action" | "module") => async () => {
       const { startTime, endTime } = computeRange(timeRange, customStart, customEnd);
       const rsp = await api.listDemoAccessAuditOptions({ field, startTime, endTime });
-      return rsp.items ?? [];
+      // 登录类记录 module 为空串，distinct 结果会带上它：作为筛选项只会得到一个空白条目
+      return (rsp.items ?? []).filter((v) => v !== "");
     },
     [timeRange, customStart, customEnd],
   );
@@ -86,6 +90,7 @@ export default function DemoAccessAuditPage() {
         key: "module",
         label: t("demo_access_audit.filter_module"),
         options: fetchOptionsFor("module"),
+        formatValue: moduleLabel,
       },
     ],
     // locale 必须在依赖里：t 引用已稳定（见 lib/i18n.tsx），翻译文本刷新只能靠 locale 驱动重算
@@ -235,16 +240,17 @@ export default function DemoAccessAuditPage() {
                 <p className="text-sm text-muted-foreground">{t("demo_access_audit.no_logs")}</p>
               </div>
             ) : (
-              <Table>
+              <Table fit>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>{t("demo_access_audit.time")}</TableHead>
-                    <TableHead>{t("demo_access_audit.action")}</TableHead>
-                    <TableHead>{t("demo_access_audit.module")}</TableHead>
+                    <TableHead className="w-[10.5rem]">{t("demo_access_audit.time")}</TableHead>
+                    <TableHead className="w-[9.5rem]">{t("demo_access_audit.action")}</TableHead>
+                    <TableHead className="w-[6rem]">{t("demo_access_audit.module")}</TableHead>
+                    {/* 路径不声明宽度：fixed 布局把剩余空间全给它（最长的值在这一列） */}
                     <TableHead>{t("demo_access_audit.path")}</TableHead>
-                    <TableHead>{t("demo_access_audit.ip")}</TableHead>
-                    <TableHead>{t("demo_access_audit.user_agent")}</TableHead>
-                    <TableHead>{t("demo_access_audit.reason")}</TableHead>
+                    <TableHead className="w-[6rem]">{t("demo_access_audit.ip")}</TableHead>
+                    <TableHead className="w-[8rem]">{t("demo_access_audit.user_agent")}</TableHead>
+                    <TableHead className="w-[6rem]">{t("demo_access_audit.reason")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -265,7 +271,9 @@ export default function DemoAccessAuditPage() {
                           {actionLabelMap[log.action] ?? log.action}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-muted-foreground">{log.module || "—"}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {moduleLabel(log.module)}
+                      </TableCell>
                       <TableCell className="max-w-[220px] font-mono text-xs">
                         <TooltipRoot>
                           <TooltipTrigger

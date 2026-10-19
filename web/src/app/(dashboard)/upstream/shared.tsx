@@ -114,18 +114,19 @@ const CAPABILITY_ICONS: Record<string, LucideIcon> = {
   audio: AudioLines,
 };
 
-// 能力徽标：按模型输入模态渲染图标，未知模态回退为 Type 图标
+// 能力徽标：按模型输入模态渲染图标，未知模态回退为 Type 图标。
+// 图标徽标按 px-1.5/gap-1 收紧：固定列宽下五个模态也能排成一行，不会把列撑宽或折行。
 export function CapabilityBadges({ capabilities }: { capabilities?: string[] }) {
   const caps = capabilities && capabilities.length > 0 ? capabilities : ["text"];
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex flex-wrap items-center gap-1">
       {caps.map((cap) => {
         const Icon = CAPABILITY_ICONS[cap] ?? Type;
         return (
           <TooltipRoot key={cap}>
             <TooltipTrigger
               render={
-                <Badge variant="secondary" className="font-mono tabular-nums">
+                <Badge variant="secondary" className="px-1.5 font-mono tabular-nums">
                   <Icon />
                 </Badge>
               }
@@ -153,11 +154,11 @@ export function SpecBadges({
 }) {
   const t = useT();
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex flex-wrap items-center gap-1">
       <TooltipRoot>
         <TooltipTrigger
           render={
-            <Badge variant="secondary" className="font-mono tabular-nums">
+            <Badge variant="secondary" className="px-2 font-mono tabular-nums">
               <ArrowLeftRight />
               {formatTokens(contextLength)}
             </Badge>
@@ -170,7 +171,7 @@ export function SpecBadges({
       <TooltipRoot>
         <TooltipTrigger
           render={
-            <Badge variant="secondary" className="font-mono tabular-nums">
+            <Badge variant="secondary" className="px-2 font-mono tabular-nums">
               <ArrowUpFromLine />
               {formatTokens(maxOutputTokens)}
             </Badge>
@@ -240,91 +241,77 @@ export function PricingInline({ pricing }: { pricing?: PricingDTO }) {
  * 停用行只降权内容列，操作列保持可点的视觉（与原实现一致）。
  */
 
-/** 「模型别名」列：ProviderIcon + 可点击复制的 alias（停用行划线） */
-export function ModelAliasCell({
+/**
+ * 「模型」列：ProviderIcon + 可点击复制的 alias（停用行划线），次行收敛身份信息。
+ *
+ * 原先独立的「业务模型 ID」「上游真名」两列并到这里：与 alias 同值的项不再重复展示，
+ * 只有真正有差异的（或平铺视图需要点明所属端点时）才出现在次行，因此行高不因并列而增加，
+ * 表格也少两列、不必横向滚动。次行同样配 Tooltip，截断后仍可读全文。
+ */
+export function ModelIdentityCell({
   alias,
+  modelId,
+  upstreamModel,
+  endpointName,
   enabled,
   onCopyAlias,
   className,
 }: {
   alias: string;
+  modelId?: string;
+  upstreamModel?: string;
+  /** 平铺视图专用：端点名（分组视图由组头承担，不传） */
+  endpointName?: string;
   enabled: boolean;
   onCopyAlias: (alias: string) => void;
   /** 视图特有的单元格修饰（如分组视图的虚线树枝缩进） */
   className?: string;
 }) {
   const t = useT();
+  // 去重且剔除与 alias 重复的值：同一句话不在一行里说两遍
+  const meta = [upstreamModel, modelId, endpointName].filter(
+    (v, i, arr): v is string => !!v && v !== alias && arr.indexOf(v) === i,
+  );
+  const metaText = meta.join(" · ");
   return (
     <TableCell className={cn(className, !enabled && "opacity-45")}>
-      <div className="flex min-w-0 items-center gap-1.5">
-        <ProviderIcon protocol={alias} size={14} className="shrink-0" />
-        <TooltipRoot>
-          <TooltipTrigger
-            render={
-              <span
-                className={cn(
-                  "max-w-[16ch] cursor-pointer truncate font-medium underline-offset-2 hover:underline",
-                  !enabled && "line-through",
-                )}
-                onClick={() => onCopyAlias(alias)}
-              >
-                {alias}
-              </span>
-            }
-          />
-          <TooltipContent side="top" align="start" className="max-w-xs break-all">
-            {`${t("models.click_to_copy")}: ${alias}`}
-          </TooltipContent>
-        </TooltipRoot>
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <ProviderIcon protocol={alias} size={14} className="shrink-0" />
+          <TooltipRoot>
+            <TooltipTrigger
+              render={
+                <span
+                  className={cn(
+                    "min-w-0 cursor-pointer truncate font-medium underline-offset-2 hover:underline",
+                    !enabled && "line-through",
+                  )}
+                  onClick={() => onCopyAlias(alias)}
+                >
+                  {alias}
+                </span>
+              }
+            />
+            <TooltipContent side="top" align="start" className="max-w-xs break-all">
+              {`${t("models.click_to_copy")}: ${alias}`}
+            </TooltipContent>
+          </TooltipRoot>
+        </div>
+        {metaText && (
+          <TooltipRoot>
+            <TooltipTrigger
+              render={
+                <span className="min-w-0 truncate font-mono text-xs text-muted-foreground">
+                  {metaText}
+                </span>
+              }
+            />
+            <TooltipContent side="top" align="start" className="max-w-xs break-all">
+              {metaText}
+            </TooltipContent>
+          </TooltipRoot>
+        )}
       </div>
-    </TableCell>
-  );
-}
-
-/** 「业务模型 ID」列：与 alias 相同时显示占位 —（恒定短占位不加 tooltip） */
-export function ModelIdCell({
-  modelId,
-  alias,
-  enabled,
-}: {
-  modelId: string;
-  alias: string;
-  enabled: boolean;
-}) {
-  return (
-    <TableCell className={cn("font-mono text-xs", !enabled && "opacity-45")}>
-      {modelId && modelId !== alias ? (
-        <TooltipRoot>
-          <TooltipTrigger render={<span className="block max-w-[20ch] truncate">{modelId}</span>} />
-          <TooltipContent side="top" align="start" className="max-w-xs break-all">
-            {modelId}
-          </TooltipContent>
-        </TooltipRoot>
-      ) : (
-        <span className="text-muted-foreground">—</span>
-      )}
-    </TableCell>
-  );
-}
-
-/** 「上游模型名」列 */
-export function UpstreamModelCell({
-  upstreamModel,
-  enabled,
-}: {
-  upstreamModel: string;
-  enabled: boolean;
-}) {
-  return (
-    <TableCell className={cn("font-mono text-xs", !enabled && "opacity-45")}>
-      <TooltipRoot>
-        <TooltipTrigger
-          render={<span className="block max-w-[20ch] truncate">{upstreamModel}</span>}
-        />
-        <TooltipContent side="top" align="start" className="max-w-xs break-all">
-          {upstreamModel}
-        </TooltipContent>
-      </TooltipRoot>
     </TableCell>
   );
 }

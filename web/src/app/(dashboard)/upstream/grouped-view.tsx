@@ -33,12 +33,10 @@ import {
   CapabilityBadges,
   ConfigMissingBadges,
   ModelActionsCell,
-  ModelAliasCell,
-  ModelIdCell,
+  ModelIdentityCell,
   OwnerCell,
   PricingInline,
   SpecBadges,
-  UpstreamModelCell,
 } from "./shared";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { oauthBadgeKey, quotaPercent } from "./oauth-form";
@@ -451,18 +449,17 @@ export function GroupedView({
   }
 
   return (
-    <Table>
+    <Table fit>
       <TableHeader>
         <TableRow>
+          {/* 主列不声明宽度：fixed 布局把它余下的空间全给这一列，模型名/上游名才有地方显示 */}
           <TableHead>{t("upstream.col_model")}</TableHead>
-          <TableHead>{t("upstream.col_id")}</TableHead>
-          <TableHead>{t("upstream.col_upstream")}</TableHead>
-          <TableHead>{t("upstream.col_spec")}</TableHead>
-          <TableHead>{t("upstream.col_capabilities")}</TableHead>
-          <TableHead>{t("upstream.col_pricing")}</TableHead>
-          <TableHead>{t("upstream.col_status")}</TableHead>
-          <TableHead>{t("upstream.col_created")}</TableHead>
-          <TableHead className="text-right">{t("upstream.col_actions")}</TableHead>
+          <TableHead className="w-[10rem]">{t("upstream.col_spec")}</TableHead>
+          <TableHead className="w-[9rem]">{t("upstream.col_capabilities")}</TableHead>
+          <TableHead className="w-[7rem]">{t("upstream.col_pricing")}</TableHead>
+          <TableHead className="w-[3.5rem]">{t("upstream.col_status")}</TableHead>
+          <TableHead className="w-[5.5rem]">{t("upstream.col_created")}</TableHead>
+          <TableHead className="w-[7.5rem] text-right">{t("upstream.col_actions")}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -473,7 +470,7 @@ export function GroupedView({
             <Fragment key={ep.id}>
               {/* 组头：白底 + 左侧主色条，与模型行区分层级 */}
               <TableRow className="bg-card hover:bg-card">
-                <TableCell colSpan={9} className="border-l-[3px] border-l-primary pl-3">
+                <TableCell colSpan={7} className="border-l-[3px] border-l-primary pl-3">
                   <div className="flex min-w-0 items-center gap-2.5 py-0.5">
                     <Button
                       type="button"
@@ -574,7 +571,7 @@ export function GroupedView({
 
               {open && group.models.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={9} className="pl-8 text-xs text-muted-foreground">
+                  <TableCell colSpan={7} className="pl-8 text-xs text-muted-foreground">
                     {t("upstream.no_models_in_group")}
                   </TableCell>
                 </TableRow>
@@ -584,14 +581,14 @@ export function GroupedView({
                 group.models.map((m) => (
                   <TableRow key={m.id} className="hover:bg-muted/40">
                     {/* 虚线树枝 + 缩进，让归属关系不依赖背景色；停用行只降权内容列，操作列保持可点的视觉 */}
-                    <ModelAliasCell
+                    <ModelIdentityCell
                       alias={m.alias}
+                      modelId={m.modelId}
+                      upstreamModel={m.upstreamModel}
                       enabled={m.enabled}
                       onCopyAlias={onCopyAlias}
                       className="border-l border-dashed border-border pl-8"
                     />
-                    <ModelIdCell modelId={m.modelId} alias={m.alias} enabled={m.enabled} />
-                    <UpstreamModelCell upstreamModel={m.upstreamModel} enabled={m.enabled} />
                     <TableCell className={cn(!m.enabled && "opacity-45")}>
                       <SpecBadges
                         contextLength={m.contextLength}

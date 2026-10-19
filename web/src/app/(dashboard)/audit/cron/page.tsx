@@ -29,6 +29,7 @@ import { FilterBar } from "@/components/filter-bar/filter-bar";
 import { useFilterBar } from "@/components/filter-bar/use-filter-bar";
 import type { FacetDef, FilterBarQueryParams } from "@/components/filter-bar/types";
 import { copyTextToClipboard } from "@/lib/clipboard";
+import { cronJobLabel } from "@/lib/utils";
 import {
   TooltipProvider,
   TooltipRoot,
@@ -92,7 +93,13 @@ export default function CronAuditPage() {
 
   const facets = useMemo<FacetDef[]>(
     () => [
-      { key: "type", label: t("cron_audit.filter_type"), options: fetchOptionsFor("type") },
+      {
+        key: "type",
+        label: t("cron_audit.filter_type"),
+        options: fetchOptionsFor("type"),
+        // 后端选项是模块名（ThinkExtractCron 等），筛选项与任务名列统一走 cron.job_* 文案
+        formatValue: (v) => cronJobLabel(v, t),
+      },
       {
         key: "status",
         label: t("cron_audit.filter_status"),
@@ -278,7 +285,7 @@ export default function CronAuditPage() {
                       <TableCell className="whitespace-nowrap text-muted-foreground">
                         {formatTime(log.createdAt)}
                       </TableCell>
-                      <TableCell className="font-medium">{log.cronName}</TableCell>
+                      <TableCell className="font-medium">{cronJobLabel(log.cronName, t)}</TableCell>
                       <TableCell>
                         <Badge
                           variant={log.triggerSource === "manual" ? "default" : "secondary"}

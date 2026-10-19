@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/tooltip";
 
 import { useI18n } from "@/lib/i18n";
+import { cronJobLabel } from "@/lib/utils";
 import { PaginationBar } from "@/components/pagination-bar";
 import { PageHeader } from "@/components/page-header";
 import { ListEmptyState } from "@/components/list-empty-state";
@@ -208,15 +209,15 @@ export default function CronPage() {
               ) : jobs.length === 0 ? (
                 <ListEmptyState icon={Timer} message={t("cron.no_jobs")} />
               ) : (
-                <Table>
+                <Table fit>
                   <TableHeader>
                     <TableRow>
                       <TableHead>{t("cron.name")}</TableHead>
-                      <TableHead>{t("cron.type")}</TableHead>
-                      <TableHead>{t("cron.spec")}</TableHead>
+                      <TableHead className="w-[4.5rem]">{t("cron.type")}</TableHead>
+                      <TableHead className="w-[12rem]">{t("cron.spec")}</TableHead>
                       <TableHead>{t("cron.description")}</TableHead>
-                      <TableHead>{t("cron.enabled")}</TableHead>
-                      <TableHead>{t("cron.updated_at")}</TableHead>
+                      <TableHead className="w-[5rem]">{t("cron.enabled")}</TableHead>
+                      <TableHead className="w-[10.5rem]">{t("cron.updated_at")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -226,10 +227,13 @@ export default function CronPage() {
                           <TooltipRoot>
                             <TooltipTrigger
                               render={
-                                <span className="block max-w-[16ch] truncate">{job.name}</span>
+                                <span className="block max-w-[16ch] truncate">
+                                  {cronJobLabel(job.name, t)}
+                                </span>
                               }
                             />
                             <TooltipContent side="top" align="start" className="max-w-xs break-all">
+                              {/* 悬停给原始模块名：界面看中文，排查时仍能拿到后端标识 */}
                               {job.name}
                             </TooltipContent>
                           </TooltipRoot>

@@ -102,7 +102,7 @@ export default function ProfilePage() {
                   <p className="text-sm text-muted-foreground">{localUser.email ?? "—"}</p>
                 </div>
                 <Badge variant="secondary" className="text-xs">
-                  {localUser.permission}
+                  {t(`permission.${localUser.permission}`)}
                 </Badge>
                 {localUser.createdAt && (
                   <p className="text-xs text-muted-foreground">

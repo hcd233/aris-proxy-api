@@ -460,7 +460,7 @@ export default function SessionsPage() {
                     })}
                   </ItemGroup>
                 ) : (
-                  <Table>
+                  <Table fit>
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-10">
@@ -470,21 +470,22 @@ export default function SessionsPage() {
                             aria-label={t("sessions.select_all_aria")}
                           />
                         </TableHead>
-                        <TableHead>{t("common.id")}</TableHead>
+                        <TableHead className="w-[4rem]">{t("common.id")}</TableHead>
                         <TableHead
-                          className="cursor-pointer select-none whitespace-nowrap"
+                          className="w-[10.5rem] cursor-pointer select-none whitespace-nowrap"
                           onClick={() => handleSort(SORTABLE_COLUMNS.createdAt)}
                         >
                           <span className="inline-flex items-center gap-1">
                             {t("sessions.time")} {renderSortIcon(SORTABLE_COLUMNS.createdAt)}
                           </span>
                         </TableHead>
+                        {/* 摘要不声明宽度：fixed 布局把剩余空间全给这一列 */}
                         <TableHead>{t("sessions.summary")}</TableHead>
-                        <TableHead className="w-[160px] text-center">
+                        <TableHead className="w-[7rem] text-center">
                           {t("sessions.score")}
                         </TableHead>
                         <TableHead
-                          className="cursor-pointer select-none whitespace-nowrap"
+                          className="w-[4rem] cursor-pointer select-none whitespace-nowrap"
                           onClick={() => handleSort(SORTABLE_COLUMNS.messageCount)}
                         >
                           <span className="inline-flex items-center gap-1">
@@ -492,7 +493,7 @@ export default function SessionsPage() {
                           </span>
                         </TableHead>
                         <TableHead
-                          className="cursor-pointer select-none whitespace-nowrap"
+                          className="w-[4rem] cursor-pointer select-none whitespace-nowrap"
                           onClick={() => handleSort(SORTABLE_COLUMNS.toolCount)}
                         >
                           <span className="inline-flex items-center gap-1">
@@ -557,13 +558,28 @@ export default function SessionsPage() {
                               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                                 {s.modelIds && s.modelIds.length > 0 ? (
                                   s.modelIds.map((m) => (
-                                    <span
-                                      key={m}
-                                      className="inline-flex items-center gap-1 text-xs text-muted-foreground"
-                                    >
-                                      <ProviderIcon protocol={m} size={14} />
-                                      {m}
-                                    </span>
+                                    // 模型名很长：max-w-full + truncate 收在固定列宽内，完整名走 Tooltip
+                                    <TooltipRoot key={m}>
+                                      <TooltipTrigger
+                                        render={
+                                          <span className="inline-flex max-w-full min-w-0 items-center gap-1 text-xs text-muted-foreground">
+                                            <ProviderIcon
+                                              protocol={m}
+                                              size={14}
+                                              className="shrink-0"
+                                            />
+                                            <span className="truncate">{m}</span>
+                                          </span>
+                                        }
+                                      />
+                                      <TooltipContent
+                                        side="top"
+                                        align="start"
+                                        className="max-w-xs break-all"
+                                      >
+                                        {m}
+                                      </TooltipContent>
+                                    </TooltipRoot>
                                   ))
                                 ) : (
                                   <span className="text-muted-foreground">—</span>

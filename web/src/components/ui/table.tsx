@@ -4,12 +4,35 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-function Table({ className, ...props }: React.ComponentProps<"table">) {
+/**
+ * 表格容器。
+ *
+ * `fit` 打开「列宽自适应」：改用 `table-layout: fixed`，列宽由表头 `w-*` 声明决定，
+ * 未声明宽度的列自动吃掉剩余空间——约定只留一列不声明（主名列），其余列都声明宽度。
+ * 单元格内容溢出时裁剪而不是把表格撑宽，列多的表格因此不必左右滑动即可看全。
+ * 兜底：容器保留 `overflow-x-auto`，只有窄到列宽预算放不下时才出现横向滚动。
+ *
+ * 注意：声明宽度之和超过容器宽度时 fixed 布局会溢出（表现为横向滚动），
+ * 新增列前先核对预算；内容需要省略号提示时按项目约定给单元格配 Tooltip。
+ */
+function Table({
+  className,
+  fit = false,
+  ...props
+}: React.ComponentProps<"table"> & { fit?: boolean }) {
   return (
-    <div data-slot="table-container" className="relative w-full overflow-x-auto">
+    <div
+      data-slot="table-container"
+      data-fit={fit ? "" : undefined}
+      className={cn(
+        "relative w-full overflow-x-auto",
+        fit &&
+          "[&_[data-slot=table-cell]]:overflow-hidden [&_[data-slot=table-cell]]:text-ellipsis",
+      )}
+    >
       <table
         data-slot="table"
-        className={cn("w-full caption-bottom text-sm", className)}
+        className={cn("w-full caption-bottom text-sm", fit && "table-fixed", className)}
         {...props}
       />
     </div>
