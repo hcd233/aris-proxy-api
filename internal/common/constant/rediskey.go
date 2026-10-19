@@ -40,6 +40,10 @@ const (
 	// RuntimeMetricsDataKeyTemplate 运行时指标-单实例快照时序（ZSET：member=快照payload, score=快照unix秒），%s = instanceID
 	RuntimeMetricsDataKeyTemplate = "metrics:runtime:data:%s"
 
+	// RedisOAuthStateKeyPrefix Web 登录 OAuth2 state 的 Redis key 前缀
+	//	（订阅账号的 oauth:flow: / oauth:access: / oauth:refresh: 见下方 OAuth*KeyTemplate）
+	RedisOAuthStateKeyPrefix = "oauth:state:"
+
 	// OAuthFlowKeyTemplate 订阅账号授权流临时记录（%s = state；一次性 Take，防重放）
 	OAuthFlowKeyTemplate = "oauth:flow:%s"
 	// OAuthAccessKeyTemplate 订阅账号 access token 缓存（%d = endpointID）
