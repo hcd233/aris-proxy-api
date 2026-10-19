@@ -128,6 +128,9 @@ func (p *oauthTokenProvider) refreshWithLock(ctx context.Context, cred *aggregat
 		var protocolErr *service.OAuthProtocolError
 		if errors.As(err, &protocolErr) && isReauthFailure(protocolErr) {
 			fresh.MarkReauth(protocolErr.Reason)
+			// 凭据不可用必须同时让缓存失效：主动刷新失败的窗口里缓存可能还有近半小时
+			// 剩余 TTL，命中后会拿已失效的 token 继续转发（"凭据失效 ⇒ 缓存不可用"）
+			p.accessCache.Delete(ctx, endpointID)
 			if saveErr := p.credRepo.Save(ctx, fresh); saveErr != nil {
 				log.Error("[OAuthTokenProvider] Persist reauth state failed", zap.Uint("endpointID", endpointID), zap.Error(saveErr))
 			}

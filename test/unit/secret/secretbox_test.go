@@ -2,8 +2,10 @@ package secret
 
 import (
 	"encoding/base64"
+	"strings"
 	"testing"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	commonutil "github.com/hcd233/aris-proxy-api/internal/common/util"
 )
 
@@ -40,6 +42,27 @@ func TestSecretBoxRoundTrip(t *testing.T) {
 	}
 }
 
+// TestSecretBoxVersionPrefix 密文带版本前缀，且解密兼容加前缀之前写入的历史密文。
+func TestSecretBoxVersionPrefix(t *testing.T) {
+	t.Parallel()
+
+	const plain = "oauth-access-token-value"
+	enc, err := commonutil.EncryptSecret(testSecretBoxKey(), plain)
+	if err != nil {
+		t.Fatalf("EncryptSecret: %v", err)
+	}
+	if !strings.HasPrefix(enc, constant.SecretBoxCiphertextPrefixV1) {
+		t.Fatalf("ciphertext must carry version prefix %q, got %q", constant.SecretBoxCiphertextPrefixV1, enc)
+	}
+
+	// 无前缀（加前缀之前写入的行）按 v1 处理，升级不要求一次性重写数据
+	legacy := strings.TrimPrefix(enc, constant.SecretBoxCiphertextPrefixV1)
+	dec, err := commonutil.DecryptSecret(testSecretBoxKey(), legacy)
+	if err != nil || dec != plain {
+		t.Fatalf("legacy ciphertext decrypt = %q, err = %v, want %q", dec, err, plain)
+	}
+}
+
 // TestSecretBoxWrongKeyFails 错误密钥解密必须失败（GCM 认证）。
 func TestSecretBoxWrongKeyFails(t *testing.T) {
 	t.Parallel()
@@ -62,12 +85,12 @@ func TestSecretBoxTamperFails(t *testing.T) {
 	if err != nil {
 		t.Fatalf("EncryptSecret: %v", err)
 	}
-	raw, err := base64.StdEncoding.DecodeString(enc)
+	raw, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(enc, constant.SecretBoxCiphertextPrefixV1))
 	if err != nil {
-		t.Fatalf("ciphertext must be base64: %v", err)
+		t.Fatalf("ciphertext payload must be base64: %v", err)
 	}
 	raw[len(raw)/2] ^= 0xFF
-	tampered := base64.StdEncoding.EncodeToString(raw)
+	tampered := constant.SecretBoxCiphertextPrefixV1 + base64.StdEncoding.EncodeToString(raw)
 
 	if _, err := commonutil.DecryptSecret(testSecretBoxKey(), tampered); err == nil {
 		t.Fatal("tampered ciphertext must fail")

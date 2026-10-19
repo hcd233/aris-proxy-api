@@ -20,7 +20,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/oauthprovider"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
-	"github.com/hcd233/aris-proxy-api/internal/lock"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/redis/go-redis/v9"
 	"github.com/samber/lo"
@@ -203,7 +202,9 @@ func buildRegistryEntries() []CronRegistryEntry {
 			Factory: func(db *gorm.DB, _ *pool.PoolManager, cache *redis.Client, _ conversation.ThinkExtractRepository) Cron {
 				credRepo := repository.NewOAuthCredentialRepository(db)
 				providers := oauthprovider.NewClients()
-				tokens := oauthprovider.NewOAuthTokenProvider(credRepo, providers, cachepkg.NewOAuthAccessCache(cache), lock.NewLocker(cache))
+				// 与 fx 容器共用同一装配入口（oauthprovider.NewDefaultTokenProvider），
+				// 避免此处手工拼装与容器侧漂移
+				tokens := oauthprovider.NewDefaultTokenProvider(credRepo, cache)
 				return NewOAuthMaintenanceCron(credRepo, tokens, providers, cache)
 			},
 		},

@@ -29,7 +29,10 @@ func NewOAuthAccessCache(rdb *redis.Client) service.OAuthAccessCache {
 	return &oauthAccessCache{rdb: rdb}
 }
 
-// Get 读取缓存；未命中/解析失败/已过安全余量返回 false
+// Get 读取缓存；未命中/解析失败/已不足安全余量返回 false。
+//
+// 余量判定不依赖 Redis TTL 单一防线：TTL 只保证 key 过期，若 TTL 计算出现偏差
+// （如 ExpiresAt 被上游少报），这里能进步一道。
 func (c *oauthAccessCache) Get(ctx context.Context, endpointID uint) (service.OAuthAccess, bool) {
 	raw, err := c.rdb.Get(ctx, fmt.Sprintf(constant.OAuthAccessKeyTemplate, endpointID)).Bytes()
 	if err != nil {
@@ -37,6 +40,9 @@ func (c *oauthAccessCache) Get(ctx context.Context, endpointID uint) (service.OA
 	}
 	var stored storedOAuthAccess
 	if err := sonic.Unmarshal(raw, &stored); err != nil {
+		return service.OAuthAccess{}, false
+	}
+	if !stored.ExpiresAt.After(time.Now().Add(constant.OAuthAccessCacheGuard)) {
 		return service.OAuthAccess{}, false
 	}
 	return service.OAuthAccess{Token: stored.Token, AccountRef: stored.AccountRef, ExpiresAt: stored.ExpiresAt}, true

@@ -29,7 +29,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/transport"
-	"github.com/hcd233/aris-proxy-api/internal/lock"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/fx"
@@ -131,8 +130,8 @@ func NewEndpointReadRepository(db *gorm.DB, readCache *cache.ReadCache) llmproxy
 }
 
 // NewOAuthEndpointRepository 订阅端点原子创建仓储（OAuthEndpointRepository 接口视图）
-func NewOAuthEndpointRepository(db *gorm.DB) llmproxy.OAuthEndpointRepository {
-	return repository.NewOAuthEndpointRepository(db)
+func NewOAuthEndpointRepository(db *gorm.DB, readCache *cache.ReadCache) llmproxy.OAuthEndpointRepository {
+	return repository.NewOAuthEndpointRepository(db, readCache)
 }
 
 // NewOAuthCredentialRepository 订阅账号凭据仓储（token 密文读写）
@@ -158,11 +157,9 @@ func NewOAuthClients() map[enum.OAuthProvider]llmproxyservice.OAuthProviderClien
 // NewOAuthTokenProvider 订阅账号 token 提供者（锁/缓存/刷新）
 func NewOAuthTokenProvider(
 	credRepo llmproxy.OAuthCredentialRepository,
-	clients map[enum.OAuthProvider]llmproxyservice.OAuthProviderClient,
-	accessCache llmproxyservice.OAuthAccessCache,
 	redisClient *redis.Client,
 ) llmproxyservice.OAuthTokenProvider {
-	return oauthprovider.NewOAuthTokenProvider(credRepo, clients, accessCache, lock.NewLocker(redisClient))
+	return oauthprovider.NewDefaultTokenProvider(credRepo, redisClient)
 }
 
 func NewAudioDirCreator() oauthport.ObjectStorageDirCreator {

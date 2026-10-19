@@ -120,7 +120,7 @@ func newFixture(t *testing.T) *fixture {
 	}
 
 	endpointRepo := repository.NewEndpointRepository(db)
-	oauthEndpointRepo := repository.NewOAuthEndpointRepository(db)
+	oauthEndpointRepo := repository.NewOAuthEndpointRepository(db, cache.NewReadCache(rdb))
 	credRepo := repository.NewOAuthCredentialRepository(db)
 	modelRepo := repository.NewModelRepository(db)
 	userRepo := repository.NewUserRepository(db)

@@ -220,7 +220,9 @@ func (r *endpointRepository) DeleteCascade(ctx context.Context, id uint, scopeUs
 		if err := r.modelDAO.BatchDeleteByField(tx, constant.FieldEndpointID, []uint{id}); err != nil {
 			return ierr.Wrap(ierr.ErrDBDelete, err, "cascade delete models by endpoint id")
 		}
-		// 凭据随端点删除：密文 token 不留存（安全预期），同时避免维护 cron 持续刷新孤儿凭据
+		// 凭据随端点删除：本项目 deleted_at 是 int64 自定义软删标记，GORM 只对
+		// gorm.DeletedAt 类型启用软删，故此处 DELETE 即物理删除——密文 token 不残留，
+		// 同时避免维护 cron 持续刷新孤儿凭据。
 		if err := tx.Where(constant.WhereEndpointIDEquals, id).Delete(&dbmodel.EndpointOAuthCredential{}).Error; err != nil {
 			return ierr.Wrap(ierr.ErrDBDelete, err, "cascade delete oauth credential by endpoint id")
 		}
@@ -478,7 +480,9 @@ var _ llmproxy.OAuthEndpointRepository = (*endpointRepository)(nil)
 
 // NewOAuthEndpointRepository 构造订阅端点原子创建仓储。
 //
-// 与 NewEndpointRepository 是同一实现的独立接口视图（fx 按接口类型分别注入）。
-func NewOAuthEndpointRepository(db *gorm.DB) llmproxy.OAuthEndpointRepository {
-	return &endpointRepository{endpointDAO: dao.GetEndpointDAO(), modelDAO: dao.GetModelDAO(), db: db}
+// 与 NewEndpointRepository 是同一实现的独立接口视图（fx 按接口类型分别注入），
+// 必须同样注入读缓存：CreateWithOAuthCredential 成功后要清读缓存，
+// 缺省 readCache 会让这次失效静默变成 no-op（InvalidateAll 对 nil 接收者直接返回）。
+func NewOAuthEndpointRepository(db *gorm.DB, readCache *cache.ReadCache) llmproxy.OAuthEndpointRepository {
+	return &endpointRepository{endpointDAO: dao.GetEndpointDAO(), modelDAO: dao.GetModelDAO(), db: db, cache: readCache}
 }
