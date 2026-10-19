@@ -16,6 +16,86 @@ Aris 将多个 MaaS 平台、多种模型和多种 API 协议统一接入，通�
 - **客户端配置导出**：从管理后台一键生成 OpenCode、Claude Code、Codex、Pi 的接入配置或安装脚本，幂等 patch、`.bak` 备份、原子替换、凭证文件 `0600`。
 - **安全与治理**：GitHub/Google OAuth2 登录 + JWT 管理鉴权，Proxy API Key 调用鉴权，`pending`/`demo`/`user`/`admin` 四级权限与用户审核（demo 演示账户：模块白名单 + 会话白名单/全量脱敏双视角 + 一键登录 + 访问审计），Aho-Corasick 触发词拦截，Redis 令牌桶请求限流与 Token 用量限流。
 
+## 同类项目横向对比
+
+对比四个主流 MaaS 开源项目（快照 **2026-10-19**）：[new-api](https://github.com/QuantumNous/new-api)（Go/Gin + React；AGPLv3 + 第 7 条附加条款）、[LiteLLM](https://github.com/BerriAI/litellm)（Python + React；MIT + 商业企业授权）、[OmniRoute](https://github.com/diegosouzapw/OmniRoute)（Node/TypeScript + SQLite；MIT）、[sub2api](https://github.com/Wei-Shaw/sub2api)（Go/Gin + Vue；LGPL-3.0）。只对比技术侧能力，不含产品与运营侧功能。
+
+三点结构性差异：
+
+- **对话正文是数据模型选择，不是路线图排期。** Aris 落库，因此内容寻址去重、评分与 ShareGPT/SFT 导出是结构性能力；其余四家没有会话聚合——LiteLLM 可显式开启，但数据仍是 spend-log 形态，其数据集导出面向评测。
+- **「配额强控」与「成本估算」是两种设计。** new-api 与 sub2api 走配额/余额扣减（预扣 → 结算、窗口软上限）；LiteLLM 的预算族依赖数据库，**无 DB 时 fail open**；Aris 只做成本估算，没有预算闸门。
+- **Agent 可观测性是同一个问题的三种答案。** Aris：客户端 Hook + 本地 spool + 服务端重建，不改动 Agent 运行时；LiteLLM：SDK harness + CLI 包装 + 服务端 agentic loop，且 trace 分析落在独立的 Lens 服务；OmniRoute：在流量层捕获，可视化对象是路由与压缩而非 Agent 步骤。
+
+标记：✅ 有 · ◐ 部分 · — 无。评分依据各项目在快照时点的自身 README/官方文档；带编号的单元格见下方[参考说明](#参考说明)。
+
+| 维度 | Aris | new-api | LiteLLM | OmniRoute | sub2api |
+| --- | --- | --- | --- | --- | --- |
+| **协议入口覆盖** | ◐[1] | ✅[1] | ✅[1] | ✅ | ◐[1] |
+| **跨协议转换** | ✅ | ✅[2] | ✅ | ✅ | ◐[2] |
+| **上游渠道类型（API Key / 订阅 OAuth）** | ✅[3] | ◐[3] | ✅[3] | ✅[3] | ✅[3] |
+| **模型别名与多端点绑定** | ✅ | ✅ | ✅ | ✅ | ◐[4] |
+| **路由与调度** | ✅[5] | ✅[5] | ✅[5] | ✅[5] | ✅[5] |
+| **熔断 / 隔离 / 降级** | ✅[6] | ◐[6] | ◐[6] | ✅[6] | ✅[6] |
+| **多租户与权限** | ✅ | ✅ | ✅ | —[7] | ✅ |
+| **认证与登录** | ✅[8] | ✅ | ✅[8] | ◐[8] | ✅ |
+| **限流与并发控制** | ✅[9] | ✅ | ✅[9] | ✅ | ✅ |
+| **用量计量与配额强控** | ◐[10] | ✅[10] | ✅[10] | ◐[10] | ✅[10] |
+| **调用审计与用量统计** | ✅[11] | ✅[11] | ✅ | ◐ | ◐[11] |
+| **对话正文落库** | ✅[12] | —[12] | ◐[12] | — | — |
+| **对话数据集导出（ShareGPT/SFT）** | ✅[13] | — | ◐[13] | — | — |
+| **Agent Harness 调用链采集** | ✅[14] | — | ✅[14] | ◐[14] | — |
+| **Trace 重建与可视化** | ✅[15] | — | ✅[15] | ◐[15] | — |
+| **内容安全与脱敏** | ✅[16] | ◐[16] | ✅[16] | ✅ | ◐ |
+| **可观测性与运行时监控** | ✅ | ◐[17] | ✅[17] | ◐[17] | ◐[17] |
+| **Token 压缩** | ✅[18] | — | ◐[18] | ✅[18] | — |
+| **MCP / A2A** | — | ◐[19] | ✅[19] | ✅[19] | ◐[19] |
+| **部署与水平扩展** | ✅[20] | ✅[20] | ✅[20] | ◐[20] | ✅ |
+| **扩展机制** | ◐[21] | ✅[21] | ✅[21] | ✅[21] | ✅[21] |
+
+### 说明
+
+**1 · 协议入口覆盖** — Aris ◐：仅文本协议（Chat/Responses/Messages + Decision 原生透传）。new-api：四种文本协议 + Realtime/Responses WebSocket + 媒体 + 任务插件路由，约 60 种渠道类型。LiteLLM：面最广——batches/files/fine-tuning/evals/realtime/videos/ocr/search/memory、Bedrock/Vertex 原生、MCP + A2A。sub2api ◐：面向订阅客户端（Responses 含 `/backend-api/codex/responses`、Messages、Chat、`/v1/systemone`、Antigravity）。
+
+**2 · 跨协议转换** — Aris：OpenAI ↔ Anthropic 共 7 条路径，含 SSE 流式事件。new-api：RelayKit 转换四种文本协议，但提示协议特有工具/字段可能无法精确映射。LiteLLM：`/v1/messages` 覆盖全部支持的提供商，Rust 核心仅少量路由。sub2api ◐：按提供商定向转换（Anthropic → xAI Responses、Codex Responses ← Chat、Antigravity）。
+
+**3 · 上游渠道类型** — Aris ✅：`api_key` + 订阅 OAuth 端点（`oauth_anthropic` / `oauth_openai`，AES-256-GCM，3 分钟提前量刷新），共用同一转发链路。new-api ◐：约 60 种 API-Key 渠道 + `ChannelTypeCodex = 57 "ChatGPT Subscription (Codex)"`（OAuth key JSON，仅 `/v1/responses`）；Claude Code OAuth 渠道（原 type 53）**已被回滚**。LiteLLM ✅：API Key + ChatGPT 订阅 device flow + Copilot 逐用户 OAuth，前者无 cost map 价（spend 恒为 $0），Anthropic Pro/Max 未文档化。OmniRoute ✅：四层 fallback（Subscription → API Key → Cheap → Free）+ PKCE 登录。sub2api ✅：OAuth 订阅账号池（Claude/Codex/Grok/Antigravity）+ 粘性会话。
+
+**4 · 模型别名与多端点绑定** — sub2api ◐：Composite Groups 把模型解析到具体提供商；其余四家为一等公民的「别名 → N 端点」绑定（带优先级与权重）。
+
+**5 · 路由与调度** — Aris：优先级分档 + 档内 A-Res 加权洗牌 + 会话亲和（TTL 5 分钟，fail-open）。new-api：加权随机 + 可拖拽优先级 + 渠道亲和 + `auto` 跨分组重试。LiteLLM：5 种策略（默认 `simple-shuffle`）+ 四类专用路由器 + Auto Router。OmniRoute：19 种 combo 策略 + 16 因子打分。sub2api：粘性会话 + 分组内选号。
+
+**6 · 熔断 / 隔离 / 降级** — Aris ✅：重试循环外 `Guard`——`BaseURL\|APIKey` 三态熔断（60s × 6 桶，≥10 请求且 ≥50% 错误打开，30s → 半开 1 次探测）+ 按 Key 信号量（≤32、1s）→ 503 + `Retry-After`，429 不计入。new-api ◐：定时健康探测 + 自动禁用/恢复，无阈值熔断。LiteLLM ◐：仅 router cooldown。OmniRoute ✅：提供商熔断（仅 408/5xx，8×/12×/2× → 半开 60/30/15s）+ 连接冷却（×2 退避，遵循 `Retry-After`）+ 单模型锁死 + 过载排队。sub2api ✅：账号错误策略 + 临时不可调度 + failover。
+
+**7 · 多租户与权限** — OmniRoute —：单运营者，仅 API-Key 作用域、IP 过滤与 33 个 MCP scope。Aris：用户级多租户。new-api：用户/分组/令牌 + 细粒度管理权限。LiteLLM：Organizations → Teams → Users → Virtual Keys（企业版组织/团队管理员）。sub2api：用户/分组 + 用户级与账号级并发。
+
+**8 · 认证与登录** — Aris ✅：OAuth2 + JWT + API Key，**无 2FA 与 passkey**。LiteLLM ✅：SSO（OIDC/SAML，≤5 用户免费）+ JWT-OIDC 懒注册 + SCIM（企业版）+ 登录失败限流。OmniRoute ◐：密码登录 + 可选 OIDC 网关。
+
+**9 · 限流与并发控制** — Aris ✅：按 IP/API Key 100 次/分钟；Token 维度中间件存在但 **TPM 刻意等效不限**（`LimitCallProxyLLMToken = 1e8`，源码注释为设计决定）。LiteLLM ✅：四级 RPM/TPM，`enforce_model_rate_limits` 升级为硬限制（429 + `retry-after: 60`）；多实例必须共享 Redis，否则按进程各算。
+
+**10 · 用量计量与配额强控** — Aris ◐：按模型定价（微单位、时段窗口 + 上下文分档 + 缓存创建 5m/1h 分档、调用时刻快照），但**只估算不拦截**，配额是每 Key 请求数上限。new-api ✅：配额点数（1 USD = 500,000）预扣 → 结算 → 差额调整 + 分组/令牌配额 + 订阅额度与重置周期。LiteLLM ✅：预算族（Key/用户/团队/团队成员/Tag/全局），**依赖数据库——无 DB 时 `max_budget` fail open**。OmniRoute ◐：按 Key 的 USD 花费配额 + 成本分析（订阅类提供商显示 $0）。sub2api ✅：Token 级成本 + 余额/订阅扣减 + 5h/1d/7d 窗口（**请求后软上限**，在途可超出）。
+
+**11 · 调用审计与用量统计** — Aris ✅：逐调用 `ModelCallAudit`（Token 四维、首 Token 与流式两段延迟、上游状态码、UA、Trace ID、估算费用），协程池异步落库。new-api ✅：使用/绘图/任务日志含 Token、费用、耗时与首字时间、请求 ID/上游请求 ID，管理员另有重试链、请求转换与计费路径。sub2api ◐：仅看板级请求/Token/费用与账号状态。
+
+**12 · 对话正文落库** — Aris ✅：每次调用的完整历史落 Session 聚合，Message/Tool 按 checksum 去重、协议无关存储，同前缀快照实时合并（例外：触发词 `omit` 与 Playground）。new-api —：日志字段只有 Token/费用/延迟/ID，请求记录 prompt 的 issue #924/#2721/#2982/#4852 全部 closed。LiteLLM ◐：默认关闭，需 `store_prompts_in_spend_logs` 开启，另有 `turn_off_message_logging`、`no-log` 脱敏开关。
+
+**13 · 对话数据集导出** — Aris ✅：ShareGPT JSONL 流式导出（SSE 带进度），保留多轮对话、`<think>` 思维链与工具调用，支持评分/模型/时间窗筛选与导出前统计预览。LiteLLM ◐：Lens datasets（Export JSONL）面向**评测**，需独立 Lens 服务 + ClickHouse，无 ShareGPT/SFT 格式。
+
+**14 · Agent Harness 调用链采集** — Aris ✅：独立编译的 `aris` CLI 注册 Codex/Claude Code Hook，fail-open，本地 spool（`0600`，256 MiB 上限）批量上报。LiteLLM ✅：三套并存——`litellm.agent()` SDK harness（8 类 typed event）、`lite claude\|codex\|opencode` 包装器（打 `harness,<name>` 标签）、服务端 `agentic_loop_hook`（默认 3 次重跑，流式 Chat 不触发）；均 beta，沙箱需预装 CLI。OmniRoute ◐：一键 CLI 接入 + MITM/TPROXY 捕获，属流量层而非 Hook 事件级。
+
+**15 · Trace 重建与可视化** — Aris ✅：服务端重建为 `TraceConversation`，按消息/工具/`session_meta` 时间线渲染并可展开原始 payload。LiteLLM ✅：Lens（独立服务 + ClickHouse）提供对话视图、subagent 分支、Investigations 与 OTLP API——early access，`/lens` 仅 proxy admin 可用，Claude Code 依赖其自带 OTel exporter（有覆盖缺口），Codex 依赖第三方集成（自动安装仅 macOS）。OmniRoute ◐：Studios 可视化路由级联与压缩瀑布，非 Agent 调用链。
+
+**16 · 内容安全与脱敏** — Aris ✅：Aho-Corasick 触发词三动作（`deny`/`omit`/`capture`），Redis pub/sub + 版本轮询热更新。LiteLLM ✅：约 50 个 guardrail 集成、四种模式，但**流式输出上改写不生效**，且 `llmguard`/`llamaguard`/`hide_secrets`/`lakera` 需企业授权。new-api ◐：仅有渠道额外设置与上游 Header 覆盖。
+
+**17 · 可观测性与运行时监控** — LiteLLM ✅：指标族最完整（TTFT、overhead、预算余量、准入/拒绝、数据库队列）、2 个官方 Grafana 面板，专用指标端口绕过虚拟 Key 鉴权（勿暴露公网）。new-api ◐：看板 + 健康探测 + Webhook 告警 + pprof/Pyroscope，仅自定义 `/api/perf-metrics`，**无 Prometheus 依赖**。sub2api ◐：管理台 + 渠道监控，`go.mod` 无 Prometheus 依赖。OmniRoute ◐：看板 + `X-OmniRoute-*` 头 + SQLite 审计轨迹，无 `/metrics`。
+
+**18 · Token 压缩** — Aris ✅：转发前对 tool output 做确定性压缩，typed DTO 就地修改，策略 `smart_crusher`/`log_compressor`/`search_compressor`/`passthrough` 并记录压缩前后。OmniRoute ✅：12 引擎流水线（RTK、Caveman、LLMLingua-2、GCF v3.2、OmniGlyph）+ 默认开启膨胀保护。LiteLLM ◐：`compress()`（beta）。
+
+**19 · MCP / A2A** — LiteLLM ✅：MCP Gateway（按 Key 的 server/tool 权限、MCP 成本追踪、`/mcp` 可被 Cursor 接入）+ A2A Agent Gateway。OmniRoute ✅：内置 MCP 服务端 110 工具（stdio/HTTP/SSE，33 scope）+ A2A v0.3。new-api ◐：仅 JS 任务插件 + 市场。sub2api ◐：仅 `hashicorp/go-plugin` 插件体系。
+
+**20 · 部署与水平扩展** — Aris ✅：Compose/K8s（`preStop` + `terminationGracePeriodSeconds: 660`）+ 八步优雅关闭排空 SSE，跨 Pod 状态走 Redis。new-api ✅：多节点需共享主库 + 统一 `SESSION_SECRET`/`CRYPTO_SECRET`，共享限流需 Redis。LiteLLM ✅：Helm（HPA/KEDA）+ AWS/GCP 官方 Terraform（无 Azure）+ cosign 签名 + Prisma 迁移，多实例必须 Redis。OmniRoute ◐：单节点 SQLite，远程模式用作用域 token 驱动另一实例。
+
+**21 · 扩展机制** — Aris ◐：无插件体系，扩展点是独立编译的 `aris` 客户端（新增 agent = 1 adapter 文件 + 2 行注册）、models.dev 导入与 Fx 装配。new-api ✅：JS 任务插件（文档化 API + 市场）+ 自定义 OAuth 提供商。LiteLLM ✅：8 个 `CustomLogger` 挂载点 + 任意语言 guardrail API + 自定义认证/SSO/密钥管理 + 改一个 JSON 注册提供商 + `s3://`/`gcs://` 加载回调。OmniRoute ✅：插件框架、市场与 skills 框架。sub2api ✅：`hashicorp/go-plugin` 与模块化 skills。
+
 ## 系统架构
 
 后端按 DDD 分层组织：接口层（router / 十级中间件链 / handler / dto）→ 应用层（17 个用例模块的 `command`/`query`/`port`）→ 领域层（聚合、值对象、仓储接口）；基础设施层反向实现仓储接口完成依赖倒置，Cron 定时治理与 `bootstrap`/Fx 装配作为横切关注点。三类调用方分别是 Web 管理后台（JWT）、`aris` Trace CLI 与 Agentic 客户端（`X-API-Key`）。
