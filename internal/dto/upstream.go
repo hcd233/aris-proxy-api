@@ -80,6 +80,9 @@ type UpstreamEndpointItem struct {
 }
 
 // UpstreamOAuthItem 订阅端点凭据投影（仅展示字段；token 永不下发）
+//
+//	@author centonhuang
+//	@update 2026-10-19 10:00:00
 type UpstreamOAuthItem struct {
 	AccountEmail   string              `json:"accountEmail,omitempty" doc:"账号邮箱"`
 	PlanType       string              `json:"planType,omitempty" doc:"订阅类型"`

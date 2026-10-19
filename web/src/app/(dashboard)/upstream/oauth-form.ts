@@ -14,40 +14,16 @@ export const emptyOAuthAuthorizeForm: OAuthAuthorizeForm = {
   state: "",
 };
 
-export interface ParsedOAuthCodeInput {
-  code: string;
-  state: string;
-}
-
 /**
- * 归一化用户回贴的授权码输入（与后端 ParseOAuthCode 同规则的三形态）：
- * 1. 完整回调 URL（Codex 浏览器跳 localhost 打不开，从地址栏复制整段）→ 取 query 的 code/state；
- * 2. "code#state"（Claude 授权页展示格式）→ 按首个 # 切分；
- * 3. 纯 code → state 留空（提交时由服务端 flow 记录兜底）。
- * 非法输入返回 null（前端预校验，服务端仍会复验）。
+ * 归一化用户回贴的授权码输入：只裁剪首尾空白并做非空校验。
+ *
+ * 三形态（完整回调 URL / "code#state" / 纯 code）的解析由服务端 ParseOAuthCode
+ * 单一权威负责——前端重复实现会让两端规则漂移；这里只拦明显的空输入。
+ * 返回 null 表示输入无效。
  */
-export function parseOAuthCodeInput(input: string): ParsedOAuthCodeInput | null {
+export function normalizeOAuthCodeInput(input: string): string | null {
   const trimmed = input.trim();
-  if (!trimmed) {
-    return null;
-  }
-  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-    try {
-      const url = new URL(trimmed);
-      const code = (url.searchParams.get("code") ?? "").trim();
-      const state = (url.searchParams.get("state") ?? "").trim();
-      return code ? { code, state } : null;
-    } catch {
-      return null;
-    }
-  }
-  const hashIndex = trimmed.indexOf("#");
-  if (hashIndex >= 0) {
-    const code = trimmed.slice(0, hashIndex).trim();
-    const state = trimmed.slice(hashIndex + 1).trim();
-    return code ? { code, state } : null;
-  }
-  return { code: trimmed, state: "" };
+  return trimmed.length > 0 ? trimmed : null;
 }
 
 /** 额度窗口百分比（四舍五入并钳位到 0~100，用于进度条宽度） */

@@ -51,6 +51,10 @@ _Avoid_: model name, exposed name
 调用上游 LLM 所需的 BaseURL 与 APIKey。由 EndpointResolver 根据请求协议（OpenAI / Anthropic）从 `Endpoint` 表取对应协议的 Base URL + 共享 API Key 组合而成，与 `Model`（上游真实模型名）一同返回给 UseCase。
 _Avoid_: connection info, auth config
 
+**SubscriptionCredential（订阅凭据）**:
+Claude Code / Codex 订阅账号经 OAuth 授权得到的 access + refresh token 组合，密文存 `endpoint_oauth_credentials`（AES-256-GCM），与 Endpoint 一对一。运行时 access token 由 OAuthTokenProvider 按需刷新后注入 `vo.UpstreamEndpoint.APIKey` 字段——该字段的语义是「最终鉴权凭据」，api_key 端点放上游密钥、订阅端点放 access token，两类端点共用同一转发链路。凭据状态（`active` / `reauth_required`）与额度快照走独立只读投影，token 永不出现在管理端接口与日志中。
+_Avoid_: oauth token, api key, access key
+
 **ProtocolType（协议类型）**:
 网关支持的四种上游 LLM 协议：`openai-chat-completion`（OpenAI Chat Completions）、`openai-response`（OpenAI Response API）、`anthropic-message`（Anthropic Messages）、`openai-decision`（OpenAI Decision API）。决定请求的序列化/反序列化方式和传输通道。网关支持跨协议转换（如 OpenAI 接口调用 Anthropic 上游），但 **Decision 仅支持原生转发**：predicate/choice/score 在 Chat/Anthropic 协议中没有等价语义。
 _Avoid_: provider type, api type

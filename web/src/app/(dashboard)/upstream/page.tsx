@@ -48,7 +48,7 @@ import { EndpointDialog } from "./endpoint-dialog";
 import {
   authSelectionForDialog,
   emptyOAuthAuthorizeForm,
-  parseOAuthCodeInput,
+  normalizeOAuthCodeInput,
   type OAuthAuthorizeForm,
 } from "./oauth-form";
 import { ModelDialog } from "./model-dialog";
@@ -442,22 +442,24 @@ export default function UpstreamPage() {
 
   /** 提交授权码：create=绑定新端点；reauth=复活既有端点 */
   const handleSubmitOAuth = async () => {
-    const parsed = parseOAuthCodeInput(oauthForm.code);
-    if (!parsed) {
+    const code = normalizeOAuthCodeInput(oauthForm.code);
+    if (!code) {
       showErrorToast(new Error(t("oauth.code_invalid")), { title: t("oauth.submit_error") });
       return;
     }
     setSaving(true);
     try {
-      const state = parsed.state || oauthForm.state;
+      // 授权码形态（回调 URL / code#state / 纯 code）由服务端统一解析；
+      // 前端只提交原文与本次授权流 state（若粘贴内容内嵌 state，服务端以其为准）
+      const state = oauthForm.state;
       if (oauthMode === "reauth" && reauthTarget) {
-        await api.reauthOAuthEndpoint(reauthTarget.id, { code: parsed.code, state });
+        await api.reauthOAuthEndpoint(reauthTarget.id, { code, state });
         toast.success(t("oauth.reauth_success"));
       } else {
         await api.exchangeOAuthEndpoint({
           name: endpointForm.name,
           provider: oauthForm.provider,
-          code: parsed.code,
+          code,
           state,
           ownerUserID: isAdmin() && endpointForm.ownerUserID ? endpointForm.ownerUserID : undefined,
         });

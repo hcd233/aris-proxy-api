@@ -1,31 +1,30 @@
 import { describe, expect, it } from "vitest";
 
-import { oauthBadgeKey, oauthCodeHintKey, parseOAuthCodeInput, quotaPercent } from "../oauth-form";
+import {
+  normalizeOAuthCodeInput,
+  oauthBadgeKey,
+  oauthCodeHintKey,
+  quotaPercent,
+} from "../oauth-form";
 
-describe("parseOAuthCodeInput", () => {
-  it("从完整回调 URL 提取 code 与 state（Codex 形态）", () => {
-    expect(parseOAuthCodeInput("http://localhost:1455/auth/callback?code=ac_1&state=st_1")).toEqual(
-      { code: "ac_1", state: "st_1" },
-    );
+describe("normalizeOAuthCodeInput", () => {
+  it("裁剪首尾空白后原样返回输入（形态解析由服务端负责）", () => {
+    expect(normalizeOAuthCodeInput("  ac_3  ")).toBe("ac_3");
+    // 回调 URL 与 code#state 不再在前端解析，整段交给服务端 ParseOAuthCode
+    expect(
+      normalizeOAuthCodeInput("http://localhost:1455/auth/callback?code=ac_1&state=st_1"),
+    ).toBe("http://localhost:1455/auth/callback?code=ac_1&state=st_1");
+    expect(normalizeOAuthCodeInput("ac_2#st_2")).toBe("ac_2#st_2");
   });
 
-  it("按 # 切分 code#state（Claude 形态）", () => {
-    expect(parseOAuthCodeInput("ac_2#st_2")).toEqual({ code: "ac_2", state: "st_2" });
-  });
-
-  it("纯 code 保留 state 为空", () => {
-    expect(parseOAuthCodeInput("  ac_3  ")).toEqual({ code: "ac_3", state: "" });
-  });
-
-  it("空输入与缺少 code 的 URL 返回 null", () => {
-    expect(parseOAuthCodeInput("   ")).toBeNull();
-    expect(parseOAuthCodeInput("https://x/cb?state=st")).toBeNull();
-    expect(parseOAuthCodeInput("#st")).toBeNull();
+  it("空输入返回 null", () => {
+    expect(normalizeOAuthCodeInput("")).toBeNull();
+    expect(normalizeOAuthCodeInput("   ")).toBeNull();
   });
 });
 
 describe("quotaPercent", () => {
-  it("四舍五入并钳位", () => {
+  it("四舍五入并钳位（上游已归一为 0~100 百分比）", () => {
     expect(quotaPercent(12.6)).toBe(13);
     expect(quotaPercent(-1)).toBe(0);
     expect(quotaPercent(150)).toBe(100);

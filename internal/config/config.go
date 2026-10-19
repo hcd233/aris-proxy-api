@@ -181,6 +181,7 @@ var (
 	CronThinkExtractEnabled bool
 
 	// CronOAuthMaintenanceEnabled bool 是否启用订阅账号维护定时任务（临期 token 刷新 + 额度探测）
+	//	@update 2026-10-18 10:00:00
 	CronOAuthMaintenanceEnabled bool
 
 	// UpstreamRetryMaxAttempts int 上游请求重试最大次数（不含首次请求）

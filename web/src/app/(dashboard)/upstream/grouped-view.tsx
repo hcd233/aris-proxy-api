@@ -101,7 +101,8 @@ function EndpointDetailPopover({
         <div className="grid grid-cols-1 gap-1.5">
           {field("OpenAI", endpoint.openaiBaseURL)}
           {field("Anthropic", endpoint.anthropicBaseURL)}
-          {field(t("endpoints.api_key"), endpoint.maskedAPIKey, false)}
+          {endpoint.authType === "api_key" &&
+            field(t("endpoints.api_key"), endpoint.maskedAPIKey, false)}
           {endpoint.oauth && (
             <div className="min-w-0 rounded-md border border-border bg-background px-2 py-1.5">
               <p className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground">

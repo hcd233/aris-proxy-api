@@ -6,6 +6,8 @@ import (
 )
 
 // OAuthQuotaWindow DTO 层额度窗口（transport 契约；不直接引用 domain vo）
+//
+// UsedPercent 为 0~100 百分比（provider 侧已把 Anthropic 比例/OpenAI 百分比归一）。
 type OAuthQuotaWindow struct {
 	Key           string    `json:"key" doc:"窗口标识（five_hour/seven_day/primary/secondary）"`
 	UsedPercent   float64   `json:"usedPercent" doc:"已用百分比"`
