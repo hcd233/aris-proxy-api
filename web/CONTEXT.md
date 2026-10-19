@@ -41,7 +41,7 @@ _Avoid_: row lock, height freeze
 _Avoid_: responsive table, auto-width table
 
 **Column Budget（列宽预算）**:
-一张 `Table fit` 表所有列宽声明之和必须小于容器可用宽度，否则 fixed 布局会溢出成横向滚动。时间戳一类不可截断的等宽内容按实测宽度给足（不足会被静默裁掉），可截断内容一律配 Tooltip。
+一张 `Table fit` 表所有列宽声明之和必须小于容器可用宽度，否则 fixed 布局会溢出成横向滚动。时间戳一类不可截断的等宽内容按实测宽度给足（不足会被静默裁掉），可截断内容一律配 Tooltip。含固定尺寸按钮的操作列也按实测给足：行内 flex 右对齐时溢出从左侧裁掉，`scrollWidth` 检测不到，表现为最左按钮整颗消失。
 _Avoid_: column width, col size
 
 ## Dataset Page（训练数据页）

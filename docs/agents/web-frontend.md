@@ -84,8 +84,8 @@
 列多到需要左右滑动的数据表，改用 `<Table fit>`：`table-layout: fixed` + 单元格 `overflow: hidden`，列宽由表头 `w-*` 声明，**只留主列不声明**（fixed 布局把剩余空间全给未声明列，实测 Chrome 行为：声明宽度之和小于表格宽度时余量归未声明列）。
 
 - **列宽预算**：声明宽度之和 ≥ 容器宽度时会溢出成横向滚动，增删列前后都要核对。1280 视口下 `max-w-6xl` 容器的实测可用宽度约 900px（侧栏 256 + 页面内边距）。
-- **不可截断内容按实测给足**：时间戳这类等宽文本（`2026/10/19 18:09:13` 在 `text-xs` 下约 163px）宽度不足会被单元格裁掉且无提示，必须按 `td.scrollWidth` 实测值给（该值含 `p-2` 内边距）。
-- **可截断内容一律 `truncate` + Tooltip**（lint 强制）；实测「静默裁掉」的方法：遍历 `tbody td`，`td.scrollWidth > td.clientWidth + 1` 且不在 `TooltipTrigger` 子树内即为不合格。
+- **不可截断内容按实测给足**：时间戳这类等宽文本（`2026/10/19 18:09:13` 在 `text-xs` 下约 163px）宽度不足会被单元格裁掉且无提示，必须按 `td.scrollWidth` 实测值给（该值含 `p-2` 内边距）。**操作列同属不可截断内容**：按钮是 `shrink-0`，行内 flex 又是 `justify-end`，宽度不足时溢出部分从**左侧**被裁掉，最左的按钮整颗消失（既无省略号也不出现滚动条）。预算按最宽语言实测（upstream 操作列：编辑/定价两个 `icon-sm` + 带文字 `DeleteButton`，zh 10rem、en 10.5rem）。
+- **可截断内容一律 `truncate` + Tooltip**（lint 强制）；实测「静默裁掉」的方法：遍历 `tbody td`，`td.scrollWidth > td.clientWidth + 1` 且不在 `TooltipTrigger` 子树内即为不合格。**注意 `scrollWidth` 只看得见右侧溢出**，`justify-end` 的 flex 从左侧裁掉时该判据失效，需另比单元格内容盒与子元素包围盒的左右边界（任一侧溢出 > 1px 即不合格）。
 - **窄视口兜底**：容器保留 `overflow-x-auto`，只有预算放不下时才出现横向滚动，属于预期行为。
 - 开启 `fit` 的页面：`upstream`（分组/平铺）、`audit/model`、`audit/demo`、`sessions`、`cron`。
 

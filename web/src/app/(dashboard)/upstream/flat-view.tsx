@@ -269,7 +269,8 @@ export function FlatView({
             onSort={onSort}
             className="w-[5.5rem]"
           />
-          <TableHead className="w-[7.5rem] text-right">{t("upstream.col_actions")}</TableHead>
+          {/* 同分组视图：操作列按最宽语言实测给足，否则 fixed 布局会裁掉最左侧的「编辑」按钮 */}
+          <TableHead className="w-[11rem] text-right">{t("upstream.col_actions")}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
