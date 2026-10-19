@@ -163,6 +163,11 @@ var (
 		FieldOAuthCredentialStatus, FieldOAuthCredentialLastError, FieldOAuthCredentialQuotaSnapshot,
 		FieldOAuthCredentialQuotaUpdatedAt, FieldCreatedAt, FieldUpdatedAt}
 
+	// OAuthCredentialRepoFieldsDisplay 凭据展示投影列（不含 token 密文列，读取时无需解密）
+	OAuthCredentialRepoFieldsDisplay = []string{FieldOAuthCredentialEndpointID, FieldOAuthCredentialProvider,
+		FieldOAuthCredentialAccountEmail, FieldOAuthCredentialPlanType, FieldOAuthCredentialStatus,
+		FieldOAuthCredentialLastError, FieldOAuthCredentialQuotaSnapshot, FieldOAuthCredentialQuotaUpdatedAt}
+
 	// OAuthCredentialUpdateColumns upsert 冲突时更新的列（endpoint_id 为冲突键，不在列内；
 	// 最早创建时间不被覆盖，故不含 created_at）
 	OAuthCredentialUpdateColumns = []string{FieldOAuthCredentialProvider, FieldOAuthCredentialAccessTokenEnc,

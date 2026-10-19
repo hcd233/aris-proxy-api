@@ -40,18 +40,27 @@ func (f *fakeCredRepo) Save(_ context.Context, cred *aggregate.OAuthCredential) 
 	return nil
 }
 
-func (f *fakeCredRepo) DeleteByEndpointID(context.Context, uint) error { return nil }
-
 func (f *fakeCredRepo) ListActive(context.Context) ([]*aggregate.OAuthCredential, error) {
 	return nil, nil
 }
 
+func (f *fakeCredRepo) ListDisplayByEndpointIDs(context.Context, []uint) (map[uint]vo.OAuthCredentialDisplay, error) {
+	return nil, nil
+}
+
+func (f *fakeCredRepo) UpdateQuota(context.Context, uint, vo.QuotaSnapshot, time.Time) error {
+	return nil
+}
+
+func (f *fakeCredRepo) UpdateLastError(context.Context, uint, string) error { return nil }
+
 type fakeAccessCache struct {
-	access    service.OAuthAccess
-	present   bool
-	putCall   int
-	lastTTL   time.Duration
-	getCalled int
+	access      service.OAuthAccess
+	present     bool
+	putCall     int
+	lastTTL     time.Duration
+	getCalled   int
+	deleteCalls []uint
 }
 
 func (f *fakeAccessCache) Get(context.Context, uint) (service.OAuthAccess, bool) {
@@ -64,7 +73,9 @@ func (f *fakeAccessCache) Put(_ context.Context, _ uint, access service.OAuthAcc
 	f.access, f.present, f.lastTTL = access, true, ttl
 }
 
-func (f *fakeAccessCache) Delete(context.Context, uint) {}
+func (f *fakeAccessCache) Delete(_ context.Context, endpointID uint) {
+	f.deleteCalls = append(f.deleteCalls, endpointID)
+}
 
 type fakeLocker struct{ locked bool }
 
@@ -192,6 +203,10 @@ func TestInvalidGrantMarksReauth(t *testing.T) {
 	}
 	if credRepo.saveCall != 1 || credRepo.cred.Status() != enum.OAuthCredentialStatusReauthRequired {
 		t.Fatalf("credential must be marked reauth_required: save=%d status=%q", credRepo.saveCall, credRepo.cred.Status())
+	}
+	// 回归 I2：凭据不可用必须同时失效 access 缓存，否则旧 token 在剩余 TTL 内仍会被命中转发
+	if len(cache.deleteCalls) != 1 || cache.deleteCalls[0] != 5 {
+		t.Fatalf("reauth must invalidate access cache, delete calls = %v", cache.deleteCalls)
 	}
 	if !usecase.CanSwitchEndpoint(err) {
 		t.Fatal("OAuthCredentialError must be switchable")

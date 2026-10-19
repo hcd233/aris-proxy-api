@@ -12,7 +12,6 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	commonmodel "github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/service"
 	"github.com/hcd233/aris-proxy-api/internal/lock"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
@@ -102,56 +101,17 @@ func SweepOAuthMaintenance(
 				zap.Uint("endpointID", cred.EndpointID()), zap.Error(refreshErr))
 		}
 
-		// 2. 额度探测（节流窗口内跳过）
+		// 2. 额度探测（节流窗口内跳过）。
+		//
+		// 落库走 service.ProbeOAuthQuota 的窄列更新：第 1 步的刷新可能刚改过 token，
+		// 用这里的 cred 快照整行回写会把新 token 覆盖回旧值（refresh token 轮换后旧值已失效）。
 		if time.Since(cred.QuotaUpdatedAt()) < constant.OAuthQuotaProbeInterval {
 			continue
 		}
-		probeOAuthQuota(ctx, cred, tokens, providers, credRepo)
+		if _, probeErr := service.ProbeOAuthQuota(ctx, cred.EndpointID(), cred.Provider(), tokens, providers, credRepo); probeErr != nil {
+			log.Warn("[OAuthMaintenance] Quota probe failed",
+				zap.Uint("endpointID", cred.EndpointID()), zap.Error(probeErr))
+		}
 	}
 	return nil
-}
-
-// probeOAuthQuota 探测单个凭据的订阅窗口用量并写回快照（失败 fail-soft）
-func probeOAuthQuota(
-	ctx context.Context,
-	cred *aggregate.OAuthCredential,
-	tokens service.OAuthTokenProvider,
-	providers map[enum.OAuthProvider]service.OAuthProviderClient,
-	credRepo llmproxy.OAuthCredentialRepository,
-) {
-	log := logger.WithCtx(ctx)
-
-	client := providers[cred.Provider()]
-	if client == nil {
-		return
-	}
-	access, err := tokens.GetAccessToken(ctx, cred.EndpointID())
-	if err != nil {
-		log.Warn("[OAuthMaintenance] Get access token for quota probe failed",
-			zap.Uint("endpointID", cred.EndpointID()), zap.Error(err))
-		persistProbeError(ctx, cred, err, credRepo)
-		return
-	}
-	snapshot, err := client.ProbeQuota(ctx, access.Token, access.AccountRef)
-	if err != nil {
-		log.Warn("[OAuthMaintenance] Quota probe failed",
-			zap.Uint("endpointID", cred.EndpointID()), zap.Error(err))
-		persistProbeError(ctx, cred, err, credRepo)
-		return
-	}
-	cred.SetQuota(*snapshot, time.Now())
-	if err := credRepo.Save(ctx, cred); err != nil {
-		log.Error("[OAuthMaintenance] Persist quota snapshot failed",
-			zap.Uint("endpointID", cred.EndpointID()), zap.Error(err))
-	}
-}
-
-// persistProbeError 记录额度探测失败原因（不改状态机）：写 last_error 供管理端展示，
-// 否则用户无法察觉"额度为什么一直不刷新"（评审 M1）。
-func persistProbeError(ctx context.Context, cred *aggregate.OAuthCredential, probeErr error, credRepo llmproxy.OAuthCredentialRepository) {
-	cred.SetLastError(fmt.Sprintf(constant.OAuthReasonQuotaProbeFailed+"%v", probeErr))
-	if err := credRepo.Save(ctx, cred); err != nil {
-		logger.WithCtx(ctx).Error("[OAuthMaintenance] Persist probe error failed",
-			zap.Uint("endpointID", cred.EndpointID()), zap.Error(err))
-	}
 }

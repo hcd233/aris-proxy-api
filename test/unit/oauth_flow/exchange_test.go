@@ -146,11 +146,19 @@ func (f *fakeOAuthCredRepo) Save(_ context.Context, cred *aggregate.OAuthCredent
 	return nil
 }
 
-func (f *fakeOAuthCredRepo) DeleteByEndpointID(context.Context, uint) error { return nil }
-
 func (f *fakeOAuthCredRepo) ListActive(context.Context) ([]*aggregate.OAuthCredential, error) {
 	return nil, nil
 }
+
+func (f *fakeOAuthCredRepo) ListDisplayByEndpointIDs(context.Context, []uint) (map[uint]vo.OAuthCredentialDisplay, error) {
+	return nil, nil
+}
+
+func (f *fakeOAuthCredRepo) UpdateQuota(context.Context, uint, vo.QuotaSnapshot, time.Time) error {
+	return nil
+}
+
+func (f *fakeOAuthCredRepo) UpdateLastError(context.Context, uint, string) error { return nil }
 
 var _ llmproxy.OAuthCredentialRepository = (*fakeOAuthCredRepo)(nil)
 

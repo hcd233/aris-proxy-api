@@ -114,9 +114,6 @@ func (c *OAuthCredential) ApplyTokens(accessToken, refreshToken string, expiresA
 	c.status = enum.OAuthCredentialStatusActive
 }
 
-// SetLastError 记录非致命错误（如额度探测失败）供展示；不改状态机（区别于 MarkReauth）。
-func (c *OAuthCredential) SetLastError(errMsg string) { c.lastError = errMsg }
-
 // MarkReauth 标记为需重新授权（刷新被上游拒绝，如 invalid_grant）。
 func (c *OAuthCredential) MarkReauth(errMsg string) {
 	c.status = enum.OAuthCredentialStatusReauthRequired

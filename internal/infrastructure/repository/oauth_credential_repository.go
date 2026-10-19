@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/samber/lo"
 	"gorm.io/gorm"
@@ -62,14 +63,6 @@ func (r *oauthCredentialRepository) Save(ctx context.Context, cred *aggregate.OA
 	return nil
 }
 
-// DeleteByEndpointID 删除指定端点的凭据（幂等，不存在不报错）。
-func (r *oauthCredentialRepository) DeleteByEndpointID(ctx context.Context, endpointID uint) error {
-	if err := r.credentialDAO.Delete(r.db.WithContext(ctx), &dbmodel.EndpointOAuthCredential{EndpointID: endpointID}); err != nil {
-		return ierr.Wrap(ierr.ErrDBDelete, err, "delete oauth credential by endpoint id")
-	}
-	return nil
-}
-
 // ListActive 列出全部 active 状态凭据（cron 维护：临期刷新与额度探测）。
 func (r *oauthCredentialRepository) ListActive(ctx context.Context) ([]*aggregate.OAuthCredential, error) {
 	db := r.db.WithContext(ctx).
@@ -90,7 +83,75 @@ func (r *oauthCredentialRepository) ListActive(ctx context.Context) ([]*aggregat
 	return creds, nil
 }
 
-// toModel 聚合 → DB 模型（token 加密）
+// ListDisplayByEndpointIDs 批量读取一组端点的凭据展示投影（只选展示列，不解密 token）。
+//
+// 列表场景逐端点 FindByEndpointID 会退化成 N+1 查询 + 逐行 AES 解密两个 token，
+// 这里一次 IN 查询取展示列（token 密文列不进入内存）。
+func (r *oauthCredentialRepository) ListDisplayByEndpointIDs(ctx context.Context, endpointIDs []uint) (map[uint]vo.OAuthCredentialDisplay, error) {
+	displays := make(map[uint]vo.OAuthCredentialDisplay, len(endpointIDs))
+	if len(endpointIDs) == 0 {
+		return displays, nil
+	}
+	var records []*dbmodel.EndpointOAuthCredential
+	if err := r.db.WithContext(ctx).
+		Select(constant.OAuthCredentialRepoFieldsDisplay).
+		Where(constant.WhereEndpointIDIn, endpointIDs).
+		Where(constant.DBConditionDeletedAtZero).
+		Find(&records).Error; err != nil {
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "list oauth credential displays")
+	}
+	for _, record := range records {
+		displays[record.EndpointID] = vo.OAuthCredentialDisplay{
+			EndpointID:     record.EndpointID,
+			Provider:       enum.OAuthProvider(record.Provider),
+			AccountEmail:   record.AccountEmail,
+			PlanType:       record.PlanType,
+			Status:         enum.OAuthCredentialStatus(record.Status),
+			LastError:      record.LastError,
+			Quota:          toOAuthQuotaSnapshotVO(record.QuotaSnapshot),
+			QuotaUpdatedAt: record.QuotaUpdatedAt,
+		}
+	}
+	return displays, nil
+}
+
+// UpdateQuota 只更新额度快照与采集时间。
+//
+// 不走 Save：Save 是按 endpoint_id 的整行 upsert（含 token/状态列），维护任务里在
+// 刷新之后调用会把内存快照中的旧 token 写回，覆盖刚轮换出的新 token。
+func (r *oauthCredentialRepository) UpdateQuota(ctx context.Context, endpointID uint, snapshot vo.QuotaSnapshot, at time.Time) error {
+	record := &dbmodel.EndpointOAuthCredential{
+		QuotaSnapshot:  toOAuthQuotaSnapshotModel(snapshot),
+		QuotaUpdatedAt: at,
+	}
+	err := r.db.WithContext(ctx).
+		Model(record).
+		Where(constant.WhereEndpointIDEquals, endpointID).
+		Where(constant.DBConditionDeletedAtZero).
+		Select(constant.FieldOAuthCredentialQuotaSnapshot, constant.FieldOAuthCredentialQuotaUpdatedAt, constant.FieldUpdatedAt).
+		Updates(record).Error
+	if err != nil {
+		return ierr.Wrap(ierr.ErrDBUpdate, err, "update oauth credential quota")
+	}
+	return nil
+}
+
+// UpdateLastError 只更新最近错误摘要（不清空额度快照，也不改凭据状态）。
+func (r *oauthCredentialRepository) UpdateLastError(ctx context.Context, endpointID uint, lastError string) error {
+	record := &dbmodel.EndpointOAuthCredential{LastError: lastError}
+	err := r.db.WithContext(ctx).
+		Model(record).
+		Where(constant.WhereEndpointIDEquals, endpointID).
+		Where(constant.DBConditionDeletedAtZero).
+		Select(constant.FieldOAuthCredentialLastError, constant.FieldUpdatedAt).
+		Updates(record).Error
+	if err != nil {
+		return ierr.Wrap(ierr.ErrDBUpdate, err, "update oauth credential last error")
+	}
+	return nil
+}
+
+// buildOAuthCredentialModel 聚合 → DB 模型（token 加密）
 func buildOAuthCredentialModel(cred *aggregate.OAuthCredential) (*dbmodel.EndpointOAuthCredential, error) {
 	key := config.OAuthCredentialKey
 	if len(key) == 0 {
@@ -121,7 +182,7 @@ func buildOAuthCredentialModel(cred *aggregate.OAuthCredential) (*dbmodel.Endpoi
 	}, nil
 }
 
-// toAggregate DB 模型 → 聚合（token 解密）
+// buildOAuthCredentialAggregate DB 模型 → 聚合（token 解密）
 func buildOAuthCredentialAggregate(record *dbmodel.EndpointOAuthCredential) (*aggregate.OAuthCredential, error) {
 	key := config.OAuthCredentialKey
 	if len(key) == 0 {

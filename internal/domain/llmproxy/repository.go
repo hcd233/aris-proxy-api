@@ -2,6 +2,7 @@ package llmproxy
 
 import (
 	"context"
+	"time"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
@@ -75,15 +76,25 @@ type ModelRepository interface {
 //
 // 加解密是持久化层职责：聚合持明文令牌，实现负责落库前加密、读出后解密。
 // 加密密钥缺失时读写直接失败（fail-closed），API Key 端点不受影响。
+//
+// 额度与错误摘要只走窄列更新（UpdateQuota / UpdateLastError）：Save 是按 endpoint_id
+// 的整行 upsert，维护任务在刷新之后调用会把新 token 覆盖回内存快照里的旧值。
 type OAuthCredentialRepository interface {
 	// FindByEndpointID 按端点查询凭据；不存在返回 (nil, nil)。
 	FindByEndpointID(ctx context.Context, endpointID uint) (*aggregate.OAuthCredential, error)
 	// Save 按 endpoint_id upsert（创建与更新共用同一入口）。
 	Save(ctx context.Context, cred *aggregate.OAuthCredential) error
-	// DeleteByEndpointID 删除指定端点的凭据（幂等，不存在不报错）。
-	DeleteByEndpointID(ctx context.Context, endpointID uint) error
 	// ListActive 列出全部 active 状态凭据（cron 维护：临期刷新与额度探测）。
 	ListActive(ctx context.Context) ([]*aggregate.OAuthCredential, error)
+	// ListDisplayByEndpointIDs 批量读取一组端点的凭据展示投影（不含 token，不解密）。
+	//
+	// 供 upstream 列表等只读场景使用：避免逐端点查询（N+1）与逐行解密 token。
+	// 未命中的 endpointID 不出现在返回 map 中。
+	ListDisplayByEndpointIDs(ctx context.Context, endpointIDs []uint) (map[uint]vo.OAuthCredentialDisplay, error)
+	// UpdateQuota 只更新额度快照与采集时间（不触碰 token/状态列）。
+	UpdateQuota(ctx context.Context, endpointID uint, snapshot vo.QuotaSnapshot, at time.Time) error
+	// UpdateLastError 只更新最近错误摘要（不触碰 token/状态列）。
+	UpdateLastError(ctx context.Context, endpointID uint, lastError string) error
 }
 
 // OAuthEndpointRepository 订阅账号端点的原子创建接口（由 endpointRepository 一并实现）

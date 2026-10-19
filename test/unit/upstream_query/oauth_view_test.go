@@ -25,11 +25,37 @@ func (f *fakeOAuthCredRepo) FindByEndpointID(_ context.Context, endpointID uint)
 
 func (f *fakeOAuthCredRepo) Save(context.Context, *llmagg.OAuthCredential) error { return nil }
 
-func (f *fakeOAuthCredRepo) DeleteByEndpointID(context.Context, uint) error { return nil }
-
 func (f *fakeOAuthCredRepo) ListActive(context.Context) ([]*llmagg.OAuthCredential, error) {
 	return nil, nil
 }
+
+// ListDisplayByEndpointIDs 从内存凭据组装展示投影（与仓储实现的列映射保持一致）
+func (f *fakeOAuthCredRepo) ListDisplayByEndpointIDs(_ context.Context, endpointIDs []uint) (map[uint]llmvo.OAuthCredentialDisplay, error) {
+	displays := make(map[uint]llmvo.OAuthCredentialDisplay, len(endpointIDs))
+	for _, id := range endpointIDs {
+		cred := f.creds[id]
+		if cred == nil {
+			continue
+		}
+		displays[id] = llmvo.OAuthCredentialDisplay{
+			EndpointID:     cred.EndpointID(),
+			Provider:       cred.Provider(),
+			AccountEmail:   cred.AccountEmail(),
+			PlanType:       cred.PlanType(),
+			Status:         cred.Status(),
+			LastError:      cred.LastError(),
+			Quota:          cred.Quota(),
+			QuotaUpdatedAt: cred.QuotaUpdatedAt(),
+		}
+	}
+	return displays, nil
+}
+
+func (f *fakeOAuthCredRepo) UpdateQuota(context.Context, uint, llmvo.QuotaSnapshot, time.Time) error {
+	return nil
+}
+
+func (f *fakeOAuthCredRepo) UpdateLastError(context.Context, uint, string) error { return nil }
 
 // TestListUpstreamOAuthView 订阅端点视图装配：auth_type/状态/邮箱/额度；demo 掩码邮箱且额度保留（Review Focus 3）。
 func TestListUpstreamOAuthView(t *testing.T) {
