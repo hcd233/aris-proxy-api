@@ -69,6 +69,24 @@ function formatProtocol(protocol: string): string {
   return labels[protocol] || protocol;
 }
 
+/**
+ * 上游状态码的筛选项文案：选项列表里只有裸码（200/429）看不出含义，
+ * 补一个语义前缀；码本身保留在括号里，方便与表格状态徽章对得上。
+ */
+function formatStatusCode(code: string, t: (key: string, fallback?: string) => string): string {
+  const n = Number(code);
+  if (!Number.isFinite(n)) return code;
+  const label =
+    n < 300
+      ? t("audit.status_success")
+      : n === 429
+        ? t("audit.status_rate_limited")
+        : n < 500
+          ? t("audit.status_client_error")
+          : t("audit.status_upstream_error");
+  return `${label} (${code})`;
+}
+
 function formatMs(ms: number): string {
   if (ms >= 1000) return `${(ms / 1000).toFixed(2)}s`;
   return `${ms}ms`;
@@ -98,7 +116,12 @@ export default function AuditPage() {
     () => [
       { key: "user", label: t("audit.filter_user"), options: fetchOptionsFor("user") },
       { key: "model", label: t("audit.filter_model"), options: fetchOptionsFor("model") },
-      { key: "status", label: t("audit.filter_status"), options: fetchOptionsFor("status") },
+      {
+        key: "status",
+        label: t("audit.filter_status"),
+        options: fetchOptionsFor("status"),
+        formatValue: (v) => formatStatusCode(v, t),
+      },
       { key: "ua", label: t("audit.filter_ua"), options: fetchOptionsFor("ua") },
     ],
     // locale 必须在依赖里：t 引用已稳定（见 lib/i18n.tsx），翻译文本刷新只能靠 locale 驱动重算
@@ -475,20 +498,20 @@ export default function AuditPage() {
                 })}
               </ItemGroup>
             ) : (
-              <Table>
+              <Table fit>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>{t("audit.time")}</TableHead>
+                    <TableHead className="w-[10.5rem]">{t("audit.time")}</TableHead>
+                    {/* 主列不声明宽度：fixed 布局把剩余空间全给模型列（端点/协议并入次行） */}
                     <TableHead>{t("audit.filter_model")}</TableHead>
-                    <TableHead>{t("audit.endpoint_name")}</TableHead>
-                    <TableHead>{t("audit.protocol")}</TableHead>
-                    <TableHead>{t("audit.user_name")}</TableHead>
-                    <TableHead>{t("audit.filter_status")}</TableHead>
-                    <TableHead>{t("audit.tokens")}</TableHead>
-                    <TableHead>{t("audit.latency")}</TableHead>
-                    <TableHead>{t("audit.cost.column")}</TableHead>
-                    <TableHead>{t("audit.useragent")}</TableHead>
-                    <TableHead>{t("audit.copy_traceid")}</TableHead>
+                    <TableHead className="w-[4rem]">{t("audit.user_name")}</TableHead>
+                    <TableHead className="w-[4rem]">{t("audit.filter_status")}</TableHead>
+                    {/* 8.5rem 是 token 列的下限：cache 行 "ca: 4.1k / 113.5k" 再窄就被裁掉 */}
+                    <TableHead className="w-[8.5rem]">{t("audit.tokens")}</TableHead>
+                    <TableHead className="w-[5rem]">{t("audit.latency")}</TableHead>
+                    <TableHead className="w-[5rem]">{t("audit.cost.column")}</TableHead>
+                    <TableHead className="w-[5rem]">{t("audit.useragent")}</TableHead>
+                    <TableHead className="w-[4.5rem]">{t("audit.copy_traceid")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -502,62 +525,62 @@ export default function AuditPage() {
                     const uaShort = log.userAgent
                       ? log.userAgent.slice(0, 30) + (log.userAgent.length > 30 ? "…" : "")
                       : "—";
+                    // 模型列次行：端点 + 协议；客户端协议与上游协议不同时用 → 表示协议转换
+                    const protocolText =
+                      log.apiProtocol &&
+                      log.upstreamProtocol &&
+                      log.apiProtocol !== log.upstreamProtocol
+                        ? `${formatProtocol(log.apiProtocol)} → ${formatProtocol(log.upstreamProtocol)}`
+                        : formatProtocol(log.apiProtocol || log.upstreamProtocol);
+                    const metaText = [log.endpoint, protocolText]
+                      .filter((v) => v && v !== "—")
+                      .join(" · ");
                     return (
                       <TableRow key={log.id} className={ok ? "" : "bg-destructive/5"}>
                         <TableCell className="whitespace-nowrap text-xs tabular-nums text-muted-foreground">
                           {formatTime(log.createdAt)}
                         </TableCell>
                         <TableCell>
-                          <TooltipProvider>
-                            <TooltipRoot>
-                              <TooltipTrigger
-                                render={
-                                  <button
-                                    type="button"
-                                    className="flex max-w-[130px] cursor-default items-center gap-1.5"
-                                  >
-                                    <ProviderIcon protocol={log.modelId} size={14} />
-                                    <span className="min-w-0 truncate">{log.modelId || "—"}</span>
-                                  </button>
-                                }
-                              />
-                              <TooltipContent side="top" className="max-w-xs">
-                                <span className="break-all">{log.modelId}</span>
-                              </TooltipContent>
-                            </TooltipRoot>
-                          </TooltipProvider>
-                        </TableCell>
-                        <TableCell>
-                          {log.endpoint ? (
+                          {/* 端点与协议并入模型列次行：原「端点」「协议」两列的信息一行说清，表格少两列 */}
+                          <div className="flex min-w-0 flex-col gap-0.5">
                             <TooltipProvider>
                               <TooltipRoot>
                                 <TooltipTrigger
                                   render={
                                     <button
                                       type="button"
-                                      className="max-w-[100px] cursor-default truncate text-xs text-muted-foreground"
+                                      className="flex min-w-0 cursor-default items-center gap-1.5"
                                     >
-                                      {log.endpoint}
+                                      <ProviderIcon
+                                        protocol={log.modelId}
+                                        size={14}
+                                        className="shrink-0"
+                                      />
+                                      <span className="min-w-0 truncate">{log.modelId || "—"}</span>
                                     </button>
                                   }
                                 />
                                 <TooltipContent side="top" className="max-w-xs">
-                                  <span className="break-all">{log.endpoint}</span>
+                                  <span className="break-all">{log.modelId}</span>
                                 </TooltipContent>
                               </TooltipRoot>
                             </TooltipProvider>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap text-muted-foreground">
-                          <div className="flex items-center gap-1.5 text-xs">
-                            <ProviderIcon protocol={log.apiProtocol} size={14} />
-                            {formatProtocol(log.apiProtocol)}
-                          </div>
-                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground/70">
-                            <ProviderIcon protocol={log.upstreamProtocol} size={14} />
-                            {formatProtocol(log.upstreamProtocol)}
+                            {metaText && (
+                              <TooltipProvider>
+                                <TooltipRoot>
+                                  <TooltipTrigger
+                                    render={
+                                      <span className="min-w-0 truncate text-xs text-muted-foreground">
+                                        {metaText}
+                                      </span>
+                                    }
+                                  />
+                                  <TooltipContent side="top" className="max-w-xs break-all">
+                                    {metaText}
+                                  </TooltipContent>
+                                </TooltipRoot>
+                              </TooltipProvider>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell>

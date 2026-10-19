@@ -69,3 +69,22 @@ export function formatDateTime(dateStr: string): string {
   const seconds = String(d.getSeconds()).padStart(2, "0");
   return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
 }
+
+/** 后端定时任务模块名（internal/common/constant）→ i18n 键后缀 */
+const CRON_JOB_I18N_SUFFIX: Record<string, string> = {
+  OAuthMaintenanceCron: "oauth_maintenance",
+  SessionTerminalCleanupCron: "session_terminal_cleanup",
+  SoftDeletePurgeCron: "soft_delete_purge",
+  ThinkExtractCron: "think_extract",
+  TriggerHitSyncCron: "trigger_hit_sync",
+};
+
+/**
+ * 定时任务展示名：后端存的是模块名（如 `ThinkExtractCron`），
+ * 直接展示等于把内部标识符摆到界面上，这里翻成 `cron.job_*` 文案。
+ * 未登记的模块名（后端新增任务）原样返回，不会渲染成空白。
+ */
+export function cronJobLabel(name: string, t: (key: string, fallback?: string) => string): string {
+  const suffix = CRON_JOB_I18N_SUFFIX[name];
+  return suffix ? t(`cron.job_${suffix}`, name) : name;
+}

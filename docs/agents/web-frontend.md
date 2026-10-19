@@ -79,6 +79,16 @@
 - **对话框正文**：显示动态长度描述的 `DialogDescription` 加 `min-h-[2.5rem]`（约两行）预留；自由描述文本不加 `min-h`。
 - **对话框横向 flex 行**：`DialogContent` 是 grid，其子项 `min-width: auto` 会被内容 min-content 撑宽——横向 flex 行（如「币种选择 + 导入按钮」）放不下时不会换行/滚动，而是把整个 grid 轨道撑宽，内容溢出弹窗圆角边界。对话框正文里的横向 flex 工具行必须显式加 `flex-wrap`，不要依赖固定宽度组合刚好放得下。
 
+### Table-Fit（列多表格的列宽预算）
+
+列多到需要左右滑动的数据表，改用 `<Table fit>`：`table-layout: fixed` + 单元格 `overflow: hidden`，列宽由表头 `w-*` 声明，**只留主列不声明**（fixed 布局把剩余空间全给未声明列，实测 Chrome 行为：声明宽度之和小于表格宽度时余量归未声明列）。
+
+- **列宽预算**：声明宽度之和 ≥ 容器宽度时会溢出成横向滚动，增删列前后都要核对。1280 视口下 `max-w-6xl` 容器的实测可用宽度约 900px（侧栏 256 + 页面内边距）。
+- **不可截断内容按实测给足**：时间戳这类等宽文本（`2026/10/19 18:09:13` 在 `text-xs` 下约 163px）宽度不足会被单元格裁掉且无提示，必须按 `td.scrollWidth` 实测值给（该值含 `p-2` 内边距）。
+- **可截断内容一律 `truncate` + Tooltip**（lint 强制）；实测「静默裁掉」的方法：遍历 `tbody td`，`td.scrollWidth > td.clientWidth + 1` 且不在 `TooltipTrigger` 子树内即为不合格。
+- **窄视口兜底**：容器保留 `overflow-x-auto`，只有预算放不下时才出现横向滚动，属于预期行为。
+- 开启 `fit` 的页面：`upstream`（分组/平铺）、`audit/model`、`audit/demo`、`sessions`、`cron`。
+
 ### Font Scale（CJK 字号对齐）
 
 `globals.css` 的 `:lang(zh)/:lang(ja)` 块覆盖 Tailwind v4 `--text-*` 主题变量，等比下调 CJK 字号（zh 0.92、ja 0.88），仅动字号不动 rem 间距。新增 text utility 档位时同步在两个 `:lang()` 块补对应 `--text-*` 覆盖。预留 `min-w` 应以缩放后的 CJK 宽度为准核定。

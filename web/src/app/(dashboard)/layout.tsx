@@ -367,7 +367,7 @@ function UserBar({ collapsed = false }: { collapsed?: boolean }) {
             </TooltipRoot>
             <div className="mt-1 flex items-center gap-1.5">
               <Badge variant="secondary" className="px-1.5 py-0 text-[10px] font-medium">
-                {user.permission}
+                {t(`permission.${user.permission}`)}
               </Badge>
             </div>
           </div>
