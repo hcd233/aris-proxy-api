@@ -157,6 +157,19 @@ export function ScheduleEditorDialog({
   onSave,
 }: ScheduleEditorDialogProps) {
   const { t, locale } = useI18n();
+  // Base UI Select 只有传 items 时，触发按钮才渲染选项文案而不是原始枚举值
+  const repeatItems: { value: RepeatMode; label: string }[] = [
+    { value: "minute", label: t("schedule.every_minute") },
+    { value: "hour", label: t("schedule.every_hour") },
+    { value: "day", label: t("schedule.every_day") },
+    { value: "week", label: t("schedule.every_week") },
+    { value: "month", label: t("schedule.every_month") },
+    { value: "advanced", label: t("schedule.advanced") },
+  ];
+  const weekdayItems = WEEKDAYS.map((day, index) => ({
+    value: String(index),
+    label: t(`schedule.${day}`),
+  }));
   const [parsed, setParsed] = useState<ParsedSpec>({
     mode: "day",
     minute: 0,
@@ -224,18 +237,18 @@ export function ScheduleEditorDialog({
             <FieldLabel htmlFor="schedule-repeat">{t("schedule.repeat")}</FieldLabel>
             <Select
               value={parsed.mode}
+              items={repeatItems}
               onValueChange={(value) => updateParsed({ mode: String(value) as RepeatMode })}
             >
               <SelectTrigger id="schedule-repeat">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="minute">{t("schedule.every_minute")}</SelectItem>
-                <SelectItem value="hour">{t("schedule.every_hour")}</SelectItem>
-                <SelectItem value="day">{t("schedule.every_day")}</SelectItem>
-                <SelectItem value="week">{t("schedule.every_week")}</SelectItem>
-                <SelectItem value="month">{t("schedule.every_month")}</SelectItem>
-                <SelectItem value="advanced">{t("schedule.advanced")}</SelectItem>
+                {repeatItems.map((item) => (
+                  <SelectItem key={item.value} value={item.value}>
+                    {item.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </Field>
@@ -308,15 +321,16 @@ export function ScheduleEditorDialog({
                   </FieldLabel>
                   <Select
                     value={String(parsed.dayOfWeek)}
+                    items={weekdayItems}
                     onValueChange={(value) => updateParsed({ dayOfWeek: parseInt(String(value)) })}
                   >
                     <SelectTrigger id="schedule-day-of-week">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {WEEKDAYS.map((d, i) => (
-                        <SelectItem key={i} value={String(i)}>
-                          {t(`schedule.${d}`)}
+                      {weekdayItems.map((item) => (
+                        <SelectItem key={item.value} value={item.value}>
+                          {item.label}
                         </SelectItem>
                       ))}
                     </SelectContent>

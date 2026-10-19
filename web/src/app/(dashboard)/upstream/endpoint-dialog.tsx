@@ -79,6 +79,13 @@ export function EndpointDialog({
   onSubmitOAuth,
 }: EndpointDialogProps) {
   const t = useT();
+  // Base UI Select 只有传 items 时，触发按钮才渲染选项文案而不是原始枚举值
+  const ownerItems = userOptions.map((u) => ({ value: String(u.id), label: u.name }));
+  const authTypeItems: { value: EndpointAuthType; label: string }[] = [
+    { value: "api_key", label: t("endpoints.auth_api_key") },
+    { value: "oauth_anthropic", label: t("oauth.badge_claude") },
+    { value: "oauth_openai", label: t("oauth.badge_codex") },
+  ];
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -103,6 +110,7 @@ export function EndpointDialog({
               <FieldLabel htmlFor="ep-owner">{t("upstream.owner")}</FieldLabel>
               <Select
                 value={form.ownerUserID ? String(form.ownerUserID) : ""}
+                items={ownerItems}
                 onValueChange={(value) =>
                   setForm((f) => ({
                     ...f,
@@ -114,9 +122,9 @@ export function EndpointDialog({
                   <SelectValue placeholder={t("upstream.owner_default")} />
                 </SelectTrigger>
                 <SelectContent>
-                  {userOptions.map((u) => (
-                    <SelectItem key={u.id} value={String(u.id)}>
-                      {u.name}
+                  {ownerItems.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -129,15 +137,18 @@ export function EndpointDialog({
               <FieldLabel htmlFor="ep-auth-type">{t("endpoints.auth_type")}</FieldLabel>
               <Select
                 value={authSelection}
+                items={authTypeItems}
                 onValueChange={(v) => onSelectAuth(v as EndpointAuthType)}
               >
                 <SelectTrigger id="ep-auth-type">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="api_key">{t("endpoints.auth_api_key")}</SelectItem>
-                  <SelectItem value="oauth_anthropic">{t("oauth.badge_claude")}</SelectItem>
-                  <SelectItem value="oauth_openai">{t("oauth.badge_codex")}</SelectItem>
+                  {authTypeItems.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <FieldDescription>{t("endpoints.auth_type_desc")}</FieldDescription>
