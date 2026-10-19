@@ -120,8 +120,7 @@ func (c *openaiOAuthClient) postTokenForm(ctx context.Context, form url.Values) 
 		return nil, ierr.Wrap(ierr.ErrInternal, err, "build openai token request")
 	}
 	req.Header.Set(constant.HTTPHeaderContentType, constant.HTTPContentTypeFormURLEncoded)
-	req.Header.Set(constant.HTTPHeaderUserAgent, constant.OAuthCodexUserAgent)
-	req.Header.Set(constant.HTTPHeaderOriginator, constant.OAuthCodexOriginator)
+	setCodexClientHeaders(req.Header)
 
 	resp, err := httpclient.GetHTTPClient().Do(req)
 	if err != nil {
@@ -139,6 +138,11 @@ func (c *openaiOAuthClient) postTokenForm(ctx context.Context, form url.Values) 
 	}
 	if parsed.AccessToken == "" {
 		return nil, ierr.New(ierr.ErrProxyRequest, "openai token response missing access_token")
+	}
+	if parsed.ExpiresIn <= 0 {
+		// 未报有效期时不能默认"永不过期"：必须报错，否则凭据会以"已过期"入表，
+		// 每次请求都触发一轮刷新
+		return nil, ierr.New(ierr.ErrProxyRequest, "openai token response has non-positive expires_in")
 	}
 
 	set := &service.OAuthTokenSet{
@@ -183,6 +187,7 @@ func (c *openaiOAuthClient) ProbeQuota(ctx context.Context, accessToken, account
 	}
 	req.Header.Set(constant.HTTPHeaderAuthorization, constant.HTTPAuthBearerPrefix+accessToken)
 	req.Header.Set(constant.HTTPHeaderChatGPTAccountID, accountRef)
+	setCodexClientHeaders(req.Header)
 
 	resp, err := httpclient.GetHTTPClient().Do(req)
 	if err != nil {
@@ -206,7 +211,8 @@ func (c *openaiOAuthClient) ProbeQuota(ctx context.Context, accessToken, account
 		}
 		minutes := int(window.LimitWindowSeconds / constant.OAuthSecondsPerMinute)
 		windows = append(windows, vo.QuotaWindow{
-			Key:           key,
+			Key: key,
+			// 上游 used_percent 已是 0~100 百分比（与 Claude 侧归一后同量纲）
 			UsedPercent:   window.UsedPercent,
 			ResetsAt:      parseTimeBestEffort(window.ResetAt),
 			WindowMinutes: minutes,

@@ -31,6 +31,10 @@ const (
 	DefaultFormatJSON      = "application/json"
 	DataURLPrefix          = "data:"
 	DataURLBase64Separator = ";base64,"
+
+	// CommaSeparator / CommaSpaceSeparator 逗号分隔符（HTTP 多值头合并、列表拼接等通用场景）
+	CommaSeparator      = ","
+	CommaSpaceSeparator = ", "
 	// ── dig 容器命名 ──
 	DigNameApplicationModule = "application"
 	DigNameCronModule        = "cron"

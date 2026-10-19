@@ -120,8 +120,16 @@ func TestProbeQuotaMapping(t *testing.T) {
 			if r.Header.Get(constant.HTTPHeaderAnthropicBeta) != constant.OAuthClaudeBetaHeader {
 				t.Errorf("missing oauth beta header: %v", r.Header)
 			}
+			// 客户端身份头与 token 端点共用（M2：同类调用头必须一致）
+			if got := r.Header.Get(constant.HTTPHeaderUserAgent); got != constant.OAuthClaudeUserAgent {
+				t.Errorf("user-agent = %q, want %q", got, constant.OAuthClaudeUserAgent)
+			}
+			if got := r.Header.Get(constant.HTTPHeaderXApp); got != constant.OAuthClaudeXApp {
+				t.Errorf("x-app = %q, want %q", got, constant.OAuthClaudeXApp)
+			}
 			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write([]byte(`{"five_hour":{"utilization":12.5,"resets_at":"2099-01-01T00:00:00Z"},"seven_day":{"utilization":40,"resets_at":"2099-01-08T00:00:00Z"}}`))
+			// 上游 utilization 为 0.0~1.0 比例（非百分比）：0.125 → 12.5%
+			_, _ = w.Write([]byte(`{"five_hour":{"utilization":0.125,"resets_at":"2099-01-01T00:00:00Z"},"seven_day":{"utilization":0.4,"resets_at":"2099-01-08T00:00:00Z"}}`))
 		}))
 		defer server.Close()
 
@@ -130,8 +138,15 @@ func TestProbeQuotaMapping(t *testing.T) {
 		if err != nil {
 			t.Fatalf("ProbeQuota: %v", err)
 		}
-		if len(snapshot.Windows) != 2 || snapshot.Windows[0].Key != "five_hour" || snapshot.Windows[0].UsedPercent != 12.5 {
+		if len(snapshot.Windows) != 2 || snapshot.Windows[0].Key != "five_hour" {
 			t.Fatalf("unexpected windows: %+v", snapshot.Windows)
+		}
+		// C2 回归：比例必须归一为 0~100 百分比，否则前端额度条恒为 0%
+		if snapshot.Windows[0].UsedPercent != 12.5 {
+			t.Fatalf("used percent = %v, want 12.5 (ratio 0.125 normalized to percent)", snapshot.Windows[0].UsedPercent)
+		}
+		if snapshot.Windows[1].UsedPercent != 40 {
+			t.Fatalf("used percent = %v, want 40 (ratio 0.4 normalized to percent)", snapshot.Windows[1].UsedPercent)
 		}
 	})
 
@@ -140,6 +155,13 @@ func TestProbeQuotaMapping(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if r.Header.Get(constant.HTTPHeaderChatGPTAccountID) != "acc-1" {
 				t.Errorf("missing account header: %v", r.Header)
+			}
+			// 客户端身份头与 token 端点共用（M2）
+			if got := r.Header.Get(constant.HTTPHeaderUserAgent); got != constant.OAuthCodexUserAgent {
+				t.Errorf("user-agent = %q, want %q", got, constant.OAuthCodexUserAgent)
+			}
+			if got := r.Header.Get(constant.HTTPHeaderOriginator); got != constant.OAuthCodexOriginator {
+				t.Errorf("originator = %q, want %q", got, constant.OAuthCodexOriginator)
 			}
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(`{"rate_limit":{"primary_window":{"used_percent":25,"limit_window_seconds":18000,"reset_at":"2099-01-01T00:00:00Z"},"secondary_window":{"used_percent":60,"limit_window_seconds":604800,"reset_at":"2099-01-08T00:00:00Z"}}}`))
@@ -153,6 +175,10 @@ func TestProbeQuotaMapping(t *testing.T) {
 		}
 		if len(snapshot.Windows) != 2 || snapshot.Windows[0].Key != "primary" || snapshot.Windows[1].Key != "secondary" {
 			t.Fatalf("unexpected windows: %+v", snapshot.Windows)
+		}
+		// Codex used_percent 已是百分比：不参与归一，原值透传
+		if snapshot.Windows[0].UsedPercent != 25 || snapshot.Windows[1].UsedPercent != 60 {
+			t.Fatalf("unexpected used percent: %+v", snapshot.Windows)
 		}
 		if snapshot.Windows[1].WindowMinutes != 10080 {
 			t.Fatalf("window minutes mapping wrong: %+v", snapshot.Windows[1])

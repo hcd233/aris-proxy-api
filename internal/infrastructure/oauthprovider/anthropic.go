@@ -19,6 +19,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	commonutil "github.com/hcd233/aris-proxy-api/internal/common/util"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/httpclient"
@@ -188,6 +189,7 @@ func (c *anthropicOAuthClient) postToken(ctx context.Context, body []byte) (*ser
 	}
 	req.Header.Set(constant.HTTPHeaderContentType, constant.HTTPContentTypeJSON)
 	req.Header.Set(constant.HTTPHeaderAccept, constant.HTTPAcceptJSONAny)
+	setClaudeClientHeaders(req.Header)
 
 	resp, err := httpclient.GetHTTPClient().Do(req)
 	if err != nil {
@@ -205,6 +207,11 @@ func (c *anthropicOAuthClient) postToken(ctx context.Context, body []byte) (*ser
 	}
 	if parsed.AccessToken == "" {
 		return nil, ierr.New(ierr.ErrProxyRequest, "claude token response missing access_token")
+	}
+	if parsed.ExpiresIn <= 0 {
+		// 未报有效期时不能默认"永不过期"：必须报错，否则凭据会以"已过期"入表，
+		// 每次请求都触发一轮刷新
+		return nil, ierr.New(ierr.ErrProxyRequest, "claude token response has non-positive expires_in")
 	}
 	return &service.OAuthTokenSet{
 		AccessToken:  parsed.AccessToken,
@@ -237,6 +244,7 @@ func (c *anthropicOAuthClient) ProbeQuota(ctx context.Context, accessToken, _ st
 	req.Header.Set(constant.HTTPHeaderAuthorization, constant.HTTPAuthBearerPrefix+accessToken)
 	req.Header.Set(constant.HTTPHeaderAccept, constant.HTTPAcceptJSONAny)
 	req.Header.Set(constant.HTTPHeaderAnthropicBeta, constant.OAuthClaudeBetaHeader)
+	setClaudeClientHeaders(req.Header)
 
 	resp, err := httpclient.GetHTTPClient().Do(req)
 	if err != nil {
@@ -259,8 +267,9 @@ func (c *anthropicOAuthClient) ProbeQuota(ctx context.Context, accessToken, _ st
 			return
 		}
 		windows = append(windows, vo.QuotaWindow{
-			Key:           key,
-			UsedPercent:   window.Utilization,
+			Key: key,
+			// 上游 utilization 为 0.0~1.0 比例，归一为百分比（与 Codex 侧同量纲）
+			UsedPercent:   window.Utilization * constant.OAuthPercentScale,
 			ResetsAt:      parseTimeBestEffort(window.ResetsAt),
 			WindowMinutes: minutes,
 		})
@@ -271,11 +280,10 @@ func (c *anthropicOAuthClient) ProbeQuota(ctx context.Context, accessToken, _ st
 	return &vo.QuotaSnapshot{Windows: windows, CapturedAt: time.Now()}, nil
 }
 
-// sanitizeErrorReason 清洗上游错误摘要：去换行、限长（该值会经 last_error 落库并下发管理端）。
+// sanitizeErrorReason 清洗上游错误摘要：去换行、按字符限长（该值会经 last_error 落库并下发管理端）。
+//
+// 必须按字符而非字节截断：上游错误体可能含中文，按字节切会得到非法 UTF-8 而写入失败。
 func sanitizeErrorReason(raw string) string {
 	cleaned := strings.TrimSpace(strings.NewReplacer("\n", " ", "\r", " ").Replace(raw))
-	if len(cleaned) > constant.OAuthErrorReasonMaxLength {
-		cleaned = cleaned[:constant.OAuthErrorReasonMaxLength]
-	}
-	return cleaned
+	return commonutil.TruncateRunes(cleaned, constant.OAuthErrorReasonMaxLength)
 }

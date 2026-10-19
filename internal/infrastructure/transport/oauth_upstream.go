@@ -41,21 +41,26 @@ func applyAnthropicOAuthUpstream(header http.Header, ep vo.UpstreamEndpoint) {
 	header.Set(constant.HTTPHeaderXApp, constant.OAuthClaudeXApp)
 }
 
-// mergeCommaHeader 合并逗号分隔头值（已包含目标值时保持原样）
+// mergeCommaHeader 合并逗号分隔头值（已包含目标值时保持原样）。
+//
+// 用 Values 聚合全部同名头行：客户端可能发多行 anthropic-beta，只用 Get 取首行
+// 会在后续 Set 时丢掉其余行的值。
 func mergeCommaHeader(header http.Header, name, value string) {
-	existing := header.Get(name)
-	if existing == "" {
-		header.Set(name, value)
-		return
+	parts := make([]string, 0, len(header.Values(name))+1)
+	for _, line := range header.Values(name) {
+		for part := range strings.SplitSeq(line, constant.CommaSeparator) {
+			trimmed := strings.TrimSpace(part)
+			if trimmed == "" || slices.Contains(parts, trimmed) {
+				continue
+			}
+			parts = append(parts, trimmed)
+		}
 	}
-	parts := strings.Split(existing, ",")
-	for i := range parts {
-		parts[i] = strings.TrimSpace(parts[i])
+	if !slices.Contains(parts, value) {
+		parts = append(parts, value)
 	}
-	if slices.Contains(parts, value) {
-		return
-	}
-	header.Set(name, existing+", "+value)
+	header.Del(name)
+	header.Set(name, strings.Join(parts, constant.CommaSpaceSeparator))
 }
 
 // transformAnthropicOAuthBody 应用 Claude OAuth 端点的 body 特化（最小必要集）：
@@ -159,9 +164,13 @@ func applyOpenAIOAuthUpstream(header http.Header, ep vo.UpstreamEndpoint) {
 
 // transformCodexOAuthBody 应用 Codex OAuth 端点的 body 特化（最小必要集，规格 §4.3）：
 //  1. 强制 store=false、stream=true（Codex 后端约束）；
-//  2. 删除上游不接受的字段——在 DTO 上逐一置 nil（omitempty 后不再输出）；
-//     清单见 constant.OAuthCodexUpstreamRejectedFields（评审发现：仅清 3 项会漏掉
-//     metadata/truncation 等客户端可能携带的字段）；
+//  2. 删除上游不接受的字段——在 DTO 上逐一置 nil（omitempty 后不再输出）。
+//     规格 §4.3 删除清单：max_output_tokens / max_completion_tokens / temperature / top_p /
+//     frequency_penalty / presence_penalty / user / metadata / prompt_cache_retention /
+//     safety_identifier / stream_options / truncation / stop_sequences。
+//     其中 max_completion_tokens / frequency_penalty / presence_penalty / stop_sequences
+//     不在本 DTO 内，往返序列化时自然消失，所以下面只置 DTO 覆盖的 9 项
+//     （评审发现：仅清 3 项会漏掉 metadata/truncation 等客户端可能携带的字段）；
 //  3. reasoning 存在时补 include=["reasoning.encrypted_content"]。
 //
 // instructions 保持客户端原值（未带则不填）：不引入来源不明的默认文本，
