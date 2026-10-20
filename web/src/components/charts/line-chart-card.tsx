@@ -14,7 +14,17 @@ import {
   ChartLegend,
   ChartLegendContent,
 } from "@/components/ui/chart";
-import { Line, LineChart, Area, AreaChart, XAxis, YAxis, CartesianGrid } from "recharts";
+import {
+  Bar,
+  BarChart,
+  Line,
+  LineChart,
+  Area,
+  AreaChart,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+} from "recharts";
 import { useChartLegendHighlight } from "@/hooks/use-chart-legend-highlight";
 import { TimeRangePicker } from "@/components/ui/time-range-picker";
 import type { TimeRangeKey } from "@/lib/time-range";
@@ -54,9 +64,11 @@ export interface LineChartCardProps<T> {
     colors: readonly string[],
   ) => { rows: Array<Record<string, unknown>>; series: ChartSeries[] };
   /** 图表类型，默认 "line" */
-  chartType?: "line" | "area";
-  /** 堆叠 id（chartType="area" 时生效） */
+  chartType?: "line" | "area" | "bar";
+  /** 堆叠 id（chartType="area" / "bar" 时生效） */
   stackId?: string;
+  /** 标题旁的附加信息（如区间总量）；loading / error 期间不渲染 */
+  headerExtra?: (data: T[]) => ReactNode;
   /** Y 轴配置 */
   yAxis?: {
     /** 非空态 domain，默认 [0, "auto"] */
@@ -119,6 +131,7 @@ export function LineChartCard<T>({
   toChart,
   chartType = "line",
   stackId,
+  headerExtra,
   yAxis,
   tooltipFormatter,
   extraElements,
@@ -208,9 +221,22 @@ export function LineChartCard<T>({
 
   const yDomain = isEmpty ? (yAxis?.emptyDomain ?? [0, 1]) : (yAxis?.domain ?? [0, "auto"]);
   const isArea = chartType === "area";
+  const isBar = chartType === "bar";
+  const topBarRadius: [number, number, number, number] = [3, 3, 0, 0];
 
-  const seriesElements = series.map((s) =>
-    isArea ? (
+  const seriesElements = series.map((s, index) =>
+    isBar ? (
+      <Bar
+        key={s.key}
+        dataKey={s.key}
+        stackId={stackId}
+        fill={s.color}
+        fillOpacity={getStrokeOpacity(s.key)}
+        maxBarSize={28}
+        radius={index === series.length - 1 ? topBarRadius : 0}
+        {...chartMotion}
+      />
+    ) : isArea ? (
       <Area
         key={s.key}
         type="monotone"
@@ -236,14 +262,16 @@ export function LineChartCard<T>({
     ),
   );
 
-  const emptySeriesElement = isArea ? (
+  const emptySeriesElement = isBar ? (
+    <Bar dataKey="__empty" fill="transparent" />
+  ) : isArea ? (
     <Area dataKey="__empty" stroke="transparent" fill="transparent" />
   ) : (
     <Line dataKey="__empty" stroke="transparent" dot={false} />
   );
 
   const chartChildren = [
-    <CartesianGrid key="grid" strokeDasharray="3 3" vertical={false} />,
+    <CartesianGrid key="grid" strokeDasharray={isBar ? undefined : "3 3"} vertical={false} />,
     <XAxis
       key="x-axis"
       dataKey="time"
@@ -258,10 +286,32 @@ export function LineChartCard<T>({
       tickFormatter={yAxis?.tickFormatter}
       allowDataOverflow={false}
     />,
-    <ChartTooltip key="tooltip" content={<ChartTooltipContent formatter={tooltipFormatter} />} />,
+    <ChartTooltip
+      key="tooltip"
+      content={
+        <ChartTooltipContent
+          formatter={tooltipFormatter}
+          labelFormatter={(label) =>
+            formatChartTime(String(label), timeRange, customStart, customEnd)
+          }
+        />
+      }
+    />,
     <ChartLegend
       key="legend"
-      content={<ChartLegendContent activeLegend={activeLegend} onLegendHover={onLegendHover} />}
+      content={() => (
+        <ChartLegendContent
+          // Recharts 的 legend payload 顺序与堆叠顺序不一致，这里按 series 顺序重排
+          payload={series.map((s) => ({
+            value: s.label,
+            dataKey: s.key,
+            color: s.color,
+            type: "square" as const,
+          }))}
+          activeLegend={activeLegend}
+          onLegendHover={onLegendHover}
+        />
+      )}
     />,
     ...seriesElements,
     isEmpty ? emptySeriesElement : null,
@@ -271,7 +321,10 @@ export function LineChartCard<T>({
   return (
     <Card>
       <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
-        <CardTitle className="font-display">{t(titleKey)}</CardTitle>
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <CardTitle className="font-display">{t(titleKey)}</CardTitle>
+          {!loading && !error ? headerExtra?.(data) : null}
+        </div>
         <TimeRangePicker
           value={timeRange}
           customStart={customStart}
@@ -296,7 +349,9 @@ export function LineChartCard<T>({
           </div>
         ) : (
           <ChartContainer config={chartConfig} className="h-64 w-full">
-            {isArea ? (
+            {isBar ? (
+              <BarChart data={chartData}>{chartChildren}</BarChart>
+            ) : isArea ? (
               <AreaChart data={chartData}>{chartChildren}</AreaChart>
             ) : (
               <LineChart data={chartData}>{chartChildren}</LineChart>
