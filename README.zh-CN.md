@@ -26,7 +26,7 @@ Aris 将多个 MaaS 平台、多种模型和多种 API 协议统一接入，通�
 - **「配额强控」与「成本估算」是两种设计。** new-api 与 sub2api 走配额/余额扣减（预扣 → 结算、窗口软上限）；LiteLLM 的预算族依赖数据库，**无 DB 时 fail open**；Aris 只做成本估算，没有预算闸门。
 - **Agent 可观测性是同一个问题的三种答案。** Aris：客户端 Hook + 本地 spool + 服务端重建，不改动 Agent 运行时；LiteLLM：SDK harness + CLI 包装 + 服务端 agentic loop，且 trace 分析落在独立的 Lens 服务；OmniRoute：在流量层捕获，可视化对象是路由与压缩而非 Agent 步骤。
 
-标记：✅ 有 · ◐ 部分 · — 无。评分依据各项目在快照时点的自身 README/官方文档；带编号的单元格见下方[参考说明](#参考说明)。
+标记：✅ 有 · ◐ 部分 · — 无。评分依据各项目在快照时点的自身 README/官方文档；带编号的单元格见下方[说明](#说明)。
 
 | 维度 | Aris | new-api | LiteLLM | OmniRoute | sub2api |
 | --- | --- | --- | --- | --- | --- |

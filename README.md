@@ -26,7 +26,7 @@ Three structural differences stand out:
 - **Quota enforcement and cost estimation are different designs.** new-api and sub2api deduct from quotas and balances (pre-deduct → settle, window soft caps); LiteLLM's budget family requires a database and **fails open without one**; Aris only estimates cost, with no budget gate.
 - **Agent observability is three answers to one question.** Aris: client hooks + local spool + server-side rebuild, with the agent runtime untouched. LiteLLM: SDK harness + CLI wrappers + server-side agentic loop, with trace analysis in a separate Lens service. OmniRoute: capture at the traffic layer, visualising routing and compression rather than agent steps.
 
-Legend: ✅ yes · ◐ partial · — no. Ratings follow each project's own README/official docs at the snapshot date; numbered cells are explained under [Reference notes](#reference-notes).
+Legend: ✅ yes · ◐ partial · — no. Ratings follow each project's own README/official docs at the snapshot date; numbered cells are explained under [Notes](#notes).
 
 | Dimension | Aris | new-api | LiteLLM | OmniRoute | sub2api |
 | --- | --- | --- | --- | --- | --- |
