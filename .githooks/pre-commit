@@ -1,5 +1,13 @@
 #!/bin/sh
-# Pre-commit hook: run Go checks before committing
+# Pre-commit hook: 格式化暂存文件，然后对「变更文件所在包」跑 lint 与测试。
+#
+# 性能约束：典型提交总耗时 <1s。为此：
+#   1. 暂存/未暂存清单各只取一次，路径判断用 shell 内建 case（不再 per-file fork git）；
+#   2. 软链同步只在提交涉及软链输入时才跑（否则每次白付 ~0.45s）；
+#   3. prettier 直连 web/node_modules/.bin（npx 冷启动约多 1.5s）；
+#   4. lint 与 test 并发：lint 范围收敛到暂存 .go 文件所在包（全仓 4.8s → 单包 0.6s）；
+#      test 跑「变更包 + test/ 下依赖这些包的测试包」（本仓库测试集中在 test/**）。
+# 全量 lint/测试仍由 CI（.github/workflows/lint.yml）兜底。
 
 # Path to the Go binary — override if Go is installed elsewhere, e.g. /usr/local/go/bin/go
 GO_BIN="${GO_BIN:-go}"
@@ -20,71 +28,93 @@ fail() {
     exit 1
 }
 
-# --------------------------------------------------------------------------
-# 0. agent instructions symlink sync — mirror AGENTS.md to CODEBUDDY.md / CLAUDE.md
-# --------------------------------------------------------------------------
-printf "$INFO Running agent instructions symlink sync ...\n"
+# 暂存/未暂存清单各只取一次：后续所有判断都复用它，避免每个环节重复 fork git。
+STAGED=$(git diff --cached --name-only)
+UNSTAGED=$(git diff --name-only)
 
-if [ -f script/sync-agent-instructions-symlinks.sh ]; then
-    chmod +x script/sync-agent-instructions-symlinks.sh 2>/dev/null || true
-    if ! sh script/sync-agent-instructions-symlinks.sh; then
-        fail "agent instructions symlink sync failed. Please fix the issues above before committing."
-    fi
-    AGENTS_LINK_CHANGES=$(git status --porcelain -- CODEBUDDY.md CLAUDE.md)
-    if [ -n "$AGENTS_LINK_CHANGES" ]; then
-        printf "$INFO agent instructions symlinks changed after sync (auto-staging):\n"
-        echo "$AGENTS_LINK_CHANGES" | sed 's/^/       /'
-        echo ""
-        if ! git add CODEBUDDY.md CLAUDE.md; then
-            fail "git add failed for agent instruction symlinks"
-        fi
-    fi
-else
-    printf "$INFO script/sync-agent-instructions-symlinks.sh not found — skipping\n"
+if [ -z "$STAGED" ]; then
+    printf "$INFO nothing staged — skipping all checks\n"
+    exit 0
 fi
-printf "$PASS agent instructions symlink sync\n"
+
+# contains_line <list> <path>：<path> 是否在换行分隔的 <list> 中（零 fork，含空格安全）。
+contains_line() {
+    case "
+$1
+" in
+    *"
+$2
+"*) return 0 ;;
+    esac
+    return 1
+}
+
+# has_go_files <dir>：目录里是否还有 .go 文件（零 fork 的 glob 探测）。
+has_go_files() {
+    for _probe in "$1"/*.go; do
+        [ -e "$_probe" ] && return 0
+    done
+    return 1
+}
 
 # --------------------------------------------------------------------------
-# 0b. skills symlink sync — mirror .agents/skills into agent skill directories
-#     (.claude/.codebuddy/.workbuddy/.zcode/.dsh；DSH 只认 .dsh/skills 的直接子级)
+# 0. agent instructions / skills symlink sync
+#    只有提交触及输入（AGENTS.md、软链脚本、.agents/skills/**）时才需要重算。
 # --------------------------------------------------------------------------
-printf "$INFO Running skills symlink sync ...\n"
-
-if [ -f script/sync-skills-symlinks.sh ]; then
-    chmod +x script/sync-skills-symlinks.sh 2>/dev/null || true
-    if ! sh script/sync-skills-symlinks.sh; then
-        fail "skills symlink sync failed. Please fix the issues above before committing."
-    fi
-    SKILLS_CHANGES=$(git status --porcelain -- .claude/skills .codebuddy/skills .workbuddy/skills .zcode/skills .dsh/skills)
-    if [ -n "$SKILLS_CHANGES" ]; then
-        printf "$INFO skills symlinks changed after sync (auto-staging):\n"
-        echo "$SKILLS_CHANGES" | sed 's/^/       /'
-        echo ""
-        # 只暂存「已跟踪项的变更」+「软链本身」：这 5 个目录同时被各 agent 当作个人
-        # skill / 配置区，整目录 `git add` 会把未跟踪的个人文件一并带入提交。
-        if ! git add -u -- .claude/skills .codebuddy/skills .workbuddy/skills .zcode/skills .dsh/skills; then
-            fail "git add -u failed for skills symlink dirs"
+if printf '%s\n' "$STAGED" | grep -Eq '^(\.agents/skills/|script/sync-|(AGENTS|CLAUDE|CODEBUDDY)\.md$)'; then
+    printf "$INFO Running agent instructions symlink sync ...\n"
+    if [ -f script/sync-agent-instructions-symlinks.sh ]; then
+        if ! sh script/sync-agent-instructions-symlinks.sh; then
+            fail "agent instructions symlink sync failed. Please fix the issues above before committing."
         fi
-        find .claude/skills .codebuddy/skills .workbuddy/skills .zcode/skills .dsh/skills -type l -print0 2>/dev/null \
-            | xargs -0 git add -- || fail "git add failed for new skill symlinks"
+        AGENTS_LINK_CHANGES=$(git status --porcelain -- CODEBUDDY.md CLAUDE.md)
+        if [ -n "$AGENTS_LINK_CHANGES" ]; then
+            printf "$INFO agent instructions symlinks changed after sync (auto-staging):\n"
+            echo "$AGENTS_LINK_CHANGES" | sed 's/^/       /'
+            echo ""
+            git add CODEBUDDY.md CLAUDE.md || fail "git add failed for agent instruction symlinks"
+        fi
+    else
+        printf "$INFO script/sync-agent-instructions-symlinks.sh not found — skipping\n"
     fi
+    printf "$PASS agent instructions symlink sync\n"
+
+    printf "$INFO Running skills symlink sync ...\n"
+    if [ -f script/sync-skills-symlinks.sh ]; then
+        if ! sh script/sync-skills-symlinks.sh; then
+            fail "skills symlink sync failed. Please fix the issues above before committing."
+        fi
+        SKILLS_CHANGES=$(git status --porcelain -- .claude/skills .codebuddy/skills .workbuddy/skills .zcode/skills .dsh/skills)
+        if [ -n "$SKILLS_CHANGES" ]; then
+            printf "$INFO skills symlinks changed after sync (auto-staging):\n"
+            echo "$SKILLS_CHANGES" | sed 's/^/       /'
+            echo ""
+            # 只暂存「已跟踪项的变更」+「软链本身」：这 5 个目录同时被各 agent 当作个人
+            # skill / 配置区，整目录 `git add` 会把未跟踪的个人文件一并带入提交。
+            git add -u -- .claude/skills .codebuddy/skills .workbuddy/skills .zcode/skills .dsh/skills \
+                || fail "git add -u failed for skills symlink dirs"
+            find .claude/skills .codebuddy/skills .workbuddy/skills .zcode/skills .dsh/skills -type l -print0 2>/dev/null \
+                | xargs -0 git add -- || fail "git add failed for new skill symlinks"
+        fi
+    else
+        printf "$INFO script/sync-skills-symlinks.sh not found — skipping\n"
+    fi
+    printf "$PASS skills symlink sync\n"
 else
-    printf "$INFO script/sync-skills-symlinks.sh not found — skipping\n"
+    printf "$INFO symlink sync not needed (no AGENTS.md / skills / sync script staged)\n"
 fi
-printf "$PASS skills symlink sync\n"
 
 # --------------------------------------------------------------------------
-# 0c. web prettier — auto-format staged web files and re-stage
-#     （与 CI web-lint 的 Prettier check 同规则，避免本地提交后 CI 才发现格式问题）
+# 1. web prettier — auto-format staged web files and re-stage
+#    与 CI web-lint 的 Prettier check 同规则，避免本地提交后 CI 才发现格式问题
 # --------------------------------------------------------------------------
-# 注：git pathspec 的 `web/*.ts` 不匹配嵌套路径，故先取 web/ 下全部暂存文件再按扩展名过滤
-WEB_CHANGES=$(git diff --cached --name-only --diff-filter=ACMR -- web/ \
-    | grep -E '\.(ts|tsx|js|jsx|mjs|cjs|json|css|scss|less|md|mdx|yml|yaml)$' || true)
+WEB_FILES=$(printf '%s\n' "$STAGED" \
+    | grep -E '^web/.*\.(ts|tsx|js|jsx|mjs|cjs|json|css|scss|less|md|mdx|yml|yaml)$')
 
-if [ -z "$WEB_CHANGES" ]; then
+if [ -z "$WEB_FILES" ]; then
     printf "$INFO No web file changes in staging area — skipping prettier\n"
-elif [ ! -d web/node_modules ]; then
-    printf "$INFO web/node_modules not found — skipping prettier\n"
+elif [ ! -x web/node_modules/.bin/prettier ]; then
+    printf "$INFO web/node_modules/.bin/prettier not found — skipping prettier\n"
 else
     printf "$INFO Running prettier -w ...\n"
 
@@ -94,28 +124,31 @@ else
     SKIP_NOTE=""
     set --
     while IFS= read -r f; do
-        [ -z "$f" ] && continue
-        if ! git diff --quiet -- "$f"; then
+        [ -n "$f" ] || continue
+        [ -f "$f" ] || continue
+        if contains_line "$UNSTAGED" "$f"; then
             SKIP_NOTE="$SKIP_NOTE       $f (has unstaged changes — skipped, restage manually)\n"
         else
             set -- "$@" "${f#web/}"
         fi
     done <<EOF
-$WEB_CHANGES
+$WEB_FILES
 EOF
 
     if [ "$#" -eq 0 ]; then
         printf "$INFO No fully-staged web file to format — skipping prettier\n"
     else
         # cd 进 web/ 使 prettier 解析 web/ 的配置与本地依赖；路径去掉 web/ 前缀
-        if ! ( cd web && npx prettier --write --log-level warn "$@" ); then
+        if ! ( cd web && ./node_modules/.bin/prettier --write --log-level warn "$@" ); then
             fail "prettier failed. Please fix the issues above before committing."
         fi
 
-        # 仅对安全子集（"$@"，与上面过滤结果一致）重排后工作区有变化的文件 re-stage；
+        # 仅对安全子集（"$@"）重排后工作区有变化的文件 re-stage；
         # 被跳过的部分暂存文件不得在此被整文件带入
+        # （格式化后重新取一次清单，不能用循环开始前的快照）
+        FORMATTED=$(git diff --name-only)
         for f in "$@"; do
-            if ! git diff --quiet -- "web/$f"; then
+            if contains_line "$FORMATTED" "web/$f"; then
                 printf "$INFO prettier reformatted (auto-staging): web/%s\n" "$f"
                 git add -- "web/$f"
             fi
@@ -128,32 +161,32 @@ EOF
 fi
 
 # --------------------------------------------------------------------------
-# 1. Detect Go changes in staging area — skip Go checks if none
+# 2. Go：gofmt（仅暂存文件）→ go mod tidy（仅 go.mod/go.sum 变更时）
+#    → lint + test 并发，范围 = 暂存 .go 文件所在包
 # --------------------------------------------------------------------------
-GO_CHANGES=$(git diff --cached --name-only -- '*.go' 'go.mod' 'go.sum')
+GO_FILES=$(printf '%s\n' "$STAGED" | grep -E '\.go$')
+MOD_FILES=$(printf '%s\n' "$STAGED" | grep -E '(^|/)go\.(mod|sum)$')
 
-if [ -z "$GO_CHANGES" ]; then
-    printf "$INFO No Go file changes in staging area — skipping gofmt, go mod tidy, vet, test, lint\n"
+if [ -z "$GO_FILES" ] && [ -z "$MOD_FILES" ]; then
+    printf "$INFO No Go file changes in staging area — skipping gofmt, tidy, lint, test\n"
 else
-    # --------------------------------------------------------------------------
-    # 2. gofmt — 只格式化「完全暂存」的 Go 文件并重新暂存
-    #    与 prettier 段同规则：部分暂存（工作区仍有未暂存改动）的文件必须跳过，
-    #    否则整文件 re-stage 会把未暂存内容一并带进提交
-    # --------------------------------------------------------------------------
+    # ----------------------------------------------------------------------
+    # 2a. gofmt — 只格式化「完全暂存」的 Go 文件并重新暂存
+    # ----------------------------------------------------------------------
     printf "$INFO Running gofmt -w ...\n"
 
-    STAGED_GO_FILES=$(git diff --cached --name-only --diff-filter=ACMR -- '*.go')
     GOFMT_SKIP_NOTE=""
     set --
     while IFS= read -r f; do
-        [ -z "$f" ] && continue
-        if ! git diff --quiet -- "$f"; then
+        [ -n "$f" ] || continue
+        [ -f "$f" ] || continue
+        if contains_line "$UNSTAGED" "$f"; then
             GOFMT_SKIP_NOTE="$GOFMT_SKIP_NOTE       $f (has unstaged changes — skipped, restage manually)\n"
         else
             set -- "$@" "$f"
         fi
     done <<EOF
-$STAGED_GO_FILES
+$GO_FILES
 EOF
 
     if [ "$#" -eq 0 ]; then
@@ -162,8 +195,10 @@ EOF
         if ! gofmt -w "$@"; then
             fail "gofmt failed. Please fix the syntax errors above before committing."
         fi
+        # 格式化后重新取一次清单（循环开始前的快照已过期）
+        GOFMT_CHANGED=$(git diff --name-only)
         for f in "$@"; do
-            if ! git diff --quiet -- "$f"; then
+            if contains_line "$GOFMT_CHANGED" "$f"; then
                 printf "$INFO gofmt reformatted (auto-staging): %s\n" "$f"
                 git add -- "$f"
             fi
@@ -174,49 +209,102 @@ EOF
     fi
     printf "$PASS gofmt\n"
 
-    # --------------------------------------------------------------------------
-    # 3. go mod tidy — verify go.mod / go.sum are consistent and re-stage
-    # --------------------------------------------------------------------------
-    printf "$INFO Running go mod tidy...\n"
-    $GO_BIN mod tidy
+    # ----------------------------------------------------------------------
+    # 2b. go mod tidy — 只在 go.mod / go.sum 变更时执行
+    #     （纯代码提交跑 tidy 要 1.4s，且自动改写会掩盖漏提交的依赖变更）
+    # ----------------------------------------------------------------------
+    if [ -n "$MOD_FILES" ]; then
+        printf "$INFO Running go mod tidy...\n"
+        $GO_BIN mod tidy || fail "go mod tidy failed."
 
-    if ! git diff --quiet go.mod go.sum; then
-        printf "$INFO go.mod or go.sum changed after 'go mod tidy' (auto-staging):\n"
-        git diff --name-only go.mod go.sum | sed 's/^/       /'
-        echo ""
-        git add go.mod go.sum
+        if ! git diff --quiet go.mod go.sum; then
+            printf "$INFO go.mod or go.sum changed after 'go mod tidy' (auto-staging):\n"
+            git diff --name-only go.mod go.sum | sed 's/^/       /'
+            echo ""
+            git add go.mod go.sum
+        fi
+        printf "$PASS go mod tidy\n"
+    else
+        printf "$INFO go.mod/go.sum unchanged — skipping go mod tidy\n"
     fi
-    printf "$PASS go mod tidy\n"
 
-    # --------------------------------------------------------------------------
-    # 4. go vet — static analysis
-    # --------------------------------------------------------------------------
-    printf "$INFO Running go vet ./...\n"
+    # ----------------------------------------------------------------------
+    # 2c. 变更包：暂存 .go 文件的所在目录（去重），无 .go 文件时回落全量
+    # ----------------------------------------------------------------------
+    set --
+    while IFS= read -r f; do
+        [ -n "$f" ] || continue
+        d=${f%/*}
+        [ "$d" = "$f" ] && d="."
+        d="./$d"
+        [ -d "$d" ] || continue
+        # 整个包被删空时不再对它跑 lint/test（go test 会报 no Go files）
+        has_go_files "$d" || continue
+        case " $* " in
+        *" $d "*) continue ;;
+        esac
+        set -- "$@" "$d"
+    done <<EOF
+$GO_FILES
+EOF
+    [ "$#" -eq 0 ] && set -- ./...
 
-    if ! $GO_BIN vet ./... 2>&1; then
-        fail "go vet failed. Please fix the issues above before committing."
+    # ----------------------------------------------------------------------
+    # 2d. lint + go test 并发
+    #     lint 已内置 govet/staticcheck（见 internal/tool/lintstatic），不再单跑 go vet
+    #     测试范围 = 变更包 + test/ 下依赖了这些包的测试包
+    #     （本仓库测试集中在 test/**，只按变更目录跑 go test 会一个用例都不跑）
+    # ----------------------------------------------------------------------
+    printf "$INFO Running lint + go test -count=1 on:%s\n" "$*"
+
+    TMP_DIR=$(mktemp -d)
+    trap 'rm -rf "$TMP_DIR"' EXIT INT TERM
+
+    # lint 先起跑，与下面的依赖解析重叠
+    $GO_BIN run ./cmd/lint "$@" >"$TMP_DIR/lint.log" 2>&1 &
+    LINT_PID=$!
+
+    MODULE=$(sed -n 's/^module[[:space:]]*//p' go.mod | head -1)
+    CHANGED_IMPORTS=""
+    for d in "$@"; do
+        CHANGED_IMPORTS="$CHANGED_IMPORTS ${MODULE}/${d#./}"
+    done
+
+    TEST_PKGS=""
+    if DEPS=$($GO_BIN list -f '{{.ImportPath}} {{range .Deps}}{{.}} {{end}}' ./test/... 2>/dev/null); then
+        TEST_PKGS=$(printf '%s\n' "$DEPS" | awk -v want="$CHANGED_IMPORTS" '
+            BEGIN { n = split(want, dep, " ") }
+            {
+                for (i = 1; i <= n; i++) {
+                    if (index(" " $0 " ", " " dep[i] " ")) { print $1; break }
+                }
+            }')
+    else
+        # 依赖图解析失败（例如测试包本身编译不过）时回落全量，避免静默跳过测试
+        TEST_PKGS=./test/...
     fi
-    printf "$PASS go vet\n"
 
-    # --------------------------------------------------------------------------
-    # 5. go test — run all unit tests, block commit on any failure
-    # --------------------------------------------------------------------------
-    printf "$INFO Running go test -count=1 ./...\n"
+    # shellcheck disable=SC2086  # TEST_PKGS 是以空白分隔的包列表
+    # -vet=off：go test 默认跑的 vet 子集与 golangci 的 govet 重复，跳过可省 ~0.2s
+    $GO_BIN test -count=1 -vet=off "$@" $TEST_PKGS >"$TMP_DIR/test.log" 2>&1 &
+    TEST_PID=$!
 
-    if ! $GO_BIN test -count=1 ./... 2>&1; then
-        fail "go test failed. All tests must pass before committing."
-    fi
-    printf "$PASS go test\n"
+    LINT_STATUS=0
+    TEST_STATUS=0
+    wait "$LINT_PID" || LINT_STATUS=$?
+    wait "$TEST_PID" || TEST_STATUS=$?
 
-    # --------------------------------------------------------------------------
-    # 6. lint — project convention lint（cmd/lint 根命令并发执行 conv + static）
-    # --------------------------------------------------------------------------
-    printf "$INFO Running lint...\n"
-
-    if ! $GO_BIN run ./cmd/lint ./... 2>&1; then
+    if [ "$LINT_STATUS" -ne 0 ]; then
+        cat "$TMP_DIR/lint.log"
         fail "lint failed. Please fix the issues above before committing."
     fi
     printf "$PASS lint\n"
+
+    if [ "$TEST_STATUS" -ne 0 ]; then
+        cat "$TMP_DIR/test.log"
+        fail "go test failed. All tests must pass before committing."
+    fi
+    printf "$PASS go test\n"
 fi
 
 # --------------------------------------------------------------------------
