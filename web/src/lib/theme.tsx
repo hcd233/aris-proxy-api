@@ -68,15 +68,15 @@ export interface TokenLayerColors {
   output: string;
 }
 
-const TOKEN_LAYER_COLORS: Record<ThemeName, TokenLayerColors> = {
-  anthropic: { cacheRead: "#F2D0B8", input: "#E6733F", cacheCreated: "#F2D5BE", output: "#D46A3E" },
-  moonshot: { cacheRead: "#C9C9C9", input: "#FFFFFF", cacheCreated: "#FFEED9", output: "#737373" },
-};
-
-/* Composition ratio bars: input/output carry the theme's two deep hues, and
- * each cache layer is the pale tint of its counterpart (cacheRead = light
- * input, cacheWrite = light output), so the four segments read as two
- * dark/light families instead of four unrelated hues. */
+/* Token four-dimensional palette, shared by the composition ratio bars and
+ * the token throughput time-series. Input/output carry the theme's two deep
+ * hues, and each cache layer is the pale tint of its counterpart
+ * (cacheRead = light input, cacheWrite = light output), so the four segments
+ * read as two dark/light families instead of four unrelated hues.
+ *
+ * Charts stack these by luminance (dark at the bottom, light on top), so the
+ * four values must stay distinguishable both from each other and from the
+ * card background. */
 const RATIO_SEGMENT_COLORS: Record<ThemeName, TokenLayerColors> = {
   anthropic: { input: "#B8654A", output: "#5C4A3D", cacheRead: "#EFC5AC", cacheCreated: "#CDBBA6" },
   /* Moonshot stays inside its own token set: moon-rock grey and moon-shadow
@@ -90,7 +90,7 @@ function chartSeriesColors(theme: ThemeName): readonly string[] {
 }
 
 function tokenLayerColors(theme: ThemeName): TokenLayerColors {
-  return TOKEN_LAYER_COLORS[theme];
+  return RATIO_SEGMENT_COLORS[theme];
 }
 
 /* ============================================================

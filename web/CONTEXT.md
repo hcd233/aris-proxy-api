@@ -112,6 +112,10 @@ _Avoid_: billing panel, spend dashboard
 Dashboard 首页的周期成本卡，按币种分行展示，点击跳转 audit 页。
 _Avoid_: spending card
 
+**Token Layer（Token 四维）**:
+Dashboard Token 吞吐量图使用的审计口径：输入（净输入，已扣除缓存读取）、输出、缓存读取、缓存写入四个互斥维度；图面直接堆叠原值，禁止二次扣减，头部显示区间总量。
+_Avoid_: prompt tokens, total tokens
+
 **formatCost（金额格式化）**:
 金额展示统一入口：去尾零、小数位上限 6，规避浮点尾差直出（`0.30000000000000004`）；null/undefined 渲染 `—`。
 _Avoid_: money format
