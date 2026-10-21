@@ -187,8 +187,10 @@ const (
 	ConvCheckMethodSave   = "Save"
 	ConvCheckFuncInit     = "init"
 
-	ConvCheckImportInfra            = "github.com/hcd233/aris-proxy-api/internal/infrastructure/"
-	ConvCheckImportInfraCache       = "github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
+	ConvCheckImportInfra      = "github.com/hcd233/aris-proxy-api/internal/infrastructure/"
+	ConvCheckImportInfraCache = "github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
+	// ConvCheckParentDirPrefix filepath.Rel 在目标位于基准目录之外时返回的上级前缀。
+	ConvCheckParentDirPrefix        = ".."
 	ConvCheckImportDatabaseModel    = "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	ConvCheckPathInfrastructure     = "internal/infrastructure"
 	ConvCheckMsgDatabaseModelDirect = "database model imports are only allowed in infrastructure layer; expose a domain/application port instead"

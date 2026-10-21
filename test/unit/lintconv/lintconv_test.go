@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/bytedance/sonic"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/tool/lintconv"
 )
@@ -108,4 +109,30 @@ func hasDiagnostic(diagnostics []lintconv.Diagnostic, rule string, severity enum
 		}
 	}
 	return false
+}
+
+// TestRunWithPackageDirArgResolvesRepoRelativePaths 回归：pre-commit hook 传「包目录」
+// （如 ./internal/infrastructure/repository）时，诊断路径必须相对仓库根归一；
+// 否则 internal/infrastructure 下的文件会被误判成「非 infrastructure 层导入 dbmodel」，
+// 让所有触及仓储目录的提交被 hook 拦下。
+//
+//nolint:paralleltest // 需要切换工作目录到临时仓库根，不能并行
+func TestRunWithPackageDirArgResolvesRepoRelativePaths(t *testing.T) {
+	root := t.TempDir()
+	writeModule(t, root)
+	writeFixtureFile(t, root, fixtureFile{
+		Path: "internal/infrastructure/repository/endpoint_repository.go",
+		Content: `package repository
+
+import _ "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
+`,
+	})
+	t.Chdir(root)
+
+	result := lintconv.Run([]string{"internal/infrastructure/repository"})
+	for _, diagnostic := range result.Diagnostics {
+		if diagnostic.Rule == constant.RuleDatabaseModelDependency {
+			t.Fatalf("scoped package dir arg must resolve repo-relative paths, got %#v", diagnostic)
+		}
+	}
 }

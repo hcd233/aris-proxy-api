@@ -68,6 +68,13 @@ func expandGoFiles(arg string) ([]goFilePath, error) {
 	if err != nil {
 		return nil, err
 	}
+	// 诊断路径统一相对仓库根（cwd）：pre-commit hook 传的是包目录（如
+	// ./internal/infrastructure/repository），若按 rootAbs 归一，规则拿到的
+	// 就是纯文件名，架构分层判断会整体失效。
+	cwd, cwdErr := os.Getwd()
+	if cwdErr != nil {
+		cwd = rootAbs
+	}
 	var paths []goFilePath
 	err = filepath.WalkDir(rootAbs, func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
@@ -85,6 +92,9 @@ func expandGoFiles(arg string) ([]goFilePath, error) {
 			rel, err := filepath.Rel(rootAbs, path)
 			if err != nil {
 				return err
+			}
+			if relCwd, relErr := filepath.Rel(cwd, path); relErr == nil && !strings.HasPrefix(relCwd, constant.ConvCheckParentDirPrefix) {
+				rel = relCwd
 			}
 			paths = append(paths, goFilePath{abs: path, rel: slashPath(rel)})
 		}
