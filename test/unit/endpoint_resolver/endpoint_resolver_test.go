@@ -485,3 +485,20 @@ func TestEndpointResolver_SharedPoolFallback(t *testing.T) {
 		t.Fatalf("fallback disabled must be ErrDataNotExists, got %v", err)
 	}
 }
+
+// FindPublicByAlias 公开池 fake：本文件用例不涉及。
+func (s *stubModelRepo) FindPublicByAlias(context.Context, vo.EndpointAlias) ([]*aggregate.Model, error) {
+	return nil, nil
+}
+
+func (s *staticModelRepo) FindPublicByAlias(context.Context, vo.EndpointAlias) ([]*aggregate.Model, error) {
+	return nil, nil
+}
+
+func (r *ownedModelRepo) FindPublicByAlias(context.Context, vo.EndpointAlias) ([]*aggregate.Model, error) {
+	return nil, nil
+}
+
+func (r *sharedPoolModelRepo) FindPublicByAlias(context.Context, vo.EndpointAlias) ([]*aggregate.Model, error) {
+	return nil, nil
+}

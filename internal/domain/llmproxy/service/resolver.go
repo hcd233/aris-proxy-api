@@ -129,6 +129,13 @@ func (r *endpointResolver) collectCandidates(ctx context.Context, userID uint, a
 	if err != nil {
 		return nil, err
 	}
+	if len(models) == 0 {
+		// 公开池无条件回退：公开端点本就是给所有用户用的，不受 shared_pool_fallback 控制。
+		models, err = r.modelRepo.FindPublicByAlias(ctx, alias)
+		if err != nil {
+			return nil, err
+		}
+	}
 	if len(models) == 0 && r.sharedPoolFallback {
 		sharedPoolID := constant.SharedPoolUserID
 		models, err = r.modelRepo.FindByAlias(ctx, alias, &sharedPoolID)
@@ -139,19 +146,16 @@ func (r *endpointResolver) collectCandidates(ctx context.Context, userID uint, a
 	if len(models) == 0 {
 		return nil, ierr.Newf(ierr.ErrDataNotExists, "model %q not found", alias.String())
 	}
-	scope := &tenantID
-	if models[0].UserID() == constant.SharedPoolUserID {
-		// 共享池命中的模型只允许解析到共享池自己的 endpoint，避免借用任意用户的 endpoint
-		sharedPoolID := constant.SharedPoolUserID
-		scope = &sharedPoolID
-	}
 
 	cands := make([]Candidate, 0, len(models))
 	for _, m := range models {
 		if !m.Enabled() {
 			continue
 		}
-		ep, findErr := r.endpointRepo.FindByID(ctx, m.EndpointID(), scope)
+		// 逐模型取归属做 scope：公开模型可能来自多个 admin，models[0] 不再代表全部；
+		// 同时保留共享池「不得借用任意用户 endpoint」的保护。
+		owner := m.UserID()
+		ep, findErr := r.endpointRepo.FindByID(ctx, m.EndpointID(), &owner)
 		if findErr != nil {
 			return nil, findErr
 		}

@@ -212,3 +212,8 @@ func TestCreateModel_PersistsPricing(t *testing.T) {
 		t.Fatalf("pricing not persisted: %+v", repo.gotPricing.Rules())
 	}
 }
+
+// FindPublicByAlias 公开池 fake：本文件用例不涉及。
+func (r *recordingModelRepo) FindPublicByAlias(context.Context, vo.EndpointAlias) ([]*aggregate.Model, error) {
+	return nil, nil
+}

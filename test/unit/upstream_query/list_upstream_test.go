@@ -377,3 +377,8 @@ func TestListUpstream_UsernameResolveToEmpty(t *testing.T) {
 		t.Fatalf("pageInfo should not be nil even for empty result")
 	}
 }
+
+// FindPublicByAlias 公开池 fake：本文件用例不涉及解析链路。
+func (f *fakeModelRepo) FindPublicByAlias(context.Context, llmvo.EndpointAlias) ([]*llmagg.Model, error) {
+	return nil, nil
+}

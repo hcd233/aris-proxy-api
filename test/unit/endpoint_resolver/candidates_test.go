@@ -182,3 +182,8 @@ func TestResolveCandidatesMatcherFilters(t *testing.T) {
 		t.Fatalf("got = %v, want [ep-b]", got)
 	}
 }
+
+// FindPublicByAlias 公开池 fake：本文件用例不涉及。
+func (r *multiModelRepo) FindPublicByAlias(context.Context, vo.EndpointAlias) ([]*aggregate.Model, error) {
+	return nil, nil
+}
