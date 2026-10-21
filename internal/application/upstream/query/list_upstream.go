@@ -54,7 +54,7 @@ func (h *listUpstreamHandler) Handle(ctx context.Context, q port.ListUpstreamQue
 		scope = &uid
 	}
 
-	allIDs, err := h.endpointRepo.FindIDsByScope(ctx, scope)
+	allIDs, err := h.endpointRepo.FindIDsByScope(ctx, scope, q.IncludePublic)
 	if err != nil {
 		log.Error("[UpstreamQuery] Find endpoint ids failed", zap.Error(err))
 		return nil, 0, nil, err
@@ -205,6 +205,7 @@ func toEndpointView(ep *llmagg.Endpoint, usersByID map[uint]*identityaggregate.U
 		AnthropicBaseURL:            anthropicBaseURL,
 		MaskedAPIKey:                commonutil.MaskSecret(ep.APIKey()),
 		AuthType:                    string(ep.AuthType()),
+		Visibility:                  string(ep.Visibility()),
 		OAuth:                       toOAuthView(ep.AuthType(), cred, isDemo),
 		SupportOpenAIChatCompletion: ep.SupportOpenAIChatCompletion(),
 		SupportOpenAIResponse:       ep.SupportOpenAIResponse(),

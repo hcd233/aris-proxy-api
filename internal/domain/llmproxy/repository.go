@@ -24,8 +24,9 @@ type EndpointRepository interface {
 	List(ctx context.Context) ([]*aggregate.Endpoint, error)
 	Paginate(ctx context.Context, param model.CommonParam, scopeUserID *uint) ([]*aggregate.Endpoint, *model.PageInfo, error)
 	// FindIDsByScope 按租户范围返回全部可见 endpoint ID 列表（id 升序）；
-	// scopeUserID 为 nil（admin 视角）不过滤。用于 upstream 分组视图的分页基数。
-	FindIDsByScope(ctx context.Context, scopeUserID *uint) ([]uint, error)
+	// scopeUserID 为 nil（admin 视角）不过滤；includePublic 为 true 时并集公开端点
+	// （普通用户视角）。用于 upstream 分组视图的分页基数。
+	FindIDsByScope(ctx context.Context, scopeUserID *uint, includePublic bool) ([]uint, error)
 }
 
 // ModelIDSyncCounts 历史 model ID 替换的三表影响行数

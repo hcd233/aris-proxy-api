@@ -59,9 +59,10 @@ func (h *upstreamHandler) HandleListUpstream(ctx context.Context, req *dto.ListU
 			PageParam:  req.PageParam,
 			QueryParam: req.QueryParam,
 		},
-		IsDemo:      perm == enum.PermissionDemo,
-		ScopeUserID: scope,
-		Username:    req.Username,
+		IsDemo:        perm == enum.PermissionDemo,
+		ScopeUserID:   scope,
+		Username:      req.Username,
+		IncludePublic: perm != enum.PermissionAdmin,
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[UpstreamHandler] List upstream failed", zap.Error(err))
@@ -101,6 +102,7 @@ func toUpstreamEndpointItem(v *upstreamport.UpstreamEndpointView) *dto.UpstreamE
 		AnthropicBaseURL:            v.AnthropicBaseURL,
 		MaskedAPIKey:                v.MaskedAPIKey,
 		AuthType:                    v.AuthType,
+		Visibility:                  v.Visibility,
 		OAuth:                       toUpstreamOAuthItem(v.OAuth),
 		SupportOpenAIChatCompletion: v.SupportOpenAIChatCompletion,
 		SupportOpenAIResponse:       v.SupportOpenAIResponse,

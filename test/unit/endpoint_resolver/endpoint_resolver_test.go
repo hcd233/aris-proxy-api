@@ -149,7 +149,7 @@ func (s *stubEndpointRepo) List(_ context.Context) ([]*aggregate.Endpoint, error
 	return nil, nil
 }
 
-func (s *stubEndpointRepo) FindIDsByScope(context.Context, *uint) ([]uint, error) {
+func (s *stubEndpointRepo) FindIDsByScope(context.Context, *uint, bool) ([]uint, error) {
 	return nil, nil
 }
 
@@ -209,7 +209,7 @@ type endpointByIDRepo struct {
 	endpoints map[uint]*aggregate.Endpoint
 }
 
-func (s *endpointByIDRepo) FindIDsByScope(context.Context, *uint) ([]uint, error) {
+func (s *endpointByIDRepo) FindIDsByScope(context.Context, *uint, bool) ([]uint, error) {
 	return nil, nil
 }
 

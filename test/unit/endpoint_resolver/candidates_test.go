@@ -80,7 +80,7 @@ func (r *multiEndpointRepo) List(context.Context) ([]*aggregate.Endpoint, error)
 func (r *multiEndpointRepo) Paginate(context.Context, model.CommonParam, *uint) ([]*aggregate.Endpoint, *model.PageInfo, error) {
 	return nil, nil, nil
 }
-func (r *multiEndpointRepo) FindIDsByScope(context.Context, *uint) ([]uint, error) {
+func (r *multiEndpointRepo) FindIDsByScope(context.Context, *uint, bool) ([]uint, error) {
 	return nil, nil
 }
 

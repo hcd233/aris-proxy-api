@@ -241,6 +241,13 @@ var (
 	// WhereOAuthCredentialStatusEquals OAuth 凭据状态显式等值条件
 	WhereOAuthCredentialStatusEquals = "status = ?"
 
+	// WhereEndpointVisibilityEquals 端点可见性显式等值条件（参数为 visibility 枚举值）
+	WhereEndpointVisibilityEquals = "visibility = ?"
+
+	// WhereModelInPublicEndpoint 模型所属端点公开且未删除（参数为 visibility 枚举值）。
+	// 用子查询而非 join：与读模型路径保持同一写法，models 表的过滤条件留在单表上。
+	WhereModelInPublicEndpoint = "endpoint_id IN (SELECT id FROM endpoints WHERE visibility = ? AND deleted_at = 0)"
+
 	// ── replaceHistoricalModelIDs（由 UpdateWithHistorySync 在事务内调用）条件与块大小 ──
 	WhereModelIDEquals = "model_id = ?"
 	WhereAPIKeyIDIn    = "api_key_id IN (?)"

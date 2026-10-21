@@ -280,11 +280,17 @@ func (r *endpointRepository) Paginate(ctx context.Context, param model.CommonPar
 // FindIDsByScope 按租户范围返回全部可见 endpoint ID 列表（id 升序）
 //
 // scopeUserID 为 nil（admin 视角）不过滤；非 nil 精确匹配 user_id（含 0=共享池）。
-func (r *endpointRepository) FindIDsByScope(ctx context.Context, scopeUserID *uint) ([]uint, error) {
+// includePublic 为 true 时并集 visibility=public 的端点（普通用户视角）。
+func (r *endpointRepository) FindIDsByScope(ctx context.Context, scopeUserID *uint, includePublic bool) ([]uint, error) {
 	db := r.db.WithContext(ctx)
 	q := db.Model(&dbmodel.Endpoint{}).Where(constant.DBConditionDeletedAtZero)
 	if scopeUserID != nil {
-		q = q.Where(constant.WhereUserIDEquals, *scopeUserID)
+		if includePublic {
+			// 必须用分组形式：一次 Where 里写 "a = ? OR b = ?" 会与后续条件拼错优先级。
+			q = q.Where(db.Where(constant.WhereUserIDEquals, *scopeUserID).Or(constant.WhereEndpointVisibilityEquals, enum.EndpointVisibilityPublic))
+		} else {
+			q = q.Where(constant.WhereUserIDEquals, *scopeUserID)
+		}
 	}
 	var ids []uint
 	if err := q.Order(constant.FieldID).Pluck(constant.FieldID, &ids).Error; err != nil {

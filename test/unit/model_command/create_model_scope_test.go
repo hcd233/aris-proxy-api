@@ -97,7 +97,7 @@ func (r *recordingModelRepo) PaginateWithFilter(context.Context, model.CommonPar
 	return nil, nil, nil
 }
 
-func (r *scopedEndpointRepo) FindIDsByScope(context.Context, *uint) ([]uint, error) {
+func (r *scopedEndpointRepo) FindIDsByScope(context.Context, *uint, bool) ([]uint, error) {
 	return nil, nil
 }
 

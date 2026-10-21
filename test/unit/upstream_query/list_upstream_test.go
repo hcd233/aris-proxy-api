@@ -28,7 +28,7 @@ type fakeEndpointRepo struct {
 	endpoints map[uint]*llmagg.Endpoint // 以 ID 索引；ID 列表即 FindIDsByScope 结果
 }
 
-func (f *fakeEndpointRepo) FindIDsByScope(_ context.Context, scopeUserID *uint) ([]uint, error) {
+func (f *fakeEndpointRepo) FindIDsByScope(_ context.Context, scopeUserID *uint, _ bool) ([]uint, error) {
 	ids := make([]uint, 0, len(f.endpoints))
 	for id, ep := range f.endpoints {
 		if scopeUserID == nil || ep.UserID() == *scopeUserID {
