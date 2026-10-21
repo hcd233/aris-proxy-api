@@ -14,7 +14,7 @@ func newModelCommand() *cobra.Command {
 func newModelExportCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "export",
-		Short: "Export aris models to a local agent harness (opencode/pi/codex/claude-code)",
+		Short: "Export aris models to a local agent harness (opencode/pi/codex/claude-code/dsh)",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return model.RunExport(cmd.Context(), model.ExportOptions{
