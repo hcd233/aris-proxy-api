@@ -30,8 +30,17 @@ SET client_min_messages = warning; -- 静音 DROP TABLE IF EXISTS 的 not-exist 
 DO $$ BEGIN RAISE EXCEPTION 'REFUSED: 必须用 -v api_key_id=<专用压测 Key ID> 指定目标'; END $$;
 \endif
 
--- 二次确认必须比对取值，不能只判断变量是否存在（-v confirm=anything 也能过）
-\if :'confirm' = 'delete-loadtest-data'
+-- 二次确认必须比对取值，不能只判断变量是否存在（-v confirm=anything 也能过）。
+-- \if 只接受布尔值，不接受比较表达式：先确认变量存在，再用 SQL 比对取值后 \gset。
+\if :{?confirm}
+\else
+DO $$ BEGIN RAISE EXCEPTION 'REFUSED: 必须用 -v confirm=delete-loadtest-data 二次确认'; END $$;
+\endif
+
+SELECT (:'confirm' = 'delete-loadtest-data') AS lt_confirm_ok
+\gset
+
+\if :lt_confirm_ok
 \else
 DO $$ BEGIN RAISE EXCEPTION 'REFUSED: 必须用 -v confirm=delete-loadtest-data 二次确认'; END $$;
 \endif
