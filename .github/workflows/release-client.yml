@@ -28,8 +28,9 @@ jobs:
   detect:
     runs-on: ubuntu-latest
     outputs:
-      should_release: ${{ steps.resolve.outputs.should_release }}
-      version: ${{ steps.resolve.outputs.version }}
+      # tag 推送走 tagged、master 推送/dispatch 走 resolve，二者只有一个会执行
+      should_release: ${{ steps.tagged.outputs.should_release || steps.resolve.outputs.should_release }}
+      version: ${{ steps.tagged.outputs.version || steps.resolve.outputs.version }}
     steps:
       - name: 手动推送的 tag 直接发布
         id: tagged
