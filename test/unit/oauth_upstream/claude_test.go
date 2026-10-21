@@ -124,6 +124,39 @@ func TestClaudeOAuthUpstreamKeepsExistingSystemArray(t *testing.T) {
 	}
 }
 
+// TestClaudeOAuthUpstreamOmitsDuplicateIdentityBlock 客户端本身是 Claude Code 时不得重复插入身份块。
+func TestClaudeOAuthUpstreamOmitsDuplicateIdentityBlock(t *testing.T) {
+	t.Parallel()
+
+	var gotBody map[string]any
+	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		raw, _ := io.ReadAll(r.Body) //nolint:errcheck // 测试辅助读取
+		_ = sonic.Unmarshal(raw, &gotBody)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id":"1","type":"message","role":"assistant","model":"claude","content":[]}`))
+	}))
+	defer mock.Close()
+
+	guard := transport.NewEndpointGuard(nil)
+	proxy := transport.NewAnthropicProxy(inflight.NewTracker(), guard)
+	ep := vo.NewUpstreamEndpointFromCredential("claude-sonnet-4-5", "oauth-token-3", mock.URL, enum.EndpointAuthOAuthAnthropic, "org-1", "oauth:9")
+
+	body := []byte(`{"model":"m","max_tokens":8,"system":[{"type":"text","text":"` + constant.OAuthClaudeSystemBlock +
+		`"},{"type":"text","text":"original system"}],"messages":[{"role":"user","content":"hi"}]}`)
+	if _, err := proxy.ForwardCreateMessage(t.Context(), ep, body); err != nil {
+		t.Fatalf("forward: %v", err)
+	}
+
+	system, ok := gotBody["system"].([]any)
+	if !ok || len(system) != 2 {
+		t.Fatalf("identity block must not be prepended twice, got %#v", gotBody["system"])
+	}
+	second, _ := system[1].(map[string]any)
+	if second["text"] != "original system" {
+		t.Fatalf("client system blocks must be preserved as-is, got %#v", system)
+	}
+}
+
 // TestAPIKeyEndpointHeadersUnchanged api_key 端点维持原 headers 行为（回归：仍设 x-api-key）。
 func TestAPIKeyEndpointHeadersUnchanged(t *testing.T) {
 	t.Parallel()

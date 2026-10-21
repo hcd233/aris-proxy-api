@@ -414,12 +414,19 @@ export default function UpstreamPage() {
   /** 发起授权：取链接、新窗口打开、记录 state（flow 由服务端保存） */
   const startOAuthAuthorize = async (provider: "anthropic" | "openai") => {
     setOauthBusy(true);
+    // 弹窗必须在用户手势内同步打开：await 之后 window.open 会被浏览器拦截。
+    // 先开空白页再导航；noopener 会让 open 返回 null，所以改为事后清 opener。
+    const authWindow = window.open("about:blank", "_blank");
+    if (authWindow) authWindow.opener = null;
     try {
       const rsp = await api.authorizeOAuthEndpoint(provider);
       setOauthAuthorizeURL(rsp.authorizeURL);
       setOauthForm((f) => ({ ...f, state: rsp.state, code: "" }));
-      window.open(rsp.authorizeURL, "_blank", "noopener");
+      if (authWindow) {
+        authWindow.location.href = rsp.authorizeURL;
+      }
     } catch (err) {
+      authWindow?.close();
       showErrorToast(err, { title: t("oauth.authorize_error") });
     } finally {
       setOauthBusy(false);

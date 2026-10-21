@@ -111,7 +111,7 @@ func toUpstreamEndpointItem(v *upstreamport.UpstreamEndpointView) *dto.UpstreamE
 	}
 }
 
-// toUpstreamOAuthItem 订阅凭据投影 → DTO（额度扁平结构逐字段映射，无 domain 依赖）
+// toUpstreamOAuthItem 订阅凭据投影 → DTO（额度为扁平视图，与 endpoint 组同形态）
 func toUpstreamOAuthItem(v *upstreamport.UpstreamOAuthView) *dto.UpstreamOAuthItem {
 	if v == nil {
 		return nil
@@ -124,18 +124,15 @@ func toUpstreamOAuthItem(v *upstreamport.UpstreamOAuthView) *dto.UpstreamOAuthIt
 		QuotaUpdatedAt: v.QuotaUpdatedAt,
 	}
 	if v.Quota != nil {
-		// 用 for-range 逐字段映射（不显式引用 domain vo 类型，规避 handler 层 domain 依赖规则）
-		windows := make([]dto.OAuthQuotaWindow, 0, len(v.Quota.Windows))
-		for _, w := range v.Quota.Windows {
-			windows = append(windows, dto.OAuthQuotaWindow{
-				Key:           w.Key,
-				UsedPercent:   w.UsedPercent,
-				ResetsAt:      w.ResetsAt,
-				WindowMinutes: w.WindowMinutes,
-			})
-		}
 		item.Quota = &dto.OAuthQuotaSnapshot{
-			Windows:    windows,
+			Windows: lo.Map(v.Quota.Windows, func(w upstreamport.UpstreamQuotaWindowView, _ int) dto.OAuthQuotaWindow {
+				return dto.OAuthQuotaWindow{
+					Key:           w.Key,
+					UsedPercent:   w.UsedPercent,
+					ResetsAt:      w.ResetsAt,
+					WindowMinutes: w.WindowMinutes,
+				}
+			}),
 			PlanType:   v.Quota.PlanType,
 			CapturedAt: v.Quota.CapturedAt,
 		}

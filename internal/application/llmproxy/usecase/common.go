@@ -219,18 +219,27 @@ func buildTransportEndpointWithToken(ctx context.Context, m *aggregate.Model, ep
 	if isAnthropic {
 		baseURL = ep.AnthropicBaseURL()
 	}
-	if !ep.AuthType().IsOAuth() {
-		return vo.NewUpstreamEndpointFromCredential(m.UpstreamModel(), ep.APIKey(), baseURL, ep.AuthType(), "", ""), nil
+	return buildTransportEndpointWithCredential(ctx, m.UpstreamModel(), ep.APIKey(), baseURL, ep.AuthType(), ep.AggregateID(), tokens)
+}
+
+// buildTransportEndpointWithCredential 按「模型别名 + 端点凭据」组装传输层端点。
+//
+// 代理链路（聚合根）与 count_tokens（读模型投影）共用同一条组装逻辑：OAuth 端点必须在
+// 这里换 access token 并带上 StableKey，调用方各自拼参数时很容易漏掉认证类型，
+// 拿着空 API Key 去请求上游（表现为静默 401）。
+func buildTransportEndpointWithCredential(ctx context.Context, model, apiKey, baseURL string, authType enum.EndpointAuthType, endpointID uint, tokens service.OAuthTokenProvider) (vo.UpstreamEndpoint, error) {
+	if !authType.IsOAuth() {
+		return vo.NewUpstreamEndpointFromCredential(model, apiKey, baseURL, authType, "", ""), nil
 	}
 	if tokens == nil {
 		return vo.UpstreamEndpoint{}, ierr.New(ierr.ErrInternal, "oauth token provider is not wired")
 	}
-	access, err := tokens.GetAccessToken(ctx, ep.AggregateID())
+	access, err := tokens.GetAccessToken(ctx, endpointID)
 	if err != nil {
 		return vo.UpstreamEndpoint{}, err
 	}
-	stableKey := fmt.Sprintf(constant.OAuthEndpointStableKeyTemplate, ep.AggregateID())
-	return vo.NewUpstreamEndpointFromCredential(m.UpstreamModel(), access.Token, baseURL, ep.AuthType(), access.AccountRef, stableKey), nil
+	stableKey := fmt.Sprintf(constant.OAuthEndpointStableKeyTemplate, endpointID)
+	return vo.NewUpstreamEndpointFromCredential(model, access.Token, baseURL, authType, access.AccountRef, stableKey), nil
 }
 
 // runWithFallback 按候选顺序转发，失败且 CanSwitchEndpoint 时切换到下一个端点。

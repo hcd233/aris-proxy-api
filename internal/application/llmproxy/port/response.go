@@ -79,9 +79,9 @@ type StreamResult struct {
 	Headers map[string]string
 	// Open 建立上游流并返回 Stream；adapter 在写出 SSE headers 之后调用。
 	//
-	// 入参 ctx 是 adapter 的父 ctx，看不到 usecase 注入的 context 值（如 CtxKeySkipStore）；
-	// 实现方必须改用构造时捕获的 usecase ctx，否则这些值会在 Read 阶段的存储上丢失。
-	Open func(ctx context.Context) (Stream, error)
+	// 不接收 ctx：adapter 的父 ctx 看不到 usecase 注入的 context 值（如 CtxKeySkipStore），
+	// 实现方一律使用构造时捕获的 usecase ctx；留一个被忽略的 ctx 参数只会误导实现者。
+	Open func() (Stream, error)
 }
 
 // isProxyResult 标记 StreamResult 为 port.Result 实现。

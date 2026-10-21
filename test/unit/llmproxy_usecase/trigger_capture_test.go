@@ -335,7 +335,7 @@ func TestAnthropicCreateMessage_CaptureStream(t *testing.T) {
 	if proxy.messageStreamCalled {
 		t.Fatal("upstream must not be called")
 	}
-	streamReader, err := sr.Open(context.Background())
+	streamReader, err := sr.Open()
 	if err != nil {
 		t.Fatalf("open stream: %v", err)
 	}
@@ -566,7 +566,7 @@ func TestOpenAICreateResponse_CaptureStream(t *testing.T) {
 	if proxy.responseStreamCalled {
 		t.Fatal("upstream must not be called")
 	}
-	streamReader, err := sr.Open(context.Background())
+	streamReader, err := sr.Open()
 	if err != nil {
 		t.Fatalf("open stream: %v", err)
 	}

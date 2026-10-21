@@ -101,6 +101,11 @@ func initEndpointRouter(endpointGroup huma.API, endpointHandler handler.Endpoint
 		Security: []map[string][]string{
 			{constant.SecuritySchemeJWT: {}},
 		},
+		Middlewares: huma.Middlewares{
+			// 本组唯一漏挂权限中间件的路由：补上与同类读接口一致的权限校验，
+			// 不依赖 scope 隔离作为唯一防线。
+			middleware.LimitUserPermissionMiddleware("getOAuthQuota", enum.PermissionUser),
+		},
 	}, endpointHandler.HandleGetOAuthQuota)
 
 	huma.Register(endpointGroup, huma.Operation{

@@ -7,7 +7,9 @@ import (
 	"testing"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
+	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 )
@@ -52,10 +54,12 @@ type mockAnthropicProxy struct {
 	forwardCountTokensCalled bool
 	forwardCountTokensResult *dto.AnthropicTokensCount
 	forwardCountTokensErr    error
+	lastEndpoint             vo.UpstreamEndpoint
 }
 
-func (p *mockAnthropicProxy) ForwardCountTokens(_ context.Context, _ vo.UpstreamEndpoint, _ []byte) (*dto.AnthropicTokensCount, error) {
+func (p *mockAnthropicProxy) ForwardCountTokens(_ context.Context, ep vo.UpstreamEndpoint, _ []byte) (*dto.AnthropicTokensCount, error) {
 	p.forwardCountTokensCalled = true
+	p.lastEndpoint = ep
 	return p.forwardCountTokensResult, p.forwardCountTokensErr
 }
 
@@ -177,7 +181,7 @@ func TestCountTokens_ModelNotFound(t *testing.T) {
 		findErr:         nil,
 	}
 	proxy := &mockAnthropicProxy{}
-	query := usecase.NewCountTokens(repo, proxy)
+	query := usecase.NewCountTokens(repo, proxy, nil)
 
 	req := &dto.AnthropicCountTokensRequest{
 		Body: &dto.AnthropicCountTokensReq{
@@ -194,5 +198,58 @@ func TestCountTokens_ModelNotFound(t *testing.T) {
 	}
 	if proxy.forwardCountTokensCalled {
 		t.Error("ForwardCountTokens should not be called when model not found")
+	}
+}
+
+type stubTokenProvider struct {
+	access service.OAuthAccess
+	err    error
+	gotID  uint
+}
+
+func (p *stubTokenProvider) GetAccessToken(_ context.Context, endpointID uint) (service.OAuthAccess, error) {
+	p.gotID = endpointID
+	return p.access, p.err
+}
+
+func (p *stubTokenProvider) RefreshIfNeeded(_ context.Context, _ uint) error { return nil }
+
+// TestCountTokens_OAuthEndpointUsesAccessToken 锁定 OAuth 端点必须注入 access token。
+// 回归：旧实现直接拿投影里的空 APIKey 拼 UpstreamEndpoint，请求上游必然 401，token 计数静默变 0。
+func TestCountTokens_OAuthEndpointUsesAccessToken(t *testing.T) {
+	t.Parallel()
+	tokens := &stubTokenProvider{access: service.OAuthAccess{Token: "oauth-access-token", AccountRef: "account-1"}}
+	repo := &mockReadRepo{
+		findResult: &llmproxy.EndpointProjection{
+			ID:                      7,
+			AuthType:                enum.EndpointAuthOAuthAnthropic,
+			AnthropicBaseURL:        "https://api.anthropic.com",
+			SupportAnthropicMessage: true,
+		},
+		findModelResult: &llmproxy.ModelAliasProjection{Alias: "claude-upstream"},
+	}
+	proxy := &mockAnthropicProxy{forwardCountTokensResult: &dto.AnthropicTokensCount{InputTokens: 42}}
+	query := usecase.NewCountTokens(repo, proxy, tokens)
+
+	rsp, err := query.Handle(context.Background(), &dto.AnthropicCountTokensRequest{
+		Body: &dto.AnthropicCountTokensReq{Model: "claude"},
+	})
+	if err != nil {
+		t.Fatalf("Handle() error: %v", err)
+	}
+	if rsp.InputTokens != 42 {
+		t.Errorf("InputTokens = %d, want 42", rsp.InputTokens)
+	}
+	if tokens.gotID != 7 {
+		t.Errorf("GetAccessToken endpoint id = %d, want 7", tokens.gotID)
+	}
+	if proxy.lastEndpoint.APIKey != "oauth-access-token" {
+		t.Errorf("upstream api key = %q, want oauth access token", proxy.lastEndpoint.APIKey)
+	}
+	if proxy.lastEndpoint.AuthType != enum.EndpointAuthOAuthAnthropic {
+		t.Errorf("upstream auth type = %q, want %q", proxy.lastEndpoint.AuthType, enum.EndpointAuthOAuthAnthropic)
+	}
+	if proxy.lastEndpoint.OAuthAccountID != "account-1" {
+		t.Errorf("upstream account id = %q, want account-1", proxy.lastEndpoint.OAuthAccountID)
 	}
 }

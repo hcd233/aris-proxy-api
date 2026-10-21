@@ -52,7 +52,7 @@ _Avoid_: model name, exposed name
 _Avoid_: connection info, auth config
 
 **SubscriptionCredential（订阅凭据）**:
-Claude Code / Codex 订阅账号经 OAuth 授权得到的 access + refresh token 组合，密文存 `endpoint_oauth_credentials`（AES-256-GCM），与 Endpoint 一对一。运行时 access token 由 OAuthTokenProvider 按需刷新后注入 `vo.UpstreamEndpoint.APIKey` 字段——该字段的语义是「最终鉴权凭据」，api_key 端点放上游密钥、订阅端点放 access token，两类端点共用同一转发链路。凭据状态（`active` / `reauth_required`）与额度快照走独立只读投影，token 永不出现在管理端接口与日志中。
+Claude Code / Codex 订阅账号经 OAuth 授权得到的 access + refresh token 组合，密文存 `endpoint_oauth_credentials`（AES-256-GCM），与 Endpoint 一对一。运行时 access token 由 OAuthTokenProvider 按需刷新后注入 `vo.UpstreamEndpoint.APIKey` 字段——该字段的语义是「最终鉴权凭据」，api_key 端点放上游密钥、订阅端点放 access token，两类端点共用同一转发链路。运行时 access 缓存（Redis `oauth:access:{endpointID}`）同样以同一把凭据密钥加密（解密失败按未命中回退 DB）；刷新与落库脱离请求生命周期（客户端取消不会丢掉轮换后的 token），拿不到刷新锁时沿用未过期的旧 token。凭据状态（`active` / `reauth_required`）与额度快照走独立只读投影，token 永不出现在管理端接口与日志中。
 _Avoid_: oauth token, api key, access key
 
 **ProtocolType（协议类型）**:
@@ -124,7 +124,7 @@ _Avoid_: config health, incomplete model
 _Avoid_: auth mode, credential type
 
 **OAuthCredential（订阅账号凭据）**:
-订阅端点的一对一凭据（`endpoint_oauth_credentials` 表）：access/refresh token 以 AES-256-GCM 密文存储（密钥 `OAUTH_CREDENTIAL_KEY`，hex 64 字符，缺省时读写 fail-closed；密钥丢失 = 全部订阅账号需重新授权），并含账号标识、邮箱、订阅类型与状态（`active` / `reauth_required`）。刷新失败（invalid_grant / 401 / 403）标记 `reauth_required`，该端点即从解析候选中剔除（fail-closed），由 fallback 切备选端点；重新授权（reauth）恢复。token 字段永不出现在任何 API 响应与日志中。
+订阅端点的一对一凭据（`endpoint_oauth_credentials` 表）：access/refresh token 以 AES-256-GCM 密文存储（密钥 `OAUTH_CREDENTIAL_KEY`，hex 64 字符，缺省时读写 fail-closed；密钥丢失 = 全部订阅账号需重新授权），并含账号标识、邮箱、订阅类型与状态（`active` / `reauth_required`）。刷新被上游以 `invalid_grant` 拒绝时标记 `reauth_required`（只认该错误码：token 端点经 WAF/Cloudflare 返回的 401/403 不视为凭据失效），该端点即从解析候选中剔除（fail-closed），由 fallback 切备选端点；重新授权（reauth）恢复，并同步刷新账号标识/邮箱/套餐（换账号重新授权后 `chatgpt-account-id` 等身份头随之更新）。token 字段永不出现在任何 API 响应与日志中。
 _Avoid_: oauth token, subscription credential
 
 **OAuthFlow（授权流记录）**:

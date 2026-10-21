@@ -69,6 +69,9 @@ var (
 	// ErrDBClose 数据库关闭错误
 	ErrDBClose = newFromSentinel(newSentinel("db_close", model.NewErrorWithKey(10000, "Internal Error", "error.internal")))
 
+	// ErrDBMigrate 数据库迁移错误
+	ErrDBMigrate = newFromSentinel(newSentinel("db_migrate", model.NewErrorWithKey(10000, "Internal Error", "error.internal")))
+
 	// ==================== 认证与鉴权错误 ====================
 
 	// ErrJWTDecode JWT 解码错误

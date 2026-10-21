@@ -58,7 +58,7 @@ func (u *anthropicUseCase) forwardMessageNativeStream(ctx context.Context, req *
 	}
 	return &port.StreamResult{
 		Protocol: enum.ProtocolKindAnthropic,
-		Open: func(context.Context) (port.Stream, error) {
+		Open: func() (port.Stream, error) {
 			return &anthropicMessageNativeStream{
 				u:        u,
 				ctx:      ctx,
@@ -114,7 +114,7 @@ func (u *anthropicUseCase) forwardMessageViaChatStream(ctx context.Context, req 
 	}
 	return &port.StreamResult{
 		Protocol: enum.ProtocolKindAnthropic,
-		Open: func(context.Context) (port.Stream, error) {
+		Open: func() (port.Stream, error) {
 			return &anthropicMessageViaChatStream{
 				u:        u,
 				ctx:      ctx,

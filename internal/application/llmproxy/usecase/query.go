@@ -9,7 +9,7 @@ import (
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
+	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/service"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 
 	proxyutil "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
@@ -90,12 +90,13 @@ type CountTokens interface {
 }
 
 type countTokens struct {
-	readRepo llmproxy.EndpointReadRepository
-	proxy    AnthropicProxyPort
+	readRepo      llmproxy.EndpointReadRepository
+	proxy         AnthropicProxyPort
+	tokenProvider service.OAuthTokenProvider
 }
 
-func NewCountTokens(readRepo llmproxy.EndpointReadRepository, proxy AnthropicProxyPort) CountTokens {
-	return &countTokens{readRepo: readRepo, proxy: proxy}
+func NewCountTokens(readRepo llmproxy.EndpointReadRepository, proxy AnthropicProxyPort, tokenProvider service.OAuthTokenProvider) CountTokens {
+	return &countTokens{readRepo: readRepo, proxy: proxy, tokenProvider: tokenProvider}
 }
 
 func (q *countTokens) Handle(ctx context.Context, req *dto.AnthropicCountTokensRequest) (*dto.AnthropicTokensCount, error) {
@@ -117,10 +118,12 @@ func (q *countTokens) Handle(ctx context.Context, req *dto.AnthropicCountTokensR
 		return &dto.AnthropicTokensCount{}, nil
 	}
 
-	upstream := vo.UpstreamEndpoint{
-		Model:   modelNameProj.Alias,
-		APIKey:  epProj.APIKey,
-		BaseURL: epProj.AnthropicBaseURL,
+	// 与代理链路共用端点组装：OAuth 端点在这里换 access token 并带 StableKey，
+	// 否则会拿空 API Key 请求上游（401），错误被吞后 token 计数静默变 0。
+	upstream, err := buildTransportEndpointWithCredential(ctx, modelNameProj.Alias, epProj.APIKey, epProj.AnthropicBaseURL, epProj.AuthType, epProj.ID, q.tokenProvider)
+	if err != nil {
+		log.Warn("[AnthropicQuery] Build upstream endpoint failed", zap.String("model", req.Body.Model), zap.Error(err))
+		return nil, err
 	}
 	body := proxyutil.MarshalAnthropicCountTokensBodyForModel(req.Body, upstream.Model)
 

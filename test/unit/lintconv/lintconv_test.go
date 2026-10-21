@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/bytedance/sonic"
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/tool/lintconv"
 )
@@ -25,6 +26,23 @@ type fixtureFile struct {
 type fixtureExpected struct {
 	Rule     string `json:"rule"`
 	Severity string `json:"severity"`
+}
+
+// TestRunKeepsPathsRelativeToWorkingDirectory 锁定「按子目录传参时诊断路径仍以工作目录为基准」。
+// 回归：hook 传 ./internal/dto 时，旧实现把路径归一成 dto/xxx.go，导致 internal/dto 前缀跳过规则失效。
+func TestRunKeepsPathsRelativeToWorkingDirectory(t *testing.T) { //nolint:paralleltest // t.Chdir 修改进程工作目录，不能并行
+	root := t.TempDir()
+	writeModule(t, root)
+	writeFixtureFile(t, root, fixtureFile{
+		Path:    "internal/dto/thing.go",
+		Content: "package dto\n\ntype ThingReq struct {\n\tName string\n}\n",
+	})
+	t.Chdir(root)
+
+	result := lintconv.Run([]string{"internal/dto"})
+	if hasDiagnostic(result.Diagnostics, constant.RuleDTONaming, enum.SeverityError) {
+		t.Fatalf("internal/dto must not report %s when linting a subdirectory: %#v", constant.RuleDTONaming, result.Diagnostics)
+	}
 }
 
 func TestRunReportsExpectedDiagnostics(t *testing.T) {

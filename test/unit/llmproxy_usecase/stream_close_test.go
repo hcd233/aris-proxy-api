@@ -36,7 +36,7 @@ func TestStream_CloseWithoutReadClosesUpstreamBody(t *testing.T) {
 		t.Fatalf("result = %T, want *port.StreamResult", result)
 	}
 
-	s, err := streamResult.Open(context.Background())
+	s, err := streamResult.Open()
 	if err != nil {
 		t.Fatalf("Open() error: %v", err)
 	}

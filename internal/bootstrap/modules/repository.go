@@ -144,9 +144,9 @@ func NewOAuthFlowStore(redisClient *redis.Client) llmproxyservice.OAuthFlowStore
 	return cache.NewOAuthFlowCache(redisClient)
 }
 
-// NewOAuthAccessCache 订阅账号 access token 缓存（Redis）
+// NewOAuthAccessCache 订阅账号 access token 缓存（Redis，token 以同一把凭据密钥加密）
 func NewOAuthAccessCache(redisClient *redis.Client) llmproxyservice.OAuthAccessCache {
-	return cache.NewOAuthAccessCache(redisClient)
+	return cache.NewOAuthAccessCache(redisClient, config.OAuthCredentialKey)
 }
 
 // NewOAuthClients 订阅账号 provider 客户端集合（Claude / Codex）

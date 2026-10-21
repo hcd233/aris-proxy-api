@@ -92,7 +92,7 @@ func readStreamEvents(t *testing.T, result port.Result, wantEvents []string) []c
 	if !ok {
 		t.Fatalf("result = %T, want *port.StreamResult", result)
 	}
-	stream, err := streamResult.Open(context.Background())
+	stream, err := streamResult.Open()
 	if err != nil {
 		t.Fatalf("Open returned error: %v", err)
 	}

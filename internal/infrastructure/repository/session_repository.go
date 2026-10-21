@@ -2,8 +2,6 @@ package repository
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"strconv"
@@ -219,27 +217,6 @@ type sessionSummaryRow struct {
 	TotalCount   int64     `gorm:"column:total_count"`
 }
 
-// NormalizeKeyword 归一化 keyword（trim + 小写），对齐 ILIKE 的大小写不敏感语义。
-func NormalizeKeyword(keyword string) string {
-	return strings.ToLower(strings.TrimSpace(keyword))
-}
-
-// KeywordCacheKeyFragment 归一化 keyword 并取 SHA-256 摘要作为缓存 key 片段。
-// 摘要对齐 modelListCacheKey 的键构造风格：用户输入不原样进 Redis key，
-// 键长固定且无特殊字符。
-func KeywordCacheKeyFragment(keyword string) string {
-	sum := sha256.Sum256([]byte(NormalizeKeyword(keyword)))
-	return hex.EncodeToString(sum[:])
-}
-
-// KeywordLikePattern 把 keyword 归一化为 LIKE/ILIKE 模式：归一化 + 通配符转义 + 两侧 %。
-//
-// 必须与 KeywordCacheKeyFragment 共用 NormalizeKeyword：命中集缓存按归一化值共享，
-// 模式与 key 不同源时同一缓存条目会承载不同结果集（如 "  foo " 与 "foo"）。
-func KeywordLikePattern(keyword string) string {
-	return "%" + util.EscapeLikePattern(NormalizeKeyword(keyword)) + "%"
-}
-
 // FormatBigIntArray 把 id 集合序列化为 PG bigint[] 字面量（"{1,2,3}"）
 //
 // 纯数字拼接，无 SQL 注入面；供 SessionKeywordFilterSQL 的 = ANY(?::bigint[]) 使用。
@@ -256,12 +233,14 @@ func FormatBigIntArray(ids []uint) string {
 //
 // 命中为空时返回 nil（GetOrLoad 的 mo.None 空值标记防穿透，短 TTL 自愈）。
 func (r *sessionReadRepository) keywordMessageIDs(ctx context.Context, keyword string) ([]uint, error) {
-	key := fmt.Sprintf(constant.ReadCacheKeywordIDsKeyTemplate, KeywordCacheKeyFragment(keyword))
+	key := fmt.Sprintf(constant.ReadCacheKeywordIDsKeyTemplate, util.KeywordCacheKeyFragment(keyword))
 	opt, err := cache.GetOrLoadWithTTL(ctx, r.cache, key,
 		constant.ReadCacheKeywordIDsTTL, constant.ReadCacheKeywordIDsTTLJitter,
 		func(loadCtx context.Context) (mo.Option[[]uint], error) {
 			var ids []uint
-			if err := r.db.WithContext(loadCtx).Raw(constant.SessionKeywordMatchIDsSQL, KeywordLikePattern(keyword)).Scan(&ids).Error; err != nil {
+			pattern := util.KeywordLikePattern(keyword)
+			// 两个占位符同值：粗筛（content JSON 文本，走 trigram 索引）+ 精筛（parts 的 text 字段）
+			if err := r.db.WithContext(loadCtx).Raw(constant.SessionKeywordMatchIDsSQL, pattern, pattern).Scan(&ids).Error; err != nil {
 				return mo.None[[]uint](), ierr.Wrap(ierr.ErrDBQuery, err, "match keyword message ids")
 			}
 			if len(ids) == 0 {
@@ -697,7 +676,7 @@ func (r *sessionReadRepository) ListDistinctModels(ctx context.Context, ownerIDs
 		query = query.Where(constant.WhereCreatedAtLTE, endTime)
 	}
 	if keyword != "" {
-		query = query.Where(constant.SessionDistinctModelLike, KeywordLikePattern(keyword))
+		query = query.Where(constant.SessionDistinctModelLike, util.KeywordLikePattern(keyword))
 	}
 
 	if err := query.Order(constant.SessionDistinctModelOrder).Limit(constant.SessionDistinctModelLimit).Scan(&models).Error; err != nil {

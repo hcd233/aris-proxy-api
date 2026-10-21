@@ -1,7 +1,9 @@
 package util
 
 import (
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"strings"
 
@@ -119,4 +121,25 @@ func ExtractMessageText(c *vo.UnifiedContent) string {
 		return part.Text
 	}
 	return ""
+}
+
+// NormalizeKeyword 归一化 keyword（trim + 小写），对齐 ILIKE 的大小写不敏感语义。
+func NormalizeKeyword(keyword string) string {
+	return strings.ToLower(strings.TrimSpace(keyword))
+}
+
+// KeywordCacheKeyFragment 归一化 keyword 并取 SHA-256 摘要作为缓存 key 片段。
+// 摘要对齐 modelListCacheKey 的键构造风格：用户输入不原样进 Redis key，
+// 键长固定且无特殊字符。
+func KeywordCacheKeyFragment(keyword string) string {
+	sum := sha256.Sum256([]byte(NormalizeKeyword(keyword)))
+	return hex.EncodeToString(sum[:])
+}
+
+// KeywordLikePattern 把 keyword 归一化为 LIKE/ILIKE 模式：归一化 + 通配符转义 + 两侧 %。
+//
+// 必须与 KeywordCacheKeyFragment 共用 NormalizeKeyword：命中集缓存按归一化值共享，
+// 模式与 key 不同源时同一缓存条目会承载不同结果集（如 "  foo " 与 "foo"）。
+func KeywordLikePattern(keyword string) string {
+	return "%" + EscapeLikePattern(NormalizeKeyword(keyword)) + "%"
 }
