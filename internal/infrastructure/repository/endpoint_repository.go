@@ -152,6 +152,7 @@ func toEndpointAggregate(m *dbmodel.Endpoint) *aggregate.Endpoint {
 		enum.EndpointAuthType(m.AuthType),
 	)
 	ep.SetUserID(m.UserID)
+	ep.RestoreVisibility(enum.EndpointVisibility(m.Visibility))
 	ep.SetTimestamps(m.CreatedAt, m.UpdatedAt)
 	return ep
 }
@@ -168,6 +169,7 @@ func toEndpointModel(ep *aggregate.Endpoint) *dbmodel.Endpoint {
 		SupportAnthropicMessage:     ep.SupportAnthropicMessage(),
 		SupportOpenAIDecision:       ep.SupportOpenAIDecision(),
 		AuthType:                    string(ep.AuthType()),
+		Visibility:                  string(ep.Visibility()),
 	}
 }
 
@@ -195,6 +197,7 @@ func (r *endpointRepository) Update(ctx context.Context, ep *aggregate.Endpoint)
 		constant.FieldEndpointSupportOpenAIResponse:       ep.SupportOpenAIResponse(),
 		constant.FieldEndpointSupportAnthropicMessage:     ep.SupportAnthropicMessage(),
 		constant.FieldEndpointSupportOpenAIDecision:       ep.SupportOpenAIDecision(),
+		constant.FieldEndpointVisibility:                  string(ep.Visibility()),
 	}
 	if err := db.Model(&dbmodel.Endpoint{}).Where(constant.WhereIDEquals, ep.AggregateID()).Updates(updates).Error; err != nil {
 		return ierr.Wrap(ierr.ErrDBUpdate, err, "update endpoint")

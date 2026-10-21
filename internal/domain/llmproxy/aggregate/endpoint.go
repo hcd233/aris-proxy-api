@@ -18,6 +18,7 @@ type Endpoint struct {
 	name                        string
 	userID                      uint // 归属用户 ID（多租户隔离；由 repository 从 DB 恢复或 Create 时写入）
 	authType                    enum.EndpointAuthType
+	visibility                  enum.EndpointVisibility // 可见性（private 默认；public 仅 admin 可写）
 	openaiBaseURL               string
 	anthropicBaseURL            string
 	apiKey                      string
@@ -71,6 +72,7 @@ func newEndpoint(
 	ep := &Endpoint{
 		name:                        name,
 		authType:                    authType.Normalize(),
+		visibility:                  enum.EndpointVisibilityPrivate,
 		openaiBaseURL:               openaiBaseURL,
 		anthropicBaseURL:            anthropicBaseURL,
 		apiKey:                      apiKey,
@@ -121,18 +123,38 @@ func (e *Endpoint) validate() error {
 	return nil
 }
 
-func (e *Endpoint) Name() string                      { return e.name }
-func (e *Endpoint) UserID() uint                      { return e.userID }
-func (e *Endpoint) AuthType() enum.EndpointAuthType   { return e.authType }
-func (e *Endpoint) OpenaiBaseURL() string             { return e.openaiBaseURL }
-func (e *Endpoint) AnthropicBaseURL() string          { return e.anthropicBaseURL }
-func (e *Endpoint) APIKey() string                    { return e.apiKey }
-func (e *Endpoint) SupportOpenAIChatCompletion() bool { return e.supportOpenAIChatCompletion }
-func (e *Endpoint) SupportOpenAIResponse() bool       { return e.supportOpenAIResponse }
-func (e *Endpoint) SupportAnthropicMessage() bool     { return e.supportAnthropicMessage }
-func (e *Endpoint) SupportOpenAIDecision() bool       { return e.supportOpenAIDecision }
-func (e *Endpoint) CreatedAt() time.Time              { return e.createdAt }
-func (e *Endpoint) UpdatedAt() time.Time              { return e.updatedAt }
+func (e *Endpoint) Name() string                        { return e.name }
+func (e *Endpoint) UserID() uint                        { return e.userID }
+func (e *Endpoint) AuthType() enum.EndpointAuthType     { return e.authType }
+func (e *Endpoint) Visibility() enum.EndpointVisibility { return e.visibility }
+func (e *Endpoint) OpenaiBaseURL() string               { return e.openaiBaseURL }
+func (e *Endpoint) AnthropicBaseURL() string            { return e.anthropicBaseURL }
+func (e *Endpoint) APIKey() string                      { return e.apiKey }
+func (e *Endpoint) SupportOpenAIChatCompletion() bool   { return e.supportOpenAIChatCompletion }
+func (e *Endpoint) SupportOpenAIResponse() bool         { return e.supportOpenAIResponse }
+func (e *Endpoint) SupportAnthropicMessage() bool       { return e.supportAnthropicMessage }
+func (e *Endpoint) SupportOpenAIDecision() bool         { return e.supportOpenAIDecision }
+func (e *Endpoint) CreatedAt() time.Time                { return e.createdAt }
+func (e *Endpoint) UpdatedAt() time.Time                { return e.updatedAt }
+
+// SetVisibility 设置可见性（写路径）：非法值返回 ErrValidation
+func (e *Endpoint) SetVisibility(v enum.EndpointVisibility) error {
+	if !v.IsValid() {
+		return ierr.New(ierr.ErrValidation, "endpoint visibility is invalid")
+	}
+	e.visibility = v
+	return nil
+}
+
+// RestoreVisibility 从持久化状态恢复可见性（读路径）：非法/空值归一为 private。
+//
+// 不返回 error：仓储恢复不能因为单行脏数据让整表读取失败（同 RehydrateEndpoint 的取舍）。
+func (e *Endpoint) RestoreVisibility(v enum.EndpointVisibility) {
+	if !v.IsValid() {
+		v = enum.EndpointVisibilityPrivate
+	}
+	e.visibility = v
+}
 
 // SetOAuthStatus 设置凭据状态投影（repository 读路径填充）
 func (e *Endpoint) SetOAuthStatus(status enum.OAuthCredentialStatus) { e.oauthStatus = status }

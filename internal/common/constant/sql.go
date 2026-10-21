@@ -150,7 +150,7 @@ var (
 	// 消息数桶固定边界（不含动态上限），与 SessionMessageCountBucketCase 对齐；末桶上限由动态 max 截断
 	SessionMessageCountBucketEdges = []int{10, 50, 100, 200, 500}
 
-	EndpointRepoFieldsFull = []string{FieldID, FieldUserID, FieldName, FieldOpenaiBaseURL, FieldAnthropicBaseURL, FieldAPIKey, FieldEndpointAuthType,
+	EndpointRepoFieldsFull = []string{FieldID, FieldUserID, FieldName, FieldOpenaiBaseURL, FieldAnthropicBaseURL, FieldAPIKey, FieldEndpointAuthType, FieldEndpointVisibility,
 		FieldSupportOpenAIChatCompletion, FieldSupportOpenAIResponse, FieldSupportAnthropicMessage, FieldSupportOpenAIDecision,
 		FieldCreatedAt, FieldUpdatedAt}
 
