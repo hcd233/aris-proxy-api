@@ -45,11 +45,21 @@ func (h *updateEndpointHandler) Handle(ctx context.Context, cmd port.UpdateEndpo
 	if ep == nil {
 		return ierr.New(ierr.ErrDataNotExists, "endpoint not found")
 	}
+	// 降级保护：admin 被降为 user 后仍能命中的自己名下公开端点，不得继续维护。
+	if ep.Visibility().IsPublic() && !cmd.IsAdmin {
+		return ierr.New(ierr.ErrUnauthorized, "only admin can modify a public endpoint")
+	}
 
 	// 校验在聚合根内、落库前完成：能力标记与对应 baseURL 必须一致，
 	// 否则写出的行会让之后每次读取都失败（见 Endpoint.Update 注释）。
 	if err := ep.Update(cmd.Name, cmd.OpenaiBaseURL, cmd.AnthropicBaseURL, cmd.APIKey, cmd.SupportOpenAIChatCompletion, cmd.SupportOpenAIResponse, cmd.SupportAnthropicMessage, cmd.SupportOpenAIDecision); err != nil {
 		return err
+	}
+	// nil = 不改：聚合根从 DB 恢复时已带上当前可见性，这里只在显式传值时覆盖。
+	if cmd.Visibility != nil {
+		if err := ep.SetVisibility(*cmd.Visibility); err != nil {
+			return err
+		}
 	}
 
 	if err := h.repo.Update(ctx, ep); err != nil {

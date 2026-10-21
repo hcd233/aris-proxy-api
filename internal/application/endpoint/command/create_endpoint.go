@@ -51,6 +51,10 @@ func (h *createEndpointHandler) Handle(ctx context.Context, cmd port.CreateEndpo
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrValidation, err, "validate endpoint")
 	}
+	// 缺省（零值）归一为私有；普通用户传 public 已在 handler 层拒绝。
+	if err := ep.SetVisibility(cmd.Visibility.Normalize()); err != nil {
+		return nil, ierr.Wrap(ierr.ErrValidation, err, "validate endpoint visibility")
+	}
 
 	id, err := h.repo.Create(ctx, ep, cmd.OwnerUserID)
 	if err != nil {

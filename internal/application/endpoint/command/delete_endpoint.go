@@ -29,6 +29,10 @@ func (h *deleteEndpointHandler) Handle(ctx context.Context, cmd port.DeleteEndpo
 	if ep == nil {
 		return ierr.New(ierr.ErrDataNotExists, "endpoint not found")
 	}
+	// 降级保护：只有 admin 能删除公开端点。
+	if ep.Visibility().IsPublic() && !cmd.IsAdmin {
+		return ierr.New(ierr.ErrUnauthorized, "only admin can delete a public endpoint")
+	}
 
 	if err := h.endpointRepo.DeleteCascade(ctx, cmd.EndpointID, cmd.ScopeUserID); err != nil {
 		log.Error("[EndpointCommand] Cascade delete endpoint failed", zap.Error(err))

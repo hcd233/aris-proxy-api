@@ -52,8 +52,10 @@ type ReauthOAuthCommand struct {
 	OperatorUserID uint
 	ScopeUserID    *uint
 	EndpointID     uint
-	CodeInput      string
-	State          string
+	// IsAdmin 降级保护：非 admin 不得重新授权已是 public 的端点。
+	IsAdmin   bool
+	CodeInput string
+	State     string
 }
 
 // ReauthOAuthHandler 订阅账号重新授权处理器
