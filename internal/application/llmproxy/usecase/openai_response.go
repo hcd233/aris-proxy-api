@@ -79,7 +79,7 @@ func (u *openAIUseCase) forwardResponseNativeStream(ctx context.Context, req *dt
 	}
 	return &port.StreamResult{
 		Protocol: enum.ProtocolKindOpenAI,
-		Open: func(context.Context) (port.Stream, error) {
+		Open: func() (port.Stream, error) {
 			return &responseNativeStream{
 				u:                 u,
 				ctx:               ctx,
@@ -146,7 +146,7 @@ func (u *openAIUseCase) forwardResponseViaChatStream(ctx context.Context, req *d
 	}
 	return &port.StreamResult{
 		Protocol: enum.ProtocolKindOpenAI,
-		Open: func(context.Context) (port.Stream, error) {
+		Open: func() (port.Stream, error) {
 			return &responseViaChatStream{
 				u:          u,
 				ctx:        ctx,
@@ -220,7 +220,7 @@ func (u *openAIUseCase) forwardResponseViaAnthropicStream(ctx context.Context, r
 	}
 	return &port.StreamResult{
 		Protocol: enum.ProtocolKindOpenAI,
-		Open: func(context.Context) (port.Stream, error) {
+		Open: func() (port.Stream, error) {
 			return newResponseViaAnthropicStream(ctx, u, req, m, stream, endpoint), nil
 		},
 	}, nil

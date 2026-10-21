@@ -114,6 +114,22 @@ func (c *OAuthCredential) ApplyTokens(accessToken, refreshToken string, expiresA
 	c.status = enum.OAuthCredentialStatusActive
 }
 
+// ApplyAccount 用新授权返回的账号信息刷新展示/身份投影。
+//
+// 只覆盖非空字段：id_token 解析失败或 provider 未下发时会给空串，空值覆盖会让
+// chatgpt-account-id 之类的身份头永久丢失（重新授权也修不回来）。
+func (c *OAuthCredential) ApplyAccount(accountRef, accountEmail, planType string) {
+	if accountRef != "" {
+		c.accountRef = accountRef
+	}
+	if accountEmail != "" {
+		c.accountEmail = accountEmail
+	}
+	if planType != "" {
+		c.planType = planType
+	}
+}
+
 // MarkReauth 标记为需重新授权（刷新被上游拒绝，如 invalid_grant）。
 func (c *OAuthCredential) MarkReauth(errMsg string) {
 	c.status = enum.OAuthCredentialStatusReauthRequired

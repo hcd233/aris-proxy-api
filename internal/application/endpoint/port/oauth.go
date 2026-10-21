@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 )
 
 // OAuthQuotaWindowView 额度窗口视图（应用层扁平结构，handler 逐字段映射到 DTO）
@@ -76,6 +77,33 @@ type OAuthQuotaView struct {
 	LastError      string
 	Quota          *OAuthQuotaSnapshotView
 	QuotaUpdatedAt *time.Time
+}
+
+// NewOAuthQuotaView 凭据聚合 → 额度视图（只含展示字段，token 不入视图）。
+//
+// 查询与手动探测两个入口共用同一映射：各自维护一份时，字段一旦漂移，
+// 同一端点会在两个接口返回不同形态。
+func NewOAuthQuotaView(cred *aggregate.OAuthCredential) *OAuthQuotaView {
+	quota := cred.Quota()
+	windows := make([]OAuthQuotaWindowView, 0, len(quota.Windows))
+	for _, w := range quota.Windows {
+		windows = append(windows, OAuthQuotaWindowView{
+			Key:           w.Key,
+			UsedPercent:   w.UsedPercent,
+			ResetsAt:      w.ResetsAt,
+			WindowMinutes: w.WindowMinutes,
+		})
+	}
+	view := &OAuthQuotaView{
+		Status:    string(cred.Status()),
+		PlanType:  cred.PlanType(),
+		LastError: cred.LastError(),
+		Quota:     &OAuthQuotaSnapshotView{Windows: windows, PlanType: quota.PlanType, CapturedAt: quota.CapturedAt},
+	}
+	if updatedAt := cred.QuotaUpdatedAt(); !updatedAt.IsZero() {
+		view.QuotaUpdatedAt = &updatedAt
+	}
+	return view
 }
 
 // GetOAuthQuotaHandler 订阅端点额度查询处理器

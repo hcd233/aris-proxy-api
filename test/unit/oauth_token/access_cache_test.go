@@ -1,6 +1,9 @@
 package oauth_token
 
 import (
+	"bytes"
+	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -22,7 +25,7 @@ func TestOAuthAccessCacheExpiryGuard(t *testing.T) {
 	mr := miniredis.RunT(t)
 	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
 	t.Cleanup(func() { _ = rdb.Close() })
-	accessCache := cache.NewOAuthAccessCache(rdb)
+	accessCache := cache.NewOAuthAccessCache(rdb, bytes.Repeat([]byte("k"), constant.SecretBoxKeyLength))
 	ctx := t.Context()
 
 	if _, ok := accessCache.Get(ctx, 7); ok {
@@ -48,6 +51,15 @@ func TestOAuthAccessCacheExpiryGuard(t *testing.T) {
 	got, ok := accessCache.Get(ctx, 8)
 	if !ok || got.Token != "at-valid" || got.AccountRef != "org-8" {
 		t.Fatalf("cache miss on valid entry: %+v ok=%v", got, ok)
+	}
+
+	// 回归：Redis 里的 token 必须是密文（Redis 会落盘，明文等于绕过数据库加密）
+	raw, err := rdb.Get(ctx, fmt.Sprintf(constant.OAuthAccessKeyTemplate, 8)).Result()
+	if err != nil {
+		t.Fatalf("read raw cache entry: %v", err)
+	}
+	if strings.Contains(raw, "at-valid") {
+		t.Fatalf("access token must not be stored in plaintext: %s", raw)
 	}
 
 	// Delete 后必须失效（重新授权路径依赖该语义）

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 	"strconv"
 	"time"
 
@@ -88,11 +87,17 @@ func (p *oauthTokenProvider) refreshWithLock(ctx context.Context, cred *aggregat
 
 	locked, lockErr := p.locker.Lock(ctx, lockKey, lockValue, constant.OAuthRefreshLockTTL)
 	if lockErr != nil {
-		// 锁基础设施故障 fail-open：直接刷新（可能与其他实例重复刷新，语义幂等）
-		log.Warn("[OAuthTokenProvider] Refresh lock unavailable, refreshing without lock",
+		// 锁故障不能退化成"无锁刷新"：OpenAI 会轮换 refresh token 并检测重复使用，
+		// 同一个 refresh token 被并发刷新可能导致整组 token 被吊销。仍有有效 access token 就用旧的，
+		// 否则返回可切换错误由调用方切备选端点。
+		log.Warn("[OAuthTokenProvider] Refresh lock unavailable, falling back to current token",
 			zap.Uint("endpointID", endpointID), zap.Error(lockErr))
+		if cred.ExpiresAt().After(time.Now()) {
+			return accessOf(cred), nil
+		}
+		return service.OAuthAccess{}, &model.OAuthCredentialError{Reason: constant.OAuthReasonRefreshLockUnavailable}
 	}
-	if !locked && lockErr == nil {
+	if !locked {
 		// 他方正在刷新：优先用刚写好的缓存，其次用尚未真正过期的旧 token
 		if access, ok := p.accessCache.Get(ctx, endpointID); ok {
 			return access, nil
@@ -123,7 +128,13 @@ func (p *oauthTokenProvider) refreshWithLock(ctx context.Context, cred *aggregat
 	if client == nil {
 		return service.OAuthAccess{}, ierr.Newf(ierr.ErrInternal, "oauth provider client %q not wired", string(fresh.Provider()))
 	}
-	tokenSet, err := client.Refresh(ctx, fresh.RefreshToken())
+	// 刷新与落库必须脱离请求生命周期：客户端取消（Claude Code / Codex 里很常见）时
+	// 上游可能已经轮换了 refresh token，用被取消的 ctx 落库会丢掉新 token，
+	// 而旧 refresh token 已失效——凭据直接报废。这里用 WithoutCancel + 独立超时。
+	refreshCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), constant.OAuthRefreshTimeout)
+	defer cancel()
+
+	tokenSet, err := client.Refresh(refreshCtx, fresh.RefreshToken())
 	if err != nil {
 		var protocolErr *service.OAuthProtocolError
 		if errors.As(err, &protocolErr) && isReauthFailure(protocolErr) {
@@ -131,7 +142,7 @@ func (p *oauthTokenProvider) refreshWithLock(ctx context.Context, cred *aggregat
 			// 凭据不可用必须同时让缓存失效：主动刷新失败的窗口里缓存可能还有近半小时
 			// 剩余 TTL，命中后会拿已失效的 token 继续转发（"凭据失效 ⇒ 缓存不可用"）
 			p.accessCache.Delete(ctx, endpointID)
-			if saveErr := p.credRepo.Save(ctx, fresh); saveErr != nil {
+			if saveErr := p.credRepo.Save(refreshCtx, fresh); saveErr != nil {
 				log.Error("[OAuthTokenProvider] Persist reauth state failed", zap.Uint("endpointID", endpointID), zap.Error(saveErr))
 			}
 			return service.OAuthAccess{}, &model.OAuthCredentialError{Reason: constant.OAuthReasonReauthRequired + protocolErr.Reason}
@@ -141,10 +152,10 @@ func (p *oauthTokenProvider) refreshWithLock(ctx context.Context, cred *aggregat
 	}
 
 	fresh.ApplyTokens(tokenSet.AccessToken, tokenSet.RefreshToken, tokenSet.ExpiresAt)
-	if err := p.credRepo.Save(ctx, fresh); err != nil {
+	if err := p.credRepo.Save(refreshCtx, fresh); err != nil {
 		return service.OAuthAccess{}, err
 	}
-	p.cacheAccess(ctx, fresh)
+	p.cacheAccess(refreshCtx, fresh)
 	return accessOf(fresh), nil
 }
 
@@ -162,10 +173,10 @@ func accessOf(cred *aggregate.OAuthCredential) service.OAuthAccess {
 	return service.OAuthAccess{Token: cred.AccessToken(), AccountRef: cred.AccountRef(), ExpiresAt: cred.ExpiresAt()}
 }
 
-// isReauthFailure 判定上游拒绝是否属于"需重新授权"（凭据本身失效而非临时故障）
+// isReauthFailure 判定上游拒绝是否属于"需重新授权"（凭据本身失效而非临时故障）。
+//
+// 只认 RFC 6749 的 invalid_grant：token 端点即使经 WAF / Cloudflare 返回 401/403，
+// 也不能据此把账号批量标记为失效（一次误判会让整批凭据要求重新授权）。
 func isReauthFailure(protocolErr *service.OAuthProtocolError) bool {
-	if protocolErr.StatusCode == http.StatusUnauthorized || protocolErr.StatusCode == http.StatusForbidden {
-		return true
-	}
 	return protocolErr.Reason == constant.OAuthErrorInvalidGrant
 }

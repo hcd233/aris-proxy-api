@@ -6,10 +6,10 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/endpoint/port"
+	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/oauthquota"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/service"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
@@ -33,7 +33,7 @@ func NewOAuthProbeHandler(
 
 // Handle 同步探测一次额度并写回快照；返回探测后的最新视图。
 //
-// 探测与落库走 service.ProbeOAuthQuota（与 cron 维护共用同一实现，避免两处漂移）；
+// 探测与落库走 oauthquota.Probe（与 cron 维护共用同一实现，避免两处漂移）；
 // 落库只更新额度列——整行写回会把并发刷新出的新 token 覆盖成快照里的旧值。
 // 取 token 走 token provider（可能触发刷新）：凭据失效时按可切换错误语义上抛。
 func (h *oauthProbeHandler) Handle(ctx context.Context, cmd port.ProbeOAuthQuotaCommand) (*port.OAuthQuotaView, error) {
@@ -57,7 +57,7 @@ func (h *oauthProbeHandler) Handle(ctx context.Context, cmd port.ProbeOAuthQuota
 		return nil, ierr.New(ierr.ErrDataNotExists, "oauth credential not found")
 	}
 
-	if _, probeErr := service.ProbeOAuthQuota(ctx, cmd.EndpointID, cred.Provider(), h.tokens, h.providers, h.credRepo); probeErr != nil {
+	if _, probeErr := oauthquota.Probe(ctx, cmd.EndpointID, cred.Provider(), h.tokens, h.providers, h.credRepo); probeErr != nil {
 		logger.WithCtx(ctx).Warn("[OAuthProbe] Quota probe failed",
 			zap.Uint("endpointID", cmd.EndpointID), zap.Error(probeErr))
 		return nil, probeErr
@@ -71,29 +71,5 @@ func (h *oauthProbeHandler) Handle(ctx context.Context, cmd port.ProbeOAuthQuota
 	if latest == nil {
 		return nil, ierr.New(ierr.ErrDataNotExists, "oauth credential not found")
 	}
-	return oauthQuotaViewOf(latest), nil
-}
-
-// oauthQuotaViewOf 凭据聚合 → 额度视图（只含展示字段，token 不入视图）
-func oauthQuotaViewOf(cred *aggregate.OAuthCredential) *port.OAuthQuotaView {
-	quota := cred.Quota()
-	windows := make([]port.OAuthQuotaWindowView, 0, len(quota.Windows))
-	for _, w := range quota.Windows {
-		windows = append(windows, port.OAuthQuotaWindowView{
-			Key:           w.Key,
-			UsedPercent:   w.UsedPercent,
-			ResetsAt:      w.ResetsAt,
-			WindowMinutes: w.WindowMinutes,
-		})
-	}
-	view := &port.OAuthQuotaView{
-		Status:    string(cred.Status()),
-		PlanType:  cred.PlanType(),
-		LastError: cred.LastError(),
-		Quota:     &port.OAuthQuotaSnapshotView{Windows: windows, PlanType: quota.PlanType, CapturedAt: quota.CapturedAt},
-	}
-	if updatedAt := cred.QuotaUpdatedAt(); !updatedAt.IsZero() {
-		view.QuotaUpdatedAt = &updatedAt
-	}
-	return view
+	return port.NewOAuthQuotaView(latest), nil
 }

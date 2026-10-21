@@ -30,7 +30,8 @@ SET client_min_messages = warning; -- 静音 DROP TABLE IF EXISTS 的 not-exist 
 DO $$ BEGIN RAISE EXCEPTION 'REFUSED: 必须用 -v api_key_id=<专用压测 Key ID> 指定目标'; END $$;
 \endif
 
-\if :{?confirm}
+-- 二次确认必须比对取值，不能只判断变量是否存在（-v confirm=anything 也能过）
+\if :'confirm' = 'delete-loadtest-data'
 \else
 DO $$ BEGIN RAISE EXCEPTION 'REFUSED: 必须用 -v confirm=delete-loadtest-data 二次确认'; END $$;
 \endif
@@ -56,8 +57,16 @@ DO $$ BEGIN RAISE EXCEPTION 'REFUSED: api_key_id 不是专用压测 Key（name �
 
 \echo '目标 Key:' :lt_key_name
 
--- ========== Step 1 候选集（预览与删除共用同一套集合） ==========
+-- ========== Step 1 候选集 + Step 2 预览（同一事务快照） ==========
+--
+-- 候选/留存集合必须在事务内计算：若在事务外算，预览到删除之间新建的 session
+-- 仍可能引用这些 message/tool，删除会误伤新数据（TOCTOU 竞态窗口）。
+-- dry_run 也走同一事务，只是最后 ROLLBACK —— 预览与真实删除同源、同快照。
 DROP TABLE IF EXISTS lt_msg, lt_tool, lt_keep_msg, lt_keep_tool;
+
+BEGIN;
+SET LOCAL statement_timeout = '5min';
+SET LOCAL lock_timeout = '30s';
 
 -- 压测 session 引用过的 message/tool（候选删除集）
 CREATE TEMP TABLE lt_msg AS
@@ -81,7 +90,6 @@ SELECT DISTINCT x::bigint AS id
 FROM sessions s, jsonb_array_elements_text(s.tool_ids::jsonb) x
 WHERE s.deleted_at = 0 AND s.api_key_id <> CAST(:'api_key_id' AS bigint);
 
--- ========== Step 2 预览（先看再删） ==========
 SELECT 'audits_to_delete' AS what, count(*) AS n
 FROM model_call_audits WHERE api_key_id = CAST(:'api_key_id' AS bigint)
 UNION ALL
@@ -102,12 +110,9 @@ WHERE t.id IN (SELECT id FROM lt_tool)
   AND NOT EXISTS (SELECT 1 FROM lt_keep_tool k WHERE k.id = t.id);
 
 \if :{?dry_run}
-\echo '[DRY-RUN] 以上为完整预览（与真实删除同源），跳过写操作'
+\echo '[DRY-RUN] 以上为完整预览（与真实删除同源、同一快照），回滚事务，不写任何数据'
+ROLLBACK;
 \else
-
-BEGIN;
-SET LOCAL statement_timeout = '5min';
-SET LOCAL lock_timeout = '30s';
 
 -- ========== Step 3 删审计 ==========
 DELETE FROM model_call_audits WHERE api_key_id = CAST(:'api_key_id' AS bigint);

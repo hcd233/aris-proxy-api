@@ -32,6 +32,12 @@ func NewUpdateModelHandler(endpointRepo llmproxy.EndpointRepository, repo llmpro
 func (h *updateModelHandler) Handle(ctx context.Context, cmd port.UpdateModelCommand) (llmproxy.ModelIDSyncCounts, error) {
 	log := logger.WithCtx(ctx)
 
+	if cmd.UpstreamModel != nil {
+		if err := ensureMockUpstreamAllowed(cmd.ScopeUserID, *cmd.UpstreamModel); err != nil {
+			return llmproxy.ModelIDSyncCounts{}, err
+		}
+	}
+
 	m, err := h.repo.FindByID(ctx, cmd.ID, cmd.ScopeUserID)
 	if err != nil {
 		log.Error("[ModelCommand] Find model for update failed", zap.Error(err))

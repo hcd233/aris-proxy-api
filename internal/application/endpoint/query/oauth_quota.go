@@ -39,27 +39,8 @@ func (h *getOAuthQuotaHandler) Handle(ctx context.Context, q port.GetOAuthQuotaQ
 	if err != nil {
 		return nil, err
 	}
-	view := &port.OAuthQuotaView{Status: string(enum.OAuthCredentialStatusReauthRequired)}
 	if cred == nil {
-		return view, nil
+		return &port.OAuthQuotaView{Status: string(enum.OAuthCredentialStatusReauthRequired)}, nil
 	}
-	view.Status = string(cred.Status())
-	view.PlanType = cred.PlanType()
-	view.LastError = cred.LastError()
-	quota := cred.Quota()
-	windows := make([]port.OAuthQuotaWindowView, 0, len(quota.Windows))
-	for _, w := range quota.Windows {
-		windows = append(windows, port.OAuthQuotaWindowView{
-			Key:           w.Key,
-			UsedPercent:   w.UsedPercent,
-			ResetsAt:      w.ResetsAt,
-			WindowMinutes: w.WindowMinutes,
-		})
-	}
-	view.Quota = &port.OAuthQuotaSnapshotView{Windows: windows, PlanType: quota.PlanType, CapturedAt: quota.CapturedAt}
-	updatedAt := cred.QuotaUpdatedAt()
-	if !updatedAt.IsZero() {
-		view.QuotaUpdatedAt = &updatedAt
-	}
-	return view, nil
+	return port.NewOAuthQuotaView(cred), nil
 }

@@ -12,9 +12,10 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 )
 
-// driveStream 按 adapter 的真实方式消费流式结果：用**同一个** ctx 先后调用 Open 与 Read，
-// 对齐 internal/api/util/adapter.go wrapStreamResult。该 ctx 来自 handler 层，是 usecase
-// 内部 ctx 的父节点，看不到 usecase 注入的 CtxKeySkipStore——这正是被回归的缺陷场景。
+// driveStream 按 adapter 的真实方式消费流式结果：Open 不接收 ctx（签名强制实现使用
+// usecase 构造时捕获的 ctx），Read 拿到的是 adapter ctx——对齐
+// internal/api/util/adapter.go wrapStreamResult。adapter ctx 来自 handler 层，是 usecase
+// 内部 ctx 的父节点，看不到 usecase 注入的 CtxKeySkipStore，这正是被回归的缺陷场景。
 func driveStream(t *testing.T, result port.Result) {
 	t.Helper()
 	streamResult, ok := result.(*port.StreamResult)
@@ -22,7 +23,7 @@ func driveStream(t *testing.T, result port.Result) {
 		t.Fatalf("result = %T, want *port.StreamResult", result)
 	}
 	adapterCtx := context.Background()
-	s, err := streamResult.Open(adapterCtx)
+	s, err := streamResult.Open()
 	if err != nil {
 		t.Fatalf("Open() error: %v", err)
 	}

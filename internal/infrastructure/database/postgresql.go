@@ -40,6 +40,7 @@ func CloseDatabase(db *gorm.DB) error {
 // AutoMigrate 自动迁移数据库表
 //
 // 由调用方传入连接，使迁移与其后的数据回填共用同一连接池。
+// AutoMigrate 之后再补齐它表达不了的表达式索引（keyword 搜索依赖）。
 //
 //	@param ctx context.Context
 //	@param db *gorm.DB
@@ -47,7 +48,24 @@ func CloseDatabase(db *gorm.DB) error {
 //	@author centonhuang
 //	@update 2026-09-27 10:00:00
 func AutoMigrate(ctx context.Context, db *gorm.DB) error {
-	return db.WithContext(ctx).AutoMigrate(model.Models...)
+	if err := db.WithContext(ctx).AutoMigrate(model.Models...); err != nil {
+		return err
+	}
+	return ensureKeywordSearchIndex(ctx, db)
+}
+
+// ensureKeywordSearchIndex 建立 keyword 搜索依赖的 pg_trgm 表达式索引。
+//
+// 该索引带「表达式 + 操作符类 + 部分谓词」，GORM tag 无法表达，历史上只手工在生产建过；
+// 新环境缺索引时 keyword 搜索退化为全表扫描。DDL 幂等（IF NOT EXISTS），已建环境为 no-op。
+// 用非 CONCURRENTLY 版本：新环境 messages 为空、生产索引已存在，启动期不会被大表重建拖住。
+func ensureKeywordSearchIndex(ctx context.Context, db *gorm.DB) error {
+	for _, statement := range []string{constant.PgTrgmExtensionDDL, constant.MessageContentTrigramIndexDDL} {
+		if err := db.WithContext(ctx).Exec(statement).Error; err != nil {
+			return ierr.Wrap(ierr.ErrDBMigrate, err, "ensure keyword search index")
+		}
+	}
+	return nil
 }
 
 // InitDatabase 初始化数据库

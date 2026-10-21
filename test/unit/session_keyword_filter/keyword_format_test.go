@@ -52,7 +52,7 @@ func TestNormalizeKeyword(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			if got := repository.NormalizeKeyword(tc.in); got != tc.want {
+			if got := util.NormalizeKeyword(tc.in); got != tc.want {
 				t.Errorf("NormalizeKeyword(%q) = %q, want %q", tc.in, got, tc.want)
 			}
 		})
@@ -107,7 +107,7 @@ func TestKeywordLikePattern(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			if got := repository.KeywordLikePattern(tc.in); got != tc.want {
+			if got := util.KeywordLikePattern(tc.in); got != tc.want {
 				t.Errorf("KeywordLikePattern(%q) = %q, want %q", tc.in, got, tc.want)
 			}
 		})
@@ -115,7 +115,7 @@ func TestKeywordLikePattern(t *testing.T) {
 
 	t.Run("normalized variants share pattern and key", func(t *testing.T) {
 		t.Parallel()
-		if repository.KeywordLikePattern("Shadcn") != repository.KeywordLikePattern("  shadcn ") {
+		if util.KeywordLikePattern("Shadcn") != util.KeywordLikePattern("  shadcn ") {
 			t.Error("normalized variants must share like pattern")
 		}
 	})
@@ -128,14 +128,14 @@ func TestKeywordLikePattern(t *testing.T) {
 //	@update 2026-10-16 16:00:00
 func TestKeywordCacheKeyFragment(t *testing.T) {
 	t.Parallel()
-	base := repository.KeywordCacheKeyFragment("Shadcn")
-	if got := repository.KeywordCacheKeyFragment("  shadcn "); got != base {
+	base := util.KeywordCacheKeyFragment("Shadcn")
+	if got := util.KeywordCacheKeyFragment("  shadcn "); got != base {
 		t.Errorf("normalized variants must share key: %q != %q", got, base)
 	}
-	if got := repository.KeywordCacheKeyFragment("Shadcn"); got != base {
+	if got := util.KeywordCacheKeyFragment("Shadcn"); got != base {
 		t.Errorf("fragment must be stable, got %q want %q", got, base)
 	}
-	if got := repository.KeywordCacheKeyFragment("Task:"); got == "Task:" || got == "task:" {
+	if got := util.KeywordCacheKeyFragment("Task:"); got == "Task:" || got == "task:" {
 		t.Errorf("raw keyword must not appear in fragment, got %q", got)
 	}
 	if len(base) != 64 {

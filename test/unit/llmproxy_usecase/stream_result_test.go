@@ -62,7 +62,7 @@ func TestStreamResult_OpenReturnsStream(t *testing.T) {
 	result := &port.StreamResult{
 		Protocol: enum.ProtocolKindOpenAI,
 		Headers:  map[string]string{"X-Accel-Buffering": "no"},
-		Open: func(ctx context.Context) (port.Stream, error) {
+		Open: func() (port.Stream, error) {
 			openCalls++
 			return &fakeStream{}, nil
 		},
@@ -75,7 +75,7 @@ func TestStreamResult_OpenReturnsStream(t *testing.T) {
 		t.Errorf("Headers[X-Accel-Buffering] = %q, want %q", result.Headers["X-Accel-Buffering"], "no")
 	}
 
-	s, err := result.Open(context.Background())
+	s, err := result.Open()
 	if err != nil {
 		t.Fatalf("Open returned error: %v", err)
 	}

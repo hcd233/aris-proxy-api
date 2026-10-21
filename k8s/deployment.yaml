@@ -72,7 +72,10 @@ spec:
             cpu: 50m
             memory: 128Mi
           limits:
-            cpu: 2000m
+            # 宿主物理 2 核，与 PostgreSQL / Redis / k3s 共享：limit 不得超过整机核数，
+            # 否则单个 pod 就能吃满整机（2026-09 的 504 即 CPU/IO 打满），资源隔离失效。
+            # 压测需要更高配额时临时 patch，勿把压测标准写回生产清单。
+            cpu: 1000m
             memory: 512Mi
       volumes:
       - name: logs

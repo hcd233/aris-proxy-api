@@ -7,8 +7,8 @@ import "time"
 // Key 取值：Claude 侧 five_hour / seven_day / seven_day_sonnet；
 // Codex 侧 primary（5h）/ secondary（7d）。前端按数组顺序渲染。
 //
-// UsedPercent 量纲固定为 0~100 百分比：provider 客户端负责把上游的异构形态
-// （Anthropic utilization 为 0.0~1.0 比例、OpenAI used_percent 为 0~100）归一后写入。
+// UsedPercent 量纲固定为 0~100 百分比：Anthropic utilization 与 OpenAI used_percent
+// 上游本就都是 0~100，provider 客户端只做原样透传，禁止再乘任何比例系数。
 type QuotaWindow struct {
 	Key           string    `json:"key"`
 	UsedPercent   float64   `json:"used_percent"`

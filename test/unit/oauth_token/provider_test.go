@@ -20,10 +20,11 @@ import (
 // ── fakes ──
 
 type fakeCredRepo struct {
-	cred     *aggregate.OAuthCredential
-	second   *aggregate.OAuthCredential // 非 nil 时第二次 Find 返回它（锁内双检场景）
-	findCall int
-	saveCall int
+	cred       *aggregate.OAuthCredential
+	second     *aggregate.OAuthCredential // 非 nil 时第二次 Find 返回它（锁内双检场景）
+	findCall   int
+	saveCall   int
+	saveCtxErr error // Save 时 ctx 的状态（验证落库不继承已取消的请求 ctx）
 }
 
 func (f *fakeCredRepo) FindByEndpointID(context.Context, uint) (*aggregate.OAuthCredential, error) {
@@ -34,8 +35,9 @@ func (f *fakeCredRepo) FindByEndpointID(context.Context, uint) (*aggregate.OAuth
 	return f.cred, nil
 }
 
-func (f *fakeCredRepo) Save(_ context.Context, cred *aggregate.OAuthCredential) error {
+func (f *fakeCredRepo) Save(ctx context.Context, cred *aggregate.OAuthCredential) error {
 	f.saveCall++
+	f.saveCtxErr = ctx.Err()
 	f.cred = cred
 	return nil
 }
@@ -77,10 +79,13 @@ func (f *fakeAccessCache) Delete(_ context.Context, endpointID uint) {
 	f.deleteCalls = append(f.deleteCalls, endpointID)
 }
 
-type fakeLocker struct{ locked bool }
+type fakeLocker struct {
+	locked bool
+	err    error
+}
 
 func (f *fakeLocker) Lock(context.Context, string, string, time.Duration) (bool, error) {
-	return f.locked, nil
+	return f.locked, f.err
 }
 func (f *fakeLocker) Refresh(context.Context, string, string, time.Duration) (bool, error) {
 	return true, nil
@@ -92,6 +97,7 @@ type fakeRefreshClient struct {
 	refreshErr  error
 	tokenSet    *service.OAuthTokenSet
 	refreshCall int
+	onRefresh   func() // 刷新期间的外部事件钩子（如模拟客户端取消请求）
 }
 
 func (f *fakeRefreshClient) Provider() enum.OAuthProvider { return f.provider }
@@ -105,6 +111,9 @@ func (f *fakeRefreshClient) ExchangeCode(context.Context, string, string, string
 
 func (f *fakeRefreshClient) Refresh(context.Context, string) (*service.OAuthTokenSet, error) {
 	f.refreshCall++
+	if f.onRefresh != nil {
+		f.onRefresh()
+	}
 	if f.refreshErr != nil {
 		return nil, f.refreshErr
 	}
@@ -251,6 +260,106 @@ func TestReauthRequiredFastFails(t *testing.T) {
 	}
 	if client.refreshCall != 0 {
 		t.Fatal("reauth_required must not attempt refresh")
+	}
+}
+
+// TestRefreshPersistsTokensAfterClientCancel 客户端取消请求后仍必须落库轮换后的 token。
+//
+// 回归：用请求 ctx 刷新/落库时，用户中断（Claude Code / Codex 常见）会导致
+// 「上游已轮换 refresh token，新 token 却没存下来」——旧 refresh token 随即失效，凭据报废。
+func TestRefreshPersistsTokensAfterClientCancel(t *testing.T) {
+	t.Parallel()
+
+	credRepo := &fakeCredRepo{cred: newCredential(t, time.Now().Add(time.Minute), enum.OAuthCredentialStatusActive)}
+	cache := &fakeAccessCache{}
+	client := &fakeRefreshClient{
+		provider: enum.OAuthProviderAnthropic,
+		tokenSet: &service.OAuthTokenSet{AccessToken: "at-new", RefreshToken: "rt-new", ExpiresAt: time.Now().Add(time.Hour)},
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	// 模拟刷新进行中用户断开连接
+	client.onRefresh = cancel
+
+	access, err := newTokenProvider(credRepo, cache, &fakeLocker{locked: true}, client).GetAccessToken(ctx, 5)
+	if err != nil {
+		t.Fatalf("GetAccessToken: %v", err)
+	}
+	if access.Token != "at-new" {
+		t.Fatalf("token = %q, want at-new", access.Token)
+	}
+	if credRepo.saveCall != 1 {
+		t.Fatalf("save calls = %d, want 1", credRepo.saveCall)
+	}
+	if credRepo.saveCtxErr != nil {
+		t.Fatalf("refresh persist must not inherit canceled request ctx: %v", credRepo.saveCtxErr)
+	}
+	if credRepo.cred.RefreshToken() != "rt-new" {
+		t.Fatalf("rotated refresh token must be persisted, got %q", credRepo.cred.RefreshToken())
+	}
+}
+
+// TestLockFailureUsesLiveToken 锁基础设施故障时不得无锁刷新：仍有有效 token 就用旧的。
+//
+// 回归：OpenAI 会轮换 refresh token 并检测重复使用，无锁并发刷新可能导致整组 token 被吊销。
+func TestLockFailureUsesLiveToken(t *testing.T) {
+	t.Parallel()
+
+	credRepo := &fakeCredRepo{cred: newCredential(t, time.Now().Add(time.Minute), enum.OAuthCredentialStatusActive)}
+	client := &fakeRefreshClient{provider: enum.OAuthProviderAnthropic}
+	locker := &fakeLocker{err: ierr.New(ierr.ErrInternal, "redis unavailable")}
+
+	access, err := newTokenProvider(credRepo, &fakeAccessCache{}, locker, client).GetAccessToken(t.Context(), 5)
+	if err != nil {
+		t.Fatalf("GetAccessToken: %v", err)
+	}
+	if access.Token != "at-old" {
+		t.Fatalf("token = %q, want old live token", access.Token)
+	}
+	if client.refreshCall != 0 {
+		t.Fatalf("refresh calls = %d, must not refresh without lock", client.refreshCall)
+	}
+}
+
+// TestLockFailureExpiredTokenFails 锁故障且 token 已过期：返回可切换错误，不冒险并发刷新。
+func TestLockFailureExpiredTokenFails(t *testing.T) {
+	t.Parallel()
+
+	credRepo := &fakeCredRepo{cred: newCredential(t, time.Now().Add(-time.Minute), enum.OAuthCredentialStatusActive)}
+	client := &fakeRefreshClient{provider: enum.OAuthProviderAnthropic}
+	locker := &fakeLocker{err: ierr.New(ierr.ErrInternal, "redis unavailable")}
+
+	_, err := newTokenProvider(credRepo, &fakeAccessCache{}, locker, client).GetAccessToken(t.Context(), 5)
+	if !isSwitchable(t, err) {
+		t.Fatalf("want switchable OAuthCredentialError, got %v", err)
+	}
+	if client.refreshCall != 0 {
+		t.Fatalf("refresh calls = %d, must not refresh without lock", client.refreshCall)
+	}
+}
+
+// TestForbiddenWithoutInvalidGrantKeepsCredential 401/403 不等于凭据失效。
+//
+// 回归：token 端点经 WAF / Cloudflare 返回 403 时，旧逻辑会把整批账号标记 reauth_required。
+func TestForbiddenWithoutInvalidGrantKeepsCredential(t *testing.T) {
+	t.Parallel()
+
+	credRepo := &fakeCredRepo{cred: newCredential(t, time.Now().Add(time.Minute), enum.OAuthCredentialStatusActive)}
+	cache := &fakeAccessCache{}
+	client := &fakeRefreshClient{
+		provider:   enum.OAuthProviderAnthropic,
+		refreshErr: &service.OAuthProtocolError{StatusCode: 403, Reason: "forbidden"},
+	}
+
+	_, err := newTokenProvider(credRepo, cache, &fakeLocker{locked: true}, client).GetAccessToken(t.Context(), 5)
+	if !isSwitchable(t, err) {
+		t.Fatalf("want switchable OAuthCredentialError, got %v", err)
+	}
+	if credRepo.saveCall != 0 || credRepo.cred.Status() != enum.OAuthCredentialStatusActive {
+		t.Fatalf("403 without invalid_grant must keep credential active: save=%d status=%q", credRepo.saveCall, credRepo.cred.Status())
+	}
+	if len(cache.deleteCalls) != 0 {
+		t.Fatalf("403 without invalid_grant must not invalidate cache: %v", cache.deleteCalls)
 	}
 }
 

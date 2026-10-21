@@ -85,7 +85,12 @@ func transformAnthropicOAuthBody(body []byte, ep vo.UpstreamEndpoint) ([]byte, e
 // prependClaudeIdentityBlock 在 system 首位插入 Claude Code 身份块。
 //
 // 上游按 system 首块判定调用端身份（协议事实）；原 system 内容不作迁移，仅前置。
+// 客户端本身就是 Claude Code 时 system 已含同一段声明，此时保持原样——重复插入会
+// 改变 prompt 语义，也可能被上游判定为异常调用。
 func prependClaudeIdentityBlock(content *dto.AnthropicMessageContent) *dto.AnthropicMessageContent {
+	if hasClaudeIdentityBlock(content) {
+		return content
+	}
 	identityText := constant.OAuthClaudeSystemBlock
 	identity := &dto.AnthropicContentBlock{Type: enum.AnthropicContentBlockTypeText, Text: &identityText}
 	if content == nil {
@@ -100,6 +105,22 @@ func prependClaudeIdentityBlock(content *dto.AnthropicMessageContent) *dto.Anthr
 		blocks = append(blocks, &dto.AnthropicContentBlock{Type: enum.AnthropicContentBlockTypeText, Text: &originalText})
 	}
 	return &dto.AnthropicMessageContent{Blocks: blocks}
+}
+
+// hasClaudeIdentityBlock 判断 system（string 或 blocks 两种形态）是否已声明 Claude Code 身份。
+func hasClaudeIdentityBlock(content *dto.AnthropicMessageContent) bool {
+	if content == nil {
+		return false
+	}
+	if strings.Contains(content.Text, constant.OAuthClaudeSystemBlock) {
+		return true
+	}
+	for _, block := range content.Blocks {
+		if block != nil && block.Text != nil && strings.Contains(*block.Text, constant.OAuthClaudeSystemBlock) {
+			return true
+		}
+	}
+	return false
 }
 
 // firstUserText 提取首条 user 消息的文本（string 或首个 text 块）；缺失返回空串。
