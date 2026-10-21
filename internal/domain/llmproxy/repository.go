@@ -119,6 +119,8 @@ type ModelListFilter struct {
 	Capability string
 	// MissingOnly 仅保留配置缺失（未计价或未填规格）的模型。
 	MissingOnly bool
+	// IncludePublic 并集公开端点下的模型（普通用户视角）。
+	IncludePublic bool
 }
 
 // ==================== CQRS 读模型 ====================

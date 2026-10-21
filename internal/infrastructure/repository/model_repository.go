@@ -337,7 +337,12 @@ func (r *modelRepository) PaginateWithFilter(ctx context.Context, param model.Co
 func (r *modelRepository) loadModelPage(ctx context.Context, param model.CommonParam, filter llmproxy.ModelListFilter, scopeUserID *uint) (mo.Option[modelPageCache], error) {
 	db := r.db.WithContext(ctx)
 	if scopeUserID != nil {
-		db = db.Where(constant.FieldUserID+" = ?", *scopeUserID)
+		if filter.IncludePublic {
+			// 必须用分组形式：一次 Where 里写 "a = ? OR b = ?" 会与后续筛选条件拼错优先级。
+			db = db.Where(db.Where(constant.WhereUserIDEquals, *scopeUserID).Or(constant.WhereModelInPublicEndpoint, enum.EndpointVisibilityPublic))
+		} else {
+			db = db.Where(constant.WhereUserIDEquals, *scopeUserID)
+		}
 	}
 	switch filter.Status {
 	case constant.ModelStatusEnabled:

@@ -104,8 +104,9 @@ type ListModelsRsp struct {
 //	@author centonhuang
 //	@update 2026-08-28 10:00:00
 type ModelListEndpointItem struct {
-	ID   uint   `json:"id" doc:"Endpoint ID"`
-	Name string `json:"name" doc:"Endpoint 名称"`
+	ID         uint   `json:"id" doc:"Endpoint ID"`
+	Name       string `json:"name" doc:"Endpoint 名称"`
+	Visibility string `json:"visibility" doc:"可见性(private/public)"`
 }
 
 // ModelListItem 平铺模型列表行

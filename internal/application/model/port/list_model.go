@@ -26,8 +26,9 @@ type ListModelUserView struct {
 //	@author centonhuang
 //	@update 2026-08-28 10:00:00
 type ListModelEndpointView struct {
-	ID   uint
-	Name string
+	ID         uint
+	Name       string
+	Visibility string // private / public
 }
 
 // ListModelView 平铺模型列表行投影
@@ -62,13 +63,14 @@ type ListModelView struct {
 //	@update 2026-08-28 10:00:00
 type ListModelQuery struct {
 	model.CommonParam
-	IsDemo      bool
-	ScopeUserID *uint
-	Username    string
-	Status      string
-	EndpointID  uint
-	Capability  string
-	MissingOnly bool
+	IsDemo        bool
+	ScopeUserID   *uint
+	Username      string
+	Status        string
+	EndpointID    uint
+	Capability    string
+	MissingOnly   bool
+	IncludePublic bool // 普通用户视角：并集公开端点下的模型
 }
 
 // ListModelHandler 平铺模型列表查询处理器

@@ -164,13 +164,14 @@ func (h *modelHandler) HandleListModels(ctx context.Context, req *dto.ListModels
 			QueryParam: commonmodel.QueryParam{Query: req.Query},
 			SortParam:  commonmodel.SortParam{Sort: req.Sort, SortField: req.SortField},
 		},
-		IsDemo:      perm == enum.PermissionDemo,
-		ScopeUserID: scope,
-		Username:    req.Username,
-		Status:      req.Status,
-		EndpointID:  req.EndpointID,
-		Capability:  req.Capability,
-		MissingOnly: req.MissingOnly,
+		IsDemo:        perm == enum.PermissionDemo,
+		ScopeUserID:   scope,
+		Username:      req.Username,
+		Status:        req.Status,
+		EndpointID:    req.EndpointID,
+		Capability:    req.Capability,
+		MissingOnly:   req.MissingOnly,
+		IncludePublic: perm != enum.PermissionAdmin,
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[ModelHandler] List models failed", zap.Error(err))
@@ -205,7 +206,7 @@ func toModelListItem(v *port.ListModelView) *dto.ModelListItem {
 		item.User = &dto.UpstreamUserItem{ID: v.User.ID, Name: v.User.Name, Avatar: v.User.Avatar}
 	}
 	if v.Endpoint != nil {
-		item.Endpoint = &dto.ModelListEndpointItem{ID: v.Endpoint.ID, Name: v.Endpoint.Name}
+		item.Endpoint = &dto.ModelListEndpointItem{ID: v.Endpoint.ID, Name: v.Endpoint.Name, Visibility: v.Endpoint.Visibility}
 	}
 	return item
 }

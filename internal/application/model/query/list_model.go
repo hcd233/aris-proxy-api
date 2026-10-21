@@ -48,7 +48,7 @@ func (h *listModelHandler) Handle(ctx context.Context, q port.ListModelQuery) ([
 		scope = lo.ToPtr(u.AggregateID())
 	}
 
-	filter := llmproxy.ModelListFilter{Status: q.Status, EndpointID: q.EndpointID, Capability: q.Capability, MissingOnly: q.MissingOnly}
+	filter := llmproxy.ModelListFilter{Status: q.Status, EndpointID: q.EndpointID, Capability: q.Capability, MissingOnly: q.MissingOnly, IncludePublic: q.IncludePublic}
 	models, pageInfo, err := h.modelRepo.PaginateWithFilter(ctx, q.CommonParam, filter, scope)
 	if err != nil {
 		log.Error("[ModelQuery] Paginate models failed", zap.Error(err))
@@ -114,7 +114,7 @@ func toListModelView(m *llmagg.Model, epsByID map[uint]*llmagg.Endpoint, usersBy
 		UpdatedAt:       m.UpdatedAt(),
 	}
 	if ep := epsByID[m.EndpointID()]; ep != nil {
-		v.Endpoint = &port.ListModelEndpointView{ID: ep.AggregateID(), Name: ep.Name()}
+		v.Endpoint = &port.ListModelEndpointView{ID: ep.AggregateID(), Name: ep.Name(), Visibility: string(ep.Visibility())}
 	}
 	if u := usersByID[m.UserID()]; u != nil {
 		v.User = &port.ListModelUserView{ID: u.AggregateID(), Name: string(u.Name()), Avatar: string(u.Avatar())}
