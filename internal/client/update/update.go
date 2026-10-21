@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"slices"
@@ -182,8 +183,9 @@ func verifyChecksum(ctx context.Context, base string, hc *http.Client, archive [
 	return nil
 }
 
-// parseChecksum 解析 sha256 文件：必须恰好一行有效摘要，摘要是 64 位 hex，
-// 带文件名（sha256sum 两列格式）时必须与当前资产名一致。口径与 install_aris_client.sh.tmpl 一致。
+// parseChecksum 解析 sha256 文件：必须恰好一行有效摘要，摘要是 64 位 hex。
+// sha256sum 两列格式的第二列允许带目录（发布产物形如 `build/client/aris-darwin-arm64.tar.gz`），
+// 只取 basename 与当前资产名比对；口径与 install_aris_client.sh.tmpl 一致（脚本直接取首列）。
 func parseChecksum(content, asset string) (string, error) {
 	invalid := func() (string, error) {
 		return "", ierr.New(ierr.ErrValidation, constant.ArisClientUpdateChecksumFormatMessage)
@@ -197,7 +199,7 @@ func parseChecksum(content, asset string) (string, error) {
 		if digest != "" ||
 			len(fields) > 2 ||
 			len(fields[0]) != sha256.Size*2 ||
-			len(fields) == 2 && strings.TrimPrefix(fields[1], "*") != asset {
+			len(fields) == 2 && path.Base(strings.TrimPrefix(fields[1], "*")) != asset {
 			return invalid()
 		}
 		if _, decodeErr := hex.DecodeString(fields[0]); decodeErr != nil {

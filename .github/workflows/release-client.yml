@@ -28,10 +28,14 @@ jobs:
       - name: Package binaries as tar.gz and generate checksums
         run: |
           staging=$(mktemp -d)
-          for binary in build/client/aris-*; do
+          dist=build/client
+          for binary in "$dist"/aris-*; do
+            name=${binary##*/}
             cp "$binary" "$staging/aris"
             tar -czf "$binary.tar.gz" -C "$staging" aris
-            sha256sum "$binary.tar.gz" > "$binary.tar.gz.sha256"
+            # 在产物目录内计算摘要：sha256sum 会把参数原样写进文件，带 build/client/ 前缀时
+            # 已发布的老版本客户端（严格比对文件名）会判定 "Invalid checksum file"。
+            (cd "$dist" && sha256sum "$name.tar.gz" > "$name.tar.gz.sha256")
             rm "$binary"
           done
       - name: Upload to GitHub Release

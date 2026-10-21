@@ -6,10 +6,12 @@ import (
 	"compress/gzip"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -81,7 +83,10 @@ func TestUpdateCommand_InstallsLatestRelease(t *testing.T) {
 		t.Fatal(err)
 	}
 	archive, checksum := releaseArchive(t, newBinary)
-	server := newReleaseServer(t, "v9.9.9", archive, checksum)
+	// 线上产物由 `sha256sum build/client/aris-*.tar.gz` 生成，摘要文件第二列带目录前缀：
+	// 按真实格式回放，避免再次退化成只认裸文件名。
+	asset := fmt.Sprintf(constant.ArisClientReleaseAssetFormat, runtime.GOOS, runtime.GOARCH)
+	server := newReleaseServer(t, "v9.9.9", archive, checksum+"  build/client/"+asset)
 
 	output, err := runClient(t, binary, server.URL, constant.ArisClientCommandUpdate)
 	if err != nil {

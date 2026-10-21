@@ -109,6 +109,7 @@ func TestRunRejectsInsecureAssetRedirect(t *testing.T) {
 }
 
 // sha256 文件口径与 install_aris_client.sh.tmpl 一致：恰好一行、64 位 hex、带文件名时须匹配资产名。
+// 发布产物由 `sha256sum build/client/aris-*.tar.gz` 生成，文件名带 build/client/ 前缀，必须容忍路径。
 func TestRunValidatesChecksumFileFormat(t *testing.T) {
 	t.Parallel()
 	archive := tarGz(t, []byte("new-binary-content"))
@@ -122,6 +123,8 @@ func TestRunValidatesChecksumFileFormat(t *testing.T) {
 	}{
 		{name: "single digest", checksum: digest, wantOK: true},
 		{name: "sha256sum two columns", checksum: digest + "  " + asset, wantOK: true},
+		{name: "release build path prefix", checksum: digest + "  build/client/" + asset, wantOK: true},
+		{name: "release build path prefix binary mode", checksum: digest + " *build/client/" + asset, wantOK: true},
 		{name: "binary mode marker", checksum: digest + " *" + asset, wantOK: true},
 		{name: "trailing newline", checksum: digest + "\n", wantOK: true},
 		{name: "two digests", checksum: digest + "\n" + digest, wantOK: false},
