@@ -28,7 +28,7 @@ type TargetCost struct {
 
 // Target 单个 agent harness 配置写入器
 type Target interface {
-	// Key 机器标识：opencode|pi|codex|claude-code
+	// Key 机器标识：opencode|pi|codex|claude-code|dsh
 	Key() string
 	// Label 展示名
 	Label() string
@@ -45,6 +45,7 @@ func Targets() []Target {
 		PiTarget{},
 		CodexTarget{},
 		ClaudeCodeTarget{},
+		DSHTarget{},
 	}
 }
 

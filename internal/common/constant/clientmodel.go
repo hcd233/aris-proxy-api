@@ -16,6 +16,8 @@ const (
 	ClientModelTargetCodex = "codex"
 	// ClientModelTargetClaudeCode Claude Code 目标标识
 	ClientModelTargetClaudeCode = "claude-code"
+	// ClientModelTargetDSH DSH（DeepSeek Harness）目标标识
+	ClientModelTargetDSH = "dsh"
 
 	// ClientModelDefaultContext context 缺省值
 	ClientModelDefaultContext = 128000
@@ -54,6 +56,20 @@ const (
 	ClientModelKeyBaseURL = "baseURL"
 	// ClientModelKeyHeaders OpenCode provider 的 headers 块
 	ClientModelKeyHeaders = "headers"
+	// ClientModelKeyContextWindow DSH 模型上下文窗口
+	ClientModelKeyContextWindow = "contextWindow"
+	// ClientModelKeyMaxTokens DSH 模型单次输出上限
+	ClientModelKeyMaxTokens = "maxTokens"
+	// ClientModelKeyInput DSH 模型输入模态
+	ClientModelKeyInput = "input"
+	// ClientModelKeyDisplayName DSH provider 展示名
+	ClientModelKeyDisplayName = "displayName"
+	// ClientModelKeyAPIKeyEnv DSH provider 的凭证引用名
+	ClientModelKeyAPIKeyEnv = "apiKeyEnv"
+	// ClientModelKeyConfig DSH patch 条目的 config 块
+	ClientModelKeyConfig = "config"
+	// ClientModelKeyRefs DSH 凭证文件的名字引用块
+	ClientModelKeyRefs = "refs"
 )
 
 // ClientModelPaths 各 harness 默认配置路径片段
@@ -64,6 +80,34 @@ const (
 	ClientModelCodexPath = ".codex/config.toml"
 	// ClientModelClaudeCodePath claude code settings 路径
 	ClientModelClaudeCodePath = ".claude/settings.json"
+	// ClientModelDSHProfilesPath DSH profile 根目录（相对 home）
+	ClientModelDSHProfilesPath = ".dsh/profiles"
+	// ClientModelDSHPatchFile DSH profile 的补丁层文件名
+	ClientModelDSHPatchFile = "cordis.patch.yml"
+	// ClientModelDSHCredentialsFile DSH 凭证文件名（相对 DSH home）
+	ClientModelDSHCredentialsFile = ".credentials.yaml"
+	// ClientModelDSHDefaultProfile 无显式 profile 时优先使用的 profile 名
+	ClientModelDSHDefaultProfile = "desktop"
+	// ClientModelDSHEntryID DSH llm provider 条目的 patch id
+	ClientModelDSHEntryID = "llm-pi-ai"
+	// ClientModelDSHEntryName 该条目对应的 DSH 插件包名
+	ClientModelDSHEntryName = "@deepseek-ai/dsh-llm-pi-ai"
+	// ClientModelDSHProviderID 本工具写入 DSH providers 的 provider 标识
+	ClientModelDSHProviderID = "aris"
+	// ClientModelDSHProviderDisplayName provider 缺省展示名
+	ClientModelDSHProviderDisplayName = "Aris"
+	// ClientModelDSHCredentialRef 凭证引用名：同时写进 apiKeyEnv 与 credentials.refs
+	ClientModelDSHCredentialRef = "ARIS_API_KEY"
+	// ClientModelDSHPatchEntryPrefix patch 条目的 id 行前缀
+	ClientModelDSHPatchEntryPrefix = "- id: "
+	// ClientModelYAMLListItemPrefix YAML 顶层列表项前缀
+	ClientModelYAMLListItemPrefix = "- "
+	// ClientModelYAMLIndent YAML 两空格缩进
+	ClientModelYAMLIndent = "  "
+	// ClientModelYAMLKeySep YAML 键值分隔符
+	ClientModelYAMLKeySep = ": "
+	// ClientModelDSHCredentialsHeader 凭证文件缺失时的最小骨架
+	ClientModelDSHCredentialsHeader = "version: 1\nrecords: {}\n"
 )
 
 // ClientModelDisplayNames harness 展示名
@@ -72,6 +116,8 @@ const (
 	ClientModelLabelPi         = "Pi"
 	ClientModelLabelCodex      = "Codex"
 	ClientModelLabelClaudeCode = "Claude Code"
+	// ClientModelLabelDSH DSH 展示名
+	ClientModelLabelDSH = "DSH"
 )
 
 // ClientModelAuthPrefix Bearer 认证头前缀与相对路径标记
@@ -141,6 +187,7 @@ const (
 	ClientModelExportSelectedTitle         = "Selected models"
 	ClientModelExportSelectedFormat        = "  • %s"
 	ClientModelExportTargetResultFormat    = "✓ Target: %s"
+	ClientModelExportDSHProfileMissing     = "DSH profile not found under ~/.dsh/profiles; run DSH once, then retry"
 )
 
 // ClientInitMessages aris init 瘦身后的新文案

@@ -224,7 +224,7 @@ func TestTargets_IncludesAllAgents(t *testing.T) {
 	for _, tg := range model.Targets() {
 		keys[tg.Key()] = true
 	}
-	for _, want := range []string{"opencode", "pi", "codex", "claude-code"} {
+	for _, want := range []string{"opencode", "pi", "codex", "claude-code", "dsh"} {
 		if !keys[want] {
 			t.Fatalf("Targets() missing %q", want)
 		}
