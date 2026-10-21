@@ -243,7 +243,7 @@ cd web && npm ci && npm run dev   # http://localhost:3000
 
 - **单机 Compose**：`docker compose -f docker/docker-compose-single.yml up -d`（需 `env/api.env`、`IMAGE_TAG` 和外部网络 `1panel-network`，迁移容器成功后 API 才启动，宿主机 `7070` → 容器 `8080`）；开发环境用 `docker-compose-dev-single.yml`（`7060` 端口）。
 - **Kubernetes**：Deployment + Service + ConfigMap/Secret，滚动更新；`preStop` + draining + `terminationGracePeriodSeconds` 支持 SSE 长连接无损下线。
-- **CI**：GitHub Actions 构建 GHCR 镜像并发布 `aris` 客户端 Release（tar.gz + sha256），服务端 `/install.sh` 提供自包含安装脚本。
+- **CI**：GitHub Actions 构建 GHCR 镜像并发布 `aris` 客户端 Release（tar.gz + sha256）；客户端代码合入 `master` 时自动递增 `vX.Y.Z` tag 并发布（无客户端变更不打扰），服务端 `/install.sh` 提供自包含安装脚本。
 
 ![部署与发布拓扑](docs/diagrams/archify/aris-arch-07.gif)
 

@@ -1,14 +1,68 @@
 name: Release Client
 
+# aris 客户端发布：
+# - master 合入：检测 cmd/client 的包依赖闭包是否有变更，有则自动 patch 递增版本号，
+#   打 vX.Y.Z tag 并发布四平台产物（tag 由 release step 创建，GITHUB_TOKEN 推送不会触发
+#   其它 workflow，因此不会顺带重跑服务端镜像流水线）
+# - 手动推送 v*.*.* tag：按该 tag 发布（与旧行为一致）
+# - workflow_dispatch：指定 version 强制发布，留空则按客户端变更自动递增
 on:
   push:
+    branches: ['master']
     tags: ['v*.*.*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '指定版本号（如 v0.2.6）；留空则检测客户端变更后自动递增'
+        required: false
+
+# 串行发布：并发合并时避免两个 run 抢同一个版本号
+concurrency:
+  group: release-client
+  cancel-in-progress: false
 
 permissions:
   contents: write
 
 jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.resolve.outputs.should_release }}
+      version: ${{ steps.resolve.outputs.version }}
+    steps:
+      - name: 手动推送的 tag 直接发布
+        id: tagged
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          echo "should_release=true" >> "$GITHUB_OUTPUT"
+          echo "version=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout repository
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        uses: actions/checkout@v4
+        with:
+          # 需要完整历史与 tag：变更范围按 before..sha 计算，版本号按最新 tag 递增
+          fetch-depth: 0
+
+      - name: Set up Go
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.1'
+
+      - name: 检测客户端变更并解析版本号
+        id: resolve
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        env:
+          BEFORE: ${{ github.event.before }}
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_VERSION: ${{ inputs.version }}
+        run: bash .github/scripts/next-client-version.sh
+
   release:
+    needs: detect
+    if: needs.detect.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -23,7 +77,10 @@ jobs:
           go-version: '1.25.1'
 
       - name: Build client binaries
-        run: VERSION=${GITHUB_REF_NAME} make build-client-all
+        # 版本号经 env 传给 make（Makefile 有字符白名单校验），不拼进 shell
+        env:
+          VERSION: ${{ needs.detect.outputs.version }}
+        run: make build-client-all
 
       - name: Package binaries as tar.gz and generate checksums
         run: |
@@ -37,6 +94,9 @@ jobs:
       - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          # tag 不存在时由本 step 创建在本次提交上
+          tag_name: ${{ needs.detect.outputs.version }}
+          target_commitish: ${{ github.sha }}
           files: |
             build/client/aris-*.tar.gz
             build/client/aris-*.tar.gz.sha256

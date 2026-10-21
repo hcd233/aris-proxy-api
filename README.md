@@ -243,7 +243,7 @@ All APIs are registered with Huma and generate OpenAPI; in development they can 
 
 - **Single-host Compose**: `docker compose -f docker/docker-compose-single.yml up -d` (requires `env/api.env`, `IMAGE_TAG`, and the external network `1panel-network`; the API starts only after the migration container succeeds; host `7070` → container `8080`). Use `docker-compose-dev-single.yml` for development (port `7060`).
 - **Kubernetes**: Deployment + Service + ConfigMap/Secret, rolling updates; `preStop` + draining + `terminationGracePeriodSeconds` support lossless shutdown of long-lived SSE connections.
-- **CI**: GitHub Actions builds GHCR images and publishes the `aris` client Release (tar.gz + sha256); the server's `/install.sh` provides a self-contained install script.
+- **CI**: GitHub Actions builds GHCR images and publishes the `aris` client Release (tar.gz + sha256); a merge to `master` that touches client code auto-bumps a `vX.Y.Z` tag and publishes a release. The server's `/install.sh` provides a self-contained install script.
 
 ![Deployment & release topology](docs/diagrams/archify/aris-arch-07.gif)
 
