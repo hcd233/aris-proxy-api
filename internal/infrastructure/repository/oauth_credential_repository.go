@@ -115,20 +115,23 @@ func (r *oauthCredentialRepository) ListDisplayByEndpointIDs(ctx context.Context
 	return displays, nil
 }
 
-// UpdateQuota 只更新额度快照与采集时间。
+// UpdateQuota 只更新额度快照、采集时间，并清空上一次的错误摘要。
 //
 // 不走 Save：Save 是按 endpoint_id 的整行 upsert（含 token/状态列），维护任务里在
 // 刷新之后调用会把内存快照中的旧 token 写回，覆盖刚轮换出的新 token。
+// 探测成功即说明当前凭据可用，旧的 last_error 必须一并清掉，否则一次临时失败会
+// 一直显示到下次 token 刷新。
 func (r *oauthCredentialRepository) UpdateQuota(ctx context.Context, endpointID uint, snapshot vo.QuotaSnapshot, at time.Time) error {
 	record := &dbmodel.EndpointOAuthCredential{
 		QuotaSnapshot:  toOAuthQuotaSnapshotModel(snapshot),
 		QuotaUpdatedAt: at,
+		LastError:      "",
 	}
 	err := r.db.WithContext(ctx).
 		Model(record).
 		Where(constant.WhereEndpointIDEquals, endpointID).
 		Where(constant.DBConditionDeletedAtZero).
-		Select(constant.FieldOAuthCredentialQuotaSnapshot, constant.FieldOAuthCredentialQuotaUpdatedAt, constant.FieldUpdatedAt).
+		Select(constant.FieldOAuthCredentialQuotaSnapshot, constant.FieldOAuthCredentialQuotaUpdatedAt, constant.FieldOAuthCredentialLastError, constant.FieldUpdatedAt).
 		Updates(record).Error
 	if err != nil {
 		return ierr.Wrap(ierr.ErrDBUpdate, err, "update oauth credential quota")

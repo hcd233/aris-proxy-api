@@ -94,6 +94,8 @@ func TestSessionKeywordFilterSQL_AvoidsLandmines(t *testing.T) {
 // TestSessionKeywordMatchIDsSQL_ScopesToUserContent 断言第一段只搜用户消息正文：
 // 部分索引 idx_messages_user_content_trgm 以 role='user' 为谓词，查询必须携带相同
 // 条件才能命中索引；搜 ->>'content' 而非 message 全文避免 role/tool 元数据误报。
+// 多模态 content 是 parts 数组，粗筛命中的是 JSON 文本，必须再按 part.text 精筛，
+// 否则搜 "text"/"type" 会命中所有多模态消息。
 //
 //	@author centonhuang
 //	@update 2026-10-15 16:00:00
@@ -108,12 +110,16 @@ func TestSessionKeywordMatchIDsSQL_ScopesToUserContent(t *testing.T) {
 		t.Errorf("SessionKeywordMatchIDsSQL must scope to user messages to hit the partial index, got %q", fragment)
 	}
 	if !strings.Contains(fragment, "message::jsonb->>'content' ILIKE ?") {
-		t.Errorf("SessionKeywordMatchIDsSQL must match message content via ILIKE ? (single placeholder), got %q", fragment)
+		t.Errorf("SessionKeywordMatchIDsSQL must match message content via ILIKE ? (indexable coarse filter), got %q", fragment)
 	}
 	if strings.Contains(fragment, "message::text ILIKE") {
 		t.Errorf("SessionKeywordMatchIDsSQL must not match raw message JSON text (role/tool metadata false positives), got %q", fragment)
 	}
-	if strings.Count(fragment, "?") != 1 {
-		t.Errorf("SessionKeywordMatchIDsSQL must contain exactly one ? placeholder, got %q", fragment)
+	if !strings.Contains(fragment, "jsonb_array_elements(") || !strings.Contains(fragment, "part->>'text' ILIKE ?") {
+		t.Errorf("SessionKeywordMatchIDsSQL must refine multimodal parts to their text field, got %q", fragment)
+	}
+	// 占位符：粗筛 + 精筛各一个，调用方传两次同一 pattern
+	if strings.Count(fragment, "?") != 2 {
+		t.Errorf("SessionKeywordMatchIDsSQL must contain exactly two ? placeholders (coarse + text refine), got %q", fragment)
 	}
 }

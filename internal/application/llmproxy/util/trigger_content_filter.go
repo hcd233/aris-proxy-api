@@ -44,7 +44,7 @@ func (s *presetStream) Close() error { return nil }
 func presetStreamResult(events []presetEvent, protocol enum.ProtocolKind) *port.StreamResult {
 	return &port.StreamResult{
 		Protocol: protocol,
-		Open: func(context.Context) (port.Stream, error) {
+		Open: func() (port.Stream, error) {
 			return &presetStream{events: events}, nil
 		},
 	}

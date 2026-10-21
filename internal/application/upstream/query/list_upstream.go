@@ -237,7 +237,7 @@ func toOAuthView(authType enum.EndpointAuthType, cred *vo.OAuthCredentialDisplay
 	if cred == nil {
 		return &port.UpstreamOAuthView{
 			Status: string(enum.OAuthCredentialStatusReauthRequired),
-			Quota:  &vo.QuotaSnapshot{Windows: []vo.QuotaWindow{}},
+			Quota:  toUpstreamQuotaView(vo.QuotaSnapshot{}),
 		}
 	}
 	email := cred.AccountEmail
@@ -246,22 +246,32 @@ func toOAuthView(authType enum.EndpointAuthType, cred *vo.OAuthCredentialDisplay
 		email = commonutil.MaskIdentity(email)
 		lastError = ""
 	}
-	quota := cred.Quota
-	if quota.Windows == nil {
-		quota.Windows = []vo.QuotaWindow{}
-	}
 	view := &port.UpstreamOAuthView{
 		AccountEmail: email,
 		PlanType:     cred.PlanType,
 		Status:       string(cred.Status),
 		LastError:    lastError,
-		Quota:        &quota,
+		Quota:        toUpstreamQuotaView(cred.Quota),
 	}
 	if !cred.QuotaUpdatedAt.IsZero() {
 		updatedAt := cred.QuotaUpdatedAt
 		view.QuotaUpdatedAt = &updatedAt
 	}
 	return view
+}
+
+// toUpstreamQuotaView 领域额度快照 → 扁平视图（Windows 恒非 nil，前端无需 null 分支）。
+func toUpstreamQuotaView(snapshot vo.QuotaSnapshot) *port.UpstreamQuotaSnapshotView {
+	windows := make([]port.UpstreamQuotaWindowView, 0, len(snapshot.Windows))
+	for _, w := range snapshot.Windows {
+		windows = append(windows, port.UpstreamQuotaWindowView{
+			Key:           w.Key,
+			UsedPercent:   w.UsedPercent,
+			ResetsAt:      w.ResetsAt,
+			WindowMinutes: w.WindowMinutes,
+		})
+	}
+	return &port.UpstreamQuotaSnapshotView{Windows: windows, PlanType: snapshot.PlanType, CapturedAt: snapshot.CapturedAt}
 }
 
 func toModelView(m *llmagg.Model, usersByID map[uint]*identityaggregate.User, isDemo bool) *port.UpstreamModelView {

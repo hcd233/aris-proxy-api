@@ -110,8 +110,10 @@ func (r *endpointRepository) fillOAuthStatus(ctx context.Context, eps []*aggrega
 	if len(oauthIDs) == 0 {
 		return nil
 	}
+	// 只取状态两列：该查询在每次请求的解析路径上，读全列会连密文 token 与额度 JSON 一起拉回
 	var records []*dbmodel.EndpointOAuthCredential
 	if err := r.db.WithContext(ctx).
+		Select(constant.FieldOAuthCredentialEndpointID, constant.FieldOAuthCredentialStatus).
 		Where(constant.WhereEndpointIDIn, oauthIDs).
 		Where(constant.DBConditionDeletedAtZero).
 		Find(&records).Error; err != nil {
@@ -474,6 +476,7 @@ func toEndpointProjection(ep *dbmodel.Endpoint) *llmproxy.EndpointProjection {
 	return &llmproxy.EndpointProjection{
 		ID:                          ep.ID,
 		Name:                        ep.Name,
+		AuthType:                    enum.EndpointAuthType(ep.AuthType),
 		OpenaiBaseURL:               ep.OpenaiBaseURL,
 		AnthropicBaseURL:            ep.AnthropicBaseURL,
 		APIKey:                      ep.APIKey,

@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
@@ -144,6 +145,7 @@ type ModelDetailProjection struct {
 type EndpointProjection struct {
 	ID                          uint
 	Name                        string
+	AuthType                    enum.EndpointAuthType
 	OpenaiBaseURL               string
 	AnthropicBaseURL            string
 	APIKey                      string

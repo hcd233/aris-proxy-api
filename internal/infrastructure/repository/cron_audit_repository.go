@@ -216,7 +216,7 @@ func (r *cronCallAuditRepository) applyFilter(db *gorm.DB, filterExp string) (*g
 	return db, nil
 }
 
-// applyKeywordSearch 注入关键词搜索条件
+// applyKeywordSearch 注入关键词搜索条件（显式 ESCAPE，与 audit 侧同形）
 func (r *cronCallAuditRepository) applyKeywordSearch(db, sql *gorm.DB, query string, queryFields []string) *gorm.DB {
 	if query == "" || len(queryFields) == 0 {
 		return sql
@@ -226,7 +226,7 @@ func (r *cronCallAuditRepository) applyKeywordSearch(db, sql *gorm.DB, query str
 		if field == "" {
 			return nil, false
 		}
-		return clause.Like{Column: clause.Column{Name: field}, Value: like}, true
+		return clause.Expr{SQL: field + constant.SqlLikeEscapeSuffix, Vars: []any{like}}, true
 	})
 	if len(expressions) > 0 {
 		sub := db.Session(&gorm.Session{NewDB: true}).Where(expressions[0])

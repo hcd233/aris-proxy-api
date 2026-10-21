@@ -28,6 +28,10 @@ func NewCreateModelHandler(endpointRepo llmproxy.EndpointRepository, modelRepo l
 func (h *createModelHandler) Handle(ctx context.Context, cmd port.CreateModelCommand) (*port.CreateModelResult, error) {
 	log := logger.WithCtx(ctx)
 
+	if err := ensureMockUpstreamAllowed(cmd.ScopeUserID, cmd.UpstreamModel); err != nil {
+		return nil, err
+	}
+
 	// Verify endpoint exists（scopeUserID>0 时限定在该用户名下，跨租户校验天然成立）
 	ep, err := h.endpointRepo.FindByID(ctx, cmd.EndpointID, cmd.ScopeUserID)
 	if err != nil {
@@ -78,4 +82,15 @@ func (h *createModelHandler) Handle(ctx context.Context, cmd port.CreateModelCom
 
 	log.Info("[ModelCommand] Create model success", zap.Uint("id", id))
 	return &port.CreateModelResult{ModelID: id}, nil
+}
+
+// ensureMockUpstreamAllowed 限制 mock 上游只能由管理员配置（scopeUserID == nil）。
+//
+// mock 装饰器不经过 guard/bulkhead 的并发隔离，若普通用户也能用
+// upstream_model=mock-llm 命中，等于开了一条绕过限流/熔断的通道。
+func ensureMockUpstreamAllowed(scopeUserID *uint, upstreamModel string) error {
+	if upstreamModel != constant.MockUpstreamModel || scopeUserID == nil {
+		return nil
+	}
+	return ierr.New(ierr.ErrValidation, "mock upstream model is reserved for administrators")
 }

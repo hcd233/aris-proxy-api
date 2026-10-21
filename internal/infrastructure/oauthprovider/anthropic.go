@@ -268,8 +268,8 @@ func (c *anthropicOAuthClient) ProbeQuota(ctx context.Context, accessToken, _ st
 		}
 		windows = append(windows, vo.QuotaWindow{
 			Key: key,
-			// 上游 utilization 为 0.0~1.0 比例，归一为百分比（与 Codex 侧同量纲）
-			UsedPercent:   window.Utilization * constant.OAuthPercentScale,
+			// 上游 utilization 已是 0~100 百分比（如 14.0 表示 14%），与 Codex 侧同量纲，直接透传
+			UsedPercent:   window.Utilization,
 			ResetsAt:      parseTimeBestEffort(window.ResetsAt),
 			WindowMinutes: minutes,
 		})

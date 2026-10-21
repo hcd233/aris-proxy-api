@@ -391,7 +391,7 @@ func (r *auditRepository) applyFilter(db *gorm.DB, criteria *filter.FilterCriter
 	return db, nil
 }
 
-// applyKeywordSearch 注入关键词搜索条件（OR 链）
+// applyKeywordSearch 注入关键词搜索条件（OR 链；显式 ESCAPE，不依赖数据库默认转义符）
 func (r *auditRepository) applyKeywordSearch(db, sql *gorm.DB, query string) *gorm.DB {
 	if query == "" || len(constant.AuditQueryFields) == 0 {
 		return sql
@@ -401,7 +401,7 @@ func (r *auditRepository) applyKeywordSearch(db, sql *gorm.DB, query string) *go
 		if field == "" {
 			return nil, false
 		}
-		return clause.Like{Column: clause.Column{Name: field}, Value: like}, true
+		return clause.Expr{SQL: field + constant.SqlLikeEscapeSuffix, Vars: []any{like}}, true
 	})
 	if len(expressions) > 0 {
 		sub := db.Session(&gorm.Session{NewDB: true}).Where(expressions[0])

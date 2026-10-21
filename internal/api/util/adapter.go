@@ -101,7 +101,7 @@ func wrapStreamResult(ctx context.Context, r *port.StreamResult, fallbackBody []
 					fiberCtx.Set(k, hv)
 				}
 			}
-			stream, err := r.Open(ctx)
+			stream, err := r.Open()
 			if err != nil {
 				var proxyErr *port.ProxyError
 				if errors.As(err, &proxyErr) {

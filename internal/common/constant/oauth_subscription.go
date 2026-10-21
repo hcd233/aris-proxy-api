@@ -71,6 +71,10 @@ const (
 	// OAuthRefreshLockTTL 刷新互斥锁 TTL（防持锁实例崩溃后的死锁）
 	OAuthRefreshLockTTL = 60 * time.Second
 
+	// OAuthRefreshTimeout 刷新上游 token 并落库的独立超时。
+	// 该阶段必须脱离请求生命周期（客户端取消不能丢新 token），因此需要自带超时上界。
+	OAuthRefreshTimeout = 15 * time.Second
+
 	// OAuthAccessCacheGuard access token 缓存的安全余量（缓存 TTL = 剩余有效期 - 该值；
 	// 读取侧同样按该余量判定，TTL 与判定共用同一常量，避免两者漂移）
 	OAuthAccessCacheGuard = 60 * time.Second
@@ -83,6 +87,8 @@ const (
 	OAuthReasonReauthRequired     = "reauthorization required: "
 	OAuthReasonRefreshInProgress  = "refresh in progress elsewhere"
 	OAuthReasonRefreshFailed      = "refresh failed: "
+	// OAuthReasonRefreshLockUnavailable 锁基础设施不可用且当前 token 已过期（不能无锁刷新）
+	OAuthReasonRefreshLockUnavailable = "refresh lock unavailable"
 
 	// OAuthReasonQuotaProbeFailed 额度探测失败写入 last_error 的前缀
 	OAuthReasonQuotaProbeFailed = "quota probe failed: "
@@ -149,10 +155,6 @@ const (
 	// OAuthQuotaWindowFiveHourMinutes / OAuthQuotaWindowSevenDayMinutes 额度窗口时长（分钟，用于展示）
 	OAuthQuotaWindowFiveHourMinutes = 300
 	OAuthQuotaWindowSevenDayMinutes = 10080
-
-	// OAuthPercentScale 额度比例 → 百分比换算（Anthropic utilization 为 0.0~1.0 比例，
-	// OpenAI used_percent 为 0~100 百分比；统一归一为 0~100 后再进 vo.QuotaWindow）
-	OAuthPercentScale = 100.0
 )
 
 // OAuth 错误与响应体限制

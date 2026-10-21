@@ -96,6 +96,9 @@ func (h *oauthReauthHandler) Handle(ctx context.Context, cmd port.ReauthOAuthCom
 		}
 	} else {
 		cred.ApplyTokens(tokenSet.AccessToken, tokenSet.RefreshToken, tokenSet.ExpiresAt)
+		// 账号信息随新授权一起更新：换用另一个 Codex 账号重新授权后，
+		// 若只换 token，chatgpt-account-id 头仍指向旧账号，上游会按旧账号计费/限流。
+		cred.ApplyAccount(tokenSet.AccountRef, tokenSet.AccountEmail, tokenSet.PlanType)
 	}
 	if err := h.credRepo.Save(ctx, cred); err != nil {
 		log.Error("[OAuthReauth] Save credential failed", zap.Error(err))

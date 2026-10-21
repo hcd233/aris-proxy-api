@@ -8,6 +8,7 @@ import (
 	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
 
+	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/oauthquota"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	commonmodel "github.com/hcd233/aris-proxy-api/internal/common/model"
@@ -103,12 +104,12 @@ func SweepOAuthMaintenance(
 
 		// 2. 额度探测（节流窗口内跳过）。
 		//
-		// 落库走 service.ProbeOAuthQuota 的窄列更新：第 1 步的刷新可能刚改过 token，
+		// 落库走 oauthquota.Probe 的窄列更新：第 1 步的刷新可能刚改过 token，
 		// 用这里的 cred 快照整行回写会把新 token 覆盖回旧值（refresh token 轮换后旧值已失效）。
 		if time.Since(cred.QuotaUpdatedAt()) < constant.OAuthQuotaProbeInterval {
 			continue
 		}
-		if _, probeErr := service.ProbeOAuthQuota(ctx, cred.EndpointID(), cred.Provider(), tokens, providers, credRepo); probeErr != nil {
+		if _, probeErr := oauthquota.Probe(ctx, cred.EndpointID(), cred.Provider(), tokens, providers, credRepo); probeErr != nil {
 			log.Warn("[OAuthMaintenance] Quota probe failed",
 				zap.Uint("endpointID", cred.EndpointID()), zap.Error(probeErr))
 		}

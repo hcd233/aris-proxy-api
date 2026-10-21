@@ -187,10 +187,8 @@ const (
 	ConvCheckMethodSave   = "Save"
 	ConvCheckFuncInit     = "init"
 
-	ConvCheckImportInfra      = "github.com/hcd233/aris-proxy-api/internal/infrastructure/"
-	ConvCheckImportInfraCache = "github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
-	// ConvCheckParentDirPrefix filepath.Rel 在目标位于基准目录之外时返回的上级前缀。
-	ConvCheckParentDirPrefix        = ".."
+	ConvCheckImportInfra            = "github.com/hcd233/aris-proxy-api/internal/infrastructure/"
+	ConvCheckImportInfraCache       = "github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	ConvCheckImportDatabaseModel    = "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	ConvCheckPathInfrastructure     = "internal/infrastructure"
 	ConvCheckMsgDatabaseModelDirect = "database model imports are only allowed in infrastructure layer; expose a domain/application port instead"
@@ -264,6 +262,8 @@ const (
 	// 前端依赖/构建目录含数万级文件但几乎无 Go 源码，遍历代价高（>2s），与 golangci paths 排除保持一致
 	ConvCheckSkipNodeModules = "node_modules"
 	ConvCheckSkipNextBuild   = ".next"
+	ConvCheckParentDir       = ".."
+	ConvCheckParentDirPrefix = "../"
 )
 
 // diagnostic 常量

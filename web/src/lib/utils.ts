@@ -70,21 +70,18 @@ export function formatDateTime(dateStr: string): string {
   return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
 }
 
-/** 后端定时任务模块名（internal/common/constant）→ i18n 键后缀 */
-const CRON_JOB_I18N_SUFFIX: Record<string, string> = {
-  OAuthMaintenanceCron: "oauth_maintenance",
-  SessionTerminalCleanupCron: "session_terminal_cleanup",
-  SoftDeletePurgeCron: "soft_delete_purge",
-  ThinkExtractCron: "think_extract",
-  TriggerHitSyncCron: "trigger_hit_sync",
-};
-
 /**
- * 定时任务展示名：后端存的是模块名（如 `ThinkExtractCron`），
- * 直接展示等于把内部标识符摆到界面上，这里翻成 `cron.job_*` 文案。
- * 未登记的模块名（后端新增任务）原样返回，不会渲染成空白。
+ * 定时任务展示名：后端存的是模块名（如 `ThinkExtractCron`），直接展示等于把内部标识符
+ * 摆到界面上，这里按模块名推导 `cron.job_*` 文案。
+ *
+ * 后缀由模块名推导（`ThinkExtractCron` → `think_extract`），后端新增任务无需同步前端映射表；
+ * 未命中的键由 t() 回退到原始模块名，不会渲染成空白。连续大写缩写（如 `APICleanupCron`）
+ * 推导结果可能对不上文案，此时同样回退原文，不影响可用性。
  */
 export function cronJobLabel(name: string, t: (key: string, fallback?: string) => string): string {
-  const suffix = CRON_JOB_I18N_SUFFIX[name];
+  const suffix = name
+    .replace(/Cron$/, "")
+    .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+    .toLowerCase();
   return suffix ? t(`cron.job_${suffix}`, name) : name;
 }

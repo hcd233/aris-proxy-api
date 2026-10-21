@@ -285,7 +285,27 @@ var (
 	//   - 与「只搜用户消息」的产品语义一致，搜索面为 11.5K 行/127MB（全表 164K 行/1GB）；
 	//   - 与部分索引 idx_messages_user_content_trgm（WHERE role='user'）谓词对齐，才能走索引；
 	//   - 不搜 message 全文 JSON，避免 role/tool_call 等元数据造成误报（搜 "user" 命中全部用户消息）。
-	SessionKeywordMatchIDsSQL = "SELECT id FROM messages WHERE message::jsonb->>'role' = 'user' AND message::jsonb->>'content' ILIKE ? ESCAPE '\\'"
+	//
+	// 多模态内容（content 为 parts 数组）第一段 ILIKE 命中的是 JSON 文本，
+	// 会误匹配 "type"/"text" 这类键名与 image/file 字段，故追加 CASE 只比对 text 字段：
+	// 字符串 content 直接放行（ILIKE 比的已是真实正文），数组 content 要求某个 part 的
+	// text 命中。粗筛仍走 trigram 索引，精筛只在候选行上执行。
+	SessionKeywordMatchIDsSQL = "SELECT id FROM messages" +
+		" WHERE message::jsonb->>'role' = 'user'" +
+		" AND message::jsonb->>'content' ILIKE ? ESCAPE '\\'" +
+		" AND CASE jsonb_typeof(message::jsonb->'content')" +
+		" WHEN 'array' THEN EXISTS (SELECT 1 FROM jsonb_array_elements(message::jsonb->'content') AS part WHERE part->>'text' ILIKE ? ESCAPE '\\')" +
+		" ELSE TRUE END"
+
+	// PgTrgmExtensionDDL keyword 表达式索引依赖的操作符类扩展
+	PgTrgmExtensionDDL = "CREATE EXTENSION IF NOT EXISTS pg_trgm"
+
+	// MessageContentTrigramIndexDDL keyword 搜索第一段的 pg_trgm 表达式索引。
+	//
+	// GORM tag 表达不了「表达式 + 操作符类 + 部分索引谓词」，此前只在生产手工建过：
+	// 新环境缺索引时 keyword 搜索退化为全表扫描。谓词必须与 SessionKeywordMatchIDsSQL
+	// 的 role='user' 条件一致，否则查询用不上该部分索引。
+	MessageContentTrigramIndexDDL = "CREATE INDEX IF NOT EXISTS idx_messages_user_content_trgm ON messages USING gin ((message::jsonb->>'content') gin_trgm_ops) WHERE message::jsonb->>'role' = 'user'"
 
 	// SessionKeywordFilterSQL session 列表 keyword 过滤 SQL 片段（第二段）。
 	//
@@ -334,6 +354,14 @@ var (
 	AuditDistinctWhereUANotEmpty = "user_agent <> ''"
 	AuditDistinctSelectModel     = "DISTINCT model_id"
 	AuditDistinctSelectStatus    = "DISTINCT upstream_status_code::text"
+
+	// SqlLikeEscapeSuffix 动态列名的 LIKE 片段后缀（列名只能来自白名单常量，禁止拼用户输入）。
+	// 统一显式 ESCAPE，不依赖数据库默认转义符——PG 默认是反斜杠，但 sqlite/其他方言不一致。
+	SqlLikeEscapeSuffix = " LIKE ? ESCAPE '\\'"
+
+	// DemoAuditDistinctWhereAction / Module demo 审计下拉选项的关键词过滤（与 cron 审计同形）
+	DemoAuditDistinctWhereAction = "action LIKE ? ESCAPE '\\'"
+	DemoAuditDistinctWhereModule = "module LIKE ? ESCAPE '\\'"
 	AuditDistinctSelectUA        = "DISTINCT user_agent"
 	AuditDistinctLimit           = 50
 

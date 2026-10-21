@@ -127,7 +127,7 @@ func newFixture(t *testing.T) *fixture {
 
 	flowStore := cache.NewOAuthFlowCache(rdb)
 	clients := oauthprovider.NewClients()
-	tokens := oauthprovider.NewOAuthTokenProvider(credRepo, clients, cache.NewOAuthAccessCache(rdb), lock.NewLocker(rdb))
+	tokens := oauthprovider.NewOAuthTokenProvider(credRepo, clients, cache.NewOAuthAccessCache(rdb, config.OAuthCredentialKey), lock.NewLocker(rdb))
 
 	endpointHandler := handler.NewEndpointHandler(handler.EndpointDependencies{
 		Create:   endpointcommand.NewCreateEndpointHandler(endpointRepo),
@@ -135,7 +135,7 @@ func newFixture(t *testing.T) *fixture {
 		Delete:   endpointcommand.NewDeleteEndpointHandler(endpointRepo),
 		OAuth:    endpointcommand.NewOAuthAuthorizeHandler(flowStore, clients),
 		Exchange: endpointcommand.NewOAuthExchangeHandler(flowStore, clients, oauthEndpointRepo),
-		Reauth:   endpointcommand.NewOAuthReauthHandler(flowStore, clients, endpointRepo, credRepo, cache.NewOAuthAccessCache(rdb)),
+		Reauth:   endpointcommand.NewOAuthReauthHandler(flowStore, clients, endpointRepo, credRepo, cache.NewOAuthAccessCache(rdb, config.OAuthCredentialKey)),
 		Quota:    endpointquery.NewGetOAuthQuotaHandler(endpointRepo, credRepo),
 		Probe:    endpointcommand.NewOAuthProbeHandler(endpointRepo, credRepo, tokens, clients),
 	})
@@ -209,7 +209,7 @@ func newFixture(t *testing.T) *fixture {
 		anthropic: usecase.NewAnthropicUseCase(
 			resolver,
 			usecase.NewListAnthropicModels(readRepo),
-			usecase.NewCountTokens(readRepo, anthropicProxy),
+			usecase.NewCountTokens(readRepo, anthropicProxy, tokens),
 			anthropicProxy,
 			openAIProxy,
 			submitter, nil, nil, nil, tokens,

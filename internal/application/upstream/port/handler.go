@@ -36,13 +36,31 @@ type UpstreamEndpointView struct {
 	UpdatedAt                   time.Time
 }
 
+// UpstreamQuotaWindowView 额度窗口视图。
+//
+// 与 endpoint 组的 OAuthQuotaWindowView 同形态（扁平字段），刻意不再向外暴露
+// domain vo：两种形态会让 handler 只能靠 for-range 推断类型来规避 domain 依赖。
+type UpstreamQuotaWindowView struct {
+	Key           string
+	UsedPercent   float64
+	ResetsAt      time.Time
+	WindowMinutes int
+}
+
+// UpstreamQuotaSnapshotView 额度快照视图
+type UpstreamQuotaSnapshotView struct {
+	Windows    []UpstreamQuotaWindowView
+	PlanType   string
+	CapturedAt time.Time
+}
+
 // UpstreamOAuthView 订阅端点凭据投影（只含展示字段与额度快照；token 永不出现在视图）
 type UpstreamOAuthView struct {
 	AccountEmail   string // demo 视角掩码
 	PlanType       string
-	Status         string            // active / reauth_required
-	LastError      string            // demo 视角置空
-	Quota          *vo.QuotaSnapshot // 额度快照（未探测为 empty 窗口）
+	Status         string // active / reauth_required
+	LastError      string // demo 视角置空
+	Quota          *UpstreamQuotaSnapshotView
 	QuotaUpdatedAt *time.Time
 }
 

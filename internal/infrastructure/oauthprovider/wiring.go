@@ -35,5 +35,5 @@ func NewDefaultTokenProvider(credRepo llmproxy.OAuthCredentialRepository, redisC
 				zap.Int("expectedKeyLength", constant.SecretBoxKeyLength))
 		}
 	})
-	return NewOAuthTokenProvider(credRepo, NewClients(), cache.NewOAuthAccessCache(redisClient), lock.NewLocker(redisClient))
+	return NewOAuthTokenProvider(credRepo, NewClients(), cache.NewOAuthAccessCache(redisClient, config.OAuthCredentialKey), lock.NewLocker(redisClient))
 }

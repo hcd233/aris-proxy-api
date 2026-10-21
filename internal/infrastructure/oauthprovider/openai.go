@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
+	"go.uber.org/zap"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
@@ -16,6 +17,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/httpclient"
+	"github.com/hcd233/aris-proxy-api/internal/logger"
 )
 
 // ──────────────────────────── Codex（OpenAI）────────────────────────────
@@ -152,7 +154,11 @@ func (c *openaiOAuthClient) postTokenForm(ctx context.Context, form url.Values) 
 	}
 	if parsed.IDToken != "" {
 		claims, claimsErr := parseOpenAIIDToken(parsed.IDToken)
-		if claimsErr == nil {
+		if claimsErr != nil {
+			// 不阻断授权（token 本身可用），但不能静默：账号 ID 为空会让后续每个请求
+			// 都带空 chatgpt-account-id 头，直到用户重新授权。
+			logger.WithCtx(ctx).Warn("[OpenAIOAuth] Parse id_token failed; account metadata left empty", zap.Error(claimsErr))
+		} else {
 			set.AccountRef = claims.Auth.ChatGPTAccountID
 			set.AccountEmail = claims.Email
 			set.PlanType = claims.Auth.ChatGPTPlanType

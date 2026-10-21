@@ -28,6 +28,23 @@ type fixtureExpected struct {
 	Severity string `json:"severity"`
 }
 
+// TestRunKeepsPathsRelativeToWorkingDirectory 锁定「按子目录传参时诊断路径仍以工作目录为基准」。
+// 回归：hook 传 ./internal/dto 时，旧实现把路径归一成 dto/xxx.go，导致 internal/dto 前缀跳过规则失效。
+func TestRunKeepsPathsRelativeToWorkingDirectory(t *testing.T) { //nolint:paralleltest // t.Chdir 修改进程工作目录，不能并行
+	root := t.TempDir()
+	writeModule(t, root)
+	writeFixtureFile(t, root, fixtureFile{
+		Path:    "internal/dto/thing.go",
+		Content: "package dto\n\ntype ThingReq struct {\n\tName string\n}\n",
+	})
+	t.Chdir(root)
+
+	result := lintconv.Run([]string{"internal/dto"})
+	if hasDiagnostic(result.Diagnostics, constant.RuleDTONaming, enum.SeverityError) {
+		t.Fatalf("internal/dto must not report %s when linting a subdirectory: %#v", constant.RuleDTONaming, result.Diagnostics)
+	}
+}
+
 func TestRunReportsExpectedDiagnostics(t *testing.T) {
 	t.Parallel()
 	cases := loadFixtureCases(t)
@@ -109,30 +126,4 @@ func hasDiagnostic(diagnostics []lintconv.Diagnostic, rule string, severity enum
 		}
 	}
 	return false
-}
-
-// TestRunWithPackageDirArgResolvesRepoRelativePaths 回归：pre-commit hook 传「包目录」
-// （如 ./internal/infrastructure/repository）时，诊断路径必须相对仓库根归一；
-// 否则 internal/infrastructure 下的文件会被误判成「非 infrastructure 层导入 dbmodel」，
-// 让所有触及仓储目录的提交被 hook 拦下。
-//
-//nolint:paralleltest // 需要切换工作目录到临时仓库根，不能并行
-func TestRunWithPackageDirArgResolvesRepoRelativePaths(t *testing.T) {
-	root := t.TempDir()
-	writeModule(t, root)
-	writeFixtureFile(t, root, fixtureFile{
-		Path: "internal/infrastructure/repository/endpoint_repository.go",
-		Content: `package repository
-
-import _ "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
-`,
-	})
-	t.Chdir(root)
-
-	result := lintconv.Run([]string{"internal/infrastructure/repository"})
-	for _, diagnostic := range result.Diagnostics {
-		if diagnostic.Rule == constant.RuleDatabaseModelDependency {
-			t.Fatalf("scoped package dir arg must resolve repo-relative paths, got %#v", diagnostic)
-		}
-	}
 }

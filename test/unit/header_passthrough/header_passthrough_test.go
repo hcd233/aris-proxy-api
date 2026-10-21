@@ -200,7 +200,7 @@ func TestStreamResult_AppliesPassthroughResponseHeaders(t *testing.T) {
 	}, func(ctx context.Context, _ *struct{}) (*huma.StreamResponse, error) {
 		result := &port.StreamResult{
 			Protocol: enum.ProtocolKindOpenAI,
-			Open: func(ctx context.Context) (port.Stream, error) {
+			Open: func() (port.Stream, error) {
 				return &passthroughSSEStream{}, nil
 			},
 		}

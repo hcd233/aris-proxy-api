@@ -171,7 +171,7 @@ func newFixture(t *testing.T, withCache bool, modelCount int) *fixture {
 	anthropicUC := usecase.NewAnthropicUseCase(
 		llmproxyservice.NewEndpointResolver(endpointRepo, modelRepo, false, nil),
 		usecase.NewListAnthropicModels(readRepo),
-		usecase.NewCountTokens(readRepo, anthropicProxy),
+		usecase.NewCountTokens(readRepo, anthropicProxy, nil),
 		anthropicProxy,
 		openAIProxy,
 		noopTaskSubmitter{},

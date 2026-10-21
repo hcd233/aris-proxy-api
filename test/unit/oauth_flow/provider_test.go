@@ -128,8 +128,8 @@ func TestProbeQuotaMapping(t *testing.T) {
 				t.Errorf("x-app = %q, want %q", got, constant.OAuthClaudeXApp)
 			}
 			w.Header().Set("Content-Type", "application/json")
-			// 上游 utilization 为 0.0~1.0 比例（非百分比）：0.125 → 12.5%
-			_, _ = w.Write([]byte(`{"five_hour":{"utilization":0.125,"resets_at":"2099-01-01T00:00:00Z"},"seven_day":{"utilization":0.4,"resets_at":"2099-01-08T00:00:00Z"}}`))
+			// 上游 utilization 已是 0~100 百分比（如 14.0 表示 14%），客户端必须原样透传
+			_, _ = w.Write([]byte(`{"five_hour":{"utilization":12.5,"resets_at":"2099-01-01T00:00:00Z"},"seven_day":{"utilization":40.0,"resets_at":"2099-01-08T00:00:00Z"}}`))
 		}))
 		defer server.Close()
 
@@ -141,12 +141,12 @@ func TestProbeQuotaMapping(t *testing.T) {
 		if len(snapshot.Windows) != 2 || snapshot.Windows[0].Key != "five_hour" {
 			t.Fatalf("unexpected windows: %+v", snapshot.Windows)
 		}
-		// C2 回归：比例必须归一为 0~100 百分比，否则前端额度条恒为 0%
+		// 回归：utilization 是百分比，再乘 100 会让有用量的账号恒显示 100%（甚至 1250%）
 		if snapshot.Windows[0].UsedPercent != 12.5 {
-			t.Fatalf("used percent = %v, want 12.5 (ratio 0.125 normalized to percent)", snapshot.Windows[0].UsedPercent)
+			t.Fatalf("used percent = %v, want 12.5 (percentage passed through as-is)", snapshot.Windows[0].UsedPercent)
 		}
 		if snapshot.Windows[1].UsedPercent != 40 {
-			t.Fatalf("used percent = %v, want 40 (ratio 0.4 normalized to percent)", snapshot.Windows[1].UsedPercent)
+			t.Fatalf("used percent = %v, want 40 (percentage passed through as-is)", snapshot.Windows[1].UsedPercent)
 		}
 	})
 

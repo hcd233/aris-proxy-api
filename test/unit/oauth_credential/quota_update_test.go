@@ -87,4 +87,19 @@ func TestUpdateQuotaKeepsTokens(t *testing.T) { //nolint:paralleltest // modifie
 	if got.LastError() != "quota probe failed: boom" {
 		t.Fatalf("last error not persisted: %q", got.LastError())
 	}
+
+	// 探测成功必须清掉上一次的错误摘要：否则一次临时失败会一直显示到下次 token 刷新
+	if err := repo.UpdateQuota(ctx, 1, snapshot, time.Now()); err != nil {
+		t.Fatalf("second update quota: %v", err)
+	}
+	got, err = repo.FindByEndpointID(ctx, 1)
+	if err != nil || got == nil {
+		t.Fatalf("reload credential after successful probe: %v", err)
+	}
+	if got.LastError() != "" {
+		t.Fatalf("successful probe must clear last error, got %q", got.LastError())
+	}
+	if got.AccessToken() != "at-new" || got.RefreshToken() != "rt-new" {
+		t.Fatalf("quota update must not touch tokens, got access=%q refresh=%q", got.AccessToken(), got.RefreshToken())
+	}
 }
