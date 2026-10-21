@@ -244,6 +244,7 @@ func TestModelID_CreateDefaultsToAlias(t *testing.T) {
 	item := getModelByAlias(t, baseURL, jwtToken, client, alias)
 	if item == nil {
 		t.Fatalf("created model alias=%s not found in list", alias)
+		return
 	}
 	modelID = item.ID
 	if item.ModelID != alias {

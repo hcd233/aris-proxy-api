@@ -217,6 +217,7 @@ func TestModelCapabilities_RoundTrip(t *testing.T) {
 	item := getModelByAlias(t, baseURL, jwtToken, client, alias)
 	if item == nil {
 		t.Fatalf("created model alias=%s not found in list", alias)
+		return
 	}
 	modelID = item.ID
 	if !slices.Equal(item.Capabilities, []string{"text", "image"}) {
@@ -250,6 +251,7 @@ func TestModelCapabilities_CreateDefaultsToText(t *testing.T) {
 	item := getModelByAlias(t, baseURL, jwtToken, client, alias)
 	if item == nil {
 		t.Fatalf("created model alias=%s not found in list", alias)
+		return
 	}
 	modelID = item.ID
 	if !slices.Equal(item.Capabilities, []string{"text"}) {
