@@ -6,6 +6,8 @@
 
 export interface EndpointForm {
   name: string;
+  /** 可见性；只有 admin 能选 public（普通用户表单恒为 private）。 */
+  visibility: "private" | "public";
   openaiBaseURL: string;
   anthropicBaseURL: string;
   apiKey: string;
@@ -18,6 +20,7 @@ export interface EndpointForm {
 
 export const emptyEndpointForm: EndpointForm = {
   name: "",
+  visibility: "private",
   openaiBaseURL: "",
   anthropicBaseURL: "",
   apiKey: "",

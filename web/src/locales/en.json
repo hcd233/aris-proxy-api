@@ -958,5 +958,11 @@
   "oauth.window_seven_day": "7-day window",
   "oauth.window_seven_day_sonnet": "7-day Sonnet window",
   "oauth.window_primary": "Primary window (5h)",
-  "oauth.window_secondary": "Secondary window (7d)"
+  "oauth.window_secondary": "Secondary window (7d)",
+  "endpoints.visibility": "Visibility",
+  "endpoints.visibility_private": "Private",
+  "endpoints.visibility_public": "Public",
+  "endpoints.visibility_desc": "Public endpoints are visible and callable by all users; only admins can modify them.",
+  "upstream.public_badge": "Public",
+  "upstream.public_readonly": "Public endpoints are managed by admins."
 }

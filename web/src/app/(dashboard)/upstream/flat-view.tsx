@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
@@ -58,6 +59,8 @@ export interface FlatViewProps {
   loading: boolean;
   isMobile: boolean;
   isDemo: boolean;
+  /** 普通用户视角：他人公开端点下的模型只读 */
+  isAdmin: boolean;
   sortField: ModelListSortField;
   sort: "asc" | "desc";
   onSort: (field: ModelListSortField) => void;
@@ -119,6 +122,7 @@ export function FlatView({
   loading,
   isMobile,
   isDemo,
+  isAdmin,
   sortField,
   sort,
   onSort,
@@ -130,6 +134,9 @@ export function FlatView({
   deletingModelID,
 }: FlatViewProps) {
   const t = useT();
+  // demo 全局只读 + 普通用户对他人公开端点下的模型只读。
+  const rowLocked = (m: ModelListItem) =>
+    isDemo || (!isAdmin && m.endpoint?.visibility === "public");
 
   if (loading) return <TableSkeleton />;
 
@@ -182,7 +189,7 @@ export function FlatView({
                 <Switch
                   size="sm"
                   checked={m.enabled}
-                  disabled={isDemo}
+                  disabled={rowLocked(m)}
                   onCheckedChange={() => onToggleEnabled(m)}
                   aria-label={m.enabled ? t("models.enabled") : t("models.disabled")}
                 />
@@ -191,25 +198,25 @@ export function FlatView({
                   <Button
                     variant="ghost"
                     size="icon-sm"
-                    disabled={isDemo}
+                    disabled={rowLocked(m)}
                     onClick={() => onEditModel(m)}
                     className="text-muted-foreground hover:text-foreground"
                   >
-                    {isDemo ? <Lock className="size-3.5" /> : <Pencil className="size-3.5" />}
+                    {rowLocked(m) ? <Lock className="size-3.5" /> : <Pencil className="size-3.5" />}
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon-sm"
-                    disabled={isDemo}
+                    disabled={rowLocked(m)}
                     onClick={() => onPricingModel(m)}
                     aria-label={t("upstream.pricing.title")}
                     className="text-muted-foreground hover:text-foreground"
                   >
-                    {isDemo ? <Lock className="size-3.5" /> : <Coins className="size-3.5" />}
+                    {rowLocked(m) ? <Lock className="size-3.5" /> : <Coins className="size-3.5" />}
                   </Button>
                   <DeleteButton
                     label={t("common.delete")}
-                    locked={isDemo}
+                    locked={rowLocked(m)}
                     disabled={deletingModelID === m.id}
                     onClick={() => onDeleteModel(m)}
                   />
@@ -220,6 +227,11 @@ export function FlatView({
               className={cn("mt-2 flex flex-wrap items-center gap-1.5", !m.enabled && "opacity-45")}
             >
               {m.endpoint && <EndpointOwnerCell name={m.endpoint.name} user={m.user} />}
+              {m.endpoint?.visibility === "public" && (
+                <Badge variant="secondary" className="px-1.5 py-0 text-[10px] font-normal">
+                  {t("upstream.public_badge")}
+                </Badge>
+              )}
               <SpecBadges contextLength={m.contextLength} maxOutputTokens={m.maxOutputTokens} />
               <CapabilityBadges capabilities={m.capabilities} />
               <PricingInline pricing={m.pricing} />
@@ -302,7 +314,7 @@ export function FlatView({
               <Switch
                 size="sm"
                 checked={m.enabled}
-                disabled={isDemo}
+                disabled={rowLocked(m)}
                 onCheckedChange={() => onToggleEnabled(m)}
                 aria-label={m.enabled ? t("models.enabled") : t("models.disabled")}
               />
@@ -312,6 +324,7 @@ export function FlatView({
             </TableCell>
             <ModelActionsCell
               isDemo={isDemo}
+              readOnly={!isAdmin && m.endpoint?.visibility === "public"}
               deleting={deletingModelID === m.id}
               onEdit={() => onEditModel(m)}
               onPricing={() => onPricingModel(m)}

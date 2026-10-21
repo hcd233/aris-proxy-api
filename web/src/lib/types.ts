@@ -376,6 +376,9 @@ export interface ListAPIKeysRsp extends CommonRsp {
 /** 端点认证类型：API Key 直连 / Claude 订阅 OAuth / Codex 订阅 OAuth */
 export type EndpointAuthType = "api_key" | "oauth_anthropic" | "oauth_openai";
 
+/** 端点可见性：私有（默认，仅归属者与 admin）/ 公开（全体登录用户只读可见、可调用） */
+export type EndpointVisibility = "private" | "public";
+
 /** 订阅账号提供方（发起授权时选择） */
 export type OAuthProviderChoice = "anthropic" | "openai";
 
@@ -440,6 +443,7 @@ export interface OAuthQuotaRspBody {
 export interface CreateEndpointReqBody {
   ownerUserID?: number;
   name: string;
+  visibility?: EndpointVisibility;
   openaiBaseURL?: string;
   anthropicBaseURL?: string;
   apiKey: string;
@@ -451,6 +455,7 @@ export interface CreateEndpointReqBody {
 
 export interface UpdateEndpointReqBody {
   name?: string;
+  visibility?: EndpointVisibility;
   openaiBaseURL?: string;
   anthropicBaseURL?: string;
   apiKey?: string;
@@ -477,6 +482,8 @@ export interface UpstreamEndpointItem {
   maskedAPIKey: string;
   /** 认证类型（api_key / oauth_anthropic / oauth_openai） */
   authType: EndpointAuthType;
+  /** 可见性（private / public）；public 对普通用户只读 */
+  visibility: EndpointVisibility;
   /** 订阅端点凭据投影；仅 OAuth 端点非空 */
   oauth?: UpstreamOAuthView;
   supportOpenAIChatCompletion: boolean;
@@ -635,6 +642,8 @@ export interface ModelUpdateRsp {
 export interface ModelListEndpoint {
   id: number;
   name: string;
+  /** 可见性（private / public）；public 对普通用户只读 */
+  visibility: EndpointVisibility;
 }
 
 export interface ModelListItem {

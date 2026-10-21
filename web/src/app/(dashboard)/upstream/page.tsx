@@ -342,6 +342,7 @@ export default function UpstreamPage() {
     setEditingEndpointAuthType(ep.authType);
     setEndpointForm({
       name: ep.name,
+      visibility: ep.visibility,
       openaiBaseURL: ep.openaiBaseURL,
       anthropicBaseURL: ep.anthropicBaseURL,
       apiKey: "",
@@ -368,9 +369,13 @@ export default function UpstreamPage() {
         await api.updateEndpoint(
           editingEndpointId,
           isOAuthEndpoint
-            ? { name: endpointForm.name }
+            ? {
+                name: endpointForm.name,
+                visibility: isAdmin() ? endpointForm.visibility : undefined,
+              }
             : {
                 name: endpointForm.name,
+                visibility: isAdmin() ? endpointForm.visibility : undefined,
                 openaiBaseURL: endpointForm.openaiBaseURL || undefined,
                 anthropicBaseURL: endpointForm.anthropicBaseURL || undefined,
                 apiKey: endpointForm.apiKey || undefined,
@@ -385,6 +390,7 @@ export default function UpstreamPage() {
         await api.createEndpoint({
           name: endpointForm.name,
           ownerUserID: isAdmin() && endpointForm.ownerUserID ? endpointForm.ownerUserID : undefined,
+          visibility: isAdmin() ? endpointForm.visibility : undefined,
           openaiBaseURL: endpointForm.openaiBaseURL || undefined,
           anthropicBaseURL: endpointForm.anthropicBaseURL || undefined,
           apiKey: endpointForm.apiKey,
@@ -788,6 +794,7 @@ export default function UpstreamPage() {
                       groups={groups}
                       isMobile={isMobile}
                       isDemo={isDemo()}
+                      isAdmin={isAdmin()}
                       togglePending={toggleEnabled.updatingKey !== null}
                       onToggleEnabled={(m) => toggleEnabled.apply(m, { enabled: !m.enabled })}
                       onEditEndpoint={openEditEndpoint}
@@ -826,6 +833,7 @@ export default function UpstreamPage() {
                     loading={flat.loading}
                     isMobile={isMobile}
                     isDemo={isDemo()}
+                    isAdmin={isAdmin()}
                     sortField={flat.sortField}
                     sort={flat.sort}
                     onSort={flat.toggleSort}

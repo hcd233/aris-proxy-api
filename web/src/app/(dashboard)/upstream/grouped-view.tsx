@@ -45,15 +45,20 @@ import { oauthBadgeKey, quotaPercent } from "./oauth-form";
 function EndpointDetailPopover({
   endpoint,
   isDemo,
+  readOnly = false,
   onReauthOAuth,
   onProbeOAuthQuota,
 }: {
   endpoint: UpstreamEndpointItem;
   isDemo: boolean;
+  /** 普通用户看他人公开端点：凭据维护入口锁定 */
+  readOnly?: boolean;
   onReauthOAuth: (ep: UpstreamEndpointItem) => void;
   onProbeOAuthQuota: (ep: UpstreamEndpointItem) => void;
 }) {
   const t = useT();
+  const locked = isDemo || readOnly;
+  const lockedTitle = isDemo ? t("common.demo_locked") : t("upstream.public_readonly");
 
   // copyable=false 的字段（掩码凭据、创建日期）复制无意义，渲染为纯文本
   const field = (label: string, value: string, copyable = true) => (
@@ -142,8 +147,8 @@ function EndpointDetailPopover({
                   size="sm"
                   variant="outline"
                   className="h-6 px-2 text-[11px]"
-                  disabled={isDemo}
-                  title={isDemo ? t("common.demo_locked") : undefined}
+                  disabled={locked}
+                  title={locked ? lockedTitle : undefined}
                   onClick={() => onReauthOAuth(endpoint)}
                 >
                   {t("oauth.reauth_action")}
@@ -152,8 +157,8 @@ function EndpointDetailPopover({
                   size="sm"
                   variant="outline"
                   className="h-6 px-2 text-[11px]"
-                  disabled={isDemo}
-                  title={isDemo ? t("common.demo_locked") : undefined}
+                  disabled={locked}
+                  title={locked ? lockedTitle : undefined}
                   onClick={() => onProbeOAuthQuota(endpoint)}
                 >
                   {t("oauth.probe_action")}
@@ -197,6 +202,8 @@ export interface GroupedViewProps {
   groups: UpstreamGroupItem[];
   isMobile: boolean;
   isDemo: boolean;
+  /** 普通用户视角：他人公开端点只读（demo 之外的第二种锁定来源） */
+  isAdmin: boolean;
   togglePending: boolean;
   onToggleEnabled: (m: UpstreamModelItem) => void;
   onEditEndpoint: (ep: UpstreamEndpointItem) => void;
@@ -223,6 +230,7 @@ export function GroupedView({
   groups,
   isMobile,
   isDemo,
+  isAdmin,
   togglePending,
   onToggleEnabled,
   onEditEndpoint,
@@ -253,6 +261,9 @@ export function GroupedView({
         {groups.map((group) => {
           const ep = group.endpoint;
           const open = !isCollapsed(ep.id);
+          // 公开端点对普通用户只读：写入口统一锁定。
+          const readOnly = !isAdmin && ep.visibility === "public";
+          const locked = isDemo || readOnly;
           return (
             <Collapsible
               key={ep.id}
@@ -278,6 +289,11 @@ export function GroupedView({
                     </TooltipContent>
                   </TooltipRoot>
                   <div className="flex flex-wrap items-center gap-1.5">
+                    {ep.visibility === "public" && (
+                      <Badge variant="secondary" className="px-1.5 py-0 text-[10px] font-normal">
+                        {t("upstream.public_badge")}
+                      </Badge>
+                    )}
                     {oauthBadgeKey(ep.authType) && (
                       <Badge variant="secondary" className="px-1.5 py-0 text-[10px] font-normal">
                         {t(oauthBadgeKey(ep.authType) ?? "")}
@@ -291,6 +307,7 @@ export function GroupedView({
                     <EndpointDetailPopover
                       endpoint={ep}
                       isDemo={isDemo}
+                      readOnly={readOnly}
                       onReauthOAuth={onReauthOAuth}
                       onProbeOAuthQuota={onProbeOAuthQuota}
                     />
@@ -311,15 +328,15 @@ export function GroupedView({
                   <Button
                     variant="ghost"
                     size="icon-sm"
-                    disabled={isDemo}
+                    disabled={locked}
                     onClick={() => onEditEndpoint(ep)}
                     className="text-muted-foreground hover:text-foreground"
                   >
-                    {isDemo ? <Lock className="size-3.5" /> : <Pencil className="size-3.5" />}
+                    {locked ? <Lock className="size-3.5" /> : <Pencil className="size-3.5" />}
                   </Button>
                   <DeleteButton
                     label={t("common.delete")}
-                    locked={isDemo}
+                    locked={locked}
                     disabled={deletingEndpointID === ep.id}
                     onClick={() => onDeleteEndpoint(ep)}
                   />
@@ -327,10 +344,10 @@ export function GroupedView({
                     size="sm"
                     variant="outline"
                     className="h-7 gap-1 px-2 text-xs"
-                    disabled={isDemo}
+                    disabled={locked}
                     onClick={() => onAddModel(ep)}
                   >
-                    {isDemo ? <Lock className="size-3" /> : <Plus className="size-3" />}
+                    {locked ? <Lock className="size-3" /> : <Plus className="size-3" />}
                     {t("upstream.add_model")}
                   </Button>
                 </div>
@@ -396,7 +413,7 @@ export function GroupedView({
                           <Switch
                             size="sm"
                             checked={m.enabled}
-                            disabled={togglePending || isDemo}
+                            disabled={togglePending || locked}
                             onCheckedChange={() => onToggleEnabled(m)}
                             aria-label={m.enabled ? t("models.enabled") : t("models.disabled")}
                           />
@@ -404,11 +421,11 @@ export function GroupedView({
                             <Button
                               variant="ghost"
                               size="icon-sm"
-                              disabled={isDemo}
+                              disabled={locked}
                               onClick={() => onEditModel(m, ep)}
                               className="text-muted-foreground hover:text-foreground"
                             >
-                              {isDemo ? (
+                              {locked ? (
                                 <Lock className="size-3.5" />
                               ) : (
                                 <Pencil className="size-3.5" />
@@ -417,12 +434,12 @@ export function GroupedView({
                             <Button
                               variant="ghost"
                               size="icon-sm"
-                              disabled={isDemo}
+                              disabled={locked}
                               onClick={() => onPricingModel(m)}
                               aria-label={t("upstream.pricing.title")}
                               className="text-muted-foreground hover:text-foreground"
                             >
-                              {isDemo ? (
+                              {locked ? (
                                 <Lock className="size-3.5" />
                               ) : (
                                 <Coins className="size-3.5" />
@@ -430,7 +447,7 @@ export function GroupedView({
                             </Button>
                             <DeleteButton
                               label={t("common.delete")}
-                              locked={isDemo}
+                              locked={locked}
                               disabled={deletingModelID === m.id}
                               onClick={() => onDeleteModel(m)}
                             />
@@ -468,6 +485,9 @@ export function GroupedView({
         {groups.map((group) => {
           const ep = group.endpoint;
           const open = !isCollapsed(ep.id);
+          // 公开端点对普通用户只读：写入口统一锁定。
+          const readOnly = !isAdmin && ep.visibility === "public";
+          const locked = isDemo || readOnly;
           return (
             <Fragment key={ep.id}>
               {/* 组头：白底 + 左侧主色条，与模型行区分层级 */}
@@ -497,6 +517,14 @@ export function GroupedView({
                         </TooltipContent>
                       </TooltipRoot>
                       <span className="flex shrink-0 items-center gap-1">
+                        {ep.visibility === "public" && (
+                          <Badge
+                            variant="secondary"
+                            className="px-1.5 py-0 text-[10px] font-normal"
+                          >
+                            {t("upstream.public_badge")}
+                          </Badge>
+                        )}
                         {ep.supportOpenAIChatCompletion && (
                           <ProtocolBadge
                             protocol="openai-chat-completion"
@@ -525,6 +553,7 @@ export function GroupedView({
                       <EndpointDetailPopover
                         endpoint={ep}
                         isDemo={isDemo}
+                        readOnly={readOnly}
                         onReauthOAuth={onReauthOAuth}
                         onProbeOAuthQuota={onProbeOAuthQuota}
                       />
@@ -543,16 +572,16 @@ export function GroupedView({
                       <Button
                         variant="ghost"
                         size="icon-sm"
-                        disabled={isDemo}
+                        disabled={locked}
                         onClick={() => onEditEndpoint(ep)}
                         aria-label={t("common.edit")}
                         className="text-muted-foreground hover:text-foreground"
                       >
-                        {isDemo ? <Lock className="size-3.5" /> : <Pencil className="size-3.5" />}
+                        {locked ? <Lock className="size-3.5" /> : <Pencil className="size-3.5" />}
                       </Button>
                       <DeleteButton
                         label={t("common.delete")}
-                        locked={isDemo}
+                        locked={locked}
                         disabled={deletingEndpointID === ep.id}
                         onClick={() => onDeleteEndpoint(ep)}
                       />
@@ -560,10 +589,10 @@ export function GroupedView({
                         size="sm"
                         variant="outline"
                         className="h-7 gap-1 px-2 text-xs"
-                        disabled={isDemo}
+                        disabled={locked}
                         onClick={() => onAddModel(ep)}
                       >
-                        {isDemo ? <Lock className="size-3" /> : <Plus className="size-3" />}
+                        {locked ? <Lock className="size-3" /> : <Plus className="size-3" />}
                         {t("upstream.add_model")}
                       </Button>
                     </span>
@@ -611,7 +640,7 @@ export function GroupedView({
                       <Switch
                         size="sm"
                         checked={m.enabled}
-                        disabled={togglePending || isDemo}
+                        disabled={togglePending || locked}
                         onCheckedChange={() => onToggleEnabled(m)}
                         aria-label={m.enabled ? t("models.enabled") : t("models.disabled")}
                       />
@@ -621,6 +650,7 @@ export function GroupedView({
                     </TableCell>
                     <ModelActionsCell
                       isDemo={isDemo}
+                      readOnly={readOnly}
                       deleting={deletingModelID === m.id}
                       onEdit={() => onEditModel(m, ep)}
                       onPricing={() => onPricingModel(m)}

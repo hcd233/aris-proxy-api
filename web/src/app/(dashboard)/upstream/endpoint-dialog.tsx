@@ -86,6 +86,10 @@ export function EndpointDialog({
     { value: "oauth_anthropic", label: t("oauth.badge_claude") },
     { value: "oauth_openai", label: t("oauth.badge_codex") },
   ];
+  const visibilityItems: { value: "private" | "public"; label: string }[] = [
+    { value: "private", label: t("endpoints.visibility_private") },
+    { value: "public", label: t("endpoints.visibility_public") },
+  ];
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -115,6 +119,8 @@ export function EndpointDialog({
                   setForm((f) => ({
                     ...f,
                     ownerUserID: value ? Number(value) : undefined,
+                    // 代建给他人的端点只能是私有：避免出现「归属他人却公开」的端点。
+                    visibility: value ? "private" : f.visibility,
                   }))
                 }
               >
@@ -130,6 +136,31 @@ export function EndpointDialog({
                 </SelectContent>
               </Select>
               <FieldDescription>{t("upstream.owner_default")}</FieldDescription>
+            </Field>
+          )}
+          {isAdmin && (
+            <Field>
+              <FieldLabel htmlFor="ep-visibility">{t("endpoints.visibility")}</FieldLabel>
+              <Select
+                value={form.visibility}
+                items={visibilityItems}
+                disabled={Boolean(form.ownerUserID)}
+                onValueChange={(v) =>
+                  setForm((f) => ({ ...f, visibility: v as "private" | "public" }))
+                }
+              >
+                <SelectTrigger id="ep-visibility">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {visibilityItems.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FieldDescription>{t("endpoints.visibility_desc")}</FieldDescription>
             </Field>
           )}
           {!editingId && (
