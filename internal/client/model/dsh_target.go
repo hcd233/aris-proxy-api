@@ -10,6 +10,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"gopkg.in/yaml.v3"
 
@@ -194,8 +196,8 @@ func mergeDSHProvider(entry *dshEntry, host string, models []TargetModel) {
 	entry.Config[constant.ClientModelKeyProviders] = providers
 }
 
-// mergeDSHModels 以服务端列表为准重排模型：同名条目保留手写字段（name、reasoningEfforts 等），
-// 只刷新服务端下发的规格；未选中的条目被移除。
+// mergeDSHModels 以服务端列表为准重排模型：同名条目保留手写字段（reasoningEfforts 等），
+// 只刷新服务端下发的规格；name 缺失或仍是上次写下的 alias 时按展示名刷新；未选中的条目被移除。
 func mergeDSHModels(existing any, models []TargetModel) []any {
 	previous := map[string]map[string]any{}
 	rawModels, _ := existing.([]any)
@@ -215,8 +217,8 @@ func mergeDSHModels(existing any, models []TargetModel) []any {
 			spec = map[string]any{}
 		}
 		spec[constant.ClientModelKeyID] = m.Alias
-		if _, ok := spec[constant.ClientModelKeyName].(string); !ok {
-			spec[constant.ClientModelKeyName] = m.Alias
+		if specName, _ := spec[constant.ClientModelKeyName].(string); specName == "" || specName == m.Alias {
+			spec[constant.ClientModelKeyName] = dshModelDisplayName(m.Alias)
 		}
 		// 长度缺失时回落默认值：0 写进 DSH 会让 provider 拒绝加载整份配置
 		contextLen := m.ContextLength
@@ -233,6 +235,29 @@ func mergeDSHModels(existing any, models []TargetModel) []any {
 		merged = append(merged, spec)
 	}
 	return merged
+}
+
+// dshModelDisplayName 由 alias 派生对外展示名：按 `-` 分词逐词首字母大写，
+// 品牌惯例写法（deepseek → DeepSeek）查表覆盖。
+func dshModelDisplayName(alias string) string {
+	words := strings.Split(alias, constant.ClientModelDSHNameWordSep)
+	for i, word := range words {
+		if brand, isBrand := constant.ClientModelDisplayNameBrands[strings.ToLower(word)]; isBrand {
+			words[i] = brand
+			continue
+		}
+		words[i] = capitalizeFirstLetter(word)
+	}
+	return strings.Join(words, constant.ClientModelDSHNameWordSep)
+}
+
+// capitalizeFirstLetter 首字符大写、其余原样；空词与多字节首字符都安全
+func capitalizeFirstLetter(word string) string {
+	first, size := utf8.DecodeRuneInString(word)
+	if size == 0 {
+		return word
+	}
+	return string(unicode.ToUpper(first)) + word[size:]
 }
 
 // dshInputModalities 与 Pi 同一套 schema：只保留 text/image，其余模态丢弃

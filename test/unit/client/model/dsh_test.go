@@ -341,3 +341,70 @@ func TestDSHWrite_FallsBackToDefaultLimits(t *testing.T) {
 		t.Fatalf("maxTokens fallback = %v, want 16384", got)
 	}
 }
+
+func TestDSHWrite_TitleCasesModelDisplayName(t *testing.T) {
+	t.Parallel()
+	home := t.TempDir()
+	patchPath := filepath.Join(home, ".dsh", "profiles", "desktop", "cordis.patch.yml")
+	if err := os.MkdirAll(filepath.Dir(patchPath), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	models := []model.TargetModel{
+		{Alias: "deepseek-v4.1-flash", Capabilities: []string{"text"}},
+		{Alias: "mimo-v2.6-pro", Capabilities: []string{"text"}},
+		{Alias: "gpt-4o", Capabilities: []string{"text"}},
+		{Alias: "glm-5.3", Capabilities: []string{"text"}},
+	}
+	if err := (model.DSHTarget{}).Write(patchPath, "https://aris.example.com", "sk-test", models); err != nil {
+		t.Fatal(err)
+	}
+
+	provider := dshProvider(t, dshEntries(t, readFileString(t, patchPath)), "aris")
+	cases := map[string]string{
+		"deepseek-v4.1-flash": "DeepSeek-V4.1-Flash",
+		"mimo-v2.6-pro":       "MiMo-V2.6-Pro",
+		"gpt-4o":              "GPT-4o",
+		"glm-5.3":             "GLM-5.3",
+	}
+	for alias, want := range cases {
+		spec := dshModelByID(t, provider, alias)
+		if spec == nil {
+			t.Fatalf("model %q missing: %v", alias, provider["models"])
+		}
+		if got := spec["name"]; got != want {
+			t.Fatalf("%s name = %v, want %v", alias, got, want)
+		}
+	}
+}
+
+func TestDSHWrite_RefreshesNameCopiedFromAlias(t *testing.T) {
+	t.Parallel()
+	home := t.TempDir()
+	patch := `- id: llm-pi-ai
+  name: "@deepseek-ai/dsh-llm-pi-ai"
+  config:
+    providers:
+      aris:
+        models:
+          - id: mimo-v2.6-pro
+            name: mimo-v2.6-pro
+          - id: custom-model
+            name: My Custom Name
+`
+	patchPath := writeTempFile(t, filepath.Join(home, ".dsh", "profiles", "desktop"), "cordis.patch.yml", patch)
+	models := []model.TargetModel{
+		{Alias: "mimo-v2.6-pro", Capabilities: []string{"text"}},
+		{Alias: "custom-model", Capabilities: []string{"text"}},
+	}
+	if err := (model.DSHTarget{}).Write(patchPath, "https://aris.example.com", "sk-test", models); err != nil {
+		t.Fatal(err)
+	}
+
+	provider := dshProvider(t, dshEntries(t, readFileString(t, patchPath)), "aris")
+	if got := dshModelByID(t, provider, "mimo-v2.6-pro")["name"]; got != "MiMo-V2.6-Pro" {
+		t.Fatalf("name copied from alias must be refreshed to its display form, got %v", got)
+	}
+	if got := dshModelByID(t, provider, "custom-model")["name"]; got != "My Custom Name" {
+		t.Fatalf("hand-written name must survive re-export, got %v", got)
+	}
+}

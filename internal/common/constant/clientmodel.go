@@ -108,7 +108,18 @@ const (
 	ClientModelYAMLKeySep = ": "
 	// ClientModelDSHCredentialsHeader 凭证文件缺失时的最小骨架
 	ClientModelDSHCredentialsHeader = "version: 1\nrecords: {}\n"
+	// ClientModelDSHNameWordSep 模型展示名的分词分隔符（alias 按 `-` 分词后逐词首字母大写）
+	ClientModelDSHNameWordSep = "-"
 )
+
+// ClientModelDisplayNameBrands alias 分词 → 品牌惯例写法：只收录首字母大写无法还原的品牌
+// （如 deepseek → DeepSeek、mimo → MiMo、gpt → GPT、glm → GLM），其余分词按首字母大写处理
+var ClientModelDisplayNameBrands = map[string]string{
+	"deepseek": "DeepSeek",
+	"glm":      "GLM",
+	"gpt":      "GPT",
+	"mimo":     "MiMo",
+}
 
 // ClientModelDisplayNames harness 展示名
 const (
