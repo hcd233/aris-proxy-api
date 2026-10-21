@@ -12,6 +12,7 @@ import (
 // OwnerUserID 归属用户（handler 层计算：普通用户=自身，admin 可指定）。
 type CreateEndpointCommand struct {
 	OwnerUserID                 uint
+	Visibility                  enum.EndpointVisibility
 	Name                        string
 	OpenaiBaseURL               string
 	AnthropicBaseURL            string
@@ -36,8 +37,14 @@ type CreateEndpointHandler interface {
 //
 // ScopeUserID 多租户隔离三态：nil（admin）不过滤；非 nil（含共享池 0）精确匹配 user_id。
 type UpdateEndpointCommand struct {
-	ScopeUserID                 *uint
-	EndpointID                  uint
+	ScopeUserID *uint
+	EndpointID  uint
+	// IsAdmin 降级保护：非 admin 不得修改已是 public 的端点。
+	IsAdmin bool
+	// OperatorUserID 操作者本人：可见性只能由端点归属者修改（admin 代管他人端点时也不例外）。
+	OperatorUserID uint
+	// Visibility 为 nil 表示不改。
+	Visibility                  *enum.EndpointVisibility
 	Name                        *string
 	OpenaiBaseURL               *string
 	AnthropicBaseURL            *string
@@ -59,6 +66,8 @@ type UpdateEndpointHandler interface {
 type DeleteEndpointCommand struct {
 	ScopeUserID *uint
 	EndpointID  uint
+	// IsAdmin 降级保护：非 admin 不得删除已是 public 的端点。
+	IsAdmin bool
 }
 
 // DeleteEndpointHandler 删除命令处理器

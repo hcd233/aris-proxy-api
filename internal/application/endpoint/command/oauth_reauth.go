@@ -45,6 +45,10 @@ func (h *oauthReauthHandler) Handle(ctx context.Context, cmd port.ReauthOAuthCom
 	if ep == nil {
 		return ierr.New(ierr.ErrDataNotExists, "endpoint not found")
 	}
+	// 降级保护：只有 admin 能重新授权公开端点（会改写所有用户共用的上游凭据）。
+	if ep.Visibility().IsPublic() && !cmd.IsAdmin {
+		return ierr.New(ierr.ErrUnauthorized, "only admin can reauthorize a public endpoint")
+	}
 	provider, ok := providerOfAuthType(ep.AuthType())
 	if !ok {
 		return ierr.New(ierr.ErrValidation, "endpoint is not an oauth subscription endpoint")

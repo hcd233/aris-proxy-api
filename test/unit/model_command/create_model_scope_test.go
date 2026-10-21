@@ -65,13 +65,21 @@ type recordingModelRepo struct {
 	gotEndpoint uint
 	gotPricing  vo.Pricing
 	gotModel    *aggregate.Model
+	byID        map[uint]*aggregate.Model
 }
 
 func (r *recordingModelRepo) FindByAlias(context.Context, vo.EndpointAlias, *uint) ([]*aggregate.Model, error) {
 	return nil, nil
 }
-func (r *recordingModelRepo) FindByID(context.Context, uint, *uint) (*aggregate.Model, error) {
-	return nil, nil
+func (r *recordingModelRepo) FindByID(_ context.Context, id uint, scopeUserID *uint) (*aggregate.Model, error) {
+	m := r.byID[id]
+	if m == nil {
+		return nil, nil
+	}
+	if scopeUserID != nil && m.UserID() != *scopeUserID {
+		return nil, nil
+	}
+	return m, nil
 }
 func (r *recordingModelRepo) Create(_ context.Context, m *aggregate.Model, ownerUserID uint) (uint, error) {
 	r.gotOwner = ownerUserID
@@ -97,7 +105,7 @@ func (r *recordingModelRepo) PaginateWithFilter(context.Context, model.CommonPar
 	return nil, nil, nil
 }
 
-func (r *scopedEndpointRepo) FindIDsByScope(context.Context, *uint) ([]uint, error) {
+func (r *scopedEndpointRepo) FindIDsByScope(context.Context, *uint, bool) ([]uint, error) {
 	return nil, nil
 }
 
@@ -211,4 +219,9 @@ func TestCreateModel_PersistsPricing(t *testing.T) {
 	if !repo.gotPricing.IsPriced() || repo.gotPricing.Rules()[0].InputMicro != 1_000_000 {
 		t.Fatalf("pricing not persisted: %+v", repo.gotPricing.Rules())
 	}
+}
+
+// FindPublicByAlias 公开池 fake：本文件用例不涉及。
+func (r *recordingModelRepo) FindPublicByAlias(context.Context, vo.EndpointAlias) ([]*aggregate.Model, error) {
+	return nil, nil
 }

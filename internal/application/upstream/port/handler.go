@@ -26,6 +26,7 @@ type UpstreamEndpointView struct {
 	AnthropicBaseURL            string
 	MaskedAPIKey                string
 	AuthType                    string             // api_key / oauth_anthropic / oauth_openai
+	Visibility                  string             // private / public
 	OAuth                       *UpstreamOAuthView // 仅 OAuth 端点非 nil（凭据字段永不下发）
 	SupportOpenAIChatCompletion bool
 	SupportOpenAIResponse       bool
@@ -97,9 +98,10 @@ type UpstreamGroupView struct {
 // （0 命中共享池数据）。CommonParam.Page/PageSize 的分页对象是 endpoint 组（每页 N 个端点）。
 type ListUpstreamQuery struct {
 	model.CommonParam
-	IsDemo      bool
-	ScopeUserID *uint
-	Username    string // 仅 admin 视角生效：按归属用户名过滤
+	IsDemo        bool
+	ScopeUserID   *uint
+	Username      string // 仅 admin 视角生效：按归属用户名过滤
+	IncludePublic bool   // 普通用户视角：并集可见性为 public 的端点
 }
 
 // ListUpstreamHandler 查询处理器

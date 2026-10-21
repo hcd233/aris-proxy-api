@@ -66,10 +66,23 @@ func (h *endpointHandler) HandleCreateEndpoint(ctx context.Context, req *dto.Cre
 	rsp := &dto.EmptyRsp{}
 	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
 
-	isAdmin := util.CtxValuePermission(ctx) == enum.PermissionAdmin
-	ownerUserID := lo.Ternary(isAdmin && req.Body.OwnerUserID != nil, lo.FromPtr(req.Body.OwnerUserID), userID)
+	perm := util.CtxValuePermission(ctx)
+	isAdmin := perm == enum.PermissionAdmin
+	visibility := enum.EndpointVisibilityPrivate
+	if req.Body.Visibility != nil {
+		if !isAdmin {
+			return nil, apiutil.NewHumaBizError(ctx, ierr.ErrUnauthorized, ierr.ErrUnauthorized.BizError())
+		}
+		visibility = req.Body.Visibility.Normalize()
+		if !visibility.IsValid() {
+			return nil, apiutil.NewHumaBizError(ctx, ierr.ErrValidation, ierr.ErrValidation.BizError())
+		}
+	}
+	// 公开端点归属强制为操作者本人：不允许代建公开端点给普通用户。
+	ownerUserID := lo.Ternary(isAdmin && req.Body.OwnerUserID != nil && !visibility.IsPublic(), lo.FromPtr(req.Body.OwnerUserID), userID)
 	_, err := h.create.Handle(ctx, port.CreateEndpointCommand{
 		OwnerUserID:                 ownerUserID,
+		Visibility:                  visibility,
 		Name:                        req.Body.Name,
 		OpenaiBaseURL:               lo.FromPtr(req.Body.OpenaiBaseURL),
 		AnthropicBaseURL:            lo.FromPtr(req.Body.AnthropicBaseURL),
@@ -91,7 +104,17 @@ func (h *endpointHandler) HandleCreateEndpoint(ctx context.Context, req *dto.Cre
 
 func (h *endpointHandler) HandleUpdateEndpoint(ctx context.Context, req *dto.UpdateEndpointReq) (*dto.HTTPResponse[*dto.EmptyRsp], error) {
 	rsp := &dto.EmptyRsp{}
-	scope, err := scopeFor(ctx, util.CtxValuePermission(ctx))
+	perm := util.CtxValuePermission(ctx)
+	isAdmin := perm == enum.PermissionAdmin
+	if req.Body.Visibility != nil {
+		if !isAdmin {
+			return nil, apiutil.NewHumaBizError(ctx, ierr.ErrUnauthorized, ierr.ErrUnauthorized.BizError())
+		}
+		if !req.Body.Visibility.IsValid() {
+			return nil, apiutil.NewHumaBizError(ctx, ierr.ErrValidation, ierr.ErrValidation.BizError())
+		}
+	}
+	scope, err := scopeFor(ctx, perm)
 	if err != nil {
 		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrUnauthorized.BizError())
 	}
@@ -99,6 +122,9 @@ func (h *endpointHandler) HandleUpdateEndpoint(ctx context.Context, req *dto.Upd
 	err = h.update.Handle(ctx, port.UpdateEndpointCommand{
 		ScopeUserID:                 scope,
 		EndpointID:                  req.ID,
+		IsAdmin:                     isAdmin,
+		OperatorUserID:              util.CtxValueUint(ctx, constant.CtxKeyUserID),
+		Visibility:                  req.Body.Visibility,
 		Name:                        req.Body.Name,
 		OpenaiBaseURL:               req.Body.OpenaiBaseURL,
 		AnthropicBaseURL:            req.Body.AnthropicBaseURL,
@@ -125,6 +151,7 @@ func (h *endpointHandler) HandleDeleteEndpoint(ctx context.Context, req *dto.Del
 	err = h.delete.Handle(ctx, port.DeleteEndpointCommand{
 		ScopeUserID: scope,
 		EndpointID:  req.ID,
+		IsAdmin:     util.CtxValuePermission(ctx) == enum.PermissionAdmin,
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[EndpointHandler] Delete endpoint failed", zap.Error(err))
@@ -186,6 +213,7 @@ func (h *endpointHandler) HandleReauthOAuth(ctx context.Context, req *dto.Reauth
 		OperatorUserID: util.CtxValueUint(ctx, constant.CtxKeyUserID),
 		ScopeUserID:    scope,
 		EndpointID:     req.ID,
+		IsAdmin:        util.CtxValuePermission(ctx) == enum.PermissionAdmin,
 		CodeInput:      req.Body.Code,
 		State:          lo.FromPtr(req.Body.State),
 	})

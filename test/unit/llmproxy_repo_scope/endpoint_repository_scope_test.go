@@ -171,14 +171,14 @@ func TestEndpointRepo_UserIsolation(t *testing.T) {
 	}
 
 	// FindIDsByScope：scope=nil 全量；scope=0 只返回共享池
-	allIDs, err := repo.FindIDsByScope(ctx, nil)
+	allIDs, err := repo.FindIDsByScope(ctx, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(allIDs) != 3 {
 		t.Fatalf("admin FindIDsByScope = %d ids, want 3", len(allIDs))
 	}
-	sharedIDs, err := repo.FindIDsByScope(ctx, lo.ToPtr(uint(0)))
+	sharedIDs, err := repo.FindIDsByScope(ctx, lo.ToPtr(uint(0)), false)
 	if err != nil {
 		t.Fatal(err)
 	}

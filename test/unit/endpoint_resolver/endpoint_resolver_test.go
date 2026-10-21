@@ -149,7 +149,7 @@ func (s *stubEndpointRepo) List(_ context.Context) ([]*aggregate.Endpoint, error
 	return nil, nil
 }
 
-func (s *stubEndpointRepo) FindIDsByScope(context.Context, *uint) ([]uint, error) {
+func (s *stubEndpointRepo) FindIDsByScope(context.Context, *uint, bool) ([]uint, error) {
 	return nil, nil
 }
 
@@ -209,7 +209,7 @@ type endpointByIDRepo struct {
 	endpoints map[uint]*aggregate.Endpoint
 }
 
-func (s *endpointByIDRepo) FindIDsByScope(context.Context, *uint) ([]uint, error) {
+func (s *endpointByIDRepo) FindIDsByScope(context.Context, *uint, bool) ([]uint, error) {
 	return nil, nil
 }
 
@@ -484,4 +484,21 @@ func TestEndpointResolver_SharedPoolFallback(t *testing.T) {
 	if !errors.Is(err, ierr.ErrDataNotExists) {
 		t.Fatalf("fallback disabled must be ErrDataNotExists, got %v", err)
 	}
+}
+
+// FindPublicByAlias 公开池 fake：本文件用例不涉及。
+func (s *stubModelRepo) FindPublicByAlias(context.Context, vo.EndpointAlias) ([]*aggregate.Model, error) {
+	return nil, nil
+}
+
+func (s *staticModelRepo) FindPublicByAlias(context.Context, vo.EndpointAlias) ([]*aggregate.Model, error) {
+	return nil, nil
+}
+
+func (r *ownedModelRepo) FindPublicByAlias(context.Context, vo.EndpointAlias) ([]*aggregate.Model, error) {
+	return nil, nil
+}
+
+func (r *sharedPoolModelRepo) FindPublicByAlias(context.Context, vo.EndpointAlias) ([]*aggregate.Model, error) {
+	return nil, nil
 }

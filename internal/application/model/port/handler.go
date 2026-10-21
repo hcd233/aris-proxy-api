@@ -14,7 +14,9 @@ import (
 //
 // ModelID 为业务模型 ID（缺省 nil 时默认 = alias，与领域层 CreateModel 行为一致）。
 type CreateModelCommand struct {
-	ScopeUserID     *uint
+	ScopeUserID *uint
+	// IsAdmin 降级保护：非 admin 不得向公开端点下写入模型。
+	IsAdmin         bool
 	Alias           string
 	ModelID         *string
 	UpstreamModel   string
@@ -41,7 +43,9 @@ type CreateModelHandler interface {
 //
 // ID 为 Model 数据库主键（路由 id），ModelID 为业务模型 ID（默认=alias，可更新）。
 type UpdateModelCommand struct {
-	ScopeUserID     *uint
+	ScopeUserID *uint
+	// IsAdmin 降级保护：非 admin 不得修改公开端点下的模型。
+	IsAdmin         bool
 	ID              uint
 	Alias           *string
 	UpstreamModel   *string
@@ -69,6 +73,8 @@ type UpdateModelHandler interface {
 type DeleteModelCommand struct {
 	ScopeUserID *uint
 	ModelID     uint
+	// IsAdmin 降级保护：非 admin 不得删除公开端点下的模型。
+	IsAdmin bool
 }
 
 // DeleteModelHandler 删除命令处理器

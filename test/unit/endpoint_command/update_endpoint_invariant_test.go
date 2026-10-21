@@ -47,7 +47,9 @@ func (s *endpointRepoStub) Paginate(context.Context, model.CommonParam, *uint) (
 	return nil, nil, nil
 }
 
-func (s *endpointRepoStub) FindIDsByScope(context.Context, *uint) ([]uint, error) { return nil, nil }
+func (s *endpointRepoStub) FindIDsByScope(context.Context, *uint, bool) ([]uint, error) {
+	return nil, nil
+}
 
 var _ llmproxy.EndpointRepository = (*endpointRepoStub)(nil)
 

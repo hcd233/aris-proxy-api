@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"slices"
 
 	"github.com/samber/lo"
 	"github.com/samber/mo"
@@ -154,6 +155,7 @@ func toEndpointAggregate(m *dbmodel.Endpoint) *aggregate.Endpoint {
 		enum.EndpointAuthType(m.AuthType),
 	)
 	ep.SetUserID(m.UserID)
+	ep.RestoreVisibility(enum.EndpointVisibility(m.Visibility))
 	ep.SetTimestamps(m.CreatedAt, m.UpdatedAt)
 	return ep
 }
@@ -170,6 +172,7 @@ func toEndpointModel(ep *aggregate.Endpoint) *dbmodel.Endpoint {
 		SupportAnthropicMessage:     ep.SupportAnthropicMessage(),
 		SupportOpenAIDecision:       ep.SupportOpenAIDecision(),
 		AuthType:                    string(ep.AuthType()),
+		Visibility:                  string(ep.Visibility()),
 	}
 }
 
@@ -197,6 +200,7 @@ func (r *endpointRepository) Update(ctx context.Context, ep *aggregate.Endpoint)
 		constant.FieldEndpointSupportOpenAIResponse:       ep.SupportOpenAIResponse(),
 		constant.FieldEndpointSupportAnthropicMessage:     ep.SupportAnthropicMessage(),
 		constant.FieldEndpointSupportOpenAIDecision:       ep.SupportOpenAIDecision(),
+		constant.FieldEndpointVisibility:                  string(ep.Visibility()),
 	}
 	if err := db.Model(&dbmodel.Endpoint{}).Where(constant.WhereIDEquals, ep.AggregateID()).Updates(updates).Error; err != nil {
 		return ierr.Wrap(ierr.ErrDBUpdate, err, "update endpoint")
@@ -279,11 +283,17 @@ func (r *endpointRepository) Paginate(ctx context.Context, param model.CommonPar
 // FindIDsByScope 按租户范围返回全部可见 endpoint ID 列表（id 升序）
 //
 // scopeUserID 为 nil（admin 视角）不过滤；非 nil 精确匹配 user_id（含 0=共享池）。
-func (r *endpointRepository) FindIDsByScope(ctx context.Context, scopeUserID *uint) ([]uint, error) {
+// includePublic 为 true 时并集 visibility=public 的端点（普通用户视角）。
+func (r *endpointRepository) FindIDsByScope(ctx context.Context, scopeUserID *uint, includePublic bool) ([]uint, error) {
 	db := r.db.WithContext(ctx)
 	q := db.Model(&dbmodel.Endpoint{}).Where(constant.DBConditionDeletedAtZero)
 	if scopeUserID != nil {
-		q = q.Where(constant.WhereUserIDEquals, *scopeUserID)
+		if includePublic {
+			// 必须用分组形式：一次 Where 里写 "a = ? OR b = ?" 会与后续条件拼错优先级。
+			q = q.Where(db.Where(constant.WhereUserIDEquals, *scopeUserID).Or(constant.WhereEndpointVisibilityEquals, enum.EndpointVisibilityPublic))
+		} else {
+			q = q.Where(constant.WhereUserIDEquals, *scopeUserID)
+		}
 	}
 	var ids []uint
 	if err := q.Order(constant.FieldID).Pluck(constant.FieldID, &ids).Error; err != nil {
@@ -323,7 +333,7 @@ func NewCachedEndpointReadRepository(db *gorm.DB, readCache *cache.ReadCache) ll
 	}
 }
 
-// ListAliases 查询指定用户的不重复模型别名（仅已启用的模型）
+// ListAliases 查询指定用户可见的不重复模型别名（自有 + 公开端点，仅已启用）
 //
 // userID 必传真实用户 ID；0（认证缺失）防御性返回空列表而非全平台别名——
 // struct 零值条件下 GORM 会忽略 user_id 过滤，守卫必须有。
@@ -345,10 +355,35 @@ func (r *endpointReadRepository) ListAliases(ctx context.Context, userID uint) (
 	return cached.OrEmpty(), nil
 }
 
+// visibleModelsDB 返回「自有 + 公开端点」的 models 查询。
+//
+// 自有优序在 Go 侧用 preferOwnModels 完成，SQL 不排：gorm 的 Order 只接受
+// OrderByColumn/string，clause.OrderBy{Expression} 会被静默忽略；且 BatchGet
+// 走 FindInBatches，最终只有主键序。
+func (r *endpointReadRepository) visibleModelsDB(ctx context.Context, userID uint) *gorm.DB {
+	db := r.db.WithContext(ctx)
+	return db.Where(db.Where(constant.WhereUserIDEquals, userID).Or(constant.WhereModelInPublicEndpoint, enum.EndpointVisibilityPublic))
+}
+
+// preferOwnModels 把归属 userID 的行稳定排到前面：同 alias 去重时保留自有行，
+// 让导出的规格/定价与解析结果（自有优先）一致。
+func preferOwnModels(models []*dbmodel.Model, userID uint) {
+	slices.SortStableFunc(models, func(a, b *dbmodel.Model) int {
+		switch {
+		case a.UserID == userID && b.UserID != userID:
+			return -1
+		case b.UserID == userID && a.UserID != userID:
+			return 1
+		default:
+			return 0
+		}
+	})
+}
+
 // loadAliases 回源查询模型别名；空结果返回 mo.None（由缓存层写空值标记防穿透）
 func (r *endpointReadRepository) loadAliases(ctx context.Context, userID uint) (mo.Option[[]*llmproxy.ModelAliasProjection], error) {
-	db := r.db.WithContext(ctx)
-	models, err := r.modelDAO.BatchGet(db, &dbmodel.Model{Enabled: true, UserID: userID}, constant.ModelRepoFieldsAlias)
+	db := r.visibleModelsDB(ctx, userID)
+	models, err := r.modelDAO.BatchGet(db, &dbmodel.Model{Enabled: true}, constant.ModelRepoFieldsAlias)
 	if err != nil {
 		return mo.None[[]*llmproxy.ModelAliasProjection](), ierr.Wrap(ierr.ErrDBQuery, err, "list model aliases")
 	}
@@ -381,11 +416,12 @@ func (r *endpointReadRepository) ListEnabledModelDetails(ctx context.Context, us
 
 // loadModelDetails 回源查询启用中模型详情；空结果返回 mo.None（写空值标记防穿透）
 func (r *endpointReadRepository) loadModelDetails(ctx context.Context, userID uint) (mo.Option[[]*llmproxy.ModelDetailProjection], error) {
-	db := r.db.WithContext(ctx)
-	models, err := r.modelDAO.BatchGet(db, &dbmodel.Model{Enabled: true, UserID: userID}, constant.ModelRepoFieldsFull)
+	db := r.visibleModelsDB(ctx, userID)
+	models, err := r.modelDAO.BatchGet(db, &dbmodel.Model{Enabled: true}, constant.ModelRepoFieldsFull)
 	if err != nil {
 		return mo.None[[]*llmproxy.ModelDetailProjection](), ierr.Wrap(ierr.ErrDBQuery, err, "list enabled model details")
 	}
+	preferOwnModels(models, userID)
 	uniq := lo.UniqBy(models, func(m *dbmodel.Model) string { return m.Alias })
 	out := lo.Map(uniq, func(m *dbmodel.Model, _ int) *llmproxy.ModelDetailProjection {
 		return &llmproxy.ModelDetailProjection{
@@ -409,8 +445,8 @@ func (r *endpointReadRepository) FindEndpointByAlias(ctx context.Context, userID
 	if userID == 0 {
 		return nil, nil, nil
 	}
-	db := r.db.WithContext(ctx)
-	models, err := r.modelDAO.BatchGet(db, &dbmodel.Model{Alias: alias, Enabled: true, UserID: userID}, constant.ModelRepoFieldsFull)
+	db := r.visibleModelsDB(ctx, userID)
+	models, err := r.modelDAO.BatchGet(db, &dbmodel.Model{Alias: alias, Enabled: true}, constant.ModelRepoFieldsFull)
 	if err != nil {
 		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "find models by alias")
 	}
@@ -419,7 +455,9 @@ func (r *endpointReadRepository) FindEndpointByAlias(ctx context.Context, userID
 	}
 	for _, idx := range rand.Perm(len(models)) {
 		m := models[idx]
-		ep, getErr := r.endpointDAO.Get(db, &dbmodel.Endpoint{ID: m.EndpointID}, constant.EndpointRepoFieldsFull)
+		// 端点查询必须用全新 session：db 已带上 models 表的并集条件（endpoint_id 列），
+		// 沿用到 endpoints 表会拼出非法 SQL。
+		ep, getErr := r.endpointDAO.Get(r.db.WithContext(ctx), &dbmodel.Endpoint{ID: m.EndpointID}, constant.EndpointRepoFieldsFull)
 		if getErr != nil {
 			if errors.Is(getErr, gorm.ErrRecordNotFound) {
 				continue

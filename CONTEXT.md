@@ -35,11 +35,19 @@ _Avoid_: jwt token, session token
 ## LLM Proxy（LLM 代理）
 
 **Endpoint（上游端点）**:
-一个上游 LLM 服务连接配置，包含名称、OpenAI 和 Anthropic 两个协议的 Base URL、共享 API Key，以及各接口（OpenAI Chat Completion / OpenAI Response / Anthropic Message / OpenAI Decision）的支持标记。归属某个 User（多租户隔离），通过 `EndpointResolver` 按模型别名在当前用户的配置范围内解析出目标端点。管理后台对所有 user 级用户开放自管；admin 可查看全量并按用户名过滤、代建。
+一个上游 LLM 服务连接配置，包含名称、OpenAI 和 Anthropic 两个协议的 Base URL、共享 API Key，以及各接口（OpenAI Chat Completion / OpenAI Response / Anthropic Message / OpenAI Decision）的支持标记。归属某个 User（多租户隔离），通过 `EndpointResolver` 按模型别名在当前用户的配置范围内解析出目标端点。管理后台对所有 user 级用户开放自管；admin 可查看全量并按用户名过滤、代建。每个端点带 `visibility`（见 EndpointVisibility）：private 仅归属者与 admin 可见，public 对全体登录用户只读可见、可调用。
 _Avoid_: upstream, provider, backend
 
+**EndpointVisibility（端点可见性）**:
+Endpoint 上的可见性属性：`private`（默认，仅归属者与 admin 可见）/ `public`（全体登录用户可见只读、可调用）。只有 admin 能创建或把端点改成 `public`，且公开端点归属固定为操作者本人（不代建）；普通用户自建端点恒为 private。普通用户对公开端点与其模型的写操作由租户 scope 天然拒绝（表现为 not found）；admin 被降级为普通用户后同样不能维护自己名下的公开端点（命令层 `IsAdmin` 守卫）。
+_Avoid_: is_public, shared flag
+
+**PublicEndpoint（公开端点）**:
+`visibility = public` 的 Endpoint，其名下 Model 随之公开。普通用户调用公开模型仍消耗自己的 API Key 配额，但上游鉴权使用端点配置的共享密钥，因此消耗 admin 的上游额度/订阅。解析优先级：自有租户命中即完全用自己，未命中才回退公开池（公开池无条件生效，不受 `gateway.shared_pool_fallback` 控制）；存量 `user_id = 0` 共享池是另一套过渡机制，只在公开池也未命中时兜底。
+_Avoid_: shared pool, public pool
+
 **Model（模型别名）**:
-一条将对外别名（`alias`）映射到上游真实模型名的记录，归属于某个 Endpoint，其用户归属继承该 Endpoint（model.user_id = endpoint.user_id）。唯一性按 `(user_id, alias, endpoint_id)` 判定：不同用户可各自配置同名别名互不干扰。OpenAI / Anthropic `/v1/models` 只返回当前 API Key 所属用户启用的别名；转发解析同样只在用户自己的配置范围内进行。
+一条将对外别名（`alias`）映射到上游真实模型名的记录，归属于某个 Endpoint，其用户归属继承该 Endpoint（model.user_id = endpoint.user_id）。唯一性按 `(user_id, alias, endpoint_id)` 判定：不同用户可各自配置同名别名互不干扰。OpenAI / Anthropic `/v1/models` 只返回当前 API Key 所属用户启用的别名；转发解析同样只在用户自己的配置范围内进行。模型可见性继承所属端点：公开端点下的模型对所有登录用户可见（`/v1/models`、CLI 导出、Web 列表同口径），普通用户只读。
 `Pricing`（见 ModelPricing）随聚合装配，未配置定价的模型不产生估算费用。
 _Avoid_: model mapping, model route, alias record
 
@@ -64,7 +72,7 @@ OpenAI `POST /v1/decisions`。对同一 `input`（文本，或仅含文本+图�
 _Avoid_: decision completion, classify api
 
 **EndpointResolver（端点解析器）**:
-按模型别名解析出候选 Endpoint 和 Model 的领域服务。输入 `alias`，查 `model` 表收集所有关联的 `endpoint_id`，过滤 enabled 与协议能力后按 **EndpointScheduling** 排序返回有序候选（`ResolveCandidates`）；`ResolveCandidatesWithAffinity` 额外按 **EndpointAffinity** 把亲和命中的候选提到最前。转发链路（usecase）按候选顺序尝试，失败且可切换时跨端点 fallback。调用方根据请求协议取对应 Base URL 并检查接口支持标记。
+按模型别名解析出候选 Endpoint 和 Model 的领域服务。输入 `alias`，查 `model` 表收集所有关联的 `endpoint_id`，过滤 enabled 与协议能力后按 **EndpointScheduling** 排序返回有序候选（`ResolveCandidates`）；`ResolveCandidatesWithAffinity` 额外按 **EndpointAffinity** 把亲和命中的候选提到最前。查询顺序：自有租户 → 公开池（**PublicEndpoint**）→ 存量共享池（受 `gateway.shared_pool_fallback` 控制）；候选端点按模型自身归属（`model.user_id`）加 scope 读取，公开模型来自多个 admin 时各自解析到自己的端点。转发链路（usecase）按候选顺序尝试，失败且可切换时跨端点 fallback。调用方根据请求协议取对应 Base URL 并检查接口支持标记。
 _Avoid_: model router, endpoint lookup
 
 **EndpointScheduling（端点调度）**:

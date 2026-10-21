@@ -183,7 +183,7 @@ func newFixture(t *testing.T, withCache bool, modelCount int) *fixture {
 	modelHandler := handler.NewModelHandler(handler.ModelDependencies{
 		Create: modelcommand.NewCreateModelHandler(endpointRepo, modelRepo),
 		Update: modelcommand.NewUpdateModelHandler(endpointRepo, modelRepo),
-		Delete: modelcommand.NewDeleteModelHandler(modelRepo),
+		Delete: modelcommand.NewDeleteModelHandler(modelRepo, endpointRepo),
 		List:   modelquery.NewListModelHandler(modelRepo, endpointRepo, userRepo),
 	})
 

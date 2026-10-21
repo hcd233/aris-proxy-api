@@ -66,6 +66,7 @@ func (h *modelHandler) HandleCreateModel(ctx context.Context, req *dto.CreateMod
 
 	_, err = h.create.Handle(ctx, port.CreateModelCommand{
 		ScopeUserID:     scope,
+		IsAdmin:         util.CtxValuePermission(ctx) == enum.PermissionAdmin,
 		Alias:           req.Body.Alias,
 		ModelID:         req.Body.ModelID,
 		UpstreamModel:   req.Body.UpstreamModel,
@@ -96,6 +97,7 @@ func (h *modelHandler) HandleUpdateModel(ctx context.Context, req *dto.UpdateMod
 
 	cmd := port.UpdateModelCommand{
 		ScopeUserID:     scope,
+		IsAdmin:         util.CtxValuePermission(ctx) == enum.PermissionAdmin,
 		ID:              req.ID,
 		Alias:           req.Body.Alias,
 		UpstreamModel:   req.Body.UpstreamModel,
@@ -138,6 +140,7 @@ func (h *modelHandler) HandleDeleteModel(ctx context.Context, req *dto.DeleteMod
 	err = h.delete.Handle(ctx, port.DeleteModelCommand{
 		ScopeUserID: scope,
 		ModelID:     req.ID,
+		IsAdmin:     util.CtxValuePermission(ctx) == enum.PermissionAdmin,
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[ModelHandler] Delete model failed", zap.Error(err))
@@ -164,13 +167,14 @@ func (h *modelHandler) HandleListModels(ctx context.Context, req *dto.ListModels
 			QueryParam: commonmodel.QueryParam{Query: req.Query},
 			SortParam:  commonmodel.SortParam{Sort: req.Sort, SortField: req.SortField},
 		},
-		IsDemo:      perm == enum.PermissionDemo,
-		ScopeUserID: scope,
-		Username:    req.Username,
-		Status:      req.Status,
-		EndpointID:  req.EndpointID,
-		Capability:  req.Capability,
-		MissingOnly: req.MissingOnly,
+		IsDemo:        perm == enum.PermissionDemo,
+		ScopeUserID:   scope,
+		Username:      req.Username,
+		Status:        req.Status,
+		EndpointID:    req.EndpointID,
+		Capability:    req.Capability,
+		MissingOnly:   req.MissingOnly,
+		IncludePublic: perm != enum.PermissionAdmin,
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[ModelHandler] List models failed", zap.Error(err))
@@ -205,7 +209,7 @@ func toModelListItem(v *port.ListModelView) *dto.ModelListItem {
 		item.User = &dto.UpstreamUserItem{ID: v.User.ID, Name: v.User.Name, Avatar: v.User.Avatar}
 	}
 	if v.Endpoint != nil {
-		item.Endpoint = &dto.ModelListEndpointItem{ID: v.Endpoint.ID, Name: v.Endpoint.Name}
+		item.Endpoint = &dto.ModelListEndpointItem{ID: v.Endpoint.ID, Name: v.Endpoint.Name, Visibility: v.Endpoint.Visibility}
 	}
 	return item
 }

@@ -28,10 +28,12 @@ type fakeEndpointRepo struct {
 	endpoints map[uint]*llmagg.Endpoint // 以 ID 索引；ID 列表即 FindIDsByScope 结果
 }
 
-func (f *fakeEndpointRepo) FindIDsByScope(_ context.Context, scopeUserID *uint) ([]uint, error) {
+func (f *fakeEndpointRepo) FindIDsByScope(_ context.Context, scopeUserID *uint, includePublic bool) ([]uint, error) {
 	ids := make([]uint, 0, len(f.endpoints))
 	for id, ep := range f.endpoints {
-		if scopeUserID == nil || ep.UserID() == *scopeUserID {
+		own := scopeUserID != nil && ep.UserID() == *scopeUserID
+		visiblePublic := includePublic && scopeUserID != nil && ep.Visibility() == enum.EndpointVisibilityPublic
+		if scopeUserID == nil || own || visiblePublic {
 			ids = append(ids, id)
 		}
 	}
@@ -376,4 +378,9 @@ func TestListUpstream_UsernameResolveToEmpty(t *testing.T) {
 	if pageInfo == nil {
 		t.Fatalf("pageInfo should not be nil even for empty result")
 	}
+}
+
+// FindPublicByAlias 公开池 fake：本文件用例不涉及解析链路。
+func (f *fakeModelRepo) FindPublicByAlias(context.Context, llmvo.EndpointAlias) ([]*llmagg.Model, error) {
+	return nil, nil
 }

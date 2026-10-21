@@ -52,7 +52,7 @@ func (f *capturingEndpointRepo) Paginate(context.Context, model.CommonParam, *ui
 	return nil, nil, nil
 }
 
-func (f *capturingEndpointRepo) FindIDsByScope(context.Context, *uint) ([]uint, error) {
+func (f *capturingEndpointRepo) FindIDsByScope(context.Context, *uint, bool) ([]uint, error) {
 	return nil, nil
 }
 

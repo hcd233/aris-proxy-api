@@ -88,16 +88,19 @@ func (r *endpointResolver) ResolveCandidatesWithAffinity(ctx context.Context, us
 //
 //  1. 查 model 表（按 alias，限定用户租户）→ 收集所有 endpointID
 //
-//  2. 用户名下未命中且开启共享池回退（gateway.shared_pool_fallback）时，
+//  2. 自有租户未命中时无条件回查公开池（visibility=public 的端点），
+//     公开模型按各自 owner（model.user_id）加 scope 取端点，不同 admin 的公开模型互不串用
+//
+//  3. 公开池也未命中且开启共享池回退（gateway.shared_pool_fallback）时，
 //     回查共享池（user_id=0 的存量/共享配置），供多租户化过渡期兜底；
 //     共享池命中的模型只允许解析到共享池自己的 endpoint，避免借用任意用户的 endpoint
 //
-//  3. 过滤 enabled 与 matcher（matcher 为 nil 表示不筛选）
+//  4. 过滤 enabled 与 matcher（matcher 为 nil 表示不筛选）
 //
-//  4. priority 升序分档（数字小=优先级高）；同档内按 weight 做 A-Res 加权洗牌
+//  5. priority 升序分档（数字小=优先级高）；同档内按 weight 做 A-Res 加权洗牌
 //     （key = rand^(1/weight)，key 大者在前）
 //
-//  5. 无候选返回 ErrDataNotExists
+//  6. 无候选返回 ErrDataNotExists
 //
 //     @param ctx context.Context
 //     @param userID uint 请求用户（多租户隔离）
@@ -129,6 +132,13 @@ func (r *endpointResolver) collectCandidates(ctx context.Context, userID uint, a
 	if err != nil {
 		return nil, err
 	}
+	if len(models) == 0 {
+		// 公开池无条件回退：公开端点本就是给所有用户用的，不受 shared_pool_fallback 控制。
+		models, err = r.modelRepo.FindPublicByAlias(ctx, alias)
+		if err != nil {
+			return nil, err
+		}
+	}
 	if len(models) == 0 && r.sharedPoolFallback {
 		sharedPoolID := constant.SharedPoolUserID
 		models, err = r.modelRepo.FindByAlias(ctx, alias, &sharedPoolID)
@@ -139,19 +149,16 @@ func (r *endpointResolver) collectCandidates(ctx context.Context, userID uint, a
 	if len(models) == 0 {
 		return nil, ierr.Newf(ierr.ErrDataNotExists, "model %q not found", alias.String())
 	}
-	scope := &tenantID
-	if models[0].UserID() == constant.SharedPoolUserID {
-		// 共享池命中的模型只允许解析到共享池自己的 endpoint，避免借用任意用户的 endpoint
-		sharedPoolID := constant.SharedPoolUserID
-		scope = &sharedPoolID
-	}
 
 	cands := make([]Candidate, 0, len(models))
 	for _, m := range models {
 		if !m.Enabled() {
 			continue
 		}
-		ep, findErr := r.endpointRepo.FindByID(ctx, m.EndpointID(), scope)
+		// 逐模型取归属做 scope：公开模型可能来自多个 admin，models[0] 不再代表全部；
+		// 同时保留共享池「不得借用任意用户 endpoint」的保护。
+		owner := m.UserID()
+		ep, findErr := r.endpointRepo.FindByID(ctx, m.EndpointID(), &owner)
 		if findErr != nil {
 			return nil, findErr
 		}

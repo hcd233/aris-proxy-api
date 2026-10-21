@@ -25,8 +25,9 @@ type EndpointRepository interface {
 	List(ctx context.Context) ([]*aggregate.Endpoint, error)
 	Paginate(ctx context.Context, param model.CommonParam, scopeUserID *uint) ([]*aggregate.Endpoint, *model.PageInfo, error)
 	// FindIDsByScope 按租户范围返回全部可见 endpoint ID 列表（id 升序）；
-	// scopeUserID 为 nil（admin 视角）不过滤。用于 upstream 分组视图的分页基数。
-	FindIDsByScope(ctx context.Context, scopeUserID *uint) ([]uint, error)
+	// scopeUserID 为 nil（admin 视角）不过滤；includePublic 为 true 时并集公开端点
+	// （普通用户视角）。用于 upstream 分组视图的分页基数。
+	FindIDsByScope(ctx context.Context, scopeUserID *uint, includePublic bool) ([]uint, error)
 }
 
 // ModelIDSyncCounts 历史 model ID 替换的三表影响行数
@@ -44,6 +45,8 @@ type ModelIDSyncCounts struct {
 // 传 0（共享池）需在网关回退开关下使用。
 type ModelRepository interface {
 	FindByAlias(ctx context.Context, alias vo.EndpointAlias, userID *uint) ([]*aggregate.Model, error)
+	// FindPublicByAlias 查询公开端点下启用中的模型（网关解析的公开池回退）。
+	FindPublicByAlias(ctx context.Context, alias vo.EndpointAlias) ([]*aggregate.Model, error)
 	FindByID(ctx context.Context, id uint, scopeUserID *uint) (*aggregate.Model, error)
 	Create(ctx context.Context, model *aggregate.Model, ownerUserID uint) (uint, error)
 	Update(ctx context.Context, model *aggregate.Model) error
@@ -117,6 +120,8 @@ type ModelListFilter struct {
 	Capability string
 	// MissingOnly 仅保留配置缺失（未计价或未填规格）的模型。
 	MissingOnly bool
+	// IncludePublic 并集公开端点下的模型（普通用户视角）。
+	IncludePublic bool
 }
 
 // ==================== CQRS 读模型 ====================

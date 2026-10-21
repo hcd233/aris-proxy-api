@@ -126,7 +126,7 @@ func (s *stubEndpointRepoForOAuth) List(context.Context) ([]*aggregate.Endpoint,
 func (s *stubEndpointRepoForOAuth) Paginate(context.Context, commonmodel.CommonParam, *uint) ([]*aggregate.Endpoint, *commonmodel.PageInfo, error) {
 	return nil, nil, nil
 }
-func (s *stubEndpointRepoForOAuth) FindIDsByScope(context.Context, *uint) ([]uint, error) {
+func (s *stubEndpointRepoForOAuth) FindIDsByScope(context.Context, *uint, bool) ([]uint, error) {
 	return nil, nil
 }
 

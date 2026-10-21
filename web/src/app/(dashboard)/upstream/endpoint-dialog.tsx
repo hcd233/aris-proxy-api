@@ -39,6 +39,8 @@ export interface EndpointDialogProps {
   setForm: React.Dispatch<React.SetStateAction<EndpointForm>>;
   userOptions: { id: number; name: string }[];
   isAdmin: boolean;
+  /** 当前登录用户 ID：可见性只允许端点归属者本人修改 */
+  currentUserId?: number;
   saving: boolean;
   onSave: () => void;
   /** 编辑态目标为 OAuth 端点：连接字段服务端固定，仅名称可改 */
@@ -65,6 +67,7 @@ export function EndpointDialog({
   setForm,
   userOptions,
   isAdmin,
+  currentUserId,
   saving,
   onSave,
   editingOAuth,
@@ -86,6 +89,12 @@ export function EndpointDialog({
     { value: "oauth_anthropic", label: t("oauth.badge_claude") },
     { value: "oauth_openai", label: t("oauth.badge_codex") },
   ];
+  const visibilityItems: { value: "private" | "public"; label: string }[] = [
+    { value: "private", label: t("endpoints.visibility_private") },
+    { value: "public", label: t("endpoints.visibility_public") },
+  ];
+  // 可见性只有端点归属者能改：代建（选了他人归属）或编辑他人端点时锁定。
+  const visibilityLocked = form.ownerUserID !== undefined && form.ownerUserID !== currentUserId;
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -115,6 +124,8 @@ export function EndpointDialog({
                   setForm((f) => ({
                     ...f,
                     ownerUserID: value ? Number(value) : undefined,
+                    // 代建给他人的端点只能是私有：避免出现「归属他人却公开」的端点。
+                    visibility: value ? "private" : f.visibility,
                   }))
                 }
               >
@@ -130,6 +141,35 @@ export function EndpointDialog({
                 </SelectContent>
               </Select>
               <FieldDescription>{t("upstream.owner_default")}</FieldDescription>
+            </Field>
+          )}
+          {isAdmin && oauthMode !== "create" && (
+            <Field>
+              <FieldLabel htmlFor="ep-visibility">{t("endpoints.visibility")}</FieldLabel>
+              <Select
+                value={form.visibility}
+                items={visibilityItems}
+                disabled={visibilityLocked}
+                onValueChange={(v) =>
+                  setForm((f) => ({ ...f, visibility: v as "private" | "public" }))
+                }
+              >
+                <SelectTrigger id="ep-visibility">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {visibilityItems.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FieldDescription>
+                {visibilityLocked
+                  ? t("endpoints.visibility_owner_only")
+                  : t("endpoints.visibility_desc")}
+              </FieldDescription>
             </Field>
           )}
           {!editingId && (

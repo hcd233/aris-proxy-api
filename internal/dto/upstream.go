@@ -70,6 +70,7 @@ type UpstreamEndpointItem struct {
 	AnthropicBaseURL            string             `json:"anthropicBaseURL" doc:"Anthropic Base URL"`
 	MaskedAPIKey                string             `json:"maskedAPIKey" doc:"Masked API Key"`
 	AuthType                    string             `json:"authType" doc:"认证类型(api_key/oauth_anthropic/oauth_openai)"`
+	Visibility                  string             `json:"visibility" doc:"可见性(private/public)"`
 	OAuth                       *UpstreamOAuthItem `json:"oauth,omitempty" doc:"订阅凭据投影（仅 OAuth 端点）"`
 	SupportOpenAIChatCompletion bool               `json:"supportOpenAIChatCompletion" doc:"是否支持 OpenAI Chat Completion"`
 	SupportOpenAIResponse       bool               `json:"supportOpenAIResponse" doc:"是否支持 OpenAI Response"`

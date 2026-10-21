@@ -241,3 +241,8 @@ func TestUpdateModel_UnchangedIDWithSyncIsIdempotent(t *testing.T) {
 }
 
 func boolPtr(b bool) *bool { return &b }
+
+// FindPublicByAlias 公开池 fake：本文件用例不涉及。
+func (r *updateModelRepo) FindPublicByAlias(context.Context, vo.EndpointAlias) ([]*aggregate.Model, error) {
+	return nil, nil
+}

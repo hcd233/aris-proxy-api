@@ -316,21 +316,29 @@ export function ModelIdentityCell({
   );
 }
 
-/** 「操作」列：编辑模型配置 + 定价配置 + 删除；demo 只读账户写入口统一锁定（DeleteButton 的 locked 模式） */
+/**
+ * 「操作」列：编辑模型配置 + 定价配置 + 删除。
+ *
+ * demo 只读账户与「他人公开端点下的模型」都锁定写入口（DeleteButton 的 locked 模式）：
+ * 前者是全局只读，后者是普通用户对公开端点无维护权。
+ */
 export function ModelActionsCell({
   isDemo,
+  readOnly = false,
   deleting,
   onEdit,
   onPricing,
   onDelete,
 }: {
   isDemo: boolean;
+  readOnly?: boolean;
   deleting: boolean;
   onEdit: () => void;
   onPricing: () => void;
   onDelete: () => void;
 }) {
   const t = useT();
+  const locked = isDemo || readOnly;
   return (
     <TableCell className="text-right">
       <div className="flex items-center justify-end gap-1">
@@ -338,25 +346,25 @@ export function ModelActionsCell({
           variant="ghost"
           size="icon-sm"
           onClick={onEdit}
-          disabled={isDemo}
+          disabled={locked}
           aria-label={t("common.edit")}
           className="text-muted-foreground hover:text-foreground"
         >
-          {isDemo ? <Lock className="size-3.5" /> : <Pencil className="size-3.5" />}
+          {locked ? <Lock className="size-3.5" /> : <Pencil className="size-3.5" />}
         </Button>
         <Button
           variant="ghost"
           size="icon-sm"
           onClick={onPricing}
-          disabled={isDemo}
+          disabled={locked}
           aria-label={t("upstream.pricing.title")}
           className="text-muted-foreground hover:text-foreground"
         >
-          {isDemo ? <Lock className="size-3.5" /> : <Coins className="size-3.5" />}
+          {locked ? <Lock className="size-3.5" /> : <Coins className="size-3.5" />}
         </Button>
         <DeleteButton
           label={t("common.delete")}
-          locked={isDemo}
+          locked={locked}
           disabled={deleting}
           onClick={onDelete}
         />

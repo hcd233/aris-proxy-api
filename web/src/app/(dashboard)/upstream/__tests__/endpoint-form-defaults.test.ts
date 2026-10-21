@@ -11,4 +11,8 @@ describe("emptyEndpointForm", () => {
     expect(emptyEndpointForm.supportOpenAIResponse).toBe(false);
     expect(emptyEndpointForm.supportAnthropicMessage).toBe(false);
   });
+
+  it("默认创建表单为私有", () => {
+    expect(emptyEndpointForm.visibility).toBe("private");
+  });
 });

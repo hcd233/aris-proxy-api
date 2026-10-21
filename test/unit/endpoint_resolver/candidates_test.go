@@ -80,7 +80,7 @@ func (r *multiEndpointRepo) List(context.Context) ([]*aggregate.Endpoint, error)
 func (r *multiEndpointRepo) Paginate(context.Context, model.CommonParam, *uint) ([]*aggregate.Endpoint, *model.PageInfo, error) {
 	return nil, nil, nil
 }
-func (r *multiEndpointRepo) FindIDsByScope(context.Context, *uint) ([]uint, error) {
+func (r *multiEndpointRepo) FindIDsByScope(context.Context, *uint, bool) ([]uint, error) {
 	return nil, nil
 }
 
@@ -181,4 +181,9 @@ func TestResolveCandidatesMatcherFilters(t *testing.T) {
 	if len(got) != 1 || got[0].Endpoint.Name() != "ep-b" {
 		t.Fatalf("got = %v, want [ep-b]", got)
 	}
+}
+
+// FindPublicByAlias 公开池 fake：本文件用例不涉及。
+func (r *multiModelRepo) FindPublicByAlias(context.Context, vo.EndpointAlias) ([]*aggregate.Model, error) {
+	return nil, nil
 }
