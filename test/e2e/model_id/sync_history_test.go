@@ -114,7 +114,7 @@ func newSyncHistoryFixture(t *testing.T) *syncHistoryFixture {
 	modelHandler := handler.NewModelHandler(handler.ModelDependencies{
 		Create: modelcommand.NewCreateModelHandler(endpointRepo, modelRepo),
 		Update: modelcommand.NewUpdateModelHandler(endpointRepo, modelRepo),
-		Delete: modelcommand.NewDeleteModelHandler(modelRepo),
+		Delete: modelcommand.NewDeleteModelHandler(modelRepo, endpointRepo),
 	})
 	upstreamHandler := handler.NewUpstreamHandler(handler.UpstreamDependencies{
 		List: upstreamquery.NewListUpstreamHandler(endpointRepo, modelRepo, userRepo, repository.NewOAuthCredentialRepository(db)),

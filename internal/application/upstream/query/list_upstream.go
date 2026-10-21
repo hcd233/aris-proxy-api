@@ -108,7 +108,10 @@ func (h *listUpstreamHandler) Handle(ctx context.Context, q port.ListUpstreamQue
 		if display, ok := credsByEp[id]; ok {
 			cred = &display
 		}
-		groups = append(groups, h.toGroupView(ctx, epsByID[id], modelsByEp[id], usersByID, cred, q.IsDemo))
+		// 非归属者（普通用户看他人公开端点）与 demo 一样脱敏订阅凭据投影：
+		// 账号邮箱/错误详情属跨租户敏感信息。
+		maskOAuth := q.IsDemo || !ownsEndpoint(q.ScopeUserID, epsByID[id])
+		groups = append(groups, h.toGroupView(ctx, epsByID[id], modelsByEp[id], usersByID, cred, q.IsDemo, maskOAuth))
 	}
 	// modelTotal 口径跟随当前筛选范围的全量模型数（含非当前页组），不受组内截断影响。
 	for _, id := range matchedIDs {
@@ -161,7 +164,7 @@ func (h *listUpstreamHandler) loadOAuthDisplays(ctx context.Context, pageIDs []u
 	return displays
 }
 
-func (h *listUpstreamHandler) toGroupView(ctx context.Context, ep *llmagg.Endpoint, models []*llmagg.Model, usersByID map[uint]*identityaggregate.User, cred *vo.OAuthCredentialDisplay, isDemo bool) *port.UpstreamGroupView {
+func (h *listUpstreamHandler) toGroupView(ctx context.Context, ep *llmagg.Endpoint, models []*llmagg.Model, usersByID map[uint]*identityaggregate.User, cred *vo.OAuthCredentialDisplay, isDemo, maskOAuth bool) *port.UpstreamGroupView {
 	mvs := lo.Map(models, func(m *llmagg.Model, _ int) *port.UpstreamModelView {
 		return toModelView(m, usersByID, isDemo)
 	})
@@ -178,7 +181,7 @@ func (h *listUpstreamHandler) toGroupView(ctx context.Context, ep *llmagg.Endpoi
 			zap.Int("limit", constant.UpstreamGroupModelLimit))
 	}
 	return &port.UpstreamGroupView{
-		Endpoint:        toEndpointView(ep, usersByID, cred, isDemo),
+		Endpoint:        toEndpointView(ep, usersByID, cred, isDemo, maskOAuth),
 		Models:          mvs,
 		ModelCount:      len(mvs),
 		TotalModelCount: totalModelCount,
@@ -186,7 +189,12 @@ func (h *listUpstreamHandler) toGroupView(ctx context.Context, ep *llmagg.Endpoi
 	}
 }
 
-func toEndpointView(ep *llmagg.Endpoint, usersByID map[uint]*identityaggregate.User, cred *vo.OAuthCredentialDisplay, isDemo bool) *port.UpstreamEndpointView {
+// ownsEndpoint 视角用户是否就是端点归属者（nil scope = admin 全量视角，视为归属者）。
+func ownsEndpoint(scope *uint, ep *llmagg.Endpoint) bool {
+	return ep == nil || scope == nil || *scope == ep.UserID()
+}
+
+func toEndpointView(ep *llmagg.Endpoint, usersByID map[uint]*identityaggregate.User, cred *vo.OAuthCredentialDisplay, isDemo, maskOAuth bool) *port.UpstreamEndpointView {
 	if ep == nil {
 		return nil
 	}
@@ -206,7 +214,7 @@ func toEndpointView(ep *llmagg.Endpoint, usersByID map[uint]*identityaggregate.U
 		MaskedAPIKey:                commonutil.MaskSecret(ep.APIKey()),
 		AuthType:                    string(ep.AuthType()),
 		Visibility:                  string(ep.Visibility()),
-		OAuth:                       toOAuthView(ep.AuthType(), cred, isDemo),
+		OAuth:                       toOAuthView(ep.AuthType(), cred, maskOAuth),
 		SupportOpenAIChatCompletion: ep.SupportOpenAIChatCompletion(),
 		SupportOpenAIResponse:       ep.SupportOpenAIResponse(),
 		SupportAnthropicMessage:     ep.SupportAnthropicMessage(),
@@ -219,10 +227,10 @@ func toEndpointView(ep *llmagg.Endpoint, usersByID map[uint]*identityaggregate.U
 // toOAuthView 装配订阅凭据投影。
 //
 // 数据源是凭据展示投影（vo.OAuthCredentialDisplay，结构上不含 token）；
-// demo 视角掩码邮箱并隐藏错误细节。
+// mask 视角（demo 或非归属者看公开端点）掩码邮箱并隐藏错误细节。
 // 缺凭据行时同样返回视图（status=reauth_required）——与解析层 fail-closed 口径一致，
 // 前端才能显示"需重新授权"而非静默无数据。
-func toOAuthView(authType enum.EndpointAuthType, cred *vo.OAuthCredentialDisplay, isDemo bool) *port.UpstreamOAuthView {
+func toOAuthView(authType enum.EndpointAuthType, cred *vo.OAuthCredentialDisplay, mask bool) *port.UpstreamOAuthView {
 	if !authType.IsOAuth() {
 		return nil
 	}
@@ -234,7 +242,7 @@ func toOAuthView(authType enum.EndpointAuthType, cred *vo.OAuthCredentialDisplay
 	}
 	email := cred.AccountEmail
 	lastError := cred.LastError
-	if isDemo {
+	if mask {
 		email = commonutil.MaskIdentity(email)
 		lastError = ""
 	}

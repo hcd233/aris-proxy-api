@@ -123,6 +123,7 @@ func (h *endpointHandler) HandleUpdateEndpoint(ctx context.Context, req *dto.Upd
 		ScopeUserID:                 scope,
 		EndpointID:                  req.ID,
 		IsAdmin:                     isAdmin,
+		OperatorUserID:              util.CtxValueUint(ctx, constant.CtxKeyUserID),
 		Visibility:                  req.Body.Visibility,
 		Name:                        req.Body.Name,
 		OpenaiBaseURL:               req.Body.OpenaiBaseURL,

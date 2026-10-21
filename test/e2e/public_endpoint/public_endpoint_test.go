@@ -118,7 +118,7 @@ func newFixture(t *testing.T) *fixture {
 	modelHandler := handler.NewModelHandler(handler.ModelDependencies{
 		Create: modelcommand.NewCreateModelHandler(endpointRepo, modelRepo),
 		Update: modelcommand.NewUpdateModelHandler(endpointRepo, modelRepo),
-		Delete: modelcommand.NewDeleteModelHandler(modelRepo),
+		Delete: modelcommand.NewDeleteModelHandler(modelRepo, endpointRepo),
 	})
 	upstreamHandler := handler.NewUpstreamHandler(handler.UpstreamDependencies{
 		List: upstreamquery.NewListUpstreamHandler(endpointRepo, modelRepo, userRepo, repository.NewOAuthCredentialRepository(db)),
@@ -315,6 +315,30 @@ func TestPublicEndpoint_VisibilityAndReadOnly(t *testing.T) {
 	status, data = f.do(t, http.MethodPost, constant.WebAPIPrefix+"/endpoint", userToken,
 		`{"name":"ep-user-public","visibility":"public","apiKey":"sk-u","openaiBaseURL":"https://o.example.com","supportOpenAIChatCompletion":true}`)
 	requireBizCode(t, status, data, bizCodeUnauthorized, "user create public endpoint")
+
+	// 可见性只能由归属者本人修改：普通用户不能把自己的端点发布，admin 也不能发布他人端点。
+	status, data = f.do(t, http.MethodPost, constant.WebAPIPrefix+"/endpoint", userToken,
+		`{"name":"ep-alice","apiKey":"sk-a","openaiBaseURL":"https://o.example.com","supportOpenAIChatCompletion":true}`)
+	requireBizCode(t, status, data, 0, "user create private endpoint")
+
+	var aliceEp dbmodel.Endpoint
+	if err := f.db.Where("name = ?", "ep-alice").First(&aliceEp).Error; err != nil {
+		t.Fatalf("reload alice endpoint: %v", err)
+	}
+
+	status, data = f.do(t, http.MethodPatch, fmt.Sprintf("%s/endpoint?id=%d", constant.WebAPIPrefix, aliceEp.ID), userToken, `{"visibility":"public"}`)
+	requireBizCode(t, status, data, bizCodeUnauthorized, "user cannot publish own endpoint")
+
+	status, data = f.do(t, http.MethodPatch, fmt.Sprintf("%s/endpoint?id=%d", constant.WebAPIPrefix, aliceEp.ID), adminToken, `{"visibility":"public"}`)
+	requireBizCode(t, status, data, bizCodeUnauthorized, "admin cannot publish someone else's endpoint")
+
+	var reloaded dbmodel.Endpoint
+	if err := f.db.First(&reloaded, aliceEp.ID).Error; err != nil {
+		t.Fatalf("reload alice endpoint: %v", err)
+	}
+	if reloaded.Visibility == string(enum.EndpointVisibilityPublic) {
+		t.Fatal("someone else's endpoint must stay private")
+	}
 
 	// 端点与模型都还在
 	if err := f.db.First(&dbmodel.Endpoint{}, ep.ID).Error; err != nil {

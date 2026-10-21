@@ -66,6 +66,7 @@ func (h *modelHandler) HandleCreateModel(ctx context.Context, req *dto.CreateMod
 
 	_, err = h.create.Handle(ctx, port.CreateModelCommand{
 		ScopeUserID:     scope,
+		IsAdmin:         util.CtxValuePermission(ctx) == enum.PermissionAdmin,
 		Alias:           req.Body.Alias,
 		ModelID:         req.Body.ModelID,
 		UpstreamModel:   req.Body.UpstreamModel,
@@ -96,6 +97,7 @@ func (h *modelHandler) HandleUpdateModel(ctx context.Context, req *dto.UpdateMod
 
 	cmd := port.UpdateModelCommand{
 		ScopeUserID:     scope,
+		IsAdmin:         util.CtxValuePermission(ctx) == enum.PermissionAdmin,
 		ID:              req.ID,
 		Alias:           req.Body.Alias,
 		UpstreamModel:   req.Body.UpstreamModel,
@@ -138,6 +140,7 @@ func (h *modelHandler) HandleDeleteModel(ctx context.Context, req *dto.DeleteMod
 	err = h.delete.Handle(ctx, port.DeleteModelCommand{
 		ScopeUserID: scope,
 		ModelID:     req.ID,
+		IsAdmin:     util.CtxValuePermission(ctx) == enum.PermissionAdmin,
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[ModelHandler] Delete model failed", zap.Error(err))

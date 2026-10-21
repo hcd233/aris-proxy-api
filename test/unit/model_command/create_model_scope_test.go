@@ -65,13 +65,21 @@ type recordingModelRepo struct {
 	gotEndpoint uint
 	gotPricing  vo.Pricing
 	gotModel    *aggregate.Model
+	byID        map[uint]*aggregate.Model
 }
 
 func (r *recordingModelRepo) FindByAlias(context.Context, vo.EndpointAlias, *uint) ([]*aggregate.Model, error) {
 	return nil, nil
 }
-func (r *recordingModelRepo) FindByID(context.Context, uint, *uint) (*aggregate.Model, error) {
-	return nil, nil
+func (r *recordingModelRepo) FindByID(_ context.Context, id uint, scopeUserID *uint) (*aggregate.Model, error) {
+	m := r.byID[id]
+	if m == nil {
+		return nil, nil
+	}
+	if scopeUserID != nil && m.UserID() != *scopeUserID {
+		return nil, nil
+	}
+	return m, nil
 }
 func (r *recordingModelRepo) Create(_ context.Context, m *aggregate.Model, ownerUserID uint) (uint, error) {
 	r.gotOwner = ownerUserID

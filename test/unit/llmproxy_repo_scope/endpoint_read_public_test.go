@@ -22,9 +22,10 @@ import (
 //	public-EP:  999 名下 gpt-x（context=9999）与 gpt-public（context=8000），端点 visibility=public
 func seedReadCatalog(t *testing.T, db *gorm.DB) (publicEndpointID uint) {
 	t.Helper()
-	epOwn := &dbmodel.Endpoint{UserID: 101, Name: "ep-own", APIKey: "k", OpenaiBaseURL: "https://o.example.com", SupportOpenAIChatCompletion: true}
+	// 公开行先入库（id 更小）：去重必须依赖「自有优先」排序，而不是主键序。
 	epPublic := &dbmodel.Endpoint{UserID: 999, Name: "ep-public", APIKey: "k", OpenaiBaseURL: "https://o.example.com", SupportOpenAIChatCompletion: true, Visibility: string(enum.EndpointVisibilityPublic)}
-	for _, ep := range []*dbmodel.Endpoint{epOwn, epPublic} {
+	epOwn := &dbmodel.Endpoint{UserID: 101, Name: "ep-own", APIKey: "k", OpenaiBaseURL: "https://o.example.com", SupportOpenAIChatCompletion: true}
+	for _, ep := range []*dbmodel.Endpoint{epPublic, epOwn} {
 		if err := db.Create(ep).Error; err != nil {
 			t.Fatal(err)
 		}
@@ -32,9 +33,9 @@ func seedReadCatalog(t *testing.T, db *gorm.DB) (publicEndpointID uint) {
 
 	caps := []enum.InputModality{enum.InputModalityText}
 	rows := []*dbmodel.Model{
-		{UserID: 101, Alias: "gpt-x", ModelID: "gpt-x", UpstreamModel: "up-own", EndpointID: epOwn.ID, ContextLength: 1000, Capabilities: caps},
 		{UserID: 999, Alias: "gpt-x", ModelID: "gpt-x", UpstreamModel: "up-public", EndpointID: epPublic.ID, ContextLength: 9999, Capabilities: caps},
 		{UserID: 999, Alias: "gpt-public", ModelID: "gpt-public", UpstreamModel: "up-public", EndpointID: epPublic.ID, ContextLength: 8000, Capabilities: caps},
+		{UserID: 101, Alias: "gpt-x", ModelID: "gpt-x", UpstreamModel: "up-own", EndpointID: epOwn.ID, ContextLength: 1000, Capabilities: caps},
 	}
 	for _, row := range rows {
 		if err := db.Create(row).Error; err != nil {

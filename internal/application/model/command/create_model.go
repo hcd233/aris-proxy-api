@@ -37,6 +37,10 @@ func (h *createModelHandler) Handle(ctx context.Context, cmd port.CreateModelCom
 	if ep == nil {
 		return nil, ierr.New(ierr.ErrDataNotExists, "endpoint not found")
 	}
+	// 降级保护：公开端点只允许 admin 维护其模型（否则降级后的 admin 仍能扩写共享端点）。
+	if ep.Visibility().IsPublic() && !cmd.IsAdmin {
+		return nil, ierr.New(ierr.ErrUnauthorized, "only admin can modify models of a public endpoint")
+	}
 
 	// 默认上下文/输出长度兜底，便于下游（如 OpenCode 配置）直接使用
 	contextLength := cmd.ContextLength

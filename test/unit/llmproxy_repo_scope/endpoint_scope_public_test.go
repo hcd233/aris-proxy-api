@@ -30,6 +30,20 @@ func TestFindIDsByScope_IncludePublic(t *testing.T) {
 	if err := db.Create(epPublic).Error; err != nil {
 		t.Fatal(err)
 	}
+	// 已软删的公开端点：OR 分组若写错（deleted_at=0 AND user_id=? OR visibility='public'），
+	// 它会被带进普通用户视角——这里守住那个优先级陷阱。
+	epDeletedPublic := &dbmodel.Endpoint{
+		UserID:                      999,
+		Name:                        "ep-deleted-public",
+		APIKey:                      "k",
+		OpenaiBaseURL:               "https://o.example.com",
+		SupportOpenAIChatCompletion: true,
+		Visibility:                  string(enum.EndpointVisibilityPublic),
+		DeletedAt:                   1,
+	}
+	if err := db.Create(epDeletedPublic).Error; err != nil {
+		t.Fatal(err)
+	}
 
 	ctx := context.Background()
 	repo := repository.NewEndpointRepository(db)

@@ -964,5 +964,6 @@
   "endpoints.visibility_public": "公開",
   "endpoints.visibility_desc": "公開エンドポイントは全ユーザーが閲覧・呼び出しできますが、変更は管理者のみ可能です。",
   "upstream.public_badge": "公開",
-  "upstream.public_readonly": "公開エンドポイントは管理者が管理します。"
+  "upstream.public_readonly": "公開エンドポイントは管理者が管理します。",
+  "endpoints.visibility_owner_only": "公開範囲を変更できるのはエンドポイントの所有者のみです。"
 }

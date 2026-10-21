@@ -134,3 +134,52 @@ func TestUpdateEndpoint_WithoutVisibilityKeepsCurrent(t *testing.T) {
 		t.Fatal("update without visibility must preserve current value")
 	}
 }
+
+// TestUpdateEndpoint_AdminCannotChangeVisibilityOfOthersEndpoint 可见性只能由归属者本人修改：
+// admin 不得把他人（含普通用户）的端点发布为公开，否则等于跨租户共享他人的上游密钥/额度。
+func TestUpdateEndpoint_AdminCannotChangeVisibilityOfOthersEndpoint(t *testing.T) {
+	t.Parallel()
+	ep := publicEndpoint(t)
+	ep.SetUserID(202)
+	repo := &fakeEndpointRepo{ep: ep}
+	handler := command.NewUpdateEndpointHandler(repo)
+
+	visibility := enum.EndpointVisibilityPublic
+	err := handler.Handle(t.Context(), port.UpdateEndpointCommand{
+		EndpointID:     7,
+		IsAdmin:        true,
+		OperatorUserID: 1,
+		Visibility:     &visibility,
+	})
+	if err == nil {
+		t.Fatal("admin must not change visibility of someone else's endpoint")
+	}
+	if repo.updated {
+		t.Fatal("repo must not be written when ownership guard rejects")
+	}
+}
+
+// TestUpdateEndpoint_OwnerCanChangeVisibility 归属者本人可以切换公开/私有。
+func TestUpdateEndpoint_OwnerCanChangeVisibility(t *testing.T) {
+	t.Parallel()
+	ep := publicEndpoint(t)
+	ep.SetUserID(202)
+	repo := &fakeEndpointRepo{ep: ep}
+	handler := command.NewUpdateEndpointHandler(repo)
+
+	visibility := enum.EndpointVisibilityPrivate
+	if err := handler.Handle(t.Context(), port.UpdateEndpointCommand{
+		EndpointID:     7,
+		IsAdmin:        true,
+		OperatorUserID: 202,
+		Visibility:     &visibility,
+	}); err != nil {
+		t.Fatalf("owner change visibility: %v", err)
+	}
+	if ep.Visibility() != enum.EndpointVisibilityPrivate {
+		t.Fatalf("visibility = %q, want private", ep.Visibility())
+	}
+	if !repo.updated {
+		t.Fatal("owner update must reach repo")
+	}
+}

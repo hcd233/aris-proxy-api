@@ -49,6 +49,10 @@ func (h *updateEndpointHandler) Handle(ctx context.Context, cmd port.UpdateEndpo
 	if ep.Visibility().IsPublic() && !cmd.IsAdmin {
 		return ierr.New(ierr.ErrUnauthorized, "only admin can modify a public endpoint")
 	}
+	// 可见性只能由归属者本人修改：防止 admin 把他人（含普通用户）的端点发布为公开或反向改动。
+	if cmd.Visibility != nil && ep.UserID() != cmd.OperatorUserID {
+		return ierr.New(ierr.ErrUnauthorized, "only the owner can change endpoint visibility")
+	}
 
 	// 校验在聚合根内、落库前完成：能力标记与对应 baseURL 必须一致，
 	// 否则写出的行会让之后每次读取都失败（见 Endpoint.Update 注释）。

@@ -41,7 +41,14 @@ func (h *updateModelHandler) Handle(ctx context.Context, cmd port.UpdateModelCom
 		return llmproxy.ModelIDSyncCounts{}, ierr.New(ierr.ErrDataNotExists, "model not found")
 	}
 
+	if gerr := h.guardPublicEndpointModel(ctx, m.EndpointID(), cmd.ScopeUserID, cmd.IsAdmin); gerr != nil {
+		return llmproxy.ModelIDSyncCounts{}, gerr
+	}
+
 	if cmd.EndpointID != nil {
+		if gerr := h.guardPublicEndpointModel(ctx, *cmd.EndpointID, cmd.ScopeUserID, cmd.IsAdmin); gerr != nil {
+			return llmproxy.ModelIDSyncCounts{}, gerr
+		}
 		ep, eerr := h.endpointRepo.FindByID(ctx, *cmd.EndpointID, cmd.ScopeUserID)
 		if eerr != nil {
 			log.Error("[ModelCommand] Find endpoint for model update failed", zap.Error(eerr))
@@ -116,4 +123,22 @@ func applyScheduling(m *aggregate.Model, cmd port.UpdateModelCommand) error {
 		weight = *cmd.Weight
 	}
 	return m.SetScheduling(priority, weight)
+}
+
+// guardPublicEndpointModel 公开端点下的模型只允许 admin 维护（降级保护）。
+//
+// 降级后的 admin 其 userID 仍能命中自己名下的公开端点，FindByID(scope) 拦不住，
+// 因此三个模型写命令都必须显式校验端点可见性。
+func (h *updateModelHandler) guardPublicEndpointModel(ctx context.Context, endpointID uint, scope *uint, isAdmin bool) error {
+	if isAdmin {
+		return nil
+	}
+	ep, err := h.endpointRepo.FindByID(ctx, endpointID, scope)
+	if err != nil {
+		return err
+	}
+	if ep != nil && ep.Visibility().IsPublic() {
+		return ierr.New(ierr.ErrUnauthorized, "only admin can modify models of a public endpoint")
+	}
+	return nil
 }

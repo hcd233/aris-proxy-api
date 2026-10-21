@@ -88,16 +88,19 @@ func (r *endpointResolver) ResolveCandidatesWithAffinity(ctx context.Context, us
 //
 //  1. 查 model 表（按 alias，限定用户租户）→ 收集所有 endpointID
 //
-//  2. 用户名下未命中且开启共享池回退（gateway.shared_pool_fallback）时，
+//  2. 自有租户未命中时无条件回查公开池（visibility=public 的端点），
+//     公开模型按各自 owner（model.user_id）加 scope 取端点，不同 admin 的公开模型互不串用
+//
+//  3. 公开池也未命中且开启共享池回退（gateway.shared_pool_fallback）时，
 //     回查共享池（user_id=0 的存量/共享配置），供多租户化过渡期兜底；
 //     共享池命中的模型只允许解析到共享池自己的 endpoint，避免借用任意用户的 endpoint
 //
-//  3. 过滤 enabled 与 matcher（matcher 为 nil 表示不筛选）
+//  4. 过滤 enabled 与 matcher（matcher 为 nil 表示不筛选）
 //
-//  4. priority 升序分档（数字小=优先级高）；同档内按 weight 做 A-Res 加权洗牌
+//  5. priority 升序分档（数字小=优先级高）；同档内按 weight 做 A-Res 加权洗牌
 //     （key = rand^(1/weight)，key 大者在前）
 //
-//  5. 无候选返回 ErrDataNotExists
+//  6. 无候选返回 ErrDataNotExists
 //
 //     @param ctx context.Context
 //     @param userID uint 请求用户（多租户隔离）

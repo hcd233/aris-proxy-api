@@ -248,10 +248,6 @@ var (
 	// 用子查询而非 join：与读模型路径保持同一写法，models 表的过滤条件留在单表上。
 	WhereModelInPublicEndpoint = "endpoint_id IN (SELECT id FROM endpoints WHERE visibility = ? AND deleted_at = 0)"
 
-	// OrderByUserIDIsCurrentFirst 把归属当前用户的行排到前面（参数为 userID）。
-	// 用于「自有 ∪ 公开」并集后按 alias 去重时保留自有行（规格/定价与解析结果一致）。
-	OrderByUserIDIsCurrentFirst = "(user_id = ?) DESC"
-
 	// ── replaceHistoricalModelIDs（由 UpdateWithHistorySync 在事务内调用）条件与块大小 ──
 	WhereModelIDEquals = "model_id = ?"
 	WhereAPIKeyIDIn    = "api_key_id IN (?)"

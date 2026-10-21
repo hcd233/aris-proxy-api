@@ -2,10 +2,12 @@ package endpoint_resolver
 
 import (
 	"context"
+	"errors"
 	"slices"
 	"testing"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
@@ -64,7 +66,8 @@ func (r *visibilityModelRepo) UpdateWithHistorySync(context.Context, *aggregate.
 	return llmproxy.ModelIDSyncCounts{}, nil
 }
 
-// scopeRecordingEndpointRepo 记录每次按 ID 取端点时收到的 scope。
+// scopeRecordingEndpointRepo 记录每次按 ID 取端点时收到的 scope，并按 scope 过滤
+// （与真实仓储一致：scope 不是归属者时查不到，防止实现退回 nil scope 仍假绿）。
 type scopeRecordingEndpointRepo struct {
 	byID   map[uint]*aggregate.Endpoint
 	scopes []uint
@@ -74,7 +77,14 @@ func (r *scopeRecordingEndpointRepo) FindByID(_ context.Context, id uint, scope 
 	if scope != nil {
 		r.scopes = append(r.scopes, *scope)
 	}
-	return r.byID[id], nil
+	ep := r.byID[id]
+	if ep == nil {
+		return nil, nil
+	}
+	if scope != nil && ep.UserID() != *scope {
+		return nil, nil
+	}
+	return ep, nil
 }
 
 func (r *scopeRecordingEndpointRepo) BatchFindByIDs(_ context.Context, ids []uint) (map[uint]*aggregate.Endpoint, error) {
@@ -109,13 +119,14 @@ func (r *scopeRecordingEndpointRepo) FindIDsByScope(context.Context, *uint, bool
 	return nil, nil
 }
 
-// newVisibilityEndpoint 构造一个最小合法端点（可见性默认 private）。
-func newVisibilityEndpoint(t *testing.T, id uint) *aggregate.Endpoint {
+// newVisibilityEndpoint 构造一个最小合法端点（可见性默认 private，带归属）。
+func newVisibilityEndpoint(t *testing.T, id, owner uint) *aggregate.Endpoint {
 	t.Helper()
 	ep, err := aggregate.CreateEndpoint(id, "ep", "https://o.example.com", "https://a.example.com", "k", true, false, false, false, enum.EndpointAuthAPIKey)
 	if err != nil {
 		t.Fatalf("CreateEndpoint: %v", err)
 	}
+	ep.SetUserID(owner)
 	return ep
 }
 
@@ -132,7 +143,7 @@ func newVisibilityModel(t *testing.T, id, owner, endpointID uint) *aggregate.Mod
 
 func TestResolveCandidates_OwnHitSkipsPublic(t *testing.T) {
 	t.Parallel()
-	epRepo := &scopeRecordingEndpointRepo{byID: map[uint]*aggregate.Endpoint{1: newVisibilityEndpoint(t, 1), 2: newVisibilityEndpoint(t, 2)}}
+	epRepo := &scopeRecordingEndpointRepo{byID: map[uint]*aggregate.Endpoint{1: newVisibilityEndpoint(t, 1, 101), 2: newVisibilityEndpoint(t, 2, 201)}}
 	modelRepo := &visibilityModelRepo{
 		own:    map[string][]*aggregate.Model{"gpt-x": {newVisibilityModel(t, 1, 101, 1)}},
 		public: map[string][]*aggregate.Model{"gpt-x": {newVisibilityModel(t, 2, 201, 2)}},
@@ -153,7 +164,7 @@ func TestResolveCandidates_OwnHitSkipsPublic(t *testing.T) {
 
 func TestResolveCandidates_FallsBackToPublic(t *testing.T) {
 	t.Parallel()
-	epRepo := &scopeRecordingEndpointRepo{byID: map[uint]*aggregate.Endpoint{1: newVisibilityEndpoint(t, 1)}}
+	epRepo := &scopeRecordingEndpointRepo{byID: map[uint]*aggregate.Endpoint{1: newVisibilityEndpoint(t, 1, 201)}}
 	modelRepo := &visibilityModelRepo{
 		own:    map[string][]*aggregate.Model{},
 		public: map[string][]*aggregate.Model{"gpt-x": {newVisibilityModel(t, 1, 201, 1)}},
@@ -174,7 +185,7 @@ func TestResolveCandidates_FallsBackToPublic(t *testing.T) {
 
 func TestResolveCandidates_PublicWorksWithoutSharedPoolFallback(t *testing.T) {
 	t.Parallel()
-	epRepo := &scopeRecordingEndpointRepo{byID: map[uint]*aggregate.Endpoint{1: newVisibilityEndpoint(t, 1)}}
+	epRepo := &scopeRecordingEndpointRepo{byID: map[uint]*aggregate.Endpoint{1: newVisibilityEndpoint(t, 1, 201)}}
 	modelRepo := &visibilityModelRepo{
 		own:    map[string][]*aggregate.Model{},
 		public: map[string][]*aggregate.Model{"gpt-x": {newVisibilityModel(t, 1, 201, 1)}},
@@ -188,7 +199,7 @@ func TestResolveCandidates_PublicWorksWithoutSharedPoolFallback(t *testing.T) {
 
 func TestResolveCandidates_MultipleAdminsUseOwnScope(t *testing.T) {
 	t.Parallel()
-	epRepo := &scopeRecordingEndpointRepo{byID: map[uint]*aggregate.Endpoint{1: newVisibilityEndpoint(t, 1), 2: newVisibilityEndpoint(t, 2)}}
+	epRepo := &scopeRecordingEndpointRepo{byID: map[uint]*aggregate.Endpoint{1: newVisibilityEndpoint(t, 1, 201), 2: newVisibilityEndpoint(t, 2, 202)}}
 	modelRepo := &visibilityModelRepo{
 		own: map[string][]*aggregate.Model{},
 		public: map[string][]*aggregate.Model{"gpt-x": {
@@ -210,7 +221,7 @@ func TestResolveCandidates_MultipleAdminsUseOwnScope(t *testing.T) {
 
 func TestResolveCandidates_DisabledOwnModelFallsBackToPublic(t *testing.T) {
 	t.Parallel()
-	epRepo := &scopeRecordingEndpointRepo{byID: map[uint]*aggregate.Endpoint{1: newVisibilityEndpoint(t, 1)}}
+	epRepo := &scopeRecordingEndpointRepo{byID: map[uint]*aggregate.Endpoint{1: newVisibilityEndpoint(t, 1, 201)}}
 	modelRepo := &visibilityModelRepo{
 		// 自有记录被禁用时 FindByAlias 返回空（仓储侧已带 enabled 过滤）。
 		own:    map[string][]*aggregate.Model{"gpt-x": {}},
@@ -220,5 +231,22 @@ func TestResolveCandidates_DisabledOwnModelFallsBackToPublic(t *testing.T) {
 
 	if _, err := resolver.ResolveCandidates(t.Context(), 101, vo.EndpointAlias("gpt-x"), nil); err != nil {
 		t.Fatalf("disabled own model must fall back to public: %v", err)
+	}
+}
+
+// TestResolveCandidates_DirtyOwnerFailsClosed 脏数据破坏 model.user_id == endpoint.user_id 时，
+// 逐模型 scope 取端点会查不到 → 候选被跳过（fail-closed），不会借用他人端点。
+func TestResolveCandidates_DirtyOwnerFailsClosed(t *testing.T) {
+	t.Parallel()
+	// 模型归属 101，但端点归属 999。
+	epRepo := &scopeRecordingEndpointRepo{byID: map[uint]*aggregate.Endpoint{1: newVisibilityEndpoint(t, 1, 999)}}
+	modelRepo := &visibilityModelRepo{
+		own:    map[string][]*aggregate.Model{"gpt-x": {newVisibilityModel(t, 1, 101, 1)}},
+		public: map[string][]*aggregate.Model{},
+	}
+	resolver := service.NewEndpointResolver(epRepo, modelRepo, false, nil)
+
+	if _, err := resolver.ResolveCandidates(t.Context(), 101, vo.EndpointAlias("gpt-x"), nil); !errors.Is(err, ierr.ErrDataNotExists) {
+		t.Fatalf("dirty owner must fail closed with ErrDataNotExists, got %v", err)
 	}
 }

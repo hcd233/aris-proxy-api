@@ -95,25 +95,31 @@ func (v EndpointVisibility) Normalize() EndpointVisibility // "" → private
    - `visibility = public` 时，归属强制为操作者本人：忽略 `ownerUserID`，不允许代建公开端点给普通用户。
 2. **更新**（`HandleUpdateEndpoint`）
    - 非 admin 显式传 `visibility` → `ierr.ErrUnauthorized`。
-   - admin 可以随时 public ↔ private 切换（否则公开只能靠删了重建）。
+   - admin 可以 public ↔ private 切换，但**只能改自己名下端点**的可见性（见下）。
    - **未传 `visibility` = 保持原值**，不是重置为 private：聚合根由 `FindByID` 从 DB 恢复，`EndpointRepoFieldsFull` 带上新列后 `ep.Visibility()` 已是当前值；命令层只在 `cmd.Visibility != nil` 时调 `SetVisibility`，`repo.Update` 随后整体写回的仍是原值。
    - 唯一会写 endpoint 整行的是 `Update`；额度刷新走 `UpdateQuota` 窄列更新、不会碰 visibility，因此不存在「后台任务把公开端点静默改回私有」的路径。
+
+**可见性只能由归属者本人修改**（CR：只校验 admin 会留下跨租户发布漏洞）：`UpdateEndpointCommand` 带 `OperatorUserID`，命令内 `cmd.Visibility != nil && ep.UserID() != cmd.OperatorUserID` → `ierr.ErrUnauthorized`。否则 admin 可以把普通用户（或另一个 admin）名下的私有端点直接改成 public——等于替别人把上游密钥/额度共享给全平台，且归属者自己反而改不回来（会被「非 admin 不得改公开端点」拦住）。前端同步：编辑他人端点时可见性选择器禁用。
 
 **普通用户改不了公开端点**：不需要新权限分支。update / delete / OAuth reauth / quota 全部走 `FindByID(ctx, id, scope)`，非 admin 的 scope 恒为自身 userID，公开端点归属是 admin，因此一律返回「endpoint not found」（`ierr.ErrDataNotExists`）。这与现有跨租户越权行为一致，不泄漏端点是否存在。
 
 **降级保护（边界情况）**：admin 被降为 `user` 后，其名下已有的公开端点仍会被自己 scope 命中，从而可以改连接字段或删除——与「只有 admin 能维护公开端点」冲突。处理：`UpdateEndpointCommand` / `DeleteEndpointCommand` / `ReauthOAuthCommand` 增加 `IsAdmin bool`，命令内取到聚合后若 `ep.Visibility().IsPublic() && !cmd.IsAdmin` 返回 `ierr.ErrUnauthorized`。
 （备选方案「降级时把其公开端点自动转私有」需要 identity 模块反向依赖 llmproxy，跨模块耦合更贵，不采用。）
 
-**写路径守卫矩阵**（结论：只有 endpoint 的三个命令需要新增 `IsAdmin`，模型侧靠归属天然拦住）
+**写路径守卫矩阵**（结论：endpoint 三个命令 + model 三个命令都需要 `IsAdmin`；模型侧在降级场景下靠归属拦不住）
 
 | 写操作 | 拦截机制 |
 |---|---|
-| endpoint update / delete | `FindByID(scope)` 拦住跨租户；降级场景由新增 `IsAdmin` 守卫 |
+| endpoint update / delete | `FindByID(scope)` 拦住跨租户；可见性变更额外要求归属者本人；降级场景由 `IsAdmin` 守卫 |
 | endpoint OAuth reauth | 同上（`ScopeUserID` + `IsAdmin`） |
 | endpoint OAuth quota probe | `FindByID(scope)` 已拦住（只读探测，不额外加 `IsAdmin`） |
-| model create（带 `endpointID`） | `FindByID(endpointID, scope)` 校验归属 → 公开端点不在普通用户 scope 内，拒绝 |
-| model update / delete | `FindByID(modelID, scope)` 按 `model.user_id` 匹配 → 公开模型归属 admin，拒绝 |
+| model create（带 `endpointID`） | 目标端点 public 且 `!IsAdmin` → `ErrUnauthorized` |
+| model update / delete | 模型所属端点 public 且 `!IsAdmin` → `ErrUnauthorized`（降级 admin 仍能命中自己名下的公开端点） |
 | 模型启用/禁用 | 走 model update，同上 |
+
+> 为什么模型侧也要守卫：降级后的 admin 其 `user_id` 恰好命中自己名下的公开端点与模型，`FindByID(scope)` 不会拦，必须补 `IsAdmin`。
+
+**OAuth 凭据投影的跨租户脱敏**：`upstream/list` 对 OAuth 端点会装配账号邮箱/订阅类型/额度/最近错误。`toOAuthView` 在 demo 视角已掩码邮箱；公开端点引入后，**非归属者**（普通用户看他人公开端点）必须同样掩码邮箱并清空 `lastError`（复用 demo 口径），否则等于把 admin 的个人邮箱与订阅错误详情下发给全员。归属者与 admin 视角保持完整值。
 
 **没有单条详情读接口**：endpoint 只有 list/create/update/delete/oauth*，model 只有 list/create/update/delete，因此不存在「普通用户 GET 公开端点详情拿到密钥」的路径。列表只下发 `MaskedAPIKey`；`baseURL` 对普通用户可见（公开端点的连接地址本就是共享信息），demo 视角的既有脱敏保持不变。若未来新增详情接口，必须复用同一脱敏口径。
 
@@ -259,7 +265,7 @@ Visibility *enum.EndpointVisibility `json:"visibility,omitempty" enum:"private,p
 
 - 公开端点共享 admin 的上游密钥与额度；一个用户高频调用会耗尽所有人的配额。当前不做用户级配额，依赖现有 Token/Request 限流（按调用者 API Key 维度）。
 - 多个 admin 公开同名 alias 时，候选是这些公开模型的合集，按 `priority`/`weight` 调度，调用可能落到任一 admin 的端点。
-- 删除（或降级前的）admin 用户会级联删除其公开端点，公开模型瞬时消失。
+- **删除用户不会级联删除其端点**（identity 既有行为，只软删 user 与 API Key）。因此「admin 降级后被删除」会让其公开端点继续对全员开放并使用已删用户的凭据；运维需先把端点改回私有或删除。若后续要收敛，应在 user 删除流程里把其公开端点置 private 或级联清理。
 - demo 账户与普通用户同口径：能看到公开端点（只读），仍然不能调用 LLM。
 - 公开模型解析 `FindPublicByAlias` 没有 `user_id` 前导列，走不上现有复合索引 `(user_id, alias, endpoint_id, deleted_at)`，会按 alias 扫描 `models` 表。该表是配置数据（万级以下），当前可接受；若增长到十万级，补 `(alias, enabled)` 索引（`// ponytail: 配置表先不建索引，行数上万再评估`）。
 

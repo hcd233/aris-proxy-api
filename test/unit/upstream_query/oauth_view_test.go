@@ -17,6 +17,8 @@ import (
 // fakeOAuthCredRepo 可编程凭据仓储（null 值 = 无凭据行）
 type fakeOAuthCredRepo struct {
 	creds map[uint]*llmagg.OAuthCredential
+	// displays 非 nil 时直接返回该投影（用于构造任意 lastError 等展示字段）
+	displays map[uint]llmvo.OAuthCredentialDisplay
 }
 
 func (f *fakeOAuthCredRepo) FindByEndpointID(_ context.Context, endpointID uint) (*llmagg.OAuthCredential, error) {
@@ -31,6 +33,9 @@ func (f *fakeOAuthCredRepo) ListActive(context.Context) ([]*llmagg.OAuthCredenti
 
 // ListDisplayByEndpointIDs 从内存凭据组装展示投影（与仓储实现的列映射保持一致）
 func (f *fakeOAuthCredRepo) ListDisplayByEndpointIDs(_ context.Context, endpointIDs []uint) (map[uint]llmvo.OAuthCredentialDisplay, error) {
+	if f.displays != nil {
+		return f.displays, nil
+	}
 	displays := make(map[uint]llmvo.OAuthCredentialDisplay, len(endpointIDs))
 	for _, id := range endpointIDs {
 		cred := f.creds[id]
@@ -171,5 +176,73 @@ func TestListUpstreamOAuthViewWithoutCredential(t *testing.T) {
 	}
 	if view.OAuth.Status != string(enum.OAuthCredentialStatusReauthRequired) {
 		t.Fatalf("missing credential must render reauth_required, got %q", view.OAuth.Status)
+	}
+}
+
+// TestListUpstreamOAuthViewMasksNonOwner 普通用户看他人公开 OAuth 端点时，
+// 账号邮箱与错误详情必须脱敏（跨租户 PII）；归属者与 admin 仍看到完整值。
+func TestListUpstreamOAuthViewMasksNonOwner(t *testing.T) {
+	t.Parallel()
+
+	const endpointID = 103
+	ep, err := llmagg.CreateEndpoint(endpointID, "claude-public", "", "https://api.anthropic.com/v1", "", false, false, true, false, enum.EndpointAuthOAuthAnthropic)
+	if err != nil {
+		t.Fatalf("CreateEndpoint: %v", err)
+	}
+	ep.SetUserID(uAlice)
+	ep.RestoreVisibility(enum.EndpointVisibilityPublic)
+	ep.SetTimestamps(testTime(), testTime())
+
+	handler := query.NewListUpstreamHandler(
+		&fakeEndpointRepo{endpoints: map[uint]*llmagg.Endpoint{endpointID: ep}},
+		&fakeModelRepo{},
+		&fakeUserRepo{users: map[uint]*useragg.User{uAlice: alice(t)}},
+		&fakeOAuthCredRepo{displays: map[uint]llmvo.OAuthCredentialDisplay{
+			endpointID: {
+				EndpointID:   endpointID,
+				Provider:     enum.OAuthProviderAnthropic,
+				AccountEmail: "alice@example.com",
+				PlanType:     "max",
+				Status:       enum.OAuthCredentialStatusActive,
+				LastError:    "invalid_grant",
+				Quota:        llmvo.QuotaSnapshot{Windows: []llmvo.QuotaWindow{}},
+			},
+		}},
+	)
+
+	viewFor := func(scope *uint) *port.UpstreamEndpointView {
+		t.Helper()
+		groups, _, _, err := handler.Handle(context.Background(), port.ListUpstreamQuery{
+			CommonParam:   model.CommonParam{PageParam: model.PageParam{Page: 1, PageSize: 10}},
+			ScopeUserID:   scope,
+			IncludePublic: scope != nil,
+		})
+		if err != nil {
+			t.Fatalf("Handle: %v", err)
+		}
+		if len(groups) != 1 || groups[0].Endpoint == nil || groups[0].Endpoint.OAuth == nil {
+			t.Fatalf("oauth view missing: %+v", groups)
+		}
+		return groups[0].Endpoint
+	}
+
+	other := uBob
+	otherView := viewFor(&other)
+	if otherView.OAuth.AccountEmail != "***" || otherView.OAuth.LastError != "" {
+		t.Fatalf("non-owner view must mask email/error, got %+v", otherView.OAuth)
+	}
+	if otherView.OAuth.PlanType != "max" {
+		t.Fatalf("non-owner view keeps plan type, got %q", otherView.OAuth.PlanType)
+	}
+
+	owner := uAlice
+	ownerView := viewFor(&owner)
+	if ownerView.OAuth.AccountEmail != "alice@example.com" || ownerView.OAuth.LastError != "invalid_grant" {
+		t.Fatalf("owner view must be unmasked, got %+v", ownerView.OAuth)
+	}
+
+	adminView := viewFor(nil)
+	if adminView.OAuth.AccountEmail != "alice@example.com" {
+		t.Fatalf("admin view must be unmasked, got %+v", adminView.OAuth)
 	}
 }

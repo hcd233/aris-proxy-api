@@ -63,6 +63,7 @@ func (r *modelRepository) FindByAlias(ctx context.Context, alias vo.EndpointAlia
 // FindPublicByAlias 查询公开端点下启用中的模型（网关解析的公开池回退）
 //
 // 用子查询而非 join：与读模型路径保持同一写法，models 表的过滤条件留在单表上。
+// ponytail: 按 alias 扫 models 表（无 user_id 前导列），配置表万级以下可接受；十万级再补 (alias, enabled) 索引。
 func (r *modelRepository) FindPublicByAlias(ctx context.Context, alias vo.EndpointAlias) ([]*aggregate.Model, error) {
 	db := r.db.WithContext(ctx).Where(constant.WhereModelInPublicEndpoint, enum.EndpointVisibilityPublic)
 	models, err := r.dao.BatchGet(db, &dbmodel.Model{Alias: alias.String(), Enabled: true}, constant.ModelRepoFieldsFull)

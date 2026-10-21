@@ -12,12 +12,13 @@ import (
 )
 
 type deleteModelHandler struct {
-	repo llmproxy.ModelRepository
+	repo         llmproxy.ModelRepository
+	endpointRepo llmproxy.EndpointRepository
 }
 
 // NewDeleteModelHandler 构造删除命令处理器
-func NewDeleteModelHandler(repo llmproxy.ModelRepository) port.DeleteModelHandler {
-	return &deleteModelHandler{repo: repo}
+func NewDeleteModelHandler(repo llmproxy.ModelRepository, endpointRepo llmproxy.EndpointRepository) port.DeleteModelHandler {
+	return &deleteModelHandler{repo: repo, endpointRepo: endpointRepo}
 }
 
 // Handle 执行删除命令
@@ -30,6 +31,17 @@ func (h *deleteModelHandler) Handle(ctx context.Context, cmd port.DeleteModelCom
 	}
 	if m == nil {
 		return ierr.New(ierr.ErrDataNotExists, "model not found")
+	}
+
+	// 降级保护：公开端点下的模型只允许 admin 删除。
+	if !cmd.IsAdmin {
+		ep, eerr := h.endpointRepo.FindByID(ctx, m.EndpointID(), cmd.ScopeUserID)
+		if eerr != nil {
+			return eerr
+		}
+		if ep != nil && ep.Visibility().IsPublic() {
+			return ierr.New(ierr.ErrUnauthorized, "only admin can modify models of a public endpoint")
+		}
 	}
 
 	if err := h.repo.Delete(ctx, cmd.ModelID, cmd.ScopeUserID); err != nil {

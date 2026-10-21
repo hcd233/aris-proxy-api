@@ -5,11 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"slices"
 
 	"github.com/samber/lo"
 	"github.com/samber/mo"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
@@ -331,7 +331,7 @@ func NewCachedEndpointReadRepository(db *gorm.DB, readCache *cache.ReadCache) ll
 	}
 }
 
-// ListAliases 查询指定用户的不重复模型别名（仅已启用的模型）
+// ListAliases 查询指定用户可见的不重复模型别名（自有 + 公开端点，仅已启用）
 //
 // userID 必传真实用户 ID；0（认证缺失）防御性返回空列表而非全平台别名——
 // struct 零值条件下 GORM 会忽略 user_id 过滤，守卫必须有。
@@ -355,13 +355,27 @@ func (r *endpointReadRepository) ListAliases(ctx context.Context, userID uint) (
 
 // visibleModelsDB 返回「自有 + 公开端点」的 models 查询。
 //
-// 自有行排在前面：同一 alias 既有自有又有公开行时，lo.UniqBy(alias) 保留自有行，
-// 让规格/定价与解析结果（自有优先）保持一致。
+// 自有优序在 Go 侧用 preferOwnModels 完成，SQL 不排：gorm 的 Order 只接受
+// OrderByColumn/string，clause.OrderBy{Expression} 会被静默忽略；且 BatchGet
+// 走 FindInBatches，最终只有主键序。
 func (r *endpointReadRepository) visibleModelsDB(ctx context.Context, userID uint) *gorm.DB {
 	db := r.db.WithContext(ctx)
-	return db.
-		Where(db.Where(constant.WhereUserIDEquals, userID).Or(constant.WhereModelInPublicEndpoint, enum.EndpointVisibilityPublic)).
-		Order(clause.OrderBy{Expression: clause.Expr{SQL: constant.OrderByUserIDIsCurrentFirst, Vars: []any{userID}}})
+	return db.Where(db.Where(constant.WhereUserIDEquals, userID).Or(constant.WhereModelInPublicEndpoint, enum.EndpointVisibilityPublic))
+}
+
+// preferOwnModels 把归属 userID 的行稳定排到前面：同 alias 去重时保留自有行，
+// 让导出的规格/定价与解析结果（自有优先）一致。
+func preferOwnModels(models []*dbmodel.Model, userID uint) {
+	slices.SortStableFunc(models, func(a, b *dbmodel.Model) int {
+		switch {
+		case a.UserID == userID && b.UserID != userID:
+			return -1
+		case b.UserID == userID && a.UserID != userID:
+			return 1
+		default:
+			return 0
+		}
+	})
 }
 
 // loadAliases 回源查询模型别名；空结果返回 mo.None（由缓存层写空值标记防穿透）
@@ -405,6 +419,7 @@ func (r *endpointReadRepository) loadModelDetails(ctx context.Context, userID ui
 	if err != nil {
 		return mo.None[[]*llmproxy.ModelDetailProjection](), ierr.Wrap(ierr.ErrDBQuery, err, "list enabled model details")
 	}
+	preferOwnModels(models, userID)
 	uniq := lo.UniqBy(models, func(m *dbmodel.Model) string { return m.Alias })
 	out := lo.Map(uniq, func(m *dbmodel.Model, _ int) *llmproxy.ModelDetailProjection {
 		return &llmproxy.ModelDetailProjection{

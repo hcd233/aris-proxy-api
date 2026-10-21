@@ -41,6 +41,8 @@ type UpdateEndpointCommand struct {
 	EndpointID  uint
 	// IsAdmin 降级保护：非 admin 不得修改已是 public 的端点。
 	IsAdmin bool
+	// OperatorUserID 操作者本人：可见性只能由端点归属者修改（admin 代管他人端点时也不例外）。
+	OperatorUserID uint
 	// Visibility 为 nil 表示不改。
 	Visibility                  *enum.EndpointVisibility
 	Name                        *string

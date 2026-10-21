@@ -964,5 +964,6 @@
   "endpoints.visibility_public": "Public",
   "endpoints.visibility_desc": "Public endpoints are visible and callable by all users; only admins can modify them.",
   "upstream.public_badge": "Public",
-  "upstream.public_readonly": "Public endpoints are managed by admins."
+  "upstream.public_readonly": "Public endpoints are managed by admins.",
+  "endpoints.visibility_owner_only": "Only the endpoint owner can change visibility."
 }
