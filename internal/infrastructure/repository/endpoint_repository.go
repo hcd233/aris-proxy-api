@@ -9,6 +9,7 @@ import (
 	"github.com/samber/lo"
 	"github.com/samber/mo"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
@@ -352,10 +353,21 @@ func (r *endpointReadRepository) ListAliases(ctx context.Context, userID uint) (
 	return cached.OrEmpty(), nil
 }
 
+// visibleModelsDB 返回「自有 + 公开端点」的 models 查询。
+//
+// 自有行排在前面：同一 alias 既有自有又有公开行时，lo.UniqBy(alias) 保留自有行，
+// 让规格/定价与解析结果（自有优先）保持一致。
+func (r *endpointReadRepository) visibleModelsDB(ctx context.Context, userID uint) *gorm.DB {
+	db := r.db.WithContext(ctx)
+	return db.
+		Where(db.Where(constant.WhereUserIDEquals, userID).Or(constant.WhereModelInPublicEndpoint, enum.EndpointVisibilityPublic)).
+		Order(clause.OrderBy{Expression: clause.Expr{SQL: constant.OrderByUserIDIsCurrentFirst, Vars: []any{userID}}})
+}
+
 // loadAliases 回源查询模型别名；空结果返回 mo.None（由缓存层写空值标记防穿透）
 func (r *endpointReadRepository) loadAliases(ctx context.Context, userID uint) (mo.Option[[]*llmproxy.ModelAliasProjection], error) {
-	db := r.db.WithContext(ctx)
-	models, err := r.modelDAO.BatchGet(db, &dbmodel.Model{Enabled: true, UserID: userID}, constant.ModelRepoFieldsAlias)
+	db := r.visibleModelsDB(ctx, userID)
+	models, err := r.modelDAO.BatchGet(db, &dbmodel.Model{Enabled: true}, constant.ModelRepoFieldsAlias)
 	if err != nil {
 		return mo.None[[]*llmproxy.ModelAliasProjection](), ierr.Wrap(ierr.ErrDBQuery, err, "list model aliases")
 	}
@@ -388,8 +400,8 @@ func (r *endpointReadRepository) ListEnabledModelDetails(ctx context.Context, us
 
 // loadModelDetails 回源查询启用中模型详情；空结果返回 mo.None（写空值标记防穿透）
 func (r *endpointReadRepository) loadModelDetails(ctx context.Context, userID uint) (mo.Option[[]*llmproxy.ModelDetailProjection], error) {
-	db := r.db.WithContext(ctx)
-	models, err := r.modelDAO.BatchGet(db, &dbmodel.Model{Enabled: true, UserID: userID}, constant.ModelRepoFieldsFull)
+	db := r.visibleModelsDB(ctx, userID)
+	models, err := r.modelDAO.BatchGet(db, &dbmodel.Model{Enabled: true}, constant.ModelRepoFieldsFull)
 	if err != nil {
 		return mo.None[[]*llmproxy.ModelDetailProjection](), ierr.Wrap(ierr.ErrDBQuery, err, "list enabled model details")
 	}
@@ -416,8 +428,8 @@ func (r *endpointReadRepository) FindEndpointByAlias(ctx context.Context, userID
 	if userID == 0 {
 		return nil, nil, nil
 	}
-	db := r.db.WithContext(ctx)
-	models, err := r.modelDAO.BatchGet(db, &dbmodel.Model{Alias: alias, Enabled: true, UserID: userID}, constant.ModelRepoFieldsFull)
+	db := r.visibleModelsDB(ctx, userID)
+	models, err := r.modelDAO.BatchGet(db, &dbmodel.Model{Alias: alias, Enabled: true}, constant.ModelRepoFieldsFull)
 	if err != nil {
 		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "find models by alias")
 	}
@@ -426,7 +438,9 @@ func (r *endpointReadRepository) FindEndpointByAlias(ctx context.Context, userID
 	}
 	for _, idx := range rand.Perm(len(models)) {
 		m := models[idx]
-		ep, getErr := r.endpointDAO.Get(db, &dbmodel.Endpoint{ID: m.EndpointID}, constant.EndpointRepoFieldsFull)
+		// 端点查询必须用全新 session：db 已带上 models 表的并集条件（endpoint_id 列），
+		// 沿用到 endpoints 表会拼出非法 SQL。
+		ep, getErr := r.endpointDAO.Get(r.db.WithContext(ctx), &dbmodel.Endpoint{ID: m.EndpointID}, constant.EndpointRepoFieldsFull)
 		if getErr != nil {
 			if errors.Is(getErr, gorm.ErrRecordNotFound) {
 				continue
