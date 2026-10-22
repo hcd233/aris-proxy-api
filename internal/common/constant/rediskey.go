@@ -37,6 +37,10 @@ const (
 	ReadCacheKeywordIDsKeyTemplate = "cache:rd:kwids:%s"
 	// ReadCacheKeyScanPattern 读缓存命名空间扫描模式（InvalidateAll 用）
 	ReadCacheKeyScanPattern = "cache:rd:*"
+	// ReadCacheWindowKeyTemplate 读缓存-时间窗查询（%s = 用途 + 参数签名的 SHA-256 摘要）
+	//
+	// 用途（某个统计指标或筛选字段）参与摘要而不单独成段：键长固定，新增用途不改变既有键形态。
+	ReadCacheWindowKeyTemplate = "cache:rd:win:%s"
 
 	// RuntimeMetricsInstancesKey 运行时指标-实例注册表（ZSET：member=instanceID, score=最后flush的unix秒）
 	RuntimeMetricsInstancesKey = "metrics:runtime:instances"

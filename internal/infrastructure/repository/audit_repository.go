@@ -18,6 +18,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall"
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall/aggregate"
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall/vo"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"github.com/hcd233/aris-proxy-api/internal/util"
@@ -25,8 +26,9 @@ import (
 
 // auditRepository AuditRepository 的 GORM 实现
 type auditRepository struct {
-	dao *dao.ModelCallAuditDAO
-	db  *gorm.DB
+	dao   *dao.ModelCallAuditDAO
+	db    *gorm.DB
+	cache *cache.ReadCache
 }
 
 // NewAuditRepository 构造审计仓储
@@ -34,8 +36,8 @@ type auditRepository struct {
 //	@return modelcall.AuditRepository
 //	@author centonhuang
 //	@update 2026-05-29 14:00:00
-func NewAuditRepository(db *gorm.DB) modelcall.AuditRepository {
-	return &auditRepository{dao: dao.GetModelCallAuditDAO(), db: db}
+func NewAuditRepository(db *gorm.DB, rc *cache.ReadCache) modelcall.AuditRepository {
+	return &auditRepository{dao: dao.GetModelCallAuditDAO(), db: db, cache: rc}
 }
 
 // Save 持久化审计聚合
@@ -115,6 +117,13 @@ func (r *auditRepository) ListByAPIKeyIDs(ctx context.Context, apiKeyIDs []uint,
 // apiKeyIDs 为 nil 表示不过滤（admin/demo 路径）；非 nil 时按 key 过滤，
 // 空（用户名下无 Key）短路返回空结果，防止越权查全量。
 func (r *auditRepository) ListDistinctUserNames(ctx context.Context, apiKeyIDs []uint, keyword string, startTime, endTime time.Time) ([]string, error) {
+	key := readCacheKey(constant.ReadCachePurposeAuditOptionUser, cacheScopeIDs(apiKeyIDs), keyword, cacheTimeBucket(startTime), cacheTimeBucket(endTime))
+	return cachedSlice(ctx, r.cache, key, func(loadCtx context.Context) ([]string, error) {
+		return r.loadDistinctUserNames(loadCtx, apiKeyIDs, keyword, startTime, endTime)
+	})
+}
+
+func (r *auditRepository) loadDistinctUserNames(ctx context.Context, apiKeyIDs []uint, keyword string, startTime, endTime time.Time) ([]string, error) {
 	if apiKeyIDs != nil && len(apiKeyIDs) == 0 {
 		return []string{}, nil
 	}
@@ -151,6 +160,13 @@ func (r *auditRepository) ListDistinctUserNames(ctx context.Context, apiKeyIDs [
 // apiKeyIDs 为 nil 表示不过滤（admin/demo 路径）；非 nil 时按 key 过滤，
 // 空（用户名下无 Key）短路返回空结果，防止越权查全量。
 func (r *auditRepository) ListDistinctModels(ctx context.Context, apiKeyIDs []uint, keyword string, startTime, endTime time.Time) ([]string, error) {
+	key := readCacheKey(constant.ReadCachePurposeAuditOptionModel, cacheScopeIDs(apiKeyIDs), keyword, cacheTimeBucket(startTime), cacheTimeBucket(endTime))
+	return cachedSlice(ctx, r.cache, key, func(loadCtx context.Context) ([]string, error) {
+		return r.loadDistinctModels(loadCtx, apiKeyIDs, keyword, startTime, endTime)
+	})
+}
+
+func (r *auditRepository) loadDistinctModels(ctx context.Context, apiKeyIDs []uint, keyword string, startTime, endTime time.Time) ([]string, error) {
 	if apiKeyIDs != nil && len(apiKeyIDs) == 0 {
 		return []string{}, nil
 	}
@@ -185,6 +201,13 @@ func (r *auditRepository) ListDistinctModels(ctx context.Context, apiKeyIDs []ui
 // apiKeyIDs 为 nil 表示不过滤（admin/demo 路径）；非 nil 时按 key 过滤，
 // 空（用户名下无 Key）短路返回空结果，防止越权查全量。
 func (r *auditRepository) ListDistinctStatusCodes(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time) ([]string, error) {
+	key := readCacheKey(constant.ReadCachePurposeAuditOptionStatus, cacheScopeIDs(apiKeyIDs), cacheTimeBucket(startTime), cacheTimeBucket(endTime))
+	return cachedSlice(ctx, r.cache, key, func(loadCtx context.Context) ([]string, error) {
+		return r.loadDistinctStatusCodes(loadCtx, apiKeyIDs, startTime, endTime)
+	})
+}
+
+func (r *auditRepository) loadDistinctStatusCodes(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time) ([]string, error) {
 	if apiKeyIDs != nil && len(apiKeyIDs) == 0 {
 		return []string{}, nil
 	}
@@ -217,6 +240,13 @@ func (r *auditRepository) ListDistinctStatusCodes(ctx context.Context, apiKeyIDs
 // apiKeyIDs 为 nil 表示不过滤（admin/demo 路径）；非 nil 时按 key 过滤，
 // 空（用户名下无 Key）短路返回空结果，防止越权查全量。
 func (r *auditRepository) ListDistinctUserAgents(ctx context.Context, apiKeyIDs []uint, keyword string, startTime, endTime time.Time) ([]string, error) {
+	key := readCacheKey(constant.ReadCachePurposeAuditOptionUA, cacheScopeIDs(apiKeyIDs), keyword, cacheTimeBucket(startTime), cacheTimeBucket(endTime))
+	return cachedSlice(ctx, r.cache, key, func(loadCtx context.Context) ([]string, error) {
+		return r.loadDistinctUserAgents(loadCtx, apiKeyIDs, keyword, startTime, endTime)
+	})
+}
+
+func (r *auditRepository) loadDistinctUserAgents(ctx context.Context, apiKeyIDs []uint, keyword string, startTime, endTime time.Time) ([]string, error) {
 	if apiKeyIDs != nil && len(apiKeyIDs) == 0 {
 		return []string{}, nil
 	}
@@ -249,6 +279,13 @@ func (r *auditRepository) ListDistinctUserAgents(ctx context.Context, apiKeyIDs 
 
 // QueryModelCost 模型成本排行（group by model_id, pricing_currency；仅带四维拆分的行）
 func (r *auditRepository) QueryModelCost(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time) ([]*modelcall.ModelCostPoint, error) {
+	key := readCacheKey(constant.ReadCachePurposeAuditStatsCost, cacheScopeIDs(apiKeyIDs), cacheTimeBucket(startTime), cacheTimeBucket(endTime))
+	return cachedSlice(ctx, r.cache, key, func(loadCtx context.Context) ([]*modelcall.ModelCostPoint, error) {
+		return r.loadModelCost(loadCtx, apiKeyIDs, startTime, endTime)
+	})
+}
+
+func (r *auditRepository) loadModelCost(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time) ([]*modelcall.ModelCostPoint, error) {
 	// apiKeyIDs 非 nil 且为空（用户名下无 Key）：短路返回空结果，防止越权查全量；nil 表示不过滤（admin 路径）
 	if apiKeyIDs != nil && len(apiKeyIDs) == 0 {
 		return []*modelcall.ModelCostPoint{}, nil
@@ -442,6 +479,13 @@ func dateTruncSQL(granularity string) string {
 }
 
 func (r *auditRepository) QueryModelTrend(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.ModelTrendPoint, error) {
+	key := readCacheKey(constant.ReadCachePurposeAuditStatsTrend, cacheScopeIDs(apiKeyIDs), cacheTimeBucket(startTime), cacheTimeBucket(endTime), granularity)
+	return cachedSlice(ctx, r.cache, key, func(loadCtx context.Context) ([]*modelcall.ModelTrendPoint, error) {
+		return r.loadModelTrend(loadCtx, apiKeyIDs, startTime, endTime, granularity)
+	})
+}
+
+func (r *auditRepository) loadModelTrend(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.ModelTrendPoint, error) {
 	// apiKeyIDs 非 nil 且为空（用户名下无 Key）：短路返回空结果，防止越权查全量；nil 表示不过滤（admin 路径）
 	if apiKeyIDs != nil && len(apiKeyIDs) == 0 {
 		return []*modelcall.ModelTrendPoint{}, nil
@@ -467,6 +511,13 @@ func (r *auditRepository) QueryModelTrend(ctx context.Context, apiKeyIDs []uint,
 }
 
 func (r *auditRepository) QueryRequestRate(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.RequestRatePoint, error) {
+	key := readCacheKey(constant.ReadCachePurposeAuditStatsRate, cacheScopeIDs(apiKeyIDs), cacheTimeBucket(startTime), cacheTimeBucket(endTime), granularity)
+	return cachedSlice(ctx, r.cache, key, func(loadCtx context.Context) ([]*modelcall.RequestRatePoint, error) {
+		return r.loadRequestRate(loadCtx, apiKeyIDs, startTime, endTime, granularity)
+	})
+}
+
+func (r *auditRepository) loadRequestRate(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.RequestRatePoint, error) {
 	// apiKeyIDs 非 nil 且为空（用户名下无 Key）：短路返回空结果，防止越权查全量；nil 表示不过滤（admin 路径）
 	if apiKeyIDs != nil && len(apiKeyIDs) == 0 {
 		return []*modelcall.RequestRatePoint{}, nil
@@ -491,6 +542,13 @@ func (r *auditRepository) QueryRequestRate(ctx context.Context, apiKeyIDs []uint
 }
 
 func (r *auditRepository) QueryTokenThroughput(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.TokenThroughputPoint, error) {
+	key := readCacheKey(constant.ReadCachePurposeAuditStatsThroughput, cacheScopeIDs(apiKeyIDs), cacheTimeBucket(startTime), cacheTimeBucket(endTime), granularity)
+	return cachedSlice(ctx, r.cache, key, func(loadCtx context.Context) ([]*modelcall.TokenThroughputPoint, error) {
+		return r.loadTokenThroughput(loadCtx, apiKeyIDs, startTime, endTime, granularity)
+	})
+}
+
+func (r *auditRepository) loadTokenThroughput(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.TokenThroughputPoint, error) {
 	// apiKeyIDs 非 nil 且为空（用户名下无 Key）：短路返回空结果，防止越权查全量；nil 表示不过滤（admin 路径）
 	if apiKeyIDs != nil && len(apiKeyIDs) == 0 {
 		return []*modelcall.TokenThroughputPoint{}, nil
@@ -523,6 +581,13 @@ func (r *auditRepository) QueryTokenThroughput(ctx context.Context, apiKeyIDs []
 }
 
 func (r *auditRepository) QueryFirstTokenLatency(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.FirstTokenLatencyPoint, error) {
+	key := readCacheKey(constant.ReadCachePurposeAuditStatsLatency, cacheScopeIDs(apiKeyIDs), cacheTimeBucket(startTime), cacheTimeBucket(endTime), granularity)
+	return cachedSlice(ctx, r.cache, key, func(loadCtx context.Context) ([]*modelcall.FirstTokenLatencyPoint, error) {
+		return r.loadFirstTokenLatency(loadCtx, apiKeyIDs, startTime, endTime, granularity)
+	})
+}
+
+func (r *auditRepository) loadFirstTokenLatency(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.FirstTokenLatencyPoint, error) {
 	// apiKeyIDs 非 nil 且为空（用户名下无 Key）：短路返回空结果，防止越权查全量；nil 表示不过滤（admin 路径）
 	if apiKeyIDs != nil && len(apiKeyIDs) == 0 {
 		return []*modelcall.FirstTokenLatencyPoint{}, nil

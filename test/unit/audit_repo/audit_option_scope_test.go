@@ -36,7 +36,7 @@ func TestListDistinctOptions_EmptyAPIKeyIDsShortCircuitsToEmpty(t *testing.T) {
 		t.Fatalf("seed failed: %v", err)
 	}
 
-	repo := repository.NewAuditRepository(db)
+	repo := repository.NewAuditRepository(db, nil)
 	ctx := context.Background()
 	now := time.Now()
 	start, end := now.Add(-24*time.Hour), now.Add(24*time.Hour)
@@ -77,7 +77,7 @@ func TestListDistinctOptions_NilAPIKeyIDsQueriesAll(t *testing.T) {
 		t.Fatalf("seed failed: %v", err)
 	}
 
-	repo := repository.NewAuditRepository(db)
+	repo := repository.NewAuditRepository(db, nil)
 	ctx := context.Background()
 
 	if items, err := repo.ListDistinctModels(ctx, nil, "", time.Time{}, time.Time{}); err != nil || len(items) != 2 {

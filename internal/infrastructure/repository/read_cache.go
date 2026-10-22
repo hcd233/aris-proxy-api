@@ -1,16 +1,21 @@
 package repository
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"slices"
 	"strconv"
+	"time"
 
 	"github.com/bytedance/sonic"
+	"github.com/samber/mo"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 )
 
@@ -46,4 +51,68 @@ func modelListCacheKey(param model.CommonParam, filter llmproxy.ModelListFilter,
 	sign, _ := sonic.MarshalString(modelListCacheSign{Param: param, Filter: filter}) //nolint:errcheck // 纯数据结构序列化不会失败
 	sum := sha256.Sum256([]byte(sign))
 	return fmt.Sprintf(constant.ReadCacheModelListKeyTemplate, scope, hex.EncodeToString(sum[:]))
+}
+
+// readCacheKey 由用途 + 参数签名摘要构造时间窗查询缓存键。
+//
+// 用途（如 "audit:distinct:model"）与全部影响结果的参数一起进摘要：键长固定、无分隔符歧义，
+// 调用方必须把 scope（apiKeyIDs / ownerIDs / sessionIDs）显式放进 parts——漏传即跨租户串数据。
+//
+//	@param purpose 用途标识，需全局唯一
+//	@param parts 影响结果的全部参数
+//	@return string
+func readCacheKey(purpose string, parts ...any) string {
+	sign, _ := sonic.MarshalString(parts) //nolint:errcheck // 纯数据结构序列化不会失败
+	sum := sha256.Sum256([]byte(purpose + "\x00" + sign))
+	return fmt.Sprintf(constant.ReadCacheWindowKeyTemplate, hex.EncodeToString(sum[:]))
+}
+
+// cacheScopeIDs 把 ID 集合归一化为升序去重切片，保证同一集合不同顺序得到同一个键。
+//
+// nil 必须保持 nil（语义是 admin 全量），空非 nil 保持空（语义是名下无 Key 的越权短路），
+// 两者不可合并——否则无 Key 用户可能命中 admin 的全量缓存。
+func cacheScopeIDs(ids []uint) []uint {
+	if ids == nil {
+		return nil
+	}
+	out := slices.Clone(ids)
+	slices.Sort(out)
+	return slices.Compact(out)
+}
+
+// cacheTimeBucket 把查询时间窗对齐到缓存键粒度；零值原样返回。
+func cacheTimeBucket(t time.Time) time.Time {
+	if t.IsZero() {
+		return t
+	}
+	return t.Truncate(constant.ReadCacheWindowBucket)
+}
+
+// cachedSlice 时间窗查询的 cache-aside 封装。
+//
+// 空结果由 GetOrLoad 写空值标记（防穿透），回源错误不写缓存，Redis 故障由 ReadCache fail-open 回源。
+//
+//	@param ctx context.Context
+//	@param rc *cache.ReadCache 为 nil 时退化为直接回源
+//	@param key 缓存键（readCacheKey 产出）
+//	@param loader 回源加载器
+//	@return []T
+//	@return error
+func cachedSlice[T any](ctx context.Context, rc *cache.ReadCache, key string, loader func(context.Context) ([]T, error)) ([]T, error) {
+	opt, err := cache.GetOrLoadWithTTL(ctx, rc, key, constant.ReadCacheWindowTTL, constant.ReadCacheWindowTTLJitter,
+		func(loadCtx context.Context) (mo.Option[[]T], error) {
+			values, loadErr := loader(loadCtx)
+			if loadErr != nil {
+				return mo.None[[]T](), loadErr
+			}
+			if len(values) == 0 {
+				return mo.None[[]T](), nil
+			}
+			return mo.Some(values), nil
+		})
+	if err != nil {
+		return nil, err
+	}
+	// 空结果统一返回空切片而非 nil：响应体里 "[]" 比 "null" 对前端安全（后者要求空值兜底）。
+	return opt.OrElse([]T{}), nil
 }

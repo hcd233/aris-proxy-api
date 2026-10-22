@@ -14,6 +14,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/filter"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
 	"github.com/hcd233/aris-proxy-api/internal/util"
@@ -24,16 +25,17 @@ import (
 //	@author centonhuang
 //	@update 2026-06-17 10:00:00
 type cronCallAuditRepository struct {
-	db  *gorm.DB
-	dao *dao.CronCallAuditDAO
+	db    *gorm.DB
+	dao   *dao.CronCallAuditDAO
+	cache *cache.ReadCache
 }
 
 // NewCronCallAuditRepository 构造 CronCallAudit 仓储
 //
 //	@param db *gorm.DB
 //	@return port.CronCallAuditRepository
-func NewCronCallAuditRepository(db *gorm.DB) port.CronCallAuditRepository {
-	return &cronCallAuditRepository{db: db, dao: dao.GetCronCallAuditDAO()}
+func NewCronCallAuditRepository(db *gorm.DB, rc *cache.ReadCache) port.CronCallAuditRepository {
+	return &cronCallAuditRepository{db: db, dao: dao.GetCronCallAuditDAO(), cache: rc}
 }
 
 // Save 保存 CronCallAudit
@@ -137,6 +139,13 @@ func (r *cronCallAuditRepository) List(ctx context.Context, param model.CommonPa
 //	@return []string
 //	@return error
 func (r *cronCallAuditRepository) ListDistinctTypes(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
+	key := readCacheKey(constant.ReadCachePurposeCronOptionType, keyword, cacheTimeBucket(startTime), cacheTimeBucket(endTime))
+	return cachedSlice(ctx, r.cache, key, func(loadCtx context.Context) ([]string, error) {
+		return r.loadDistinctTypes(loadCtx, keyword, startTime, endTime)
+	})
+}
+
+func (r *cronCallAuditRepository) loadDistinctTypes(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
 	var types []string
 	query := r.db.WithContext(ctx).Model(&dbmodel.CronCallAudit{}).
 		Select(constant.CronAuditDistinctSelectType).
@@ -168,6 +177,13 @@ func (r *cronCallAuditRepository) ListDistinctTypes(ctx context.Context, keyword
 //	@return []string
 //	@return error
 func (r *cronCallAuditRepository) ListDistinctStatuses(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
+	key := readCacheKey(constant.ReadCachePurposeCronOptionStatus, keyword, cacheTimeBucket(startTime), cacheTimeBucket(endTime))
+	return cachedSlice(ctx, r.cache, key, func(loadCtx context.Context) ([]string, error) {
+		return r.loadDistinctStatuses(loadCtx, keyword, startTime, endTime)
+	})
+}
+
+func (r *cronCallAuditRepository) loadDistinctStatuses(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
 	var statuses []string
 	query := r.db.WithContext(ctx).Model(&dbmodel.CronCallAudit{}).
 		Select(constant.CronAuditDistinctSelectStatus).
