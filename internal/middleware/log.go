@@ -9,6 +9,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/hcd233/aris-proxy-api/internal/util"
 	"github.com/samber/lo"
 	"go.uber.org/zap"
 )
@@ -89,11 +90,16 @@ func buildRequestBodyFields(c fiber.Ctx) []zap.Field {
 	if !strings.Contains(string(c.Request().Header.ContentType()), constant.HTTPContentTypeJSON) {
 		return nil
 	}
+	body := c.Body()
+	if len(body) == 0 {
+		return nil
+	}
+	if len(body) > constant.LogMiddlewareBodyMaxBytes {
+		return []zap.Field{zap.String("request", bodyPreview(body))}
+	}
 	request := make(map[string]any)
-	if reqBody := c.Body(); len(reqBody) > 0 {
-		if jsonErr := sonic.Unmarshal(reqBody, &request); jsonErr != nil {
-			zap.L().Warn("[LogMiddleware] Unmarshal request error", zap.ByteString("request", reqBody), zap.Error(jsonErr))
-		}
+	if jsonErr := sonic.Unmarshal(body, &request); jsonErr != nil {
+		return []zap.Field{zap.String("request", bodyPreview(body))}
 	}
 	return []zap.Field{zap.Dict("request", lo.MapToSlice(request, func(key string, value any) zap.Field {
 		return zap.Any(key, value)
@@ -101,19 +107,40 @@ func buildRequestBodyFields(c fiber.Ctx) []zap.Field {
 }
 
 func buildResponseBodyFields(c fiber.Ctx) []zap.Field {
-	if !strings.Contains(string(c.Response().Header.ContentType()), constant.HTTPContentTypeJSON) &&
-		!strings.Contains(string(c.Response().Header.ContentType()), constant.HTTPContentTypeProblemJSON) {
+	contentType := string(c.Response().Header.ContentType())
+	if !strings.Contains(contentType, constant.HTTPContentTypeJSON) &&
+		!strings.Contains(contentType, constant.HTTPContentTypeProblemJSON) {
 		return nil
 	}
+	body := c.Response().Body()
+	if len(body) == 0 {
+		return nil
+	}
+	if len(body) > constant.LogMiddlewareBodyMaxBytes {
+		return []zap.Field{zap.String("response", bodyPreview(body))}
+	}
 	response := make(map[string]any)
-	if respBody := c.Response().Body(); respBody != nil {
-		if jsonErr := sonic.Unmarshal(respBody, &response); jsonErr != nil {
-			zap.L().Warn("[LogMiddleware] Unmarshal response error", zap.ByteString("response", respBody), zap.Error(jsonErr))
-		}
+	if jsonErr := sonic.Unmarshal(body, &response); jsonErr != nil {
+		return []zap.Field{zap.String("response", bodyPreview(body))}
 	}
 	return []zap.Field{zap.Dict("response", lo.MapToSlice(response, func(key string, value any) zap.Field {
 		return zap.Any(key, value)
 	})...)}
+}
+
+// bodyPreview 把超长或不可解析的 body 截断成字符串字段，避免整段内容进入日志。
+func bodyPreview(body []byte) string {
+	return util.TruncateFieldValue(string(body), constant.LogMiddlewareBodyMaxBytes)
+}
+
+// ShouldLogBody 判断是否记录请求/响应体：只在失败现场记录。
+//
+// 成功响应体是日志体积与 CPU 的主要来源（如 session/message/list 的 310KB 响应
+// 需完整 JSON 解析后再编码一次），而排障依赖的是失败请求的入参与出参，故成功路径不记录。
+//
+// 导出供回归测试断言策略（同 repository.FormatBigIntArray 的测试导出约定）。
+func ShouldLogBody(err error, status int) bool {
+	return err != nil || status >= fiber.StatusBadRequest
 }
 
 func buildResponseHeadersFields(c fiber.Ctx) []zap.Field {
@@ -172,9 +199,11 @@ func LogMiddleware(cfg LogMiddlewareConfig) fiber.Handler {
 		}
 
 		fields = append(fields, buildRequestHeadersFields(c)...)
-		fields = append(fields, buildRequestBodyFields(c)...)
-		fields = append(fields, buildResponseBodyFields(c)...)
 		fields = append(fields, buildResponseHeadersFields(c)...)
+		if ShouldLogBody(err, c.Response().StatusCode()) {
+			fields = append(fields, buildRequestBodyFields(c)...)
+			fields = append(fields, buildResponseBodyFields(c)...)
+		}
 
 		if err != nil {
 			fields = append([]zap.Field{zap.Error(err)}, fields...)
