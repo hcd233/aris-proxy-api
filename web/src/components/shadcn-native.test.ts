@@ -233,6 +233,14 @@ describe("⑥ 聊天区", () => {
     expect(src).toMatch(/<MessageHeader[\s\S]*?<CopyButton[\s\S]*?<\/MessageHeader>/);
   });
 
+  it("思考块与工具卡之间只保留列表 gap，不叠加 margin", () => {
+    expect(read("components/chat/reasoning-block.tsx")).not.toContain("mb-3");
+    expect(read("components/chat/tool-call-card.tsx")).not.toContain("mt-3");
+    expect(read("components/chat/assistant-message.tsx")).toContain(
+      '<div className="flex flex-col gap-3">',
+    );
+  });
+
   it("playground 对话区用 MessageScroller", () => {
     const src = read("components/playground/conversation-view.tsx");
     expect(src).toContain("<MessageScrollerProvider");

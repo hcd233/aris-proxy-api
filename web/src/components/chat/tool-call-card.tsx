@@ -46,7 +46,7 @@ export function ToolCallCard({ call, result }: ToolCallCardProps) {
     <Collapsible
       open={open}
       onOpenChange={setOpen}
-      className="mt-3 overflow-hidden rounded-lg border border-border bg-card"
+      className="overflow-hidden rounded-lg border border-border bg-card"
     >
       <CollapsibleTrigger className="flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors hover:bg-muted/30">
         <div className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/12 text-primary">

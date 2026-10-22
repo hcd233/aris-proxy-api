@@ -7,7 +7,7 @@ export function ReasoningBlock({ text }: { text: string }) {
   if (!text.trim()) return null;
 
   return (
-    <Collapsible className="mb-3">
+    <Collapsible>
       <CollapsibleTrigger className="inline-flex items-center gap-1.5 rounded-md px-1.5 py-1 text-[12px] text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground">
         <Brain className="size-3.5 text-primary/70" />
         <span className="font-medium tracking-wide">{t("chat.thought_process")}</span>

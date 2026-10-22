@@ -104,7 +104,7 @@ export function AssistantMessage({ message, index, toolResultsByID }: AssistantM
         {refusal && <PartRefusal text={refusal} />}
 
         {tool_calls && tool_calls.length > 0 && (
-          <div>
+          <div className="flex flex-col gap-3">
             {tool_calls.map((call: UnifiedToolCall, i: number) => (
               <ToolCallCard
                 key={call.id ?? i}
