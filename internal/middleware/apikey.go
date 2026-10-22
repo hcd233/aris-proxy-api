@@ -139,6 +139,23 @@ func apiKeyAuthCacheTTL() time.Duration {
 	return constant.APIKeyAuthCacheTTL + rand.N(constant.APIKeyAuthCacheTTLJitter) //nolint:gosec // G404 TTL 抖动无需密码学随机
 }
 
+// APIKeyAuthFailureStatus 把鉴权回源失败映射为 HTTP 状态码。
+//
+// Key 不存在（gorm.ErrRecordNotFound）是客户端问题 → 401；
+// DB 不可用等其他错误是服务端问题 → 503，让 SDK 重试而不是误以为 Key 失效。
+// 导出仅供回归测试断言（同 ResolveAPIKeyAuth 的约定）。
+//
+//	@param err ResolveAPIKeyAuth 返回的错误
+//	@return int HTTP 状态码
+//	@author centonhuang
+//	@update 2026-10-23 01:30:00
+func APIKeyAuthFailureStatus(err error) int {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return fiber.StatusUnauthorized
+	}
+	return fiber.StatusServiceUnavailable
+}
+
 // APIKeyMiddleware API Key 验证中间件
 //
 // 鉴权结果（key 归属 + 用户信息）走 Redis 缓存：命中时每请求 0 次 DB 查询，
@@ -169,8 +186,14 @@ func APIKeyMiddleware(db *gorm.DB, cache *redis.Client) func(ctx huma.Context, n
 
 		auth, err := ResolveAPIKeyAuth(ctx.Context(), db, cache, tokenString)
 		if err != nil {
-			logger.WithCtx(ctx.Context()).Info("[APIKeyMiddleware] API key not found", zap.Error(err))
-			lo.Must0(apiutil.WriteErrorHTTPResponse(ctx, fiber.StatusUnauthorized, ierr.ErrUnauthorized.BizError().Localize(i18n.FromCtx(ctx.Context()))))
+			status := APIKeyAuthFailureStatus(err)
+			if status == fiber.StatusUnauthorized {
+				logger.WithCtx(ctx.Context()).Info("[APIKeyMiddleware] API key not found", zap.Error(err))
+				lo.Must0(apiutil.WriteErrorHTTPResponse(ctx, status, ierr.ErrUnauthorized.BizError().Localize(i18n.FromCtx(ctx.Context()))))
+				return
+			}
+			logger.WithCtx(ctx.Context()).Error("[APIKeyMiddleware] Failed to load API key auth", zap.Error(err))
+			lo.Must0(apiutil.WriteErrorHTTPResponse(ctx, status, ierr.ErrInternal.BizError().Localize(i18n.FromCtx(ctx.Context()))))
 			return
 		}
 

@@ -88,8 +88,8 @@ func (u *anthropicUseCase) CreateMessage(ctx context.Context, req *dto.Anthropic
 		return SelectCompatRoute(enum.ProxyAPIAnthropicMessage, ep) != enum.CompatRouteUnsupported
 	})
 	if err != nil {
-		log.Error("[AnthropicUseCase] Model not found or unsupported for messages API", zap.String("model", req.Body.Model), zap.Error(err))
-		return nil, proxyutil.SendAnthropicModelNotFoundError(req.Body.Model)
+		log.Error("[AnthropicUseCase] Messages model resolve failed", zap.String("model", req.Body.Model), zap.Error(err))
+		return nil, proxyutil.ModelResolveError(err, enum.ProtocolKindAnthropic, req.Body.Model)
 	}
 	ep, m := cands[0].Endpoint, cands[0].Model
 	compatRoute = SelectCompatRoute(enum.ProxyAPIAnthropicMessage, ep)

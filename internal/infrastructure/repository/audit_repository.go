@@ -89,7 +89,7 @@ func (r *auditRepository) Save(ctx context.Context, audit *aggregate.ModelCallAu
 //	@update 2026-06-09 10:00:00
 func (r *auditRepository) ListAll(ctx context.Context, param model.CommonParam, startTime, endTime time.Time, criteria *filter.FilterCriteria) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
 	db := r.db.WithContext(ctx)
-	return r.paginate(db, param, startTime, endTime, criteria)
+	return r.paginate(ctx, db, nil, param, startTime, endTime, criteria)
 }
 
 // ListByAPIKeyIDs 按 api_key_id IN (...) 分页查询；apiKeyIDs 为空时返回空结果且不打 SQL
@@ -109,7 +109,7 @@ func (r *auditRepository) ListByAPIKeyIDs(ctx context.Context, apiKeyIDs []uint,
 		return nil, &model.PageInfo{Page: page, PageSize: pageSize, Total: 0}, nil
 	}
 	db := r.db.WithContext(ctx).Where(fmt.Sprintf(constant.DBConditionInTemplate, constant.FieldAPIKeyID), apiKeyIDs)
-	return r.paginate(db, param, startTime, endTime, criteria)
+	return r.paginate(ctx, db, apiKeyIDs, param, startTime, endTime, criteria)
 }
 
 // ListDistinctUserNames 查询去重的用户名列表。
@@ -349,7 +349,7 @@ func (r *auditRepository) BatchGetRelations(ctx context.Context, apiKeyIDs []uin
 // paginate 通用分页：在调用方已附加范围过滤的 db 上做时间范围、模糊搜索、排序、count、limit/offset。
 //
 // 不复用 baseDAO.Paginate，因为后者只接受 *ModelT 等值 where 不支持 IN 条件。
-func (r *auditRepository) paginate(db *gorm.DB, param model.CommonParam, startTime, endTime time.Time, criteria *filter.FilterCriteria) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
+func (r *auditRepository) paginate(ctx context.Context, db *gorm.DB, scope []uint, param model.CommonParam, startTime, endTime time.Time, criteria *filter.FilterCriteria) ([]*aggregate.ModelCallAudit, *model.PageInfo, error) {
 	if param.Page < 1 {
 		param.Page = 1
 	}
@@ -371,12 +371,16 @@ func (r *auditRepository) paginate(db *gorm.DB, param model.CommonParam, startTi
 		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, filterErr, "build filter SQL")
 	}
 	sql = r.applyKeywordSearch(db, sql, param.Query)
+
+	// COUNT 必须在 applySort 之前取：带 ORDER BY 的 COUNT 会对全部命中行排序。
+	countSQL := sql
 	sql = r.applySort(sql, param.Sort, param.SortField)
 
-	pageInfo := &model.PageInfo{Page: param.Page, PageSize: param.PageSize}
-	if err := sql.Count(&pageInfo.Total).Error; err != nil {
-		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "count audit logs")
+	total, countErr := r.countPaginated(ctx, countSQL, scope, param, startTime, endTime, criteria)
+	if countErr != nil {
+		return nil, nil, countErr
 	}
+	pageInfo := &model.PageInfo{Page: param.Page, PageSize: param.PageSize, Total: total}
 
 	limit, offset := param.PageSize, (param.Page-1)*param.PageSize
 	var records []*dbmodel.ModelCallAudit
@@ -404,6 +408,42 @@ func (r *auditRepository) paginate(db *gorm.DB, param model.CommonParam, startTi
 		return a
 	})
 	return audits, pageInfo, nil
+}
+
+// countPaginated 计算列表 total：无 filter/keyword 时按 (scope, 时间窗分钟桶) 缓存。
+//
+// 审计表 82K 行时 COUNT(*) 是 Seq Scan（2026-10-23 实测 111ms），而分页 SELECT 走
+// idx_mca_created_at 仅 0.17ms——每请求一次的 COUNT 是审计列表的主成本。
+// 带 filter/keyword 的查询键基数不可控（filter 组合、联想输入逐字符变化），直接回源。
+func (r *auditRepository) countPaginated(ctx context.Context, db *gorm.DB, scope []uint, param model.CommonParam, startTime, endTime time.Time, criteria *filter.FilterCriteria) (int64, error) {
+	load := func(loadCtx context.Context) (mo.Option[int64], error) {
+		var total int64
+		if err := db.WithContext(loadCtx).Count(&total).Error; err != nil {
+			return mo.None[int64](), ierr.Wrap(ierr.ErrDBQuery, err, "count audit logs")
+		}
+		return mo.Some(total), nil
+	}
+
+	hasFilter := criteria != nil && len(criteria.Filters) > 0
+	if r.cache == nil || hasFilter || param.Query != "" {
+		opt, loadErr := load(ctx)
+		if loadErr != nil {
+			return 0, loadErr
+		}
+		return opt.OrElse(0), nil
+	}
+
+	key := readCacheKey(
+		constant.ReadCachePurposeAuditPaginateCount,
+		cacheScopeIDs(scope),
+		cacheTimeBucket(startTime),
+		cacheTimeBucket(endTime),
+	)
+	opt, cacheErr := cache.GetOrLoadWithTTL(ctx, r.cache, key, constant.ReadCachePaginateCountTTL, constant.ReadCachePaginateCountTTLJitter, load)
+	if cacheErr != nil {
+		return 0, cacheErr
+	}
+	return opt.OrElse(0), nil
 }
 
 // applyFilter 注入 filter 条件

@@ -200,11 +200,9 @@ func NewSessionReadRepository(db *gorm.DB, rc *cache.ReadCache) session.SessionR
 
 // sessionSummaryRow session 列表查询的扁平行模型。
 //
-// 设计要点（perf/session-list-trigram-and-windowcount-2026-06-08）：
-//   - TotalCount 接 SQL 里的 COUNT(*) OVER ()，把分页 SELECT 与 COUNT 折成一条
-//     语句执行，省掉一次独立 COUNT(*) 的 roundtrip 与 WHERE 评估。
-//     窗口函数对所有行返回相同值，所以只需读 rows[0].TotalCount。
-//   - MessageCount 和 ToolCount 从 message_ids / tool_ids 实时计算，不再物化冗余列。
+// MessageCount / ToolCount 从 message_ids / tool_ids 实时计算（不物化冗余列）。
+// total 由独立 COUNT(*) 查询产出，行模型不再携带窗口函数别名
+// （perf/session-list-split-count-2026-10-23）。
 type sessionSummaryRow struct {
 	ID           uint      `gorm:"column:id"`
 	CreatedAt    time.Time `gorm:"column:created_at"`
@@ -214,7 +212,6 @@ type sessionSummaryRow struct {
 	ToolCount    int       `gorm:"column:tool_count"`
 	Questions    []uint    `gorm:"column:questions;serializer:json"`
 	ModelIDs     []string  `gorm:"column:model_ids;serializer:json"`
-	TotalCount   int64     `gorm:"column:total_count"`
 }
 
 // FormatBigIntArray 把 id 集合序列化为 PG bigint[] 字面量（"{1,2,3}"）
@@ -283,29 +280,26 @@ func (r *sessionReadRepository) ListAllSessions(ctx context.Context, param model
 		param.PageSize = 20
 	}
 
-	sql := db.Model(&dbmodel.Session{}).Select(constant.SessionSummarySelect).Where(constant.DBConditionDeletedAtZero)
+	base := db.Model(&dbmodel.Session{}).Where(constant.DBConditionDeletedAtZero)
 
 	if !startTime.IsZero() {
-		sql = sql.Where(constant.FieldCreatedAt+" >= ?", startTime)
+		base = base.Where(constant.FieldCreatedAt+" >= ?", startTime)
 	}
 	if !endTime.IsZero() {
-		sql = sql.Where(constant.FieldCreatedAt+" <= ?", endTime)
+		base = base.Where(constant.FieldCreatedAt+" <= ?", endTime)
 	}
 	if param.Sort != "" && param.SortField != "" {
 		param.SortField = util.SafeSortField(param.SortField)
 	}
-	if param.Sort != "" && param.SortField != "" {
-		sql = sql.Order(clause.OrderByColumn{Column: clause.Column{Name: param.SortField}, Desc: param.Sort == enum.SortDesc})
-	}
 	if keyword != "" {
-		filtered, ok, err := r.applyKeywordFilter(ctx, sql, keyword)
+		filtered, ok, err := r.applyKeywordFilter(ctx, base, keyword)
 		if err != nil {
 			return nil, nil, err
 		}
 		if !ok {
 			return []*session.SessionSummaryProjection{}, &model.PageInfo{Page: param.Page, PageSize: param.PageSize}, nil
 		}
-		sql = filtered
+		base = filtered
 	}
 
 	// 注入 filter 条件
@@ -315,38 +309,11 @@ func (r *sessionReadRepository) ListAllSessions(ctx context.Context, param model
 			return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "build filter SQL")
 		}
 		if filterSQL != "" {
-			sql = sql.Where(filterSQL, filterArgs...)
+			base = base.Where(filterSQL, filterArgs...)
 		}
 	}
 
-	limit, offset := param.PageSize, (param.Page-1)*param.PageSize
-	var rows []sessionSummaryRow
-	if err := sql.Limit(limit).Offset(offset).Find(&rows).Error; err != nil {
-		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "paginate sessions")
-	}
-
-	pageInfo := &model.PageInfo{Page: param.Page, PageSize: param.PageSize}
-	if len(rows) > 0 {
-		// COUNT(*) OVER () 对所有行返回相同 total，读首行即可。
-		pageInfo.Total = rows[0].TotalCount
-	}
-	// 空结果时 total 保持 0（窗口函数无行可读）。
-	// 这是合理 fallback：page > 1 且数据缩水的边界情况罕见，前端遇到 total=0 退化为
-	// "no results" 视图，比为了准确性多打一次 COUNT 划得来。
-
-	out := lo.Map(rows, func(row sessionSummaryRow, _ int) *session.SessionSummaryProjection {
-		return &session.SessionSummaryProjection{
-			ID:           row.ID,
-			CreatedAt:    row.CreatedAt,
-			UpdatedAt:    row.UpdatedAt,
-			Questions:    row.Questions,
-			ModelIDs:     row.ModelIDs,
-			Score:        row.Score,
-			MessageCount: row.MessageCount,
-			ToolCount:    row.ToolCount,
-		}
-	})
-	return out, pageInfo, nil
+	return r.paginateSessions(base, param)
 }
 
 func (r *sessionReadRepository) ListSessionsByOwnerIDs(ctx context.Context, ownerIDs []uint, param model.CommonParam, startTime, endTime time.Time, keyword string, criteria *filter.FilterCriteria) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
@@ -358,30 +325,27 @@ func (r *sessionReadRepository) ListSessionsByOwnerIDs(ctx context.Context, owne
 		param.PageSize = 20
 	}
 
-	sql := db.Model(&dbmodel.Session{}).Select(constant.SessionSummarySelect).Where(constant.DBConditionDeletedAtZero)
-	sql = sql.Where(fmt.Sprintf(constant.DBConditionInTemplate, constant.FieldAPIKeyID), ownerIDs)
+	base := db.Model(&dbmodel.Session{}).Where(constant.DBConditionDeletedAtZero)
+	base = base.Where(fmt.Sprintf(constant.DBConditionInTemplate, constant.FieldAPIKeyID), ownerIDs)
 
 	if !startTime.IsZero() {
-		sql = sql.Where(constant.FieldCreatedAt+" >= ?", startTime)
+		base = base.Where(constant.FieldCreatedAt+" >= ?", startTime)
 	}
 	if !endTime.IsZero() {
-		sql = sql.Where(constant.FieldCreatedAt+" <= ?", endTime)
+		base = base.Where(constant.FieldCreatedAt+" <= ?", endTime)
 	}
 	if param.Sort != "" && param.SortField != "" {
 		param.SortField = util.SafeSortField(param.SortField)
 	}
-	if param.Sort != "" && param.SortField != "" {
-		sql = sql.Order(clause.OrderByColumn{Column: clause.Column{Name: param.SortField}, Desc: param.Sort == enum.SortDesc})
-	}
 	if keyword != "" {
-		filtered, ok, err := r.applyKeywordFilter(ctx, sql, keyword)
+		filtered, ok, err := r.applyKeywordFilter(ctx, base, keyword)
 		if err != nil {
 			return nil, nil, err
 		}
 		if !ok {
 			return []*session.SessionSummaryProjection{}, &model.PageInfo{Page: param.Page, PageSize: param.PageSize}, nil
 		}
-		sql = filtered
+		base = filtered
 	}
 
 	// 注入 filter 条件
@@ -391,34 +355,11 @@ func (r *sessionReadRepository) ListSessionsByOwnerIDs(ctx context.Context, owne
 			return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "build filter SQL")
 		}
 		if filterSQL != "" {
-			sql = sql.Where(filterSQL, filterArgs...)
+			base = base.Where(filterSQL, filterArgs...)
 		}
 	}
 
-	limit, offset := param.PageSize, (param.Page-1)*param.PageSize
-	var rows []sessionSummaryRow
-	if err := sql.Limit(limit).Offset(offset).Find(&rows).Error; err != nil {
-		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "paginate sessions")
-	}
-
-	pageInfo := &model.PageInfo{Page: param.Page, PageSize: param.PageSize}
-	if len(rows) > 0 {
-		pageInfo.Total = rows[0].TotalCount
-	}
-
-	out := lo.Map(rows, func(row sessionSummaryRow, _ int) *session.SessionSummaryProjection {
-		return &session.SessionSummaryProjection{
-			ID:           row.ID,
-			CreatedAt:    row.CreatedAt,
-			UpdatedAt:    row.UpdatedAt,
-			Questions:    row.Questions,
-			ModelIDs:     row.ModelIDs,
-			Score:        row.Score,
-			MessageCount: row.MessageCount,
-			ToolCount:    row.ToolCount,
-		}
-	})
-	return out, pageInfo, nil
+	return r.paginateSessions(base, param)
 }
 
 func (r *sessionReadRepository) ListSessionsByIDs(ctx context.Context, ids []uint, param model.CommonParam) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
@@ -433,25 +374,40 @@ func (r *sessionReadRepository) ListSessionsByIDs(ctx context.Context, ids []uin
 		param.PageSize = 20
 	}
 
-	sql := db.Model(&dbmodel.Session{}).Select(constant.SessionSummarySelect).Where(constant.DBConditionDeletedAtZero)
-	sql = sql.Where(constant.FieldID+" IN ?", ids)
+	base := db.Model(&dbmodel.Session{}).Where(constant.DBConditionDeletedAtZero)
+	base = base.Where(constant.FieldID+" IN ?", ids)
 
 	if param.Sort != "" && param.SortField != "" {
 		param.SortField = util.SafeSortField(param.SortField)
 	}
+
+	return r.paginateSessions(base, param)
+}
+
+// paginateSessions 独立 COUNT(*) + 分页 SELECT。
+//
+// 必须拆成两条 SQL：COUNT(*) OVER () 会让 PG 在 LIMIT 之前对全部命中行求值
+// jsonb_array_length（每行一次 TOAST 解压）再 top-N 排序——11K 会话表上实测
+// 119.6ms；拆分后 COUNT 1.0ms（部分索引 index-only scan）+ 分页 4.1ms。
+// 见 BENCHMARK §3.6 的 EXPLAIN 与 test/unit/session_list_split。
+//
+// base 必须已带全部 WHERE（含租户 scope / keyword / filter），且不得带
+// Select / Order / Limit——排序与分页只作用于分页查询。
+func (r *sessionReadRepository) paginateSessions(base *gorm.DB, param model.CommonParam) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
+	var total int64
+	if err := base.Session(&gorm.Session{}).Count(&total).Error; err != nil {
+		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "count sessions")
+	}
+
+	pageQuery := base.Session(&gorm.Session{}).Select(constant.SessionSummarySelect)
 	if param.Sort != "" && param.SortField != "" {
-		sql = sql.Order(clause.OrderByColumn{Column: clause.Column{Name: param.SortField}, Desc: param.Sort == enum.SortDesc})
+		pageQuery = pageQuery.Order(clause.OrderByColumn{Column: clause.Column{Name: param.SortField}, Desc: param.Sort == enum.SortDesc})
 	}
 
 	limit, offset := param.PageSize, (param.Page-1)*param.PageSize
 	var rows []sessionSummaryRow
-	if err := sql.Limit(limit).Offset(offset).Find(&rows).Error; err != nil {
-		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "paginate sessions by ids")
-	}
-
-	pageInfo := &model.PageInfo{Page: param.Page, PageSize: param.PageSize}
-	if len(rows) > 0 {
-		pageInfo.Total = rows[0].TotalCount
+	if err := pageQuery.Limit(limit).Offset(offset).Find(&rows).Error; err != nil {
+		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "paginate sessions")
 	}
 
 	out := lo.Map(rows, func(row sessionSummaryRow, _ int) *session.SessionSummaryProjection {
@@ -466,7 +422,7 @@ func (r *sessionReadRepository) ListSessionsByIDs(ctx context.Context, ids []uin
 			ToolCount:    row.ToolCount,
 		}
 	})
-	return out, pageInfo, nil
+	return out, &model.PageInfo{Page: param.Page, PageSize: param.PageSize, Total: total}, nil
 }
 
 // GetSessionDetail 查询 Session 详情（含 Message/Tool 投影）

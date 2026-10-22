@@ -79,8 +79,8 @@ func (u *openAIUseCase) CreateDecision(ctx context.Context, req *dto.OpenAICreat
 		return SelectCompatRoute(enum.ProxyAPIOpenAIDecision, ep) != enum.CompatRouteUnsupported
 	})
 	if err != nil {
-		log.Error("[OpenAIUseCase] Decision API model not found or unsupported", zap.String("model", model), zap.Error(err))
-		return nil, proxyutil.SendOpenAIModelNotFoundError(model)
+		log.Error("[OpenAIUseCase] Decision API model resolve failed", zap.String("model", model), zap.Error(err))
+		return nil, proxyutil.ModelResolveError(err, enum.ProtocolKindOpenAI, model)
 	}
 	ep, m := cands[0].Endpoint, cands[0].Model
 
@@ -173,8 +173,8 @@ func (u *openAIUseCase) CreateChatCompletion(ctx context.Context, req *dto.OpenA
 		return SelectCompatRoute(enum.ProxyAPIOpenAIChat, ep) != enum.CompatRouteUnsupported
 	})
 	if err != nil {
-		log.Error("[OpenAIUseCase] Model not found or unsupported for chat completion", zap.String("model", req.Body.Model), zap.Error(err))
-		return nil, proxyutil.SendOpenAIModelNotFoundError(req.Body.Model)
+		log.Error("[OpenAIUseCase] Chat model resolve failed", zap.String("model", req.Body.Model), zap.Error(err))
+		return nil, proxyutil.ModelResolveError(err, enum.ProtocolKindOpenAI, req.Body.Model)
 	}
 	ep, m := cands[0].Endpoint, cands[0].Model
 	compatRoute = SelectCompatRoute(enum.ProxyAPIOpenAIChat, ep)
@@ -257,8 +257,8 @@ func (u *openAIUseCase) CreateResponse(ctx context.Context, req *dto.OpenAICreat
 		return SelectCompatRoute(enum.ProxyAPIOpenAIResponse, ep) != enum.CompatRouteUnsupported
 	})
 	if err != nil {
-		log.Error("[OpenAIUseCase] Response API model not found or unsupported", zap.String("model", model), zap.Error(err))
-		return nil, proxyutil.SendOpenAIModelNotFoundError(model)
+		log.Error("[OpenAIUseCase] Response API model resolve failed", zap.String("model", model), zap.Error(err))
+		return nil, proxyutil.ModelResolveError(err, enum.ProtocolKindOpenAI, model)
 	}
 	ep, m := cands[0].Endpoint, cands[0].Model
 	compatRoute = SelectCompatRoute(enum.ProxyAPIOpenAIResponse, ep)

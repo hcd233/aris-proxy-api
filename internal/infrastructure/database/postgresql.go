@@ -59,6 +59,9 @@ func AutoMigrate(ctx context.Context, db *gorm.DB) error {
 // 该索引带「表达式 + 操作符类 + 部分谓词」，GORM tag 无法表达，历史上只手工在生产建过；
 // 新环境缺索引时 keyword 搜索退化为全表扫描。DDL 幂等（IF NOT EXISTS），已建环境为 no-op。
 // 用非 CONCURRENTLY 版本：新环境 messages 为空、生产索引已存在，启动期不会被大表重建拖住。
+//
+// 审计列表的 idx_mca_active_created 部分索引不在此处：按运维约定手工执行
+// constant.AuditActiveCreatedIndexDDL（CREATE INDEX CONCURRENTLY，避免部署期锁表）。
 func ensureKeywordSearchIndex(ctx context.Context, db *gorm.DB) error {
 	for _, statement := range []string{constant.PgTrgmExtensionDDL, constant.MessageContentTrigramIndexDDL} {
 		if err := db.WithContext(ctx).Exec(statement).Error; err != nil {

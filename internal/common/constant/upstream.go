@@ -73,11 +73,20 @@ const (
 	OpenAIInternalErrorType    = "server_error"
 	OpenAIInternalErrorCode    = "internal_error"
 
+	// OpenAIUnavailableErrorMessage / OpenAIUnavailableErrorCode 服务端暂时不可用
+	// （DB 故障等基础设施错误）的协议原生错误；HTTP 503，SDK 可重试。
+	OpenAIUnavailableErrorMessage = "Service temporarily unavailable"
+	OpenAIUnavailableErrorCode    = "service_unavailable"
+
 	AnthropicNotFoundErrorType            = "not_found_error"
 	AnthropicModelNotFoundMessageTemplate = "model: %s"
 	AnthropicInternalErrorMessage         = "Internal server error"
 	AnthropicInternalErrorType            = "api_error"
 	AnthropicInternalErrorBodyType        = "error"
+	// AnthropicOverloadedErrorType / AnthropicUnavailableMessage 服务端暂时不可用的
+	// 协议原生错误（官方 overloaded_error）；HTTP 503。
+	AnthropicOverloadedErrorType = "overloaded_error"
+	AnthropicUnavailableMessage  = "Service temporarily unavailable"
 
 	UpstreamErrorType             = "upstream_error"
 	UpstreamStatusMessageTemplate = "Upstream returned status %d"

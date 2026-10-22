@@ -164,7 +164,7 @@ func TestAnthropicCreateMessage_NativeUnary(t *testing.T) {
 // Model not found 时，application 必须以 *port.ProxyError(404) 返回，由 adapter 写为 HTTP 404 JSON 响应。
 func TestAnthropicCreateMessage_ModelNotFound(t *testing.T) {
 	t.Parallel()
-	mockResolver := &mockResolver{resolveErr: ierr.New(ierr.ErrInternal, "model not found")}
+	mockResolver := &mockResolver{resolveErr: ierr.New(ierr.ErrDataNotExists, "model not found")}
 	uc := usecase.NewAnthropicUseCase(mockResolver, &mockAnthropicListModels{}, &mockAnthropicCountTokens{}, &mockAnthropicProxyForAnthropic{}, &mockOpenAIProxy{}, &mockTaskSubmitter{}, nil, nil, nil, nil)
 
 	stream := false

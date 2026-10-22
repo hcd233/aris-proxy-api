@@ -85,6 +85,13 @@ const (
 
 	// RuntimeMetricsUnknownInstance hostname 获取失败时的兜底实例标识
 	RuntimeMetricsUnknownInstance = "unknown"
+
+	// RuntimeMetricsResultCacheTTL since=0 首屏聚合结果的本进程缓存 TTL。
+	//
+	// 与采集间隔（5s）对齐：一个采集周期内重复打开监控页/多标签页复用同一结果，
+	// 首屏不再重复读回 720 条/实例快照并逐条 JSON 解码。增量轮询（since>0）只读
+	// 尾部 2 个桶，本来就很便宜，直接回源、不参与该缓存。
+	RuntimeMetricsResultCacheTTL = RuntimeMetricsFlushInterval
 )
 
 // —— 运行时指标 range 档 key ——

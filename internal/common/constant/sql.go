@@ -207,6 +207,13 @@ var (
 
 	AuditMaxPageSize = 500
 
+	// AuditActiveCreatedIndexDDL admin 审计列表 COUNT(*)/分页的部分索引（手工执行）。
+	//
+	// GORM tag 无法表达 WHERE deleted_at = 0 的部分索引；2026-10-23 实测 82K 行上
+	// COUNT(*) 走 Seq Scan 111ms，部分索引后可走 index-only scan（数 ms）。
+	// 不接入 AutoMigrate：按运维约定在生产手工执行，CONCURRENTLY 建索引避免部署期锁表。
+	AuditActiveCreatedIndexDDL = "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_mca_active_created ON model_call_audits (created_at DESC) WHERE deleted_at = 0"
+
 	SessionMaxPageSize = 500
 
 	// UpstreamGroupModelLimit upstream 分组视图单个分组返回的模型数上限（防御性兜底）。
@@ -274,14 +281,13 @@ var (
 
 	// SessionSummarySelect session 列表投影。
 	//
-	// 设计要点（perf/session-list-trigram-and-windowcount-2026-06-08）：
-	//   把 COUNT(*) OVER () AS total_count 折进同一条 SELECT，省掉一次独立 COUNT(*)
-	//   roundtrip 与一次 WHERE 评估。对带 keyword 的请求尤其受益——EXISTS 子查询
-	//   原来要跑两遍（COUNT 一次、SELECT 一次），现在一次搞定。
-	//   sessionSummaryRow.TotalCount 接收每行（窗口函数对所有行返回相同值）。
-	//
-	//   message_count 和 tool_count 从 message_ids / tool_ids 实时计算，不再物化冗余列。
-	SessionSummarySelect = "id, created_at, updated_at, score, COALESCE(jsonb_array_length(message_ids::jsonb), 0) AS message_count, COALESCE(jsonb_array_length(tool_ids::jsonb), 0) AS tool_count, questions, model_ids, COUNT(*) OVER () AS total_count"
+	// 设计要点（perf/session-list-split-count-2026-10-23，BENCHMARK §3.6）：
+	//   total 由独立的 COUNT(*) 查询产出，投影里**不再**带 COUNT(*) OVER ()。
+	//   窗口函数在 LIMIT 之前求值：PG 必须对 WHERE 命中的全部行计算
+	//   jsonb_array_length(message_ids)（每行一次 TOAST 解压）后再 top-N 排序；
+	//   2026-10-23 实测 11K 会话表上 119.6ms，拆分后 COUNT 1.0ms + 分页 4.1ms。
+	//   分页 SELECT 只解压当前页 20 行，message_count/tool_count 仍实时计算。
+	SessionSummarySelect = "id, created_at, updated_at, score, COALESCE(jsonb_array_length(message_ids::jsonb), 0) AS message_count, COALESCE(jsonb_array_length(tool_ids::jsonb), 0) AS tool_count, questions, model_ids"
 
 	// SessionKeywordMatchIDsSQL keyword 搜索第一段：关键词 → 用户消息 id 集合。
 	//

@@ -154,7 +154,7 @@ func (r *mockResolver) ResolveCandidates(_ context.Context, _ uint, _ vo.Endpoin
 		return nil, ierr.New(ierr.ErrDataNotExists, "no candidate")
 	}
 	if matcher != nil && !matcher(r.resolveEndpoint) {
-		return nil, ierr.New(ierr.ErrInternal, "endpoint unsupported")
+		return nil, ierr.New(ierr.ErrDataNotExists, "endpoint unsupported")
 	}
 	return []service.Candidate{{Endpoint: r.resolveEndpoint, Model: r.resolveModel}}, nil
 }
@@ -350,7 +350,7 @@ func TestOpenAICreateChatCompletion_NativeUnary(t *testing.T) {
 // Model not found 时，application 必须以 *port.ProxyError(404) 返回，由 adapter 写为 HTTP 404 JSON 响应。
 func TestOpenAICreateChatCompletion_ModelNotFound(t *testing.T) {
 	t.Parallel()
-	resolver := &mockResolver{resolveErr: ierr.New(ierr.ErrInternal, "model not found")}
+	resolver := &mockResolver{resolveErr: ierr.New(ierr.ErrDataNotExists, "model not found")}
 	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, &mockOpenAIProxy{}, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{}, nil, nil, nil, nil)
 
 	stream := false
@@ -375,6 +375,40 @@ func TestOpenAICreateChatCompletion_ModelNotFound(t *testing.T) {
 	}
 	if proxyErr.Protocol != enum.ProtocolKindOpenAI {
 		t.Fatalf("protocol = %v, want %v", proxyErr.Protocol, enum.ProtocolKindOpenAI)
+	}
+}
+
+// 解析链路的 DB 故障（如 PG 连接打满）必须返回 503，而不是伪装成 404 model_not_found。
+func TestOpenAICreateChatCompletion_ModelResolveDBError(t *testing.T) {
+	t.Parallel()
+	resolver := &mockResolver{resolveErr: ierr.New(ierr.ErrDBQuery, "FATAL: sorry, too many clients already")}
+	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, &mockOpenAIProxy{}, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{}, nil, nil, nil, nil)
+
+	stream := false
+	req := &dto.OpenAIChatCompletionRequest{Body: &dto.OpenAIChatCompletionReq{
+		Model: "mock-chat",
+		Messages: []*dto.OpenAIChatCompletionMessageParam{
+			{Role: enum.RoleUser, Content: &dto.OpenAIMessageContent{Text: "Hello"}},
+		},
+		Stream: &stream,
+	}}
+
+	result, err := uc.CreateChatCompletion(context.Background(), req)
+	if result != nil {
+		t.Fatalf("result = %T, want nil (DB failure must not produce a Result)", result)
+	}
+	var proxyErr *port.ProxyError
+	if !errors.As(err, &proxyErr) {
+		t.Fatalf("err = %v, want *port.ProxyError", err)
+	}
+	if proxyErr.StatusCode != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want %d", proxyErr.StatusCode, http.StatusServiceUnavailable)
+	}
+	if !strings.Contains(string(proxyErr.Body), "service_unavailable") {
+		t.Fatalf("body = %s, want service_unavailable", proxyErr.Body)
+	}
+	if !errors.Is(proxyErr.Cause, ierr.ErrDBQuery) {
+		t.Fatalf("cause = %v, want the DB error preserved", proxyErr.Cause)
 	}
 }
 
@@ -444,7 +478,7 @@ func TestOpenAICreateResponse_NativeUnary(t *testing.T) {
 
 func TestOpenAICreateResponse_ModelNotFound(t *testing.T) {
 	t.Parallel()
-	resolver := &mockResolver{resolveErr: ierr.New(ierr.ErrInternal, "model not found")}
+	resolver := &mockResolver{resolveErr: ierr.New(ierr.ErrDataNotExists, "model not found")}
 	uc := usecase.NewOpenAIUseCase(resolver, &mockListModels{}, &mockOpenAIProxy{}, &mockAnthropicProxyForOpenAI{}, &mockTaskSubmitter{}, nil, nil, nil, nil)
 
 	stream := false

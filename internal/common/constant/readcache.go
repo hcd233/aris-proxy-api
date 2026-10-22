@@ -56,6 +56,15 @@ const (
 	ReadCachePurposeSessionOptionScore   = "session:option:score"
 	ReadCachePurposeSessionOptionModel   = "session:option:model"
 	ReadCachePurposeSessionOptionMsgCnt  = "session:option:message-count"
+	// ReadCachePurposeAuditPaginateCount 审计列表 total 的计数缓存（仅无 filter/keyword 时启用）。
+	ReadCachePurposeAuditPaginateCount = "audit:paginate:count"
+
+	// ReadCachePaginateCountTTL 列表总数字段基准 TTL。
+	//
+	// 审计表持续追加，但看板 total 落后 30s 无感知；继续沿用时间窗查询的抖动策略，
+	// 避免同一批 scope 的计数条目同时过期。
+	ReadCachePaginateCountTTL       = 30 * time.Second
+	ReadCachePaginateCountTTLJitter = 10 * time.Second
 
 	// ReadCacheWindowBucket 时间窗查询缓存键的时间对齐粒度
 	//

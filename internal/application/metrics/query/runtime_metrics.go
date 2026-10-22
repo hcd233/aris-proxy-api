@@ -11,6 +11,7 @@ import (
 	"math"
 	"slices"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/bytedance/sonic"
@@ -32,6 +33,17 @@ type SnapshotReader interface {
 
 type runtimeMetricsHandler struct {
 	reader SnapshotReader
+
+	// initialCache 只缓存 since=0 的首屏结果（TTL = 采集间隔）。
+	// 增量轮询（since>0）只读尾部桶，不值得缓存，也不能覆盖首屏键。
+	initialCacheMu sync.RWMutex
+	initialCache   map[string]runtimeMetricsInitialEntry
+}
+
+type runtimeMetricsInitialEntry struct {
+	series    dto.RuntimeSeries
+	latest    int64
+	expiresAt time.Time
 }
 
 // NewRuntimeMetricsHandler 创建运行时指标聚合查询服务
@@ -41,7 +53,10 @@ type runtimeMetricsHandler struct {
 //	@author centonhuang
 //	@update 2026-06-25 10:00:00
 func NewRuntimeMetricsHandler(reader SnapshotReader) port.RuntimeMetricsService {
-	return &runtimeMetricsHandler{reader: reader}
+	return &runtimeMetricsHandler{
+		reader:       reader,
+		initialCache: map[string]runtimeMetricsInitialEntry{},
+	}
 }
 
 // RangeWindow 单个预设 range 档对应的窗口长度与桶宽。
@@ -73,6 +88,11 @@ func resolveRange(r string) RangeWindow {
 func (h *runtimeMetricsHandler) RuntimeMetrics(ctx context.Context, rangeKey string, since int64) (dto.RuntimeSeries, int64, error) {
 	rw := resolveRange(rangeKey)
 	now := time.Now()
+	if since <= 0 {
+		if series, latest, ok := h.loadInitial(rangeKey, now); ok {
+			return series, latest, nil
+		}
+	}
 	end := now.Unix()
 	bucket := int64(rw.Bucket.Seconds())
 	windowStart := now.Add(-rw.Window).Unix()
@@ -108,7 +128,37 @@ func (h *runtimeMetricsHandler) RuntimeMetrics(ctx context.Context, rangeKey str
 	series := Aggregate(byInstance, alignedStart, bucket, end, outputStart)
 	// latest 取当前桶起点；无样本的桶在 buildSeries 中被跳过，故空的末桶不会塌成 0。
 	latest := end - mod(end, bucket)
+	if since <= 0 {
+		h.storeInitial(rangeKey, series, latest, now)
+	}
 	return series, latest, nil
+}
+
+// loadInitial 读取 since=0 首屏缓存；过期视为未命中。
+func (h *runtimeMetricsHandler) loadInitial(rangeKey string, now time.Time) (dto.RuntimeSeries, int64, bool) {
+	h.initialCacheMu.RLock()
+	entry, ok := h.initialCache[rangeKey]
+	h.initialCacheMu.RUnlock()
+	if !ok || !now.Before(entry.expiresAt) {
+		return dto.RuntimeSeries{}, 0, false
+	}
+	return entry.series, entry.latest, true
+}
+
+// storeInitial 写入首屏缓存，顺手清理过期条目（range 档只有 4 个，规模有界）。
+func (h *runtimeMetricsHandler) storeInitial(rangeKey string, series dto.RuntimeSeries, latest int64, now time.Time) {
+	h.initialCacheMu.Lock()
+	defer h.initialCacheMu.Unlock()
+	for key, entry := range h.initialCache {
+		if !now.Before(entry.expiresAt) {
+			delete(h.initialCache, key)
+		}
+	}
+	h.initialCache[rangeKey] = runtimeMetricsInitialEntry{
+		series:    series,
+		latest:    latest,
+		expiresAt: now.Add(constant.RuntimeMetricsResultCacheTTL),
+	}
 }
 
 // Aggregate 把各 instance 的快照按桶聚合成可展示时序：

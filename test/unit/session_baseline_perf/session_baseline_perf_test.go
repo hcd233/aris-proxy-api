@@ -17,11 +17,15 @@
 //	    3) SessionSummarySelect 改为直接读列。
 //
 //	perf/session-list-trigram-and-windowcount-2026-06-08：
-//	  - 把 COUNT(*) OVER () AS total_count 折进同一条 SELECT，省掉一次独立 COUNT(*)
-//	    roundtrip 与 WHERE 评估；对带 keyword 的请求尤其受益（EXISTS 子查询从两次执行
-//	    降到一次）。
 //	  - keyword 路径加上 pg_trgm + GIN trigram 表达式索引让 messages.message::text ILIKE
 //	    走 trigram bitmap 扫描，2 字符及以上子串都能命中。
+//
+//	perf/session-list-split-count-2026-10-23（BENCHMARK §3.6 压测复核）：
+//	  - 2026-06-08 的 COUNT(*) OVER () 折进 SELECT 在大表上适得其反：窗口函数在 LIMIT
+//	    之前求值，PG 必须对 WHERE 命中的全部 3225 行计算 jsonb_array_length（每行一次
+//	    TOAST 解压）再 top-N 排序，EXPLAIN 实测 119.6ms。
+//	  - 现改为独立 COUNT(*)（走 idx_sessions_first_msg 部分索引，1.0ms）+ 分页 SELECT
+//	    去掉窗口（只解压 20 行，4.1ms）。SQL 形态由 test/unit/session_list_split 钉住。
 //
 // 雷区记录：
 //
@@ -66,20 +70,21 @@ func TestSessionSummarySelect_UsesExpressionCountColumns(t *testing.T) {
 	}
 }
 
-// TestSessionSummarySelect_FoldsCountIntoWindowFunction 投影必须包含
-// COUNT(*) OVER () AS total_count，把分页 SELECT 与 COUNT 折成一条语句执行。
+// TestSessionSummarySelect_HasNoWindowCount 投影不得包含 COUNT(*) OVER ()：
+// 窗口函数强制在 LIMIT 前对全部命中行求值 jsonb_array_length，是 session/list
+// 3.7s 尾延迟的主因（2026-10-23 压测复核，见包注释）。
 //
 //	@author centonhuang
-//	@update 2026-06-08 00:55:00
-func TestSessionSummarySelect_FoldsCountIntoWindowFunction(t *testing.T) {
+//	@update 2026-10-23 01:20:00
+func TestSessionSummarySelect_HasNoWindowCount(t *testing.T) {
 	t.Parallel()
 	sel := constant.SessionSummarySelect
 
-	if !strings.Contains(sel, "COUNT(*) OVER ()") {
-		t.Errorf("SessionSummarySelect must fold COUNT into the same SELECT via COUNT(*) OVER () to save a roundtrip + WHERE re-evaluation, got %q", sel)
+	if strings.Contains(sel, "COUNT(*) OVER") {
+		t.Errorf("SessionSummarySelect must not fold COUNT into a window function: it forces jsonb detoast on every matched row before LIMIT, got %q", sel)
 	}
-	if !strings.Contains(sel, "total_count") {
-		t.Errorf("SessionSummarySelect must alias the windowed count as total_count to match sessionSummaryRow.TotalCount, got %q", sel)
+	if strings.Contains(sel, "total_count") {
+		t.Errorf("SessionSummarySelect must not carry the windowed total_count alias; total is now a separate COUNT query, got %q", sel)
 	}
 }
 

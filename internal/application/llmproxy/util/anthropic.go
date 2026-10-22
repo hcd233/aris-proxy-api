@@ -40,6 +40,32 @@ func SendAnthropicModelNotFoundError(model string) *port.ProxyError {
 	}
 }
 
+// SendAnthropicUnavailableError 构造 Anthropic 服务暂时不可用错误（HTTP 503）。
+//
+// 用于 DB 故障等基础设施错误：返回 503 + overloaded_error，让 SDK 进入重试分支，
+// 而不是把基础设施故障伪装成 404 not_found_error。
+//
+//	@param cause error 底层错误（保留给日志与 errors.Is/As 穿透）
+//	@return *port.ProxyError
+//	@author centonhuang
+//	@update 2026-10-23 01:30:00
+func SendAnthropicUnavailableError(cause error) *port.ProxyError {
+	body := lo.Must1(sonic.Marshal(&dto.AnthropicErrorResponse{
+		Type: constant.AnthropicInternalErrorBodyType,
+		Error: &dto.AnthropicError{
+			Type:    constant.AnthropicOverloadedErrorType,
+			Message: constant.AnthropicUnavailableMessage,
+		},
+	}))
+	return &port.ProxyError{
+		StatusCode: http.StatusServiceUnavailable,
+		Headers:    map[string]string{constant.HTTPHeaderContentType: constant.HTTPContentTypeJSON},
+		Body:       body,
+		Cause:      cause,
+		Protocol:   enum.ProtocolKindAnthropic,
+	}
+}
+
 // blockState tracks content blocks by index during SSE event accumulation
 type blockState struct {
 	block         *dto.AnthropicContentBlock
