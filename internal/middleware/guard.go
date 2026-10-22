@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/gofiber/fiber/v3"
@@ -69,6 +70,69 @@ func isRouteNotFound(err error) bool {
 	return errors.As(err, &fiberErr) && fiberErr.Code == fiber.StatusNotFound
 }
 
+// BanCleanCache 进程内「该 IP 未被封禁」负缓存。
+//
+// 每请求一次的 Redis EXISTS 是固定成本，而封禁是低频事件：缓存 1s 内的干净结论，
+// 把 Redis 调用摊薄到每 IP 每秒 1 次。封禁最迟 TTL 后生效；本进程自己触发封禁时
+// 调 Invalidate 立即失效。仅在单个 pod 内生效，跨 pod 结论各自独立（Redis ban key 是权威源）。
+type BanCleanCache struct {
+	mu      sync.Mutex
+	entries map[string]time.Time
+	ttl     time.Duration
+	limit   int
+}
+
+// NewBanCleanCache 创建负缓存
+//
+//	@param ttl 结论有效期
+//	@param limit 条目上限，超限整体清空
+//	@return *BanCleanCache
+//	@author centonhuang
+//	@update 2026-10-22 15:00:00
+func NewBanCleanCache(ttl time.Duration, limit int) *BanCleanCache {
+	return &BanCleanCache{
+		entries: make(map[string]time.Time),
+		ttl:     ttl,
+		limit:   limit,
+	}
+}
+
+// IsClean 判断该 IP 是否仍在「未封禁」结论有效期内
+func (c *BanCleanCache) IsClean(ip string) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	expiry, ok := c.entries[ip]
+	if !ok {
+		return false
+	}
+	if time.Now().After(expiry) {
+		delete(c.entries, ip)
+		return false
+	}
+	return true
+}
+
+// MarkClean 记录该 IP 未被封禁
+func (c *BanCleanCache) MarkClean(ip string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	// ponytail: 超限整体清空，O(1) 且防止伪造 IP 撑爆内存；上限 4096 时清空极少发生
+	if len(c.entries) >= c.limit {
+		clear(c.entries)
+	}
+	c.entries[ip] = time.Now().Add(c.ttl)
+}
+
+// Invalidate 丢弃该 IP 的缓存结论（本进程触发封禁时调用）
+func (c *BanCleanCache) Invalidate(ip string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	delete(c.entries, ip)
+}
+
 // GuardMiddleware 路由扫描防护中间件
 //
 // 在 Fiber 层拦截路由扫描行为：
@@ -92,6 +156,7 @@ func GuardMiddleware(cache *redis.Client, cfg GuardConfig) fiber.Handler {
 	allowIPs := lo.SliceToMap(cfg.AllowIPs, func(p string) (string, struct{}) {
 		return p, struct{}{}
 	})
+	cleanCache := NewBanCleanCache(constant.GuardCleanCacheTTL, constant.GuardCleanCacheLimit)
 	return func(c fiber.Ctx) error {
 		if cache == nil {
 			logger.WithFCtx(c).Warn("[GuardMiddleware] Redis dependency is nil")
@@ -104,12 +169,16 @@ func GuardMiddleware(cache *redis.Client, cfg GuardConfig) fiber.Handler {
 		banKey := fmt.Sprintf(constant.ScannerBanKeyTemplate, ip)
 		ctx := c.RequestCtx()
 
-		banned, err := cache.Exists(ctx, banKey).Result()
-		if err != nil {
-			logger.WithFCtx(c).Warn("[GuardMiddleware] Failed to check ban status", zap.String("ip", ip), zap.Error(err))
-		}
-		if banned > 0 {
-			return c.SendStatus(fiber.StatusForbidden)
+		// 负缓存命中则跳过 ban 查询；下方的 404 扫描计数逻辑对每个请求照常执行
+		if !cleanCache.IsClean(ip) {
+			banned, err := cache.Exists(ctx, banKey).Result()
+			if err != nil {
+				logger.WithFCtx(c).Warn("[GuardMiddleware] Failed to check ban status", zap.String("ip", ip), zap.Error(err))
+			}
+			if banned > 0 {
+				return c.SendStatus(fiber.StatusForbidden)
+			}
+			cleanCache.MarkClean(ip)
 		}
 
 		nextErr := c.Next()
@@ -134,6 +203,7 @@ func GuardMiddleware(cache *redis.Client, cfg GuardConfig) fiber.Handler {
 			strikes := result[0]
 			wasBanned := result[1] == 1
 			if wasBanned {
+				cleanCache.Invalidate(ip)
 				logger.WithFCtx(c).Warn("[GuardMiddleware] IP banned due to route scanning",
 					zap.String("ip", ip),
 					zap.Int64("strikes", strikes),
