@@ -6,7 +6,7 @@ import { useI18n } from "@/lib/i18n";
 import type { TokenThroughputPoint } from "@/lib/types";
 import { LineChartCard } from "@/components/charts/line-chart-card";
 import { useTokenLayerColors } from "@/lib/theme";
-import { toTokenVolumeRows, totalTokens, colorLuminance } from "@/lib/token-volume";
+import { toTokenVolumeRows, colorLuminance } from "@/lib/token-volume";
 
 function formatTokenCount(v: number): string {
   if (v >= 1_000_000) {
@@ -65,14 +65,6 @@ export function TokenVolumeChart() {
       toChart={toChart}
       chartType="bar"
       stackId="1"
-      headerExtra={(data) => {
-        const total = totalTokens(data);
-        return total > 0 ? (
-          <span className="text-sm font-normal tabular-nums text-muted-foreground">
-            {total.toLocaleString()}
-          </span>
-        ) : null;
-      }}
       yAxis={{ tickFormatter: formatTokenCount }}
       tooltipFormatter={(value, name, item) => {
         if (value == null) return null;

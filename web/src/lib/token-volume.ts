@@ -15,14 +15,6 @@ export function toTokenVolumeRows(data: TokenThroughputPoint[]) {
   }));
 }
 
-/** 区间总 token 数 = 输入 + 输出 + 缓存读取 + 缓存写入。 */
-export function totalTokens(data: TokenThroughputPoint[]): number {
-  return data.reduce(
-    (sum, p) => sum + p.inputTokens + p.outputTokens + p.cacheReadTokens + p.cacheCreationTokens,
-    0,
-  );
-}
-
 /**
  * 相对亮度（WCAG），用于把堆叠层按「深色在下、浅色在上」排序。
  * 只接受 6 位十六进制颜色（图表色板即此格式）。

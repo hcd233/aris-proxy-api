@@ -67,8 +67,6 @@ export interface LineChartCardProps<T> {
   chartType?: "line" | "area" | "bar";
   /** 堆叠 id（chartType="area" / "bar" 时生效） */
   stackId?: string;
-  /** 标题旁的附加信息（如区间总量）；loading / error 期间不渲染 */
-  headerExtra?: (data: T[]) => ReactNode;
   /** Y 轴配置 */
   yAxis?: {
     /** 非空态 domain，默认 [0, "auto"] */
@@ -131,7 +129,6 @@ export function LineChartCard<T>({
   toChart,
   chartType = "line",
   stackId,
-  headerExtra,
   yAxis,
   tooltipFormatter,
   extraElements,
@@ -321,10 +318,7 @@ export function LineChartCard<T>({
   return (
     <Card>
       <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <CardTitle className="font-display">{t(titleKey)}</CardTitle>
-          {!loading && !error ? headerExtra?.(data) : null}
-        </div>
+        <CardTitle className="font-display">{t(titleKey)}</CardTitle>
         <TimeRangePicker
           value={timeRange}
           customStart={customStart}
