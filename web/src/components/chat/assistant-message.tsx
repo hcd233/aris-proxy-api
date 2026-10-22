@@ -72,7 +72,21 @@ export function AssistantMessage({ message, index, toolResultsByID }: AssistantM
       </MessageAvatar>
 
       <MessageContent>
-        {time && <MessageHeader className="px-0">{time}</MessageHeader>}
+        {(modelId || time) && (
+          <MessageHeader className="min-h-8 gap-2 px-0">
+            {isAssistant && modelId && (
+              <span className="font-mono text-[11px] font-medium tracking-tight text-foreground/80">
+                {modelId}
+              </span>
+            )}
+            {isAssistant && modelId && time && (
+              <span aria-hidden className="text-muted-foreground/40">
+                ·
+              </span>
+            )}
+            {time && <span className="tabular-nums">{time}</span>}
+          </MessageHeader>
+        )}
         {reasoning_content && <ReasoningBlock text={reasoning_content} />}
 
         <Bubble variant="ghost">

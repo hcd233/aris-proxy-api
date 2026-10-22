@@ -212,6 +212,21 @@ describe("⑥ 聊天区", () => {
     expect(read("components/chat/multimodal-parts.tsx")).toMatch(/<Attachment[\s>]/);
   });
 
+  it("助手消息头像顶部对齐且模型名在头像右侧", () => {
+    const messageSrc = read("components/ui/message.tsx");
+    const avatar = messageSrc.slice(
+      messageSrc.indexOf("function MessageAvatar"),
+      messageSrc.indexOf("function MessageContent"),
+    );
+    expect(avatar).toContain("self-start");
+    expect(avatar).not.toContain("self-end");
+    expect(avatar).not.toContain("translate-y");
+
+    expect(read("components/chat/assistant-message.tsx")).toMatch(
+      /<MessageHeader[\s\S]*?\{modelId\}[\s\S]*?<\/MessageHeader>/,
+    );
+  });
+
   it("playground 对话区用 MessageScroller", () => {
     const src = read("components/playground/conversation-view.tsx");
     expect(src).toContain("<MessageScrollerProvider");
