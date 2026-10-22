@@ -239,6 +239,9 @@ var (
 	// 无占位符时 v 会被静默丢弃（v=0 时退化为 WHERE user_id，语义完全错误）。
 	WhereUserIDEquals = "user_id = ?"
 
+	// WhereAPIKeyIDEquals api_key_id 显式等值条件（会话归属组键、租户隔离过滤）
+	WhereAPIKeyIDEquals = "api_key_id = ?"
+
 	// WhereOAuthCredentialStatusEquals OAuth 凭据状态显式等值条件
 	WhereOAuthCredentialStatusEquals = "status = ?"
 

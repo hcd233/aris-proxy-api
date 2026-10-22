@@ -60,36 +60,40 @@ func (dao *SessionDAO) FindAllForPurge(db *gorm.DB, softDeleted bool) ([]Session
 
 // GroupForUpdateQuery 构造同组会话的行锁查询（不执行）
 //
-//	首条消息 ID 是同一对话快照集合的分组键：历史消息按 checksum 去重复用行，
-//	第 k 轮的 MessageIDs 是第 k+1 轮的前缀。查询结果不含 MessageIDs 为空的行
+//	组键是「归属 API Key + 首条消息 ID」：历史消息按 checksum 全局去重复用行
+//	（messages 表没有归属列），两个用户的首条消息相同即共享同一 message 行，只按首条
+//	消息 ID 分组会把不同租户的快照并进同一组。查询结果不含 MessageIDs 为空的行
 //	（'[]' 的 ->>0 为 NULL），与去重算法跳过空 MessageIDs 的语义一致。
 //
 //	@param db *gorm.DB
 //	@param firstMessageID uint 组键（首条消息 ID）
+//	@param apiKeyID uint 组键（归属 API Key ID）
 //	@return *gorm.DB
 //	@author centonhuang
-//	@update 2026-08-29 10:00:00
-func (dao *SessionDAO) GroupForUpdateQuery(db *gorm.DB, firstMessageID uint) *gorm.DB {
+//	@update 2026-10-22 20:00:00
+func (dao *SessionDAO) GroupForUpdateQuery(db *gorm.DB, firstMessageID, apiKeyID uint) *gorm.DB {
 	return db.Select(constant.SessionRepoFieldsDedup).
 		Where(constant.DBConditionDeletedAtZero).
+		Where(constant.WhereAPIKeyIDEquals, apiKeyID).
 		Where(constant.SessionFirstMessageIDCondition, strconv.FormatUint(uint64(firstMessageID), 10)).
 		Clauses(clause.Locking{Strength: constant.DBLockStrengthUpdate})
 }
 
-// FindGroupForUpdate 锁定并返回同组（首条消息 ID 相同）的全部活跃会话
+// FindGroupForUpdate 锁定并返回同组（同归属 Key + 首条消息 ID 相同）的全部活跃会话
 //
 //	FOR UPDATE 串行化同组并发写入（插入路径去重与多副本并发）。
 //	::jsonb 为 PG 专有语法，sqlite 不可用，行为由 e2e 覆盖。
 //
 //	@param db *gorm.DB
 //	@param firstMessageID uint 组键
+//	@param apiKeyID uint 归属组键
 //	@return []*dbmodel.Session
 //	@return error
 //	@author centonhuang
-//	@update 2026-08-29 10:00:00
-func (dao *SessionDAO) FindGroupForUpdate(db *gorm.DB, firstMessageID uint) ([]*dbmodel.Session, error) {
+//	@update 2026-10-22 20:00:00
+func (dao *SessionDAO) FindGroupForUpdate(db *gorm.DB, firstMessageID, apiKeyID uint) ([]*dbmodel.Session, error) {
 	var models []*dbmodel.Session
-	if err := dao.GroupForUpdateQuery(db, firstMessageID).Find(&models).Error; err != nil {
+	if err := dao.GroupForUpdateQuery(db, firstMessageID, apiKeyID).Find(&models).Error; err != nil {
 		return nil, err
 	}
 	return models, nil

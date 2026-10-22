@@ -43,8 +43,13 @@ type PoolManager struct {
 //	@param sessionCache sessionport.SessionDetailCache 会话详情缓存（续写后失效，可为 nil）
 //	@return *PoolManager
 //	@author centonhuang
-//	@update 2026-10-22 10:00:00
-func NewPoolManager(db *gorm.DB, auditRepo modelcall.AuditRepository, demoAccessAuditRepo demoaccessauditport.DemoAccessAuditRepository, sessionCache sessionport.SessionDetailCache) *PoolManager {
+//	@update 2026-10-22 20:00:00
+func NewPoolManager(
+	db *gorm.DB,
+	auditRepo modelcall.AuditRepository,
+	demoAccessAuditRepo demoaccessauditport.DemoAccessAuditRepository,
+	sessionCache sessionport.SessionDetailCache,
+) *PoolManager {
 	return &PoolManager{
 		db:                  db,
 		auditRepo:           auditRepo,

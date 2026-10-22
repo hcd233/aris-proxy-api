@@ -130,38 +130,39 @@ func (pm *PoolManager) mergeSessionSnapshot(ctx context.Context, session *dbmode
 		return
 	}
 	log := logger.WithCtx(ctx)
-	deduped, keeperID, err := repository.DeduplicateSessionGroup(pm.db.WithContext(ctx), session)
+	deduped, touchedIDs, err := repository.DeduplicateSessionGroup(pm.db.WithContext(ctx), session)
 	if err != nil {
 		log.Error("[StorePool] Session deduplication failed, will self-heal on next insert", zap.Error(err))
 		return
 	}
-	if keeperID != 0 {
-		pm.invalidateSessionMeta(ctx, keeperID)
-	}
+	pm.invalidateSessionMetas(ctx, touchedIDs)
 	if deduped > 0 {
 		log.Info("[StorePool] Session snapshot merged",
 			zap.Int("deduped", deduped),
-			zap.Uint("keeperID", keeperID))
+			zap.Uints("touchedSessionIDs", touchedIDs))
 	}
 }
 
-// invalidateSessionMeta 失效会话详情缓存（best-effort）
+// invalidateSessionMetas 失效本轮被改写过的会话详情缓存（best-effort）
 //
-// 续写把快照前滚到既有会话行，会话 ID 不再随轮次变化，缓存不会因「新 ID」
-// 自然过期；删除失败仅记日志，最长由 SessionDetailCacheTTL 兜底。
+// 续写把快照前滚到既有会话行，会话 ID 不再随轮次变化，缓存不会因「新 ID」自然过期；
+// 除 keeper 外，被合并 tool_ids 的容器行同样要失效，否则 tool 列表最长陈旧
+// SessionDetailCacheTTL（60min）。删除失败仅记日志，由 TTL 兜底。
 //
 //	@receiver pm *PoolManager
 //	@param ctx context.Context
-//	@param sessionID uint 承接快照的会话 ID
+//	@param sessionIDs []uint 本轮被更新过的会话 ID
 //	@author centonhuang
-//	@update 2026-10-22 10:00:00
-func (pm *PoolManager) invalidateSessionMeta(ctx context.Context, sessionID uint) {
-	if pm.sessionCache == nil {
+//	@update 2026-10-22 20:00:00
+func (pm *PoolManager) invalidateSessionMetas(ctx context.Context, sessionIDs []uint) {
+	if pm.sessionCache == nil || len(sessionIDs) == 0 {
 		return
 	}
-	if err := pm.sessionCache.DeleteSessionMeta(ctx, sessionID); err != nil {
-		logger.WithCtx(ctx).Warn("[StorePool] Session meta cache invalidation failed",
-			zap.Uint("sessionID", sessionID), zap.Error(err))
+	for _, sessionID := range sessionIDs {
+		if err := pm.sessionCache.DeleteSessionMeta(ctx, sessionID); err != nil {
+			logger.WithCtx(ctx).Warn("[StorePool] Session meta cache invalidation failed",
+				zap.Uint("sessionID", sessionID), zap.Error(err))
+		}
 	}
 }
 
