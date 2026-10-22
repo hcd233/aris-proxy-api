@@ -53,16 +53,18 @@ func assertSQLContains(t *testing.T, sqlText string, wants []string) {
 }
 
 // TestGroupForUpdateQuery_SQLShape 钉住组查询形态：
-// ::jsonb 强转（索引命中前提）、FOR UPDATE（同组并发串行化）、deleted_at = 0（活跃行）。
+// ::jsonb 强转（索引命中前提）、api_key_id 归属过滤（租户隔离）、FOR UPDATE
+// （同组并发串行化）、deleted_at = 0（活跃行）。
 func TestGroupForUpdateQuery_SQLShape(t *testing.T) {
 	t.Parallel()
 	dry := newSQLShapeDB(t)
 
 	var out []*dbmodel.Session
-	q := dao.GetSessionDAO().GroupForUpdateQuery(dry, 42).Find(&out)
+	q := dao.GetSessionDAO().GroupForUpdateQuery(dry, 42, 7).Find(&out)
 
 	assertSQLContains(t, q.Statement.SQL.String(), []string{
 		"message_ids::jsonb->>0",
+		"api_key_id = ",
 		"FOR UPDATE",
 		"deleted_at = 0",
 	})

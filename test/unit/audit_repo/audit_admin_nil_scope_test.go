@@ -51,7 +51,7 @@ func TestQueryMetrics_NilPathReachesSQL(t *testing.T) {
 		t.Fatalf("seed failed: %v", err)
 	}
 
-	repo := repository.NewAuditRepository(db)
+	repo := repository.NewAuditRepository(db, nil)
 	ctx := context.Background()
 	start := time.Now().Add(-24 * time.Hour)
 	end := time.Now().Add(24 * time.Hour)

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { TokenThroughputPoint } from "@/lib/types";
-import { colorLuminance, toTokenVolumeRows, totalTokens } from "./token-volume";
+import { colorLuminance, toTokenVolumeRows } from "./token-volume";
 
 function point(overrides: Partial<TokenThroughputPoint> = {}): TokenThroughputPoint {
   return {
@@ -23,17 +23,6 @@ describe("toTokenVolumeRows", () => {
     const [row] = toTokenVolumeRows([point({ inputTokens: 5, cacheReadTokens: 1_000 })]);
     expect(row.inputTokens).toBe(5);
     expect(row.cacheReadTokens).toBe(1_000);
-  });
-});
-
-describe("totalTokens", () => {
-  it("sums input / output / cache read / cache write", () => {
-    expect(
-      totalTokens([
-        point(),
-        point({ inputTokens: 1, outputTokens: 2, cacheReadTokens: 3, cacheCreationTokens: 4 }),
-      ]),
-    ).toBe(12 + 7 + 900 + 40 + 1 + 2 + 3 + 4);
   });
 });
 

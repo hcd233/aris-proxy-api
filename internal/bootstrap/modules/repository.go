@@ -101,8 +101,8 @@ func NewSessionWriteRepository(db *gorm.DB) session.SessionRepository {
 	return repository.NewSessionRepository(db)
 }
 
-func NewAuditRepository(db *gorm.DB) modelcall.AuditRepository {
-	return repository.NewAuditRepository(db)
+func NewAuditRepository(db *gorm.DB, rc *cache.ReadCache) modelcall.AuditRepository {
+	return repository.NewAuditRepository(db, rc)
 }
 
 func NewDemoConfigRepository(db *gorm.DB) demoport.DemoConfigRepository {
@@ -231,8 +231,8 @@ func NewCronRepository(db *gorm.DB) cronmgmtport.CronJobRepository {
 	return repository.NewCronRepository(db)
 }
 
-func NewCronCallAuditRepository(db *gorm.DB) cronauditport.CronCallAuditRepository {
-	return repository.NewCronCallAuditRepository(db)
+func NewCronCallAuditRepository(db *gorm.DB, rc *cache.ReadCache) cronauditport.CronCallAuditRepository {
+	return repository.NewCronCallAuditRepository(db, rc)
 }
 
 func NewAccessTokenSignerImpl() identityservice.TokenSigner {

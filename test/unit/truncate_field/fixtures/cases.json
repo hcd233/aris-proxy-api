@@ -34,5 +34,11 @@
     "input": "你好世界测试数据",
     "max_len": 6,
     "want": "你好...(truncated, total 24 chars)"
+  },
+  {
+    "name": "unicode_cut_inside_rune",
+    "input": "你好世界测试数据",
+    "max_len": 4,
+    "want": "你...(truncated, total 24 chars)"
   }
 ]

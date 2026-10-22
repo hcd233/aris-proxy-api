@@ -4,13 +4,7 @@ import { ProviderIcon } from "@/components/provider-icon";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
 import { CopyButton } from "@/components/ui/copy-button";
-import {
-  Message,
-  MessageAvatar,
-  MessageContent,
-  MessageFooter,
-  MessageHeader,
-} from "@/components/ui/message";
+import { Message, MessageAvatar, MessageContent, MessageHeader } from "@/components/ui/message";
 import { useT } from "@/lib/i18n";
 import { extractContent, lookupToolResult, type ToolResultInfo } from "./content-extract";
 import { MultimodalParts } from "./multimodal-parts";
@@ -72,29 +66,45 @@ export function AssistantMessage({ message, index, toolResultsByID }: AssistantM
       </MessageAvatar>
 
       <MessageContent>
-        {time && <MessageHeader className="px-0">{time}</MessageHeader>}
+        {(modelId || time || text) && (
+          <MessageHeader className="min-h-8 gap-2 px-0">
+            {isAssistant && modelId && (
+              <span className="font-mono text-[11px] font-medium tracking-tight text-foreground/80">
+                {modelId}
+              </span>
+            )}
+            {isAssistant && modelId && time && (
+              <span aria-hidden className="text-muted-foreground/40">
+                ·
+              </span>
+            )}
+            {time && <span className="tabular-nums">{time}</span>}
+            {text && (
+              <CopyButton
+                value={text}
+                variant="icon"
+                ariaLabel={t("chat_message.copy_aria")}
+                className="ml-auto opacity-0 transition-opacity group-hover/msg:opacity-100 focus-visible:opacity-100"
+              />
+            )}
+          </MessageHeader>
+        )}
         {reasoning_content && <ReasoningBlock text={reasoning_content} />}
 
-        <Bubble variant="ghost">
-          <BubbleContent>
-            {parts.length > 0 && <MultimodalParts parts={parts} />}
-            {text && <MarkdownLite text={text} />}
-            {!text && parts.length === 0 && !tool_calls?.length && !refusal && (
-              <span className="text-muted-foreground">—</span>
-            )}
-          </BubbleContent>
-        </Bubble>
-
-        {text && (
-          <MessageFooter className="px-0 opacity-0 transition-opacity group-hover/msg:opacity-100">
-            <CopyButton value={text} variant="icon" ariaLabel={t("chat_message.copy_aria")} />
-          </MessageFooter>
+        {(parts.length > 0 || text || (!tool_calls?.length && !refusal)) && (
+          <Bubble variant="ghost">
+            <BubbleContent>
+              {parts.length > 0 && <MultimodalParts parts={parts} />}
+              {text && <MarkdownLite text={text} />}
+              {!text && parts.length === 0 && <span className="text-muted-foreground">—</span>}
+            </BubbleContent>
+          </Bubble>
         )}
 
         {refusal && <PartRefusal text={refusal} />}
 
         {tool_calls && tool_calls.length > 0 && (
-          <div>
+          <div className="flex flex-col gap-3">
             {tool_calls.map((call: UnifiedToolCall, i: number) => (
               <ToolCallCard
                 key={call.id ?? i}

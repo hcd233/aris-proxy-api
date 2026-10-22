@@ -5,6 +5,7 @@ const (
 	FieldDeletedAt                   = "deleted_at"
 	FieldCheckSum                    = "check_sum"
 	FieldMessageIDs                  = "message_ids"
+	FieldQuestions                   = "questions"
 	FieldModelIDs                    = "model_ids"
 	FieldToolIDs                     = "tool_ids"
 	FieldMetadata                    = "metadata"
@@ -237,6 +238,9 @@ var (
 	// 必须用 "user_id = ?" 而非 Where("user_id", v)：GORM 的 Where("col", v) 在
 	// 无占位符时 v 会被静默丢弃（v=0 时退化为 WHERE user_id，语义完全错误）。
 	WhereUserIDEquals = "user_id = ?"
+
+	// WhereAPIKeyIDEquals api_key_id 显式等值条件（会话归属组键、租户隔离过滤）
+	WhereAPIKeyIDEquals = "api_key_id = ?"
 
 	// WhereOAuthCredentialStatusEquals OAuth 凭据状态显式等值条件
 	WhereOAuthCredentialStatusEquals = "status = ?"

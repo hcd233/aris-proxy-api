@@ -21,7 +21,7 @@ import (
 //	@author centonhuang
 //	@update 2026-08-27
 func RegisterCLIAPIRoutes(cliGroup huma.API, deps APIRouterDependencies) {
-	cliGroup.UseMiddleware(middleware.APIKeyMiddleware(deps.DB))
+	cliGroup.UseMiddleware(middleware.APIKeyMiddleware(deps.DB, deps.Cache))
 
 	huma.Register(cliGroup, huma.Operation{
 		OperationID: "listClientModels",

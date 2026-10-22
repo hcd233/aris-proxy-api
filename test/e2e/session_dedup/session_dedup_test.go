@@ -1,4 +1,4 @@
-// Package session_dedup 验证 session 前缀去重在插入后实时生效。
+// Package session_dedup 验证会话续写在既有行上前滚、会话 ID 跨轮保持稳定。
 //
 // 环境变量（缺省 skip）：
 //   - BASE_URL   API 根地址
@@ -7,9 +7,9 @@
 //   - E2E_MODEL  上游模型名（缺省 gpt-5.5）
 //   - E2E_ALLOW_LIVE=1 允许对生产域名目标执行（缺省拒绝，见 e2eguard）
 //
-// 流程：同一对话连续两轮 chat completions（轮次1消息带随机标记）→
-// 轮次1快照应被轮次2快照实时取代 → 以标记为 keyword 轮询 session/list，
-// 最终只剩 1 条且 messageCount == 轮次2消息数（含 assistant 回复）。
+// 流程：同一对话连续两轮 chat completions（轮次1消息带随机标记）→ 轮次2 的快照
+// 合并回轮次1的会话行 → 以标记为 keyword 轮询 session/list，两轮都只剩 1 条、
+// messageCount 等于该轮消息数（含 assistant 回复），且两轮 session ID 相同。
 //
 //	@author centonhuang
 //	@update 2026-08-29 10:00:00
@@ -153,7 +153,9 @@ func listSessionsByKeyword(t *testing.T, baseURL, jwtToken, keyword string) []se
 	return rsp.Sessions
 }
 
-func TestE2E_SessionPrefixDedup_RealtimeAfterInsert(t *testing.T) {
+// TestE2E_SessionSnapshot_KeepsSessionIDOnContinuation 断言续聊时旧会话被原地前滚：
+// 两轮都只命中 1 条会话，messageCount 随轮次增长，且 session ID 保持不变。
+func TestE2E_SessionSnapshot_KeepsSessionIDOnContinuation(t *testing.T) {
 	t.Parallel()
 	baseURL, apiKey, jwtToken := mustE2EEnv(t)
 	marker := fmt.Sprintf("dedup-e2e-%d", time.Now().UnixNano())
@@ -163,33 +165,41 @@ func TestE2E_SessionPrefixDedup_RealtimeAfterInsert(t *testing.T) {
 		{Role: "user", Content: "Reply with exactly: OK " + marker},
 	}
 	assistantContent := postOnce(t, baseURL, apiKey, turn1)
+	firstID := waitForSingleSession(t, baseURL, jwtToken, marker, len(turn1)+1)
 
 	turn2 := append(append([]chatMessage{}, turn1...),
 		chatMessage{Role: "assistant", Content: assistantContent},
 		chatMessage{Role: "user", Content: "Thanks " + marker},
 	)
 	postOnce(t, baseURL, apiKey, turn2)
+	secondID := waitForSingleSession(t, baseURL, jwtToken, marker, len(turn2)+1)
 
-	// store 消息 = 请求消息 + assistant 回复
-	expectedCount := len(turn2) + 1
+	if secondID != firstID {
+		t.Fatalf("session id changed on continuation: first=%d second=%d", firstID, secondID)
+	}
+	t.Logf("continuation kept session id=%d messageCount=%d", secondID, len(turn2)+1)
+}
 
-	// 去重完成后 keyword 只命中轮次2快照；轮次1快照（messageCount 更小）应已软删。
-	// 用 ticker 轮询而非 time.Sleep（lintconv testing.sleep 规则）。
+// waitForSingleSession 轮询 keyword 命中的会话，等到唯一一条且 messageCount 等于 expectedCount
+//
+// 用 ticker 轮询而非 time.Sleep（lintconv testing.sleep 规则）：落库与合并都是异步的。
+func waitForSingleSession(t *testing.T, baseURL, jwtToken, keyword string, expectedCount int) uint {
+	t.Helper()
+
 	ticker := time.NewTicker(3 * time.Second)
 	defer ticker.Stop()
 	deadline := time.Now().Add(90 * time.Second)
 	for {
-		sessions := listSessionsByKeyword(t, baseURL, jwtToken, marker)
+		sessions := listSessionsByKeyword(t, baseURL, jwtToken, keyword)
 		if len(sessions) == 1 && sessions[0].MessageCount == expectedCount {
-			t.Logf("deduped: single session id=%d messageCount=%d", sessions[0].ID, sessions[0].MessageCount)
-			return
+			return sessions[0].ID
 		}
 		if time.Now().After(deadline) {
 			counts := make([]int, 0, len(sessions))
 			for _, s := range sessions {
 				counts = append(counts, s.MessageCount)
 			}
-			t.Fatalf("dedup not settled within 90s: sessions=%d want=1, messageCounts=%v want=[%d]",
+			t.Fatalf("session snapshot not settled within 90s: sessions=%d want=1, messageCounts=%v want=[%d]",
 				len(sessions), counts, expectedCount)
 		}
 		<-ticker.C
