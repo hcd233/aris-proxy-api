@@ -140,7 +140,7 @@ func (r *cronCallAuditRepository) List(ctx context.Context, param model.CommonPa
 //	@return error
 func (r *cronCallAuditRepository) ListDistinctTypes(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
 	key := readCacheKey(constant.ReadCachePurposeCronOptionType, keyword, cacheTimeBucket(startTime), cacheTimeBucket(endTime))
-	return cachedSlice(ctx, r.cache, key, func(loadCtx context.Context) ([]string, error) {
+	return cachedSliceByKeyword(ctx, r.cache, key, keyword, func(loadCtx context.Context) ([]string, error) {
 		return r.loadDistinctTypes(loadCtx, keyword, startTime, endTime)
 	})
 }
@@ -178,7 +178,7 @@ func (r *cronCallAuditRepository) loadDistinctTypes(ctx context.Context, keyword
 //	@return error
 func (r *cronCallAuditRepository) ListDistinctStatuses(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
 	key := readCacheKey(constant.ReadCachePurposeCronOptionStatus, keyword, cacheTimeBucket(startTime), cacheTimeBucket(endTime))
-	return cachedSlice(ctx, r.cache, key, func(loadCtx context.Context) ([]string, error) {
+	return cachedSliceByKeyword(ctx, r.cache, key, keyword, func(loadCtx context.Context) ([]string, error) {
 		return r.loadDistinctStatuses(loadCtx, keyword, startTime, endTime)
 	})
 }

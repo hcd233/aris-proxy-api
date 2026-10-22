@@ -166,3 +166,27 @@ func TestTimeBucketAlignsToMinute(t *testing.T) {
 		t.Fatalf("same minute window must reuse cache, got %d db queries", got)
 	}
 }
+
+// TestKeywordOptionNotCached 钉住「keyword 非空不缓存」
+//
+// 联想输入逐字符变化，每个片段都会生成新键且几乎不复用：缓存只会多付一次 SET
+// 并把 Redis 键空间按「scope × 输入片段 × 分钟」放大。
+func TestKeywordOptionNotCached(t *testing.T) {
+	t.Parallel()
+
+	repo, queries := newAuditRepo(t)
+
+	if _, err := repo.ListDistinctModels(t.Context(), nil, "m", rangeStart, rangeEnd); err != nil {
+		t.Fatalf("keyword distinct models: %v", err)
+	}
+	if got := queries(); got != 1 {
+		t.Fatalf("first keyword call should hit db once, got %d", got)
+	}
+
+	if _, err := repo.ListDistinctModels(t.Context(), nil, "m", rangeStart, rangeEnd); err != nil {
+		t.Fatalf("keyword distinct models again: %v", err)
+	}
+	if got := queries(); got != 2 {
+		t.Fatalf("keyword query must not be cached, got %d db queries", got)
+	}
+}

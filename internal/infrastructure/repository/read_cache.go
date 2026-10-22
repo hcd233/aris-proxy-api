@@ -116,3 +116,29 @@ func cachedSlice[T any](ctx context.Context, rc *cache.ReadCache, key string, lo
 	// 空结果统一返回空切片而非 nil：响应体里 "[]" 比 "null" 对前端安全（后者要求空值兜底）。
 	return opt.OrElse([]T{}), nil
 }
+
+// cachedSliceByKeyword 联想类查询（带 keyword 过滤）的 cache-aside 入口
+//
+// keyword 由用户逐字符输入：每个片段都生成独立缓存键、几乎不复用，缓存只会多付一次
+// SET 并把 Redis 键空间按「scope × 输入片段 × 分钟」放大。因此 keyword 非空时直接回源，
+// 只有「无关键词」这类可复用的全量选项查询才落缓存。
+//
+//	@param ctx context.Context
+//	@param rc *cache.ReadCache 为 nil 时退化为直接回源
+//	@param key 缓存键（readCacheKey 产出）
+//	@param keyword string 用户输入的关键词；非空时不走缓存
+//	@param loader 回源加载器
+//	@return []T
+//	@return error
+func cachedSliceByKeyword[T any](
+	ctx context.Context,
+	rc *cache.ReadCache,
+	key string,
+	keyword string,
+	loader func(context.Context) ([]T, error),
+) ([]T, error) {
+	if keyword != "" {
+		return loader(ctx)
+	}
+	return cachedSlice(ctx, rc, key, loader)
+}
