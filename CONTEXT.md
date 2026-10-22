@@ -21,7 +21,7 @@ Demo 演示行为的单行配置表（`demo_configs`，固定 ID=1）：`loginEn
 _Avoid_: demo settings, showcase config
 
 **ProxyAPIKey（代理密钥）**:
-用户签发的 API Key，用于通过网关转发 LLM 请求。每个用户有配额上限（`APIKeyQuota`）。密钥值（`APIKeySecret`）仅在创建时明文返回一次，后续只展示脱敏后字符串。属于某个 User，鉴权时从请求头提取并与数据库比对。
+用户签发的 API Key，用于通过网关转发 LLM 请求。每个用户有配额上限（`APIKeyQuota`）。密钥值（`APIKeySecret`）仅在创建时明文返回一次，后续只展示脱敏后字符串。属于某个 User；鉴权时从请求头提取，先查 Redis 鉴权缓存（`auth:apikey:<sha256 摘要>`，30s TTL，命中时零 DB 查询），未命中再回源数据库比对。副作用：吊销/轮换最迟 30s 后生效。
 _Avoid_: api key, credential, token
 
 **OAuthProvider（OAuth 平台）**:
