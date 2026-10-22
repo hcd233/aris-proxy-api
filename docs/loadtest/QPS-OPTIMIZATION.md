@@ -2,9 +2,8 @@
 
 > 本文是分析报告，不含代码改动。所有"预期收益"都是在**明确假设**下给出的估算，落地前须用 §6 的方法实测验证。
 >
-> **实施状态**：第 1 批（§3.1 日志 body 策略 + §3.4 压缩级别）已落地，见
-> [`internal/middleware/log.go`](../../internal/middleware/log.go) 与
-> [`internal/middleware/compress.go`](../../internal/middleware/compress.go)；其余批次未开始，收益待实测。
+> **实施状态**：第 1 批（§3.1 日志 body 策略 + §3.4 压缩级别）与第 2 批（§3.2 APIKey 鉴权缓存
+> + §3.3 Guard 负缓存）已落地，见 [`internal/middleware/`](../../internal/middleware/)；其余批次未开始，收益待实测。
 
 ## 0. 结论先行
 

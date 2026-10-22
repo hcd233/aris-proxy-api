@@ -17,7 +17,7 @@ import (
 //	@author centonhuang
 //	@update 2026-03-06 10:00:00
 func initOpenAIRouter(openaiGroup huma.API, openaiHandler handler.OpenAIHandler, db *gorm.DB, cache *redis.Client) {
-	openaiGroup.UseMiddleware(middleware.APIKeyMiddleware(db), middleware.HeaderPassthroughMiddleware())
+	openaiGroup.UseMiddleware(middleware.APIKeyMiddleware(db, cache), middleware.HeaderPassthroughMiddleware())
 
 	huma.Register(openaiGroup, huma.Operation{
 		OperationID: "listModels",

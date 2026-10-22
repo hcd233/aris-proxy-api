@@ -3,11 +3,14 @@ package constant
 const (
 	LockKeyTemplateMiddleware = "%s:%s:%v"
 	JWTUserCacheKeyTemplate   = "jwt:user:%d"
-	TokenBucketKeyTemplate    = "tb:%s:%s:%v"
-	ScannerBanKeyTemplate     = "scanner:ban:%s"
-	ScannerStrikeKeyTemplate  = "scanner:strike:%s"
-	ShareKeyTemplate          = "share:%s"
-	UserSharesKeyTemplate     = "user_shares:%d"
+	// APIKeyAuthKeyTemplate API Key 鉴权缓存（%s = 密钥 SHA-256 十六进制摘要）：
+	// 用摘要而非明文做 key，避免 keyspace / 监控面板泄露可用密钥。
+	APIKeyAuthKeyTemplate    = "auth:apikey:%s"
+	TokenBucketKeyTemplate   = "tb:%s:%s:%v"
+	ScannerBanKeyTemplate    = "scanner:ban:%s"
+	ScannerStrikeKeyTemplate = "scanner:strike:%s"
+	ShareKeyTemplate         = "share:%s"
+	UserSharesKeyTemplate    = "user_shares:%d"
 	// CronLockKeyTemplate cron 任务互斥锁的 Redis key 模板（%s = CronModule*）
 	CronLockKeyTemplate      = "cron:lock:%s"
 	SessionSharesKeyTemplate = "session_shares:%d"
