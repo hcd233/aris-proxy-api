@@ -33,4 +33,33 @@ const (
 	ReadCacheScanBatch = 128
 	// ReadCacheModelListScopeAll Web 模型列表缓存键的 admin 全量视角片段
 	ReadCacheModelListScopeAll = "all"
+	// ReadCacheWindowTTL 读缓存-时间窗查询（统计聚合 / 筛选选项）基准 TTL
+	//
+	// 这类查询按时间窗取数，结果会随新写入的审计行变化；60s 足够摊薄看板重复刷新，
+	// 又不至于让图表明显落后（目录类缓存用 5min）。
+	ReadCacheWindowTTL = 60 * time.Second
+	// ReadCacheWindowTTLJitter 时间窗查询 TTL 随机抖动上限
+	ReadCacheWindowTTLJitter = 10 * time.Second
+	// 读缓存-时间窗查询的用途标识（readCacheKey 的 purpose，参与键摘要）。
+	// 必须全局唯一：两个不同查询共用同一 purpose + 相同其余参数会互相串数据。
+	ReadCachePurposeAuditOptionUser      = "audit:option:user"
+	ReadCachePurposeAuditOptionModel     = "audit:option:model"
+	ReadCachePurposeAuditOptionStatus    = "audit:option:status"
+	ReadCachePurposeAuditOptionUA        = "audit:option:ua"
+	ReadCachePurposeAuditStatsCost       = "audit:stats:model-cost"
+	ReadCachePurposeAuditStatsTrend      = "audit:stats:model-trend"
+	ReadCachePurposeAuditStatsRate       = "audit:stats:request-rate"
+	ReadCachePurposeAuditStatsThroughput = "audit:stats:token-throughput"
+	ReadCachePurposeAuditStatsLatency    = "audit:stats:first-token-latency"
+	ReadCachePurposeCronOptionType       = "cron:option:type"
+	ReadCachePurposeCronOptionStatus     = "cron:option:status"
+	ReadCachePurposeSessionOptionScore   = "session:option:score"
+	ReadCachePurposeSessionOptionModel   = "session:option:model"
+	ReadCachePurposeSessionOptionMsgCnt  = "session:option:message-count"
+
+	// ReadCacheWindowBucket 时间窗查询缓存键的时间对齐粒度
+	//
+	// 前端每次请求的 startTime/endTime 多为「当前时刻 - N 天」，逐请求变化会让缓存永不命中。
+	// 键里把时间对齐到本粒度，同一分钟内的请求复用同一条目（聚合窗口最多偏移 59s）。
+	ReadCacheWindowBucket = 60 * time.Second
 )

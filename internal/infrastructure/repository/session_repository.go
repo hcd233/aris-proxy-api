@@ -618,6 +618,13 @@ func BuildOrderedToolProjections(ids []uint, records []*dbmodel.Tool) []*session
 // ownerIDs 为 nil 表示不过滤（admin/demo 白名单路径）；非 nil 且为空（用户名下
 // 无 Key）短路返回空结果，防止越权查全量。sessionIDs 非 nil 时按白名单过滤。
 func (r *sessionReadRepository) ListDistinctScores(ctx context.Context, ownerIDs []uint, startTime, endTime time.Time, sessionIDs []uint) ([]int, error) {
+	key := readCacheKey(constant.ReadCachePurposeSessionOptionScore, cacheScopeIDs(ownerIDs), cacheTimeBucket(startTime), cacheTimeBucket(endTime), cacheScopeIDs(sessionIDs))
+	return cachedSlice(ctx, r.cache, key, func(loadCtx context.Context) ([]int, error) {
+		return r.loadDistinctScores(loadCtx, ownerIDs, startTime, endTime, sessionIDs)
+	})
+}
+
+func (r *sessionReadRepository) loadDistinctScores(ctx context.Context, ownerIDs []uint, startTime, endTime time.Time, sessionIDs []uint) ([]int, error) {
 	if ownerIDs != nil && len(ownerIDs) == 0 {
 		return []int{}, nil
 	}
@@ -653,6 +660,13 @@ func (r *sessionReadRepository) ListDistinctScores(ctx context.Context, ownerIDs
 // ownerIDs 为 nil 表示不过滤（admin/demo 白名单路径）；非 nil 且为空（用户名下
 // 无 Key）短路返回空结果，防止越权查全量。sessionIDs 非 nil 时按白名单过滤。
 func (r *sessionReadRepository) ListDistinctModels(ctx context.Context, ownerIDs []uint, keyword string, startTime, endTime time.Time, sessionIDs []uint) ([]string, error) {
+	key := readCacheKey(constant.ReadCachePurposeSessionOptionModel, cacheScopeIDs(ownerIDs), keyword, cacheTimeBucket(startTime), cacheTimeBucket(endTime), cacheScopeIDs(sessionIDs))
+	return cachedSlice(ctx, r.cache, key, func(loadCtx context.Context) ([]string, error) {
+		return r.loadDistinctModels(loadCtx, ownerIDs, keyword, startTime, endTime, sessionIDs)
+	})
+}
+
+func (r *sessionReadRepository) loadDistinctModels(ctx context.Context, ownerIDs []uint, keyword string, startTime, endTime time.Time, sessionIDs []uint) ([]string, error) {
 	if ownerIDs != nil && len(ownerIDs) == 0 {
 		return []string{}, nil
 	}
@@ -686,6 +700,12 @@ func (r *sessionReadRepository) ListDistinctModels(ctx context.Context, ownerIDs
 	return models, nil
 }
 
+// sessionMessageCountStats 消息数统计的缓存载荷（多返回值打包成可序列化结构）
+type sessionMessageCountStats struct {
+	MaxCount     int           `json:"maxCount"`
+	BucketCounts map[int]int64 `json:"bucketCounts"`
+}
+
 // ListMessageCountStats 查询消息数统计：
 //   - maxCount：当前时间范围内最大的 session 消息数（无会话时为 0）
 //   - bucketCounts：各固定边界桶（0-10 / 11-50 / 51-100 / 101-200 / 201-500 / 501+）的会话数
@@ -693,6 +713,29 @@ func (r *sessionReadRepository) ListDistinctModels(ctx context.Context, ownerIDs
 // ownerIDs 为 nil 表示不过滤（admin/demo 白名单路径）；非 nil 且为空（用户名下
 // 无 Key）短路返回空结果，防止越权查全量。sessionIDs 非 nil 时按白名单过滤。
 func (r *sessionReadRepository) ListMessageCountStats(ctx context.Context, ownerIDs []uint, startTime, endTime time.Time, sessionIDs []uint) (maxCount int, bucketCounts map[int]int64, err error) {
+	key := readCacheKey(constant.ReadCachePurposeSessionOptionMsgCnt,
+		cacheScopeIDs(ownerIDs),
+		cacheTimeBucket(startTime),
+		cacheTimeBucket(endTime),
+		cacheScopeIDs(sessionIDs),
+	)
+	cached, cacheErr := cache.GetOrLoadWithTTL(ctx, r.cache, key,
+		constant.ReadCacheWindowTTL, constant.ReadCacheWindowTTLJitter,
+		func(loadCtx context.Context) (mo.Option[sessionMessageCountStats], error) {
+			loadMax, loadBuckets, loadErr := r.loadMessageCountStats(loadCtx, ownerIDs, startTime, endTime, sessionIDs)
+			if loadErr != nil {
+				return mo.None[sessionMessageCountStats](), loadErr
+			}
+			return mo.Some(sessionMessageCountStats{MaxCount: loadMax, BucketCounts: loadBuckets}), nil
+		})
+	if cacheErr != nil {
+		return 0, nil, cacheErr
+	}
+	stats, _ := cached.Get()
+	return stats.MaxCount, stats.BucketCounts, nil
+}
+
+func (r *sessionReadRepository) loadMessageCountStats(ctx context.Context, ownerIDs []uint, startTime, endTime time.Time, sessionIDs []uint) (maxCount int, bucketCounts map[int]int64, err error) {
 	if ownerIDs != nil && len(ownerIDs) == 0 {
 		return 0, map[int]int64{}, nil
 	}

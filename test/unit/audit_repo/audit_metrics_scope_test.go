@@ -44,7 +44,7 @@ func TestQueryMetrics_EmptyAPIKeyIDsShortCircuitsToEmpty(t *testing.T) {
 		t.Fatalf("seed failed: %v", err)
 	}
 
-	repo := repository.NewAuditRepository(db)
+	repo := repository.NewAuditRepository(db, nil)
 	ctx := context.Background()
 	now := time.Now()
 	start, end := now.Add(-24*time.Hour), now.Add(24*time.Hour)
