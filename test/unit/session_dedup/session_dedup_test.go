@@ -13,6 +13,7 @@ import (
 // sessionFixture represents session data in fixture JSON
 type sessionFixture struct {
 	ID         uint   `json:"id"`
+	APIKeyID   uint   `json:"api_key_id"`
 	MessageIDs []uint `json:"message_ids"`
 	ToolIDs    []uint `json:"tool_ids"`
 }
@@ -56,6 +57,7 @@ func toDBSessions(fixtures []sessionFixture) []*dbmodel.Session {
 	sessions := make([]*dbmodel.Session, 0, len(fixtures))
 	for _, f := range fixtures {
 		s := &dbmodel.Session{
+			APIKeyID:   f.APIKeyID,
 			MessageIDs: f.MessageIDs,
 			ToolIDs:    f.ToolIDs,
 		}
@@ -63,6 +65,56 @@ func toDBSessions(fixtures []sessionFixture) []*dbmodel.Session {
 		sessions = append(sessions, s)
 	}
 	return sessions
+}
+
+// TestFindRedundantSessionsIsTenantScoped 钉住分组键包含归属 API Key
+//
+// messages 表按 checksum 全局去重（表上无归属列），两个租户的首条消息相同就会复用
+// 同一 message 行。若分组只按首条消息 ID，较长的那个会把另一个租户的会话判成冗余并
+// 软删——这里断言跨租户的前缀关系不产生任何冗余。
+func TestFindRedundantSessionsIsTenantScoped(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name     string
+		sessions []sessionFixture
+		expected []uint
+	}{
+		{
+			name: "cross tenant prefix keeps both",
+			sessions: []sessionFixture{
+				{ID: 1, APIKeyID: 10, MessageIDs: []uint{1, 2}},
+				{ID: 2, APIKeyID: 20, MessageIDs: []uint{1, 2, 3}},
+			},
+			expected: []uint{},
+		},
+		{
+			name: "same tenant prefix drops shorter",
+			sessions: []sessionFixture{
+				{ID: 1, APIKeyID: 10, MessageIDs: []uint{1, 2}},
+				{ID: 2, APIKeyID: 10, MessageIDs: []uint{1, 2, 3}},
+			},
+			expected: []uint{1},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			result := repository.FindRedundantSessions(toDBSessions(tc.sessions))
+			got := append([]uint{}, result.RedundantIDs...)
+			sort.Slice(got, func(i, j int) bool { return got[i] < got[j] })
+			if len(got) != len(tc.expected) {
+				t.Fatalf("RedundantIDs = %v, want %v", got, tc.expected)
+			}
+			for i := range got {
+				if got[i] != tc.expected[i] {
+					t.Fatalf("RedundantIDs = %v, want %v", got, tc.expected)
+				}
+			}
+		})
+	}
 }
 
 // TestFindRedundantSessionsWithMerge tests the tool_ids merging functionality

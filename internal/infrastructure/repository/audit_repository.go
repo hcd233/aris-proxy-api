@@ -118,7 +118,7 @@ func (r *auditRepository) ListByAPIKeyIDs(ctx context.Context, apiKeyIDs []uint,
 // 空（用户名下无 Key）短路返回空结果，防止越权查全量。
 func (r *auditRepository) ListDistinctUserNames(ctx context.Context, apiKeyIDs []uint, keyword string, startTime, endTime time.Time) ([]string, error) {
 	key := readCacheKey(constant.ReadCachePurposeAuditOptionUser, cacheScopeIDs(apiKeyIDs), keyword, cacheTimeBucket(startTime), cacheTimeBucket(endTime))
-	return cachedSlice(ctx, r.cache, key, func(loadCtx context.Context) ([]string, error) {
+	return cachedSliceByKeyword(ctx, r.cache, key, keyword, func(loadCtx context.Context) ([]string, error) {
 		return r.loadDistinctUserNames(loadCtx, apiKeyIDs, keyword, startTime, endTime)
 	})
 }
@@ -161,7 +161,7 @@ func (r *auditRepository) loadDistinctUserNames(ctx context.Context, apiKeyIDs [
 // 空（用户名下无 Key）短路返回空结果，防止越权查全量。
 func (r *auditRepository) ListDistinctModels(ctx context.Context, apiKeyIDs []uint, keyword string, startTime, endTime time.Time) ([]string, error) {
 	key := readCacheKey(constant.ReadCachePurposeAuditOptionModel, cacheScopeIDs(apiKeyIDs), keyword, cacheTimeBucket(startTime), cacheTimeBucket(endTime))
-	return cachedSlice(ctx, r.cache, key, func(loadCtx context.Context) ([]string, error) {
+	return cachedSliceByKeyword(ctx, r.cache, key, keyword, func(loadCtx context.Context) ([]string, error) {
 		return r.loadDistinctModels(loadCtx, apiKeyIDs, keyword, startTime, endTime)
 	})
 }
@@ -241,7 +241,7 @@ func (r *auditRepository) loadDistinctStatusCodes(ctx context.Context, apiKeyIDs
 // 空（用户名下无 Key）短路返回空结果，防止越权查全量。
 func (r *auditRepository) ListDistinctUserAgents(ctx context.Context, apiKeyIDs []uint, keyword string, startTime, endTime time.Time) ([]string, error) {
 	key := readCacheKey(constant.ReadCachePurposeAuditOptionUA, cacheScopeIDs(apiKeyIDs), keyword, cacheTimeBucket(startTime), cacheTimeBucket(endTime))
-	return cachedSlice(ctx, r.cache, key, func(loadCtx context.Context) ([]string, error) {
+	return cachedSliceByKeyword(ctx, r.cache, key, keyword, func(loadCtx context.Context) ([]string, error) {
 		return r.loadDistinctUserAgents(loadCtx, apiKeyIDs, keyword, startTime, endTime)
 	})
 }

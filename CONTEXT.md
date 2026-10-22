@@ -283,8 +283,10 @@ _Avoid_: cron mutex, scheduled lock, scheduler lock
 定时 cron 任务，遍历被软删除的 Session，提取引用的 Message/Tool IDs，与活跃 Session 引用的 IDs 计算差集后硬删除孤儿记录。避免多 Session 共享 Message/Tool 时误删。使用 `lo.Difference` 做集合运算。
 
 **SessionDedup（会话续写合并）**:
-每次 LLM 请求都会把完整对话历史落库并插入一条 Session 快照，历史 Message 按 checksum 复用同一行，因此第 k 轮的 MessageIDs 必然是第 k+1 轮的**前缀**。快照插入事务提交后，在独立短事务内按首个 Message ID 分组（同一对话的快照集合）做续写合并：`FindSessionTarget` 取组内「新快照的前缀」且最长者（等长取 ID 最小）作为 keeper，把新行的 MessageIDs/Questions/ModelIDs/Metadata 前滚到 keeper、并入 ToolIDs，再软删新行——**会话 ID、评分与分享关系因此跨轮保持稳定**。首轮与对话分叉（组内无前缀关系）保留新行；重试/补发旧轮次（新快照是既有会话的前缀）只并工具、不覆盖更长快照。组行 `FOR UPDATE` 串行化同组并发写入；失败仅记日志，残留由下次同组插入自愈；写回后失效 `session:meta:v2:{id}`。算法与写回在 `repository.DeduplicateSessionGroup` / `FindSessionTarget`。
+每次 LLM 请求都会把完整对话历史落库并插入一条 Session 快照，历史 Message 按 checksum 复用同一行，因此第 k 轮的 MessageIDs 必然是第 k+1 轮的**前缀**。快照插入事务提交后，在独立短事务内按**（归属 API Key, 首条 Message ID）**分组（同一租户下同一对话的快照集合）做续写合并：`FindSessionTarget` 取组内「新快照的前缀」且最长者（等长取 ID 最小）作为 keeper，把新行的 MessageIDs/Questions/ModelIDs/Metadata 前滚到 keeper、并入 ToolIDs，再软删新行——**会话 ID、评分与分享关系因此跨轮保持稳定**。首轮与对话分叉（组内无前缀关系）保留新行；重试/补发旧轮次（新快照是既有会话的前缀）只并工具、不覆盖更长快照。组行 `FOR UPDATE` 串行化同组并发写入；失败仅记日志，残留由下次同组插入自愈；本轮被改写过的会话（keeper 与被合并 tool_ids 的容器）统一失效 `session:meta:v2:{id}`。算法与写回在 `repository.DeduplicateSessionGroup` / `FindSessionTarget` / `FindRedundantSessions`。
 _Avoid_: session merge, snapshot cleanup
+
+> **为什么归属进分组键**：`messages` 表按 checksum **全局**去重（表上无归属列），两个用户的首条消息内容+模型+工具相同时复用同一 message 行。只按首条 Message ID 分组会把不同租户的快照判成同一段对话，续写时把本轮内容写进他人的会话行。归属进键后，换 API Key 续聊各自成组、各留一行（ID 仍稳定，只是不跨 Key 合并）。
 
 **TerminalCleanup（终态清理）**:
 每小时 cron（`SessionTerminalCleanupCron`），扫描最近 24 小时内末条消息为 assistant 且带 tool_calls 的会话（对话在工具调用处中断，属不完整分支）并删除。不做前缀解析——前缀冗余由插入时去重实时处理；被删会话的 Message/Tool 引用由 SoftDeletePurge 按保留期处理。

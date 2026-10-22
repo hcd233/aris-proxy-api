@@ -133,13 +133,16 @@ func bodyPreview(body []byte) string {
 	return util.TruncateFieldValue(string(body), constant.LogMiddlewareBodyMaxBytes)
 }
 
-// ShouldLogBody 判断是否记录请求/响应体：只在失败现场记录。
+// ShouldLogResponseBody 判断是否记录响应体：只在失败现场记录。
 //
-// 成功响应体是日志体积与 CPU 的主要来源（如 session/message/list 的 310KB 响应
-// 需完整 JSON 解析后再编码一次），而排障依赖的是失败请求的入参与出参，故成功路径不记录。
+// 请求体与响应体分开决策：
+//   - 请求体始终记录（超长/不可解析时截断到 LogMiddlewareBodyMaxBytes）：LLM 代理的
+//     prompt 只存在于请求体，审计表不存内容，成功请求丢请求体等于丢掉「这句话是谁问的」。
+//   - 响应体只在失败时记录：成功响应体是日志体积与 CPU 的主要来源（如
+//     session/message/list 的 310KB 响应需完整 JSON 解析后再编码一次）。
 //
 // 导出供回归测试断言策略（同 repository.FormatBigIntArray 的测试导出约定）。
-func ShouldLogBody(err error, status int) bool {
+func ShouldLogResponseBody(err error, status int) bool {
 	return err != nil || status >= fiber.StatusBadRequest
 }
 
@@ -200,8 +203,9 @@ func LogMiddleware(cfg LogMiddlewareConfig) fiber.Handler {
 
 		fields = append(fields, buildRequestHeadersFields(c)...)
 		fields = append(fields, buildResponseHeadersFields(c)...)
-		if ShouldLogBody(err, c.Response().StatusCode()) {
-			fields = append(fields, buildRequestBodyFields(c)...)
+		// 请求体始终记录：LLM 代理的 prompt 只在这里，且超长时已退化为截断字符串
+		fields = append(fields, buildRequestBodyFields(c)...)
+		if ShouldLogResponseBody(err, c.Response().StatusCode()) {
 			fields = append(fields, buildResponseBodyFields(c)...)
 		}
 

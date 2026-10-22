@@ -75,8 +75,10 @@ func isRouteNotFound(err error) bool {
 // 每请求一次的 Redis EXISTS 是固定成本，而封禁是低频事件：缓存 1s 内的干净结论，
 // 把 Redis 调用摊薄到每 IP 每秒 1 次。封禁最迟 TTL 后生效；本进程自己触发封禁时
 // 调 Invalidate 立即失效。仅在单个 pod 内生效，跨 pod 结论各自独立（Redis ban key 是权威源）。
+//
+// 命中路径在每请求热路径上，只读，因此用 RWMutex：互斥锁会把同 pod 的并发请求串行化。
 type BanCleanCache struct {
-	mu      sync.Mutex
+	mu      sync.RWMutex
 	entries map[string]time.Time
 	ttl     time.Duration
 	limit   int
@@ -85,10 +87,10 @@ type BanCleanCache struct {
 // NewBanCleanCache 创建负缓存
 //
 //	@param ttl 结论有效期
-//	@param limit 条目上限，超限整体清空
+//	@param limit 条目上限，超限淘汰最早过期的条目
 //	@return *BanCleanCache
 //	@author centonhuang
-//	@update 2026-10-22 15:00:00
+//	@update 2026-10-22 20:00:00
 func NewBanCleanCache(ttl time.Duration, limit int) *BanCleanCache {
 	return &BanCleanCache{
 		entries: make(map[string]time.Time),
@@ -98,34 +100,81 @@ func NewBanCleanCache(ttl time.Duration, limit int) *BanCleanCache {
 }
 
 // IsClean 判断该 IP 是否仍在「未封禁」结论有效期内
+//
+// 过期条目不在这里删除：读路径持读锁，删 map 需要写锁。过期条目由 MarkClean 的
+// 淘汰逻辑回收，内存上限由 limit 保证。
+//
+//	@receiver c *BanCleanCache
+//	@param ip string 客户端 IP
+//	@return bool 是否处于「未封禁」结论有效期内
+//	@author centonhuang
+//	@update 2026-10-22 20:00:00
 func (c *BanCleanCache) IsClean(ip string) bool {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 
 	expiry, ok := c.entries[ip]
-	if !ok {
-		return false
-	}
-	if time.Now().After(expiry) {
-		delete(c.entries, ip)
-		return false
-	}
-	return true
+	return ok && time.Now().Before(expiry)
 }
 
 // MarkClean 记录该 IP 未被封禁
+//
+//	@receiver c *BanCleanCache
+//	@param ip string 客户端 IP
+//	@author centonhuang
+//	@update 2026-10-22 20:00:00
 func (c *BanCleanCache) MarkClean(ip string) {
+	now := time.Now()
+
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	// ponytail: 超限整体清空，O(1) 且防止伪造 IP 撑爆内存；上限 4096 时清空极少发生
 	if len(c.entries) >= c.limit {
-		clear(c.entries)
+		c.evictLocked(now)
 	}
-	c.entries[ip] = time.Now().Add(c.ttl)
+	c.entries[ip] = now.Add(c.ttl)
+}
+
+// evictLocked 在超限时回收空间，调用方必须持写锁
+//
+// 先清掉已过期条目，仍超限则淘汰最早过期的一条。刻意不用 clear() 整体清空：
+// 源 IP 被伪造打满时整体清空会让所有结论周期性失效，把优化变成 Redis 尖峰。
+//
+// ponytail: 仅在超限时 O(n) 扫一遍, 上限若需上万条再换 LRU。
+//
+//	@receiver c *BanCleanCache
+//	@param now time.Time 当前时间
+//	@author centonhuang
+//	@update 2026-10-22 20:00:00
+func (c *BanCleanCache) evictLocked(now time.Time) {
+	for ip, expiry := range c.entries {
+		if now.After(expiry) {
+			delete(c.entries, ip)
+		}
+	}
+	if len(c.entries) < c.limit {
+		return
+	}
+
+	oldestIP := ""
+	var oldestExpiry time.Time
+	for ip, expiry := range c.entries {
+		if oldestIP == "" || expiry.Before(oldestExpiry) {
+			oldestIP = ip
+			oldestExpiry = expiry
+		}
+	}
+	if oldestIP != "" {
+		delete(c.entries, oldestIP)
+	}
 }
 
 // Invalidate 丢弃该 IP 的缓存结论（本进程触发封禁时调用）
+//
+//	@receiver c *BanCleanCache
+//	@param ip string 客户端 IP
+//	@author centonhuang
+//	@update 2026-10-22 20:00:00
 func (c *BanCleanCache) Invalidate(ip string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -172,13 +221,15 @@ func GuardMiddleware(cache *redis.Client, cfg GuardConfig) fiber.Handler {
 		// 负缓存命中则跳过 ban 查询；下方的 404 扫描计数逻辑对每个请求照常执行
 		if !cleanCache.IsClean(ip) {
 			banned, err := cache.Exists(ctx, banKey).Result()
-			if err != nil {
+			switch {
+			case err != nil:
+				// fail-open，但不把「检查失败」固化成「干净」结论：下次请求仍会重新问 Redis
 				logger.WithFCtx(c).Warn("[GuardMiddleware] Failed to check ban status", zap.String("ip", ip), zap.Error(err))
-			}
-			if banned > 0 {
+			case banned > 0:
 				return c.SendStatus(fiber.StatusForbidden)
+			default:
+				cleanCache.MarkClean(ip)
 			}
-			cleanCache.MarkClean(ip)
 		}
 
 		nextErr := c.Next()

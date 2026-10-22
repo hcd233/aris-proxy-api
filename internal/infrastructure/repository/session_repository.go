@@ -661,7 +661,7 @@ func (r *sessionReadRepository) loadDistinctScores(ctx context.Context, ownerIDs
 // 无 Key）短路返回空结果，防止越权查全量。sessionIDs 非 nil 时按白名单过滤。
 func (r *sessionReadRepository) ListDistinctModels(ctx context.Context, ownerIDs []uint, keyword string, startTime, endTime time.Time, sessionIDs []uint) ([]string, error) {
 	key := readCacheKey(constant.ReadCachePurposeSessionOptionModel, cacheScopeIDs(ownerIDs), keyword, cacheTimeBucket(startTime), cacheTimeBucket(endTime), cacheScopeIDs(sessionIDs))
-	return cachedSlice(ctx, r.cache, key, func(loadCtx context.Context) ([]string, error) {
+	return cachedSliceByKeyword(ctx, r.cache, key, keyword, func(loadCtx context.Context) ([]string, error) {
 		return r.loadDistinctModels(loadCtx, ownerIDs, keyword, startTime, endTime, sessionIDs)
 	})
 }
@@ -731,7 +731,12 @@ func (r *sessionReadRepository) ListMessageCountStats(ctx context.Context, owner
 	if cacheErr != nil {
 		return 0, nil, cacheErr
 	}
-	stats, _ := cached.Get()
+	// 命中空值标记（mo.None）时返回空 map 而非 nil map：调用方把它直接塞进响应体，
+	// nil map 会序列化成 "null"，与「空结果统一返回空集合」的约定冲突。
+	stats, ok := cached.Get()
+	if !ok {
+		return 0, map[int]int64{}, nil
+	}
 	return stats.MaxCount, stats.BucketCounts, nil
 }
 
