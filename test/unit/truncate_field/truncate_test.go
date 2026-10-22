@@ -3,6 +3,7 @@ package truncate_field
 import (
 	"os"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/bytedance/sonic"
 	"github.com/hcd233/aris-proxy-api/internal/util"
@@ -133,6 +134,23 @@ func TestTruncateFieldValue_UnicodeString(t *testing.T) {
 	got := util.TruncateFieldValue(tc.Input, tc.MaxLen)
 	if got != tc.Want {
 		t.Errorf("TruncateFieldValue(%q, %d) = %q, want %q", tc.Input, tc.MaxLen, got, tc.Want)
+	}
+}
+
+// TestTruncateFieldValue_UnicodeCutInsideRune 钉住截断点回退到 rune 边界
+//
+// max_len=4 落在「好」的中间字节上：直接 val[:4] 会产出非法 UTF-8（日志乱码）。
+func TestTruncateFieldValue_UnicodeCutInsideRune(t *testing.T) {
+	t.Parallel()
+	cases := loadFieldCases(t)
+	tc := findFieldCase(t, cases, "unicode_cut_inside_rune")
+
+	got := util.TruncateFieldValue(tc.Input, tc.MaxLen)
+	if got != tc.Want {
+		t.Errorf("TruncateFieldValue(%q, %d) = %q, want %q", tc.Input, tc.MaxLen, got, tc.Want)
+	}
+	if !utf8.ValidString(got) {
+		t.Errorf("truncated value is not valid UTF-8: %q", got)
 	}
 }
 

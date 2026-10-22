@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/samber/lo"
 
@@ -26,19 +27,26 @@ func ToDataURL(contentType string, bytes []byte) string {
 	return fmt.Sprintf(constant.DataURLTemplate, contentType, base64Data)
 }
 
-// TruncateFieldValue 截断过长的字符串值，保留前 maxLen 字符并附加截断信息
+// TruncateFieldValue 截断过长的字符串值，保留前 maxLen 字节并附加截断信息
+//
+// maxLen 是字节上限；截断点回退到 rune 边界，避免把中文/emoji 切成非法 UTF-8
+// （否则日志里是乱码，JSON 编码器还会把残字节替换成 U+FFFD）。
 //
 //	@param val 原始值
-//	@param maxLen 最大长度
+//	@param maxLen 最大字节数
 //	@return string 截断后的字符串
 //	@author centonhuang
-//	@update 2026-04-09 15:00:00
+//	@update 2026-10-22 20:00:00
 func TruncateFieldValue(val string, maxLen int) string {
 	if len(val) <= maxLen {
 		return val
 	}
+	cut := maxLen
+	for cut > 0 && !utf8.RuneStart(val[cut]) {
+		cut--
+	}
 	var sb strings.Builder
-	sb.WriteString(val[:maxLen])
+	sb.WriteString(val[:cut])
 	sb.WriteString(constant.TruncateSuffixPrefix)
 	fmt.Fprintf(&sb, constant.FormatDecimal, len(val))
 	sb.WriteString(constant.TruncateSuffixPostfix)
