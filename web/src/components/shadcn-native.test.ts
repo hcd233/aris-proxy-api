@@ -227,6 +227,12 @@ describe("⑥ 聊天区", () => {
     );
   });
 
+  it("助手消息复制按钮收进消息头，不再用 MessageFooter 撑高", () => {
+    const src = read("components/chat/assistant-message.tsx");
+    expect(src).not.toContain("MessageFooter");
+    expect(src).toMatch(/<MessageHeader[\s\S]*?<CopyButton[\s\S]*?<\/MessageHeader>/);
+  });
+
   it("playground 对话区用 MessageScroller", () => {
     const src = read("components/playground/conversation-view.tsx");
     expect(src).toContain("<MessageScrollerProvider");
