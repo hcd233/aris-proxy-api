@@ -282,8 +282,8 @@ _Avoid_: cron mutex, scheduled lock, scheduler lock
 **SoftDeletePurge（软删除清理）**:
 定时 cron 任务，遍历被软删除的 Session，提取引用的 Message/Tool IDs，与活跃 Session 引用的 IDs 计算差集后硬删除孤儿记录。避免多 Session 共享 Message/Tool 时误删。使用 `lo.Difference` 做集合运算。
 
-**SessionDedup（会话前缀去重）**:
-session 插入事务提交后实时执行的去重：每次 LLM 请求都会把完整对话历史落库并新建一条 Session，历史 Message 按 checksum 复用同一行，因此第 k 轮的 MessageIDs 必然是第 k+1 轮的**前缀**——冗余判定即前缀判定，而非任意子数组。去重按首个 Message ID 分组（同一对话的快照集合），组内保留最长者（长度相同取 ID 最小），把被删快照的 ToolIDs 并入保留者；对话分叉时组内可有多个保留者。执行在 `store_pool` 主事务提交后的独立短事务内，组行 `FOR UPDATE` 串行化同组并发写入；失败仅记日志，残留由下次同组插入自愈。算法与写回在 `repository.DeduplicateSessionGroup`。
+**SessionDedup（会话续写合并）**:
+每次 LLM 请求都会把完整对话历史落库并插入一条 Session 快照，历史 Message 按 checksum 复用同一行，因此第 k 轮的 MessageIDs 必然是第 k+1 轮的**前缀**。快照插入事务提交后，在独立短事务内按首个 Message ID 分组（同一对话的快照集合）做续写合并：`FindSessionTarget` 取组内「新快照的前缀」且最长者（等长取 ID 最小）作为 keeper，把新行的 MessageIDs/Questions/ModelIDs/Metadata 前滚到 keeper、并入 ToolIDs，再软删新行——**会话 ID、评分与分享关系因此跨轮保持稳定**。首轮与对话分叉（组内无前缀关系）保留新行；重试/补发旧轮次（新快照是既有会话的前缀）只并工具、不覆盖更长快照。组行 `FOR UPDATE` 串行化同组并发写入；失败仅记日志，残留由下次同组插入自愈；写回后失效 `session:meta:v2:{id}`。算法与写回在 `repository.DeduplicateSessionGroup` / `FindSessionTarget`。
 _Avoid_: session merge, snapshot cleanup
 
 **TerminalCleanup（终态清理）**:

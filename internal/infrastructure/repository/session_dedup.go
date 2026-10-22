@@ -149,6 +149,36 @@ func isPrefix(short, long []uint) bool {
 	return slices.Equal(long[:len(short)], short)
 }
 
+// FindSessionTarget 返回同组中承接本轮快照的既有会话；nil 表示没有会话可续写
+//
+// 只认「既有会话是新快照的前缀」这一种关系：同组内最长者优先（等长取 ID 最小），
+// 保证同一段对话始终落在同一行上。新快照被既有会话包含（重试/补发旧轮次）或与
+// 既有会话无前缀关系（对话分叉）时返回 nil，由 FindRedundantSessions 按既有规则处理。
+//
+//	@param sessions []*dbmodel.Session 同组会话（不含本轮新行）
+//	@param messageIDs []uint 本轮快照的消息 ID 列表
+//	@return *dbmodel.Session 承接本轮快照的会话；nil 表示保留新行
+//	@author centonhuang
+//	@update 2026-10-22 10:00:00
+func FindSessionTarget(sessions []*dbmodel.Session, messageIDs []uint) *dbmodel.Session {
+	var target *dbmodel.Session
+	for _, s := range sessions {
+		if len(s.MessageIDs) == 0 || !isPrefix(s.MessageIDs, messageIDs) {
+			continue
+		}
+		if target == nil {
+			target = s
+			continue
+		}
+		longer := len(s.MessageIDs) > len(target.MessageIDs)
+		earlierTie := len(s.MessageIDs) == len(target.MessageIDs) && s.ID < target.ID
+		if longer || earlierTie {
+			target = s
+		}
+	}
+	return target
+}
+
 // mergeToolIDsIntoMapping 将 target 和 source 的 ToolIDs 合并到 mapping 中指定 targetID 的条目
 //
 //	@param mapping map[uint]map[uint]struct{}
@@ -240,37 +270,118 @@ func applyMergeInTx(tx *gorm.DB, sessionDAO *dao.SessionDAO, result MergeResult)
 	return mergedCount, nil
 }
 
-// DeduplicateSessionGroup 在单个短事务内锁定同组会话并执行前缀去重
+// DeduplicateSessionGroup 在单个短事务内锁定同组会话，把本轮快照合并回既有会话
 //
 // 由 session 插入路径在主事务提交后调用（store_pool）：组行 FOR UPDATE 串行化
-// 同组并发写入；空组竞态下并发首插各留一份，下次同组插入自愈。
+// 同组并发写入。续写时把新行的快照字段前滚到既有 keeper 并软删新行，会话 ID、
+// 评分与分享关系因此跨轮保持稳定；首轮与对话分叉保留新行。其余陈旧前缀行仍按
+// 既有规则合并删除。空组竞态下并发首插各留一份，下次同组插入自愈。
+//
 // ::jsonb 为 PG 专有语法，sqlite 不可用，行为由 e2e 覆盖。
 //
 //	@param db *gorm.DB
-//	@param firstMessageID uint 组键（新会话的首条消息 ID）
+//	@param session *dbmodel.Session 本轮已提交的新行
 //	@return int 软删的冗余会话数
+//	@return uint 承接快照的 keeper ID（0 表示新行自持）
 //	@return error
 //	@author centonhuang
-//	@update 2026-08-29 10:00:00
-func DeduplicateSessionGroup(db *gorm.DB, firstMessageID uint) (int, error) {
-	var deduped int
-	err := db.Transaction(func(tx *gorm.DB) error {
-		sessions, err := dao.GetSessionDAO().FindGroupForUpdate(tx, firstMessageID)
-		if err != nil {
-			return err
+//	@update 2026-10-22 10:00:00
+func DeduplicateSessionGroup(db *gorm.DB, session *dbmodel.Session) (deduped int, keeperID uint, err error) {
+	if len(session.MessageIDs) == 0 {
+		return 0, 0, nil
+	}
+
+	err = db.Transaction(func(tx *gorm.DB) error {
+		sessions, findErr := dao.GetSessionDAO().FindGroupForUpdate(tx, session.MessageIDs[0])
+		if findErr != nil {
+			return findErr
+		}
+
+		keeper := FindSessionTarget(excludeSession(sessions, session.ID), session.MessageIDs)
+		if keeper != nil {
+			if writeErr := writeBackSnapshot(tx, keeper, session); writeErr != nil {
+				return writeErr
+			}
+			if deleteErr := dao.GetSessionDAO().BatchDeleteByField(tx, constant.WhereFieldID, []uint{session.ID}); deleteErr != nil {
+				return deleteErr
+			}
+			keeperID = keeper.ID
+			deduped++
+			// 内存视图同步写回结果，供后续按 keeper 清理其它陈旧前缀行
+			keeper.MessageIDs = session.MessageIDs
+			keeper.ToolIDs = unionIDs(keeper.ToolIDs, session.ToolIDs)
+			sessions = excludeSession(sessions, session.ID)
 		}
 
 		result := FindRedundantSessions(sessions)
 		if len(result.RedundantIDs) == 0 {
 			return nil
 		}
-		deduped = len(result.RedundantIDs)
+		deduped += len(result.RedundantIDs)
 
-		_, err = applyMergeInTx(tx, dao.GetSessionDAO(), result)
-		return err
+		_, mergeErr := applyMergeInTx(tx, dao.GetSessionDAO(), result)
+		return mergeErr
 	})
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
-	return deduped, nil
+	return deduped, keeperID, nil
+}
+
+// writeBackSnapshot 把本轮快照写回既有会话，保留其 ID、评分与创建时间
+//
+// keeper 是本轮快照的前缀。长度相同说明是同一快照的重试，只合并工具引用，
+// 不覆盖既有快照字段；更长则把消息/提问/模型/元数据整体前滚。
+// tool_ids 等列为 text 类型（GORM serializer:json），Updates(map) 不触发序列化，
+// 必须显式 sonic.MarshalString 后存 JSON 字符串。
+//
+//	@param tx *gorm.DB
+//	@param keeper *dbmodel.Session 承接快照的既有会话
+//	@param snapshot *dbmodel.Session 本轮已提交的新行
+//	@return error
+//	@author centonhuang
+//	@update 2026-10-22 10:00:00
+func writeBackSnapshot(tx *gorm.DB, keeper, snapshot *dbmodel.Session) error {
+	fields := map[string]any{
+		constant.FieldToolIDs: unionIDs(keeper.ToolIDs, snapshot.ToolIDs),
+	}
+	if len(snapshot.MessageIDs) > len(keeper.MessageIDs) {
+		fields[constant.FieldMessageIDs] = snapshot.MessageIDs
+		fields[constant.FieldQuestions] = snapshot.Questions
+		fields[constant.FieldModelIDs] = snapshot.ModelIDs
+		fields[constant.FieldMetadata] = snapshot.Metadata
+	}
+
+	updates := make(map[string]any, len(fields))
+	for column, value := range fields {
+		payload, err := sonic.MarshalString(value)
+		if err != nil {
+			return err
+		}
+		updates[column] = payload
+	}
+	return dao.GetSessionDAO().Update(tx, &dbmodel.Session{ID: keeper.ID}, updates)
+}
+
+// unionIDs 合并多组 ID、去重并排序，保证写入内容稳定
+//
+//	@param lists ...[]uint
+//	@return []uint
+//	@author centonhuang
+//	@update 2026-10-22 10:00:00
+func unionIDs(lists ...[]uint) []uint {
+	merged := lo.Uniq(slices.Concat(lists...))
+	slices.Sort(merged)
+	return merged
+}
+
+// excludeSession 过滤掉指定会话
+//
+//	@param sessions []*dbmodel.Session
+//	@param sessionID uint
+//	@return []*dbmodel.Session
+//	@author centonhuang
+//	@update 2026-10-22 10:00:00
+func excludeSession(sessions []*dbmodel.Session, sessionID uint) []*dbmodel.Session {
+	return lo.Filter(sessions, func(s *dbmodel.Session, _ int) bool { return s.ID != sessionID })
 }
