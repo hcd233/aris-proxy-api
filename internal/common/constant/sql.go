@@ -5,6 +5,7 @@ const (
 	FieldDeletedAt                   = "deleted_at"
 	FieldCheckSum                    = "check_sum"
 	FieldMessageIDs                  = "message_ids"
+	FieldQuestions                   = "questions"
 	FieldModelIDs                    = "model_ids"
 	FieldToolIDs                     = "tool_ids"
 	FieldMetadata                    = "metadata"

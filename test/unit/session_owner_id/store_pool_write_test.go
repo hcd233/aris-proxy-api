@@ -52,7 +52,7 @@ func TestStorePoolPersistsAPIKeyID(t *testing.T) {
 	}
 
 	// auditRepo / demoAccessAuditRepo 传 nil：本用例只走消息存储路径，不触达它们
-	pm := pool.NewPoolManager(db, nil, nil)
+	pm := pool.NewPoolManager(db, nil, nil, nil)
 
 	const wantAPIKeyID uint = 77
 	ctx := context.WithValue(context.Background(), constant.CtxKeyAPIKeyID, wantAPIKeyID)

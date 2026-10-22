@@ -4,6 +4,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 	demoauditport "github.com/hcd233/aris-proxy-api/internal/application/demoaccessaudit/port"
 	modelport "github.com/hcd233/aris-proxy-api/internal/application/model/port"
+	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/inflight"
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall"
@@ -62,8 +63,13 @@ func NewReadCache(client *redis.Client) *cache.ReadCache {
 	return cache.NewReadCache(client)
 }
 
-func NewPoolManager(db *gorm.DB, auditRepo modelcall.AuditRepository, demoAccessAuditRepo demoauditport.DemoAccessAuditRepository) *pool.PoolManager {
-	return pool.NewPoolManager(db, auditRepo, demoAccessAuditRepo)
+func NewPoolManager(
+	db *gorm.DB,
+	auditRepo modelcall.AuditRepository,
+	demoAccessAuditRepo demoauditport.DemoAccessAuditRepository,
+	sessionCache sessionport.SessionDetailCache,
+) *pool.PoolManager {
+	return pool.NewPoolManager(db, auditRepo, demoAccessAuditRepo, sessionCache)
 }
 
 func NewInflightTracker() *inflight.Tracker {

@@ -69,6 +69,7 @@ func (pm *PoolManager) runMessageStoreTask(task *dto.MessageStoreTask) {
 	})
 
 	var messageIDs []uint
+	var session *dbmodel.Session
 	err := db.Transaction(func(tx *gorm.DB) error {
 		var err error
 		messageIDs, err = pm.deduplicateAndStoreMessages(tx, messages)
@@ -90,7 +91,7 @@ func (pm *PoolManager) runMessageStoreTask(task *dto.MessageStoreTask) {
 			return err
 		}
 
-		session := &dbmodel.Session{
+		session = &dbmodel.Session{
 			APIKeyName: task.APIKeyName,
 			APIKeyID:   task.APIKeyID,
 			MessageIDs: messageIDs,
@@ -110,10 +111,10 @@ func (pm *PoolManager) runMessageStoreTask(task *dto.MessageStoreTask) {
 		return
 	}
 	log.Info("[StorePool] Messages stored successfully")
-	pm.deduplicateNewSession(task.Ctx, messageIDs)
+	pm.mergeSessionSnapshot(task.Ctx, session)
 }
 
-// deduplicateNewSession 主事务提交后对同组会话执行前缀去重（best-effort）
+// mergeSessionSnapshot 主事务提交后把本轮快照合并回同组既有会话（best-effort）
 //
 // 主数据（messages/tools/session）已提交，去重失败仅记日志、不重试：
 // 残留重复由该对话下次插入时的去重自愈。task.Ctx 经 CopyContextValues
@@ -121,21 +122,46 @@ func (pm *PoolManager) runMessageStoreTask(task *dto.MessageStoreTask) {
 //
 //	@receiver pm *PoolManager
 //	@param ctx context.Context 脱离请求生命周期的存储上下文
-//	@param messageIDs []uint 新会话的消息 ID 列表，空则短路
+//	@param session *dbmodel.Session 本轮已提交的新行；消息为空时短路
 //	@author centonhuang
-//	@update 2026-08-29 10:00:00
-func (pm *PoolManager) deduplicateNewSession(ctx context.Context, messageIDs []uint) {
-	if len(messageIDs) == 0 {
+//	@update 2026-10-22 10:00:00
+func (pm *PoolManager) mergeSessionSnapshot(ctx context.Context, session *dbmodel.Session) {
+	if session == nil || len(session.MessageIDs) == 0 {
 		return
 	}
 	log := logger.WithCtx(ctx)
-	deduped, err := repository.DeduplicateSessionGroup(pm.db.WithContext(ctx), messageIDs[0])
+	deduped, keeperID, err := repository.DeduplicateSessionGroup(pm.db.WithContext(ctx), session)
 	if err != nil {
 		log.Error("[StorePool] Session deduplication failed, will self-heal on next insert", zap.Error(err))
 		return
 	}
+	if keeperID != 0 {
+		pm.invalidateSessionMeta(ctx, keeperID)
+	}
 	if deduped > 0 {
-		log.Info("[StorePool] Session deduplicated", zap.Int("deduped", deduped))
+		log.Info("[StorePool] Session snapshot merged",
+			zap.Int("deduped", deduped),
+			zap.Uint("keeperID", keeperID))
+	}
+}
+
+// invalidateSessionMeta 失效会话详情缓存（best-effort）
+//
+// 续写把快照前滚到既有会话行，会话 ID 不再随轮次变化，缓存不会因「新 ID」
+// 自然过期；删除失败仅记日志，最长由 SessionDetailCacheTTL 兜底。
+//
+//	@receiver pm *PoolManager
+//	@param ctx context.Context
+//	@param sessionID uint 承接快照的会话 ID
+//	@author centonhuang
+//	@update 2026-10-22 10:00:00
+func (pm *PoolManager) invalidateSessionMeta(ctx context.Context, sessionID uint) {
+	if pm.sessionCache == nil {
+		return
+	}
+	if err := pm.sessionCache.DeleteSessionMeta(ctx, sessionID); err != nil {
+		logger.WithCtx(ctx).Warn("[StorePool] Session meta cache invalidation failed",
+			zap.Uint("sessionID", sessionID), zap.Error(err))
 	}
 }
 
