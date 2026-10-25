@@ -41,13 +41,12 @@ type routeParams struct {
 	TriggerHandler     handler.TriggerHandler
 	MetricsHandler     handler.MetricsHandler
 	DatasetHandler     handler.DatasetHandler
-	TraceHandler       handler.TraceHandler
 	ClientHandler      handler.ClientHandler
 	UpstreamHandler    handler.UpstreamHandler
 }
 
 func registerRoutes(params routeParams) {
-	router.RegisterOpsRouter(params.App, params.HumaAPI, params.PingHandler, params.TraceHandler)
+	router.RegisterOpsRouter(params.App, params.HumaAPI, params.PingHandler, params.ClientHandler)
 	router.RegisterAPIRouter(params.HumaAPI, router.APIRouterDependencies{
 		DB:                 params.DB,
 		Cache:              params.Cache,
@@ -71,7 +70,6 @@ func registerRoutes(params routeParams) {
 		TriggerHandler:     params.TriggerHandler,
 		MetricsHandler:     params.MetricsHandler,
 		DatasetHandler:     params.DatasetHandler,
-		TraceHandler:       params.TraceHandler,
 		ClientHandler:      params.ClientHandler,
 		UpstreamHandler:    params.UpstreamHandler,
 	})

@@ -162,7 +162,7 @@ _Avoid_: model level, model size, model class
 ## Session & Conversation（会话与对话）
 
 **Session（会话）**:
-一次完整的 LLM 交互聚合：由 Proxy Capture 或 Transcript Ingestion 沉淀，包含多个 Message（消息）和 Tool（工具调用）。归属于某个 API Key Owner。支持人工评分（`SessionScore`，范围 1-5）。可被分享（`SessionShare`）给未登录用户查看。会话列表支持按消息数区间筛选：固定边界桶（0-10 / 11-50 / 51-100 / 101-200 / 201-500）+ 当前时间范围最大消息数为动态上限的末桶。
+一次完整的 LLM 交互聚合：由 Proxy Capture 沉淀，包含多个 Message（消息）和 Tool（工具调用）。归属于某个 API Key Owner。支持人工评分（`SessionScore`，范围 1-5）。可被分享（`SessionShare`）给未登录用户查看。会话列表支持按消息数区间筛选：固定边界桶（0-10 / 11-50 / 51-100 / 101-200 / 201-500）+ 当前时间范围最大消息数为动态上限的末桶。
 _Avoid_: conversation（"Conversation" 用于其他语境不可混用）, chat, thread
 
 **Message（消息）**:
@@ -186,7 +186,7 @@ _Avoid_: quality score, rating, feedback score
 _Avoid_: share link, public link, shared session
 
 **APIKeyOwner（会话所有者）**:
-Session/Trace 的归属，由 `api_key_id` 唯一确定（值对象 `vo.APIKeyOwnerID`），来自鉴权中间件注入的 `CtxKeyAPIKeyID`。用于权限校验：用户只能访问其名下 API Key ID 对应的会话。`api_key_name`（值对象 `vo.APIKeyOwner`）仍保留，但**仅用于展示与审计可读性，不参与鉴权**——名称只在 `(user_id, name)` 维度唯一、可跨用户重复，按名称判定会导致越权。`api_key_id = 0` 表示归属未知（2026-07 前后的存量会话），仅 admin 可见。
+Session 的归属，由 `api_key_id` 唯一确定（值对象 `vo.APIKeyOwnerID`），来自鉴权中间件注入的 `CtxKeyAPIKeyID`。用于权限校验：用户只能访问其名下 API Key ID 对应的会话。`api_key_name`（值对象 `vo.APIKeyOwner`）仍保留，但**仅用于展示与审计可读性，不参与鉴权**——名称只在 `(user_id, name)` 维度唯一、可跨用户重复，按名称判定会导致越权。`api_key_id = 0` 表示归属未知（2026-07 前后的存量会话），仅 admin 可见。
 _Avoid_: owner name, api key identifier
 
 ## Model Call Audit（模型调用审计）
@@ -299,26 +299,11 @@ _Avoid_: terminal session sweep, stuck session cleanup
 cron 任务执行的触发来源枚举：`scheduled`（定时调度触发）与 `manual`（管理后台手动触发，可对 disabled 任务执行，拿不到分布式锁时忽略执行且不产生审计）。写入 `cron_call_audits.trigger_source` 列。
 _Avoid_: trigger type, execution source, run source
 
-**Transcript Ingestion（会话摄取）**:
-对订阅制 Agentic 工具（Claude Code、Codex）流量的离线捕获方式。读取工具写在本地的会话文件后摄取进平台。沉淀为 Trace（沉淀会话）。与 Proxy Capture 是两条互斥的数据入口。
-_Avoid_: log scraping, import, sync, ingestion
-
-## Trace & Agent Client（Trace 与 Agent 客户端）
-
-**AgentAdapter（Agent 适配器）**:
-客户端按 agent 抹平 hook 与 transcript 格式差异的抽象（`ParseHook` / `ClassifyTranscriptLine` / `StdoutAck`），经轻量注册表按 `--agent` 名称分发；服务端另有完成事件注册表（codex: Stop/task_complete；claude: SessionEnd）。新 agent 接入 = 客户端 1 个 adapter 文件 + 服务端 2 行 registry 注册。hook 命令统一为 `aris trace ingest --agent <name>`。
-_Avoid_: agent plugin, hook parser
+## Agent Client（Agent 客户端）
 
 **ArisClient（Aris 客户端）**:
-独立编译的 `aris` 二进制，从 `cmd/client` 构建，包含 `init`（huh 交互式配置向导：健康检查 → 选 agent（Codex / Claude Code / Both）→ API Key → 注册对应 hooks：codex 写 `~/.codex/hooks.json`，claude 写 `~/.claude/settings.json`，均幂等去重、保留既有配置、写前 .bak 备份）、`status`（状态面板：连通性、API Key 校验、hooks 注册状态、本地 spool/日志，支持 `--json`）、`trace ingest`（非交互 hook 回调，fail-open）、`model export`（模型配置导出：拉取 `GET /api/cli/v1/model/list` 后交互选模型与目标 harness，把启用模型的能力、长度与**基础档定价**（USD/1M tokens，来自服务端 `cost` 字段）写入本地配置——OpenCode 写 `cost{input,output,cache_read,cache_write}`，未计价模型整体省略该字段；Pi 写 `cost{input,output,cacheRead,cacheWrite}`，未计价回落零值（Pi 要求每个模型都有 cost 元数据）；Codex 与 Claude Code 的配置没有成本字段，不写成本；DSH 写 `~/.dsh/profiles/<profile>/cordis.patch.yml` 的 `llm-pi-ai` 条目（只替换该条目，注释与其余条目原样保留；同名模型的 `name` 缺失或仍等于 alias 时按 Title Case 派生展示名——`deepseek-v4.1-flash` → `DeepSeek-V4.1-Flash`、`mimo-v2.6-pro` → `MiMo-V2.6-Pro`，品牌惯例写法（如 DeepSeek、MiMo、GPT、GLM）查表覆盖，手写 `name` 与 `reasoningEfforts` 保留，只刷新长度与模态），并把 API Key 写进 `~/.dsh/.credentials.yaml` 的 `refs.ARIS_API_KEY`，provider 侧只留 `apiKeyEnv` 引用、不落明文。重复导出时服务端列表内的同名模型整体刷新以跟随调价，用户自加的模型保留）、`version`（输出构建版本号，release 经 `-ldflags -X main.version` 注入 tag，本地构建回退 `dev`）、`update`（把自身升级到最新 release：`HEAD <releases/latest/download>/aris-<os>-<arch>.tar.gz` 从第一跳重定向地址取 tag，下载归档后校验 sha256，再以同目录临时文件 `0700` + `rename` 原子替换自身；已是最新时只提示不下载）等命令，不链接数据库、Server、lint 或 Web 静态资源。此外客户端带**使用中更新检查**：仅当 stderr 是 TTY、命令不属于 `trace`（hook 每事件调用）/`update`/`version`、且当前版本可解析时，在命令执行期间后台 `HEAD` 解析最新 tag，命令结束后最多等 400ms 在 stderr 提示一行；不做本地缓存（每次实时解析，24 小时内多次发版也能提示到最新）、不自动安装，`ARIS_NO_UPDATE_CHECK` 关闭检查、`ARIS_UPDATE_BASE_URL` 覆盖更新源（镜像/测试）。支持 `darwin/amd64`、`darwin/arm64`、`linux/amd64`、`linux/arm64` 四个平台，产物发布到 GitHub Releases；`GET /install.sh` 返回的自包含脚本负责下载、校验、原子安装，并按 `$SHELL` 将安装目录 `$HOME/.aris/bin` 幂等写入 shell rc（zsh→`~/.zshrc`；bash→`~/.bashrc`，macOS 无 `.bashrc` 时用 `~/.bash_profile`；其他→`~/.profile`，写入失败仅告警不阻塞），末尾 `exec aris init --host <origin>` 进入配置向导。API Key 校验接口为 `GET /api/cli/v1/aris/client/check`（2026-09-06 由 `/trace/client/check` 更名，破坏性变更，旧客户端需重装）。
-_Avoid_: TraceClient, trace client, trace cli, codex hook script, install script
-
-**TraceSpool（本地 spool）**:
-`aris trace ingest` 在 `~/.aris/trace/spool/` 维护的待上报记录队列。Hook 事件和 rollout 记录先原子落盘（0600），再以 5 秒超时批量 POST。服务端确认 `accepted` / `duplicate` 后删除 pending，`rejected` 移入隔离区。spool 全局上限 256 MiB，达到上限后停止接收新记录但保留既有未确认记录，始终 fail-open。
-_Avoid_: trace queue, pending records, ingest buffer
-
-**TraceEvent（Trace 事件）**:
-Trace 的原始记录单元，由 `aris trace ingest` 上报，经 `GET /api/web/v1/trace/event/list` 分页查询，供 Web 前端按事件时间线渲染（消息/工具调用/session_meta 可读化展示，原始 payload 可展开）。
+独立编译的 `aris` 二进制，从 `cmd/client` 构建，包含 `init`（huh 三步配置向导：健康检查 → API Key → 保存到 `~/.aris/config.json`；旧版 `~/.aris/trace/config.json` 仅保留读取兼容）、`status`（状态面板：服务端连通性、API Key 校验、本机各 agent 配置存在性，支持 `--json`）、`model export`（模型配置导出：拉取 `GET /api/cli/v1/model/list` 后交互选模型与目标 harness，把启用模型的能力、长度与**基础档定价**（USD/1M tokens，来自服务端 `cost` 字段）写入本地配置——OpenCode 写 `cost{input,output,cache_read,cache_write}`，未计价模型整体省略该字段；Pi 写 `cost{input,output,cacheRead,cacheWrite}`，未计价回落零值（Pi 要求每个模型都有 cost 元数据）；Codex 与 Claude Code 的配置没有成本字段，不写成本；DSH 写 `~/.dsh/profiles/<profile>/cordis.patch.yml` 的 `llm-pi-ai` 条目（只替换该条目，注释与其余条目原样保留；同名模型的 `name` 缺失或仍等于 alias 时按 Title Case 派生展示名——`deepseek-v4.1-flash` → `DeepSeek-V4.1-Flash`、`mimo-v2.6-pro` → `MiMo-V2.6-Pro`，品牌惯例写法（如 DeepSeek、MiMo、GPT、GLM）查表覆盖，手写 `name` 与 `reasoningEfforts` 保留，只刷新长度与模态），并把 API Key 写进 `~/.dsh/.credentials.yaml` 的 `refs.ARIS_API_KEY`，provider 侧只留 `apiKeyEnv` 引用、不落明文。重复导出时服务端列表内的同名模型整体刷新以跟随调价，用户自加的模型保留）、`version`（输出构建版本号，release 经 `-ldflags -X main.version` 注入 tag，本地构建回退 `dev`）、`update`（把自身升级到最新 release：`HEAD <releases/latest/download>/aris-<os>-<arch>.tar.gz` 从第一跳重定向地址取 tag，下载归档后校验 sha256，再以同目录临时文件 `0700` + `rename` 原子替换自身；已是最新时只提示不下载）等命令，不链接数据库、Server、lint 或 Web 静态资源。此外客户端带**使用中更新检查**：仅当 stderr 是 TTY、命令不属于 `update`/`version`、且当前版本可解析时，在命令执行期间后台 `HEAD` 解析最新 tag，命令结束后最多等 400ms 在 stderr 提示一行；不做本地缓存（每次实时解析，24 小时内多次发版也能提示到最新）、不自动安装，`ARIS_NO_UPDATE_CHECK` 关闭检查、`ARIS_UPDATE_BASE_URL` 覆盖更新源（镜像/测试）。支持 `darwin/amd64`、`darwin/arm64`、`linux/amd64`、`linux/arm64` 四个平台，产物发布到 GitHub Releases；`GET /install.sh` 返回的自包含脚本负责下载、校验、原子安装，并按 `$SHELL` 将安装目录 `$HOME/.aris/bin` 幂等写入 shell rc（zsh→`~/.zshrc`；bash→`~/.bashrc`，macOS 无 `.bashrc` 时用 `~/.bash_profile`；其他→`~/.profile`，写入失败仅告警不阻塞），末尾 `exec aris init --host <origin>` 进入配置向导。API Key 校验接口为 `GET /api/cli/v1/aris/client/check`。
+_Avoid_: aris-cli, client tool
 
 ## Infrastructure（基础设施）
 

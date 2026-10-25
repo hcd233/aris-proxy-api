@@ -31,3 +31,9 @@ type ClientModelCost struct {
 	CacheRead  float64 `json:"cacheRead" doc:"缓存读取单价"`
 	CacheWrite float64 `json:"cacheWrite" doc:"缓存创建单价"`
 }
+
+// CheckArisClientReq 验证 Aris 客户端 API Key 请求。
+type CheckArisClientReq struct{}
+
+// InstallScriptReq 安装脚本请求（无鉴权，服务端嵌入 host）。
+type InstallScriptReq struct{}

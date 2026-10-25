@@ -62,13 +62,13 @@ func TestCheckRowWarn(t *testing.T) {
 func TestSummaryPanel(t *testing.T) {
 	t.Parallel()
 	got := clientui.SummaryPanel(
-		"Trace configuration completed",
+		"Configuration completed",
 		"Config: /tmp/x",
 	)
-	want := "╭───────────────────────────────╮\n" +
-		"│ Trace configuration completed │\n" +
-		"│ Config: /tmp/x                │\n" +
-		"╰───────────────────────────────╯"
+	want := "╭─────────────────────────╮\n" +
+		"│ Configuration completed │\n" +
+		"│ Config: /tmp/x          │\n" +
+		"╰─────────────────────────╯"
 	if got != want {
 		t.Fatalf("SummaryPanel =\n%s\nwant:\n%s", got, want)
 	}

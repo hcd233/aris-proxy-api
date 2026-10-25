@@ -290,11 +290,6 @@ export interface DeleteSessionRsp extends CommonRsp {
   failures?: DeleteSessionFailed[];
 }
 
-export interface DeleteTraceRsp extends CommonRsp {
-  deletedCount?: number;
-  failures?: DeleteSessionFailed[];
-}
-
 // ─── Session Batch Delete ─────────────────────────────────────────────────────
 
 // ─── Share 分页接口（公开，与 session detail 优化模式对齐） ───────────────────
@@ -975,59 +970,6 @@ export type DatasetExportSSEEvent =
   | { event: "data"; data: DatasetExportSSEData }
   | { event: "done"; data: DatasetExportSSEStart }
   | { event: "error"; data: DatasetExportSSEError };
-
-// ─── Trace (codex hooks) ─────────────────────────────────────────────────────
-
-export interface TraceSummary {
-  id: number;
-  sessionId: string;
-  agent: string;
-  apiKeyName: string;
-  model: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface TraceDetail {
-  id: number;
-  sessionId: string;
-  agent: string;
-  apiKeyName: string;
-  model: string;
-  cwd: string;
-  metadata?: Record<string, string>;
-  eventCount: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface TraceEventItem {
-  id: number;
-  source: string;
-  recordType: string;
-  event: string;
-  turnId?: string;
-  callId?: string;
-  transcriptLine?: number;
-  clientSequence: number;
-  dedupKey: string;
-  payload?: unknown;
-  createdAt: string;
-}
-
-export interface ListTracesRsp extends CommonRsp {
-  traces?: TraceSummary[];
-  pageInfo?: PageInfo;
-}
-
-export interface GetTraceRsp extends CommonRsp {
-  trace?: TraceDetail;
-}
-
-export interface ListTraceEventsRsp extends CommonRsp {
-  events?: TraceEventItem[];
-  pageInfo?: PageInfo;
-}
 
 // ─── Demo Access Audit ────────────────────────────────────────────────────────
 

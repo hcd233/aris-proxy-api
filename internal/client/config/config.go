@@ -1,4 +1,5 @@
-package trace
+// Package config 管理 aris 客户端本地配置与路径。
+package config
 
 import (
 	"context"
@@ -7,32 +8,65 @@ import (
 	"path/filepath"
 
 	"github.com/bytedance/sonic"
+
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 )
 
+// Paths aris 客户端本地路径。
+type Paths struct {
+	Root string
+}
+
+// DefaultPaths 返回客户端默认根目录 ~/.aris。
+func DefaultPaths() (Paths, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return Paths{}, ierr.Wrap(ierr.ErrInternal, err, "resolve user home directory")
+	}
+	return Paths{Root: filepath.Join(home, constant.ArisClientRootDirName)}, nil
+}
+
+// ConfigFile 返回当前配置文件路径 ~/.aris/config.json。
+func (p Paths) ConfigFile() string {
+	return filepath.Join(p.Root, constant.ArisClientConfigFileName)
+}
+
+// legacyConfigFile 返回旧版配置文件路径 ~/.aris/trace/config.json。
+func (p Paths) legacyConfigFile() string {
+	return filepath.Join(p.Root, constant.ArisClientLegacyConfigDirName, constant.ArisClientConfigFileName)
+}
+
+// Config 客户端配置。
 type Config struct {
 	Host   string `json:"host"`
 	APIKey string `json:"apiKey"`
 }
 
-type ConfigStore interface {
+// Store 配置读写接口。
+type Store interface {
 	Load(ctx context.Context) (Config, error)
 	Save(ctx context.Context, config Config) error
 }
 
-type configStore struct {
+type store struct {
 	paths Paths
 }
 
-func NewConfigStore(paths Paths) ConfigStore {
-	return &configStore{paths: paths}
+// NewStore 构造配置存储。
+func NewStore(paths Paths) Store {
+	return &store{paths: paths}
 }
 
-func (s *configStore) Load(ctx context.Context) (Config, error) {
+// Load 读取配置；新路径不存在时回退读取旧版 trace 目录，避免升级后要求重新 init。
+func (s *store) Load(ctx context.Context) (Config, error) {
 	if err := ctx.Err(); err != nil {
 		return Config{}, err
 	}
 	data, err := os.ReadFile(s.paths.ConfigFile())
+	if errors.Is(err, os.ErrNotExist) {
+		data, err = os.ReadFile(s.paths.legacyConfigFile())
+	}
 	if errors.Is(err, os.ErrNotExist) {
 		return Config{}, nil
 	}
@@ -46,7 +80,8 @@ func (s *configStore) Load(ctx context.Context) (Config, error) {
 	return config, nil
 }
 
-func (s *configStore) Save(ctx context.Context, config Config) error {
+// Save 写入配置；父目录与文件分别收紧到 0700/0600。
+func (s *store) Save(ctx context.Context, config Config) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}

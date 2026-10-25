@@ -12,7 +12,7 @@ import (
 	"golang.org/x/term"
 
 	"github.com/hcd233/aris-proxy-api/internal/client/api"
-	clienttrace "github.com/hcd233/aris-proxy-api/internal/client/trace"
+	clientconfig "github.com/hcd233/aris-proxy-api/internal/client/config"
 	"github.com/hcd233/aris-proxy-api/internal/client/ui"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
@@ -36,11 +36,11 @@ func RunExport(ctx context.Context, opts ExportOptions) error {
 		out = os.Stdout
 	}
 
-	paths, pathErr := clienttrace.DefaultPaths()
+	paths, pathErr := clientconfig.DefaultPaths()
 	if pathErr != nil {
 		return pathErr
 	}
-	store := clienttrace.NewConfigStore(paths)
+	store := clientconfig.NewStore(paths)
 	cfg, loadErr := store.Load(ctx) //nolint:errcheck // 读不到按未初始化处理
 	if loadErr != nil || cfg.Host == "" || cfg.APIKey == "" {
 		return ierr.New(ierr.ErrValidation, constant.ClientModelExportNeedInitMessage)

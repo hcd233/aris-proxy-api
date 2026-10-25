@@ -57,7 +57,6 @@ import (
 // 嵌入接口空结构体：注册期满足方法集、不解引用（cross_tenant_reference 包惯例）
 type (
 	stubPingHandler       struct{ handler.PingHandler }
-	stubTraceHandler      struct{ handler.TraceHandler }
 	stubTokenHandler      struct{ handler.TokenHandler }
 	stubOauth2Handler     struct{ handler.Oauth2Handler }
 	stubUserHandler       struct{ handler.UserHandler }
@@ -239,7 +238,6 @@ func (f *crossTenantSessionFixture) buildApp(t *testing.T, db *gorm.DB, rdb *red
 		Cache:             rdb,
 		AccessSigner:      jwt.NewAccessTokenSigner(),
 		PingHandler:       &stubPingHandler{},
-		TraceHandler:      &stubTraceHandler{},
 		TokenHandler:      &stubTokenHandler{},
 		Oauth2Handler:     &stubOauth2Handler{},
 		UserHandler:       &stubUserHandler{},

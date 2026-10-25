@@ -1,4 +1,4 @@
-// Package session_backfill 验证 sessions/traces 的 api_key_id 存量回填语义。
+// Package session_backfill 验证 sessions 的 api_key_id 存量回填语义。
 //
 // 回填规则（宁漏勿越）：仅当 api_key_id=0、api_key_name 非空、且该名称在
 // proxy_api_keys **全表（含已软删）** 中恰好对应一条记录、该记录未软删时，
@@ -38,7 +38,7 @@ type sessionSeed struct {
 func newBackfillDB(t *testing.T) *gorm.DB {
 	t.Helper()
 	db := sqlitetest.OpenPrivateMemoryDB(t)
-	if err := db.AutoMigrate(&dbmodel.ProxyAPIKey{}, &dbmodel.Session{}, &dbmodel.Trace{}); err != nil {
+	if err := db.AutoMigrate(&dbmodel.ProxyAPIKey{}, &dbmodel.Session{}); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
 	keys := []*dbmodel.ProxyAPIKey{
@@ -98,7 +98,7 @@ func TestBackfillOnlyFillsUnambiguous(t *testing.T) {
 	cases := sessionCases()
 	ids := seedSessions(t, db, cases)
 
-	sessions, _, err := repository.BackfillSessionAPIKeyID(context.Background(), db)
+	sessions, err := repository.BackfillSessionAPIKeyID(context.Background(), db)
 	if err != nil {
 		t.Fatalf("backfill: %v", err)
 	}
@@ -122,7 +122,7 @@ func TestBackfillIdempotent(t *testing.T) {
 	ids := seedSessions(t, db, cases)
 	ctx := context.Background()
 
-	if _, _, err := repository.BackfillSessionAPIKeyID(ctx, db); err != nil {
+	if _, err := repository.BackfillSessionAPIKeyID(ctx, db); err != nil {
 		t.Fatalf("first backfill: %v", err)
 	}
 	first := make([]uint, len(ids))
@@ -130,47 +130,16 @@ func TestBackfillIdempotent(t *testing.T) {
 		first[i] = apiKeyIDOf(t, db, id)
 	}
 
-	sessions, traces, err := repository.BackfillSessionAPIKeyID(ctx, db)
+	sessions, err := repository.BackfillSessionAPIKeyID(ctx, db)
 	if err != nil {
 		t.Fatalf("second backfill: %v", err)
 	}
-	if sessions != 0 || traces != 0 {
-		t.Errorf("second run affected (sessions=%d, traces=%d), want (0, 0)", sessions, traces)
+	if sessions != 0 {
+		t.Errorf("second run affected sessions=%d, want 0", sessions)
 	}
 	for i, id := range ids {
 		if got := apiKeyIDOf(t, db, id); got != first[i] {
 			t.Errorf("session %d drifted after second run: %d -> %d", id, first[i], got)
 		}
-	}
-}
-
-// TestBackfillTraces traces 表按同一规则回填。
-func TestBackfillTraces(t *testing.T) {
-	t.Parallel()
-	db := newBackfillDB(t)
-	traces := []*dbmodel.Trace{
-		{SessionID: "t-uniq", APIKeyName: "uniq-key", Agent: "codex"},
-		{SessionID: "t-dup", APIKeyName: "dup-key", Agent: "codex"},
-	}
-	if err := db.Create(traces).Error; err != nil {
-		t.Fatalf("seed traces: %v", err)
-	}
-
-	_, affected, err := repository.BackfillSessionAPIKeyID(context.Background(), db)
-	if err != nil {
-		t.Fatalf("backfill: %v", err)
-	}
-	if affected != 1 {
-		t.Errorf("backfilled traces = %d, want 1", affected)
-	}
-	var got []dbmodel.Trace
-	if err := db.Order("id").Find(&got).Error; err != nil {
-		t.Fatalf("reload traces: %v", err)
-	}
-	if got[0].APIKeyID != 1 {
-		t.Errorf("t-uniq api_key_id = %d, want 1", got[0].APIKeyID)
-	}
-	if got[1].APIKeyID != 0 {
-		t.Errorf("t-dup api_key_id = %d, want 0（跨用户同名不推断）", got[1].APIKeyID)
 	}
 }

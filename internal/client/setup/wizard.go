@@ -14,7 +14,7 @@ import (
 	"golang.org/x/term"
 
 	"github.com/hcd233/aris-proxy-api/internal/client/api"
-	trace "github.com/hcd233/aris-proxy-api/internal/client/trace"
+	clientconfig "github.com/hcd233/aris-proxy-api/internal/client/config"
 	"github.com/hcd233/aris-proxy-api/internal/client/ui"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
@@ -23,17 +23,17 @@ import (
 // InitOptions aris init 运行参数
 type InitOptions struct {
 	Host       string
-	Paths      trace.Paths
+	Paths      clientconfig.Paths
 	In         io.Reader
 	Out        io.Writer
 	HTTPClient *http.Client
 }
 
-// RunInit 执行四步配置向导：连接检查 → 选择 agent → API Key → 配置 hooks
+// RunInit 执行三步配置向导：连接检查 → API Key → 保存配置
 func RunInit(ctx context.Context, opts InitOptions) error {
 	paths := opts.Paths
 	if paths.Root == "" {
-		resolved, err := trace.DefaultPaths()
+		resolved, err := clientconfig.DefaultPaths()
 		if err != nil {
 			return err
 		}
@@ -54,7 +54,7 @@ func RunInit(ctx context.Context, opts InitOptions) error {
 	}
 	defer cleanup()
 
-	store := trace.NewConfigStore(paths)
+	store := clientconfig.NewStore(paths)
 	existing, _ := store.Load(ctx) //nolint:errcheck // best-effort：读不到按未初始化处理
 
 	host := opts.Host
@@ -89,7 +89,7 @@ func RunInit(ctx context.Context, opts InitOptions) error {
 
 	printStep(out, 3, constant.ArisClientInitTitleSave)
 	if err := ui.RunWithSpinner(ttyIn, ttyOut, constant.ArisClientInitSavingConfig, func() error {
-		return store.Save(ctx, trace.Config{Host: host, APIKey: apiKey})
+		return store.Save(ctx, clientconfig.Config{Host: host, APIKey: apiKey})
 	}); err != nil {
 		return err
 	}
@@ -97,7 +97,6 @@ func RunInit(ctx context.Context, opts InitOptions) error {
 	printLine(out, "", ui.SummaryPanel(
 		constant.ArisClientInitDone,
 		fmt.Sprintf(constant.ArisClientInitConfigFormat, paths.ConfigFile()),
-		constant.ArisClientNextHintTraceInstall,
 		constant.ArisClientNextHintModelExport,
 	))
 	return nil

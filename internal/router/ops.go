@@ -20,12 +20,12 @@ import (
 //	@param app *fiber.App
 //	@param humaAPI huma.API
 //	@param pingHandler handler.PingHandler
-//	@param traceHandler handler.TraceHandler
+//	@param clientHandler handler.ClientHandler
 //	@author centonhuang
 //	@update 2026-08-27
-func RegisterOpsRouter(app *fiber.App, humaAPI huma.API, pingHandler handler.PingHandler, traceHandler handler.TraceHandler) {
+func RegisterOpsRouter(app *fiber.App, humaAPI huma.API, pingHandler handler.PingHandler, clientHandler handler.ClientHandler) {
 	initHealthRouter(humaAPI, pingHandler)
-	registerInstallScript(humaAPI, traceHandler)
+	registerInstallScript(humaAPI, clientHandler)
 
 	if config.Env != enum.EnvProduction {
 		registerDocs(app)
@@ -61,13 +61,13 @@ func initHealthRouter(healthGroup huma.API, pingHandler handler.PingHandler) {
 	}, pingHandler.HandleSSEPing)
 }
 
-func registerInstallScript(humaAPI huma.API, traceHandler handler.TraceHandler) {
+func registerInstallScript(humaAPI huma.API, clientHandler handler.ClientHandler) {
 	huma.Register(humaAPI, huma.Operation{
-		OperationID: "installTraceScript", Method: http.MethodGet, Path: "/install.sh",
-		Summary:     "InstallTraceScript",
+		OperationID: "installArisClientScript", Method: http.MethodGet, Path: "/install.sh",
+		Summary:     "InstallArisClientScript",
 		Description: "Return the self-contained Aris client install script",
-		Tags:        []string{constant.TagTrace},
-	}, traceHandler.HandleInstallScript)
+		Tags:        []string{constant.TagClient},
+	}, clientHandler.HandleInstallScript)
 }
 
 func registerDocs(app *fiber.App) {

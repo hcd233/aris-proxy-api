@@ -82,7 +82,7 @@ describe("② 表单与列表", () => {
     expect(read(p)).not.toMatch(/<label[\s>]/);
   });
 
-  const mobileLists = ["apikeys", "sessions", "trace", "trigger", "users", "audit/model"].map(
+  const mobileLists = ["apikeys", "sessions", "trigger", "users", "audit/model"].map(
     (p) => `app/(dashboard)/${p}/page.tsx`,
   );
   it.each(mobileLists)("%s 移动端列表用 Item", (p) => {
@@ -98,7 +98,6 @@ describe("② 表单与列表", () => {
   });
 
   it("代码 / JSON 预览与图表卡片表格用 ScrollArea", () => {
-    expect(read("components/trace-detail/trace-detail-client.tsx")).not.toMatch(/overflow-auto/);
     expect(read("app/(dashboard)/dataset/page.tsx")).not.toMatch(/overflow-auto/);
     for (const p of [
       "components/charts/model-cost-bar-chart.tsx",
@@ -135,14 +134,13 @@ describe("③ 组合修正", () => {
     expect(read("app/(dashboard)/layout.tsx")).toContain("<SidebarGroupLabel");
   });
 
-  it.each([
-    "components/chat/markdown-lite.tsx",
-    "app/(dashboard)/upstream/grouped-view.tsx",
-    "components/trace-install-popover.tsx",
-  ])("%s 复用 CopyButton", (p) => {
-    expect(read(p)).toContain("<CopyButton");
-    expect(read(p)).not.toContain("copyTextToClipboard");
-  });
+  it.each(["components/chat/markdown-lite.tsx", "app/(dashboard)/upstream/grouped-view.tsx"])(
+    "%s 复用 CopyButton",
+    (p) => {
+      expect(read(p)).toContain("<CopyButton");
+      expect(read(p)).not.toContain("copyTextToClipboard");
+    },
+  );
 
   it("CopyButton 基于 Button", () => {
     expect(read("components/ui/copy-button.tsx")).toContain("<Button");

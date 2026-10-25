@@ -39,9 +39,6 @@ import (
 	sessioncommand "github.com/hcd233/aris-proxy-api/internal/application/session/command"
 	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
 	sessionquery "github.com/hcd233/aris-proxy-api/internal/application/session/query"
-	tracecommand "github.com/hcd233/aris-proxy-api/internal/application/trace/command"
-	traceport "github.com/hcd233/aris-proxy-api/internal/application/trace/port"
-	tracequery "github.com/hcd233/aris-proxy-api/internal/application/trace/query"
 	triggerapp "github.com/hcd233/aris-proxy-api/internal/application/trigger"
 	triggercommand "github.com/hcd233/aris-proxy-api/internal/application/trigger/command"
 	triggerport "github.com/hcd233/aris-proxy-api/internal/application/trigger/port"
@@ -60,16 +57,13 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall"
 	oauthsvc "github.com/hcd233/aris-proxy-api/internal/domain/oauth2/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/session"
-	"github.com/hcd233/aris-proxy-api/internal/domain/trace"
 	triggerdomain "github.com/hcd233/aris-proxy-api/internal/domain/trigger"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 var ApplicationModule = fx.Module(constant.DigNameApplicationModule,
@@ -168,12 +162,6 @@ var ApplicationModule = fx.Module(constant.DigNameApplicationModule,
 		NewPreviewDatasetHandler,
 		NewExportDatasetHandler,
 		NewPreviewFormatDatasetHandler,
-		NewTraceRepository,
-		NewReportTraceEventHandler,
-		NewListTracesHandler,
-		NewGetTraceHandler,
-		NewListTraceEventsHandler,
-		NewDeleteTraceHandler,
 	),
 )
 
@@ -544,36 +532,6 @@ func NewListCronCallAuditsHandler(repo cronauditport.CronCallAuditRepository) cr
 
 func NewListCronCallAuditOptionsHandler(repo cronauditport.CronCallAuditRepository) cronauditport.ListCronCallAuditOptionsHandler {
 	return cronauditquery.NewListCronCallAuditOptionsHandler(repo)
-}
-
-func NewTraceRepository(db *gorm.DB) trace.TraceRepository {
-	return repository.NewTraceRepository(db)
-}
-
-func NewReportTraceEventHandler(repo trace.TraceRepository) traceport.ReportTraceEventHandler {
-	return tracecommand.NewReportTraceEventHandler(repo)
-}
-
-func NewListTracesHandler(repo trace.TraceRepository, apiKeyRepo apikey.APIKeyRepository) traceport.ListTracesHandler {
-	return tracequery.NewListTracesHandler(repo, apiKeyRepo)
-}
-
-func NewGetTraceHandler(
-	repo trace.TraceRepository,
-	apiKeyRepo apikey.APIKeyRepository,
-) traceport.GetTraceHandler {
-	return tracequery.NewGetTraceHandler(repo, apiKeyRepo)
-}
-
-func NewListTraceEventsHandler(
-	repo trace.TraceRepository,
-	apiKeyRepo apikey.APIKeyRepository,
-) traceport.ListTraceEventsHandler {
-	return tracequery.NewListTraceEventsHandler(repo, apiKeyRepo)
-}
-
-func NewDeleteTraceHandler(repo trace.TraceRepository, apiKeyRepo apikey.APIKeyRepository) traceport.DeleteTraceHandler {
-	return tracecommand.NewDeleteTraceHandler(repo, apiKeyRepo)
 }
 
 func NewListDemoAccessAuditsHandler(repo demoauditport.DemoAccessAuditRepository) demoauditport.ListDemoAccessAuditsHandler {

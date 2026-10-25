@@ -5,15 +5,12 @@ import (
 	"context"
 	"net/http"
 	"os"
-	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/hcd233/aris-proxy-api/internal/client/api"
-	"github.com/hcd233/aris-proxy-api/internal/client/executable"
+	clientconfig "github.com/hcd233/aris-proxy-api/internal/client/config"
 	"github.com/hcd233/aris-proxy-api/internal/client/model"
-	"github.com/hcd233/aris-proxy-api/internal/client/trace"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 )
 
@@ -21,32 +18,20 @@ import (
 type Report struct {
 	ConfigFound      bool
 	Host             string
-	Agent            string
 	ServerOK         bool
 	ServerLatency    time.Duration
 	ServerErr        string
 	AuthOK           bool
 	AuthMaskedKey    string
 	AuthErr          string
-	HooksFound       int
-	HooksTotal       int
-	HooksMissing     []string
 	ProvidersFound   []string
 	ProvidersMissing []string
-	PendingCount     int
-	PendingBytes     int64
-	RejectedCount    int
-	RecentErrors     int
-	LogDir           string
 }
 
 // Collect 并发收集本地扫描与网络检查结果；无 config 时跳过网络请求
-func Collect(ctx context.Context, paths trace.Paths, hc *http.Client) *Report {
-	report := &Report{
-		HooksTotal: len(constant.ArisClientCodexHookEvents),
-		LogDir:     paths.LogDir(),
-	}
-	store := trace.NewConfigStore(paths)
+func Collect(ctx context.Context, paths clientconfig.Paths, hc *http.Client) *Report {
+	report := &Report{}
+	store := clientconfig.NewStore(paths)
 	config, err := store.Load(ctx)
 	if err == nil && config.Host != "" {
 		report.ConfigFound = true
@@ -56,7 +41,7 @@ func Collect(ctx context.Context, paths trace.Paths, hc *http.Client) *Report {
 
 	var wg sync.WaitGroup
 	wg.Go(func() {
-		collectLocal(paths, report)
+		report.ProvidersFound, report.ProvidersMissing = scanProviderConfigs()
 	})
 	if report.ConfigFound {
 		client := api.New(config.Host, config.APIKey, hc)
@@ -81,20 +66,6 @@ func Collect(ctx context.Context, paths trace.Paths, hc *http.Client) *Report {
 	return report
 }
 
-// collectLocal 扫描本地目录：spool 积压、rejected、当日日志、hooks 注册状态
-func collectLocal(paths trace.Paths, report *Report) {
-	report.PendingCount, report.PendingBytes = scanRecordDir(paths.PendingDir())
-	report.RejectedCount, _ = scanRecordDir(paths.RejectedDir())
-	report.RecentErrors = countTodayLogEntries(paths)
-	binPath, err := executable.Path()
-	if err != nil {
-		report.HooksMissing = append([]string{}, constant.ArisClientCodexHookEvents...)
-		return
-	}
-	report.HooksFound, report.HooksMissing = trace.InspectCodexHooks(paths, binPath)
-	report.ProvidersFound, report.ProvidersMissing = scanProviderConfigs()
-}
-
 // scanProviderConfigs 遍历各 agent harness 默认配置路径，报告存在性
 func scanProviderConfigs() (found, missing []string) {
 	home, err := os.UserHomeDir()
@@ -109,39 +80,6 @@ func scanProviderConfigs() (found, missing []string) {
 		}
 	}
 	return found, missing
-}
-
-// scanRecordDir 统计目录中记录文件的数量与总字节数；目录缺失视为 0
-func scanRecordDir(dir string) (count int, totalBytes int64) {
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return 0, 0
-	}
-	for _, entry := range entries {
-		info, err := entry.Info()
-		if err != nil || !info.Mode().IsRegular() || filepath.Ext(entry.Name()) != constant.ArisClientRecordFileSuffix {
-			continue
-		}
-		count++
-		totalBytes += info.Size()
-	}
-	return count, totalBytes
-}
-
-// countTodayLogEntries 统计当日客户端日志条目数
-func countTodayLogEntries(paths trace.Paths) int {
-	name := constant.ArisClientLogPrefix + time.Now().UTC().Format(constant.ArisClientLogDateFormat) + constant.ArisClientLogSuffix
-	data, err := os.ReadFile(filepath.Join(paths.LogDir(), name))
-	if err != nil {
-		return 0
-	}
-	count := 0
-	for line := range strings.SplitSeq(string(data), "\n") {
-		if line != "" {
-			count++
-		}
-	}
-	return count
 }
 
 // maskAPIKey 脱敏 API Key：仅保留末 4 位

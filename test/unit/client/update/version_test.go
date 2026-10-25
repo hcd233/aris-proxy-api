@@ -100,8 +100,6 @@ func TestShouldCheckCommand(t *testing.T) {
 		{name: "status participates", commandPath: []string{"status"}, expected: true},
 		{name: "init participates", commandPath: []string{"init"}, expected: true},
 		{name: "model export participates", commandPath: []string{"model", "export"}, expected: true},
-		{name: "trace ingest skipped", commandPath: []string{constant.ArisClientCommandTrace, "ingest"}, expected: false},
-		{name: "trace install skipped", commandPath: []string{constant.ArisClientCommandTrace, "install"}, expected: false},
 		{name: "update skipped", commandPath: []string{constant.ArisClientCommandUpdate}, expected: false},
 		{name: "version skipped", commandPath: []string{constant.ArisClientCommandVersion}, expected: false},
 		{name: "empty path skipped", commandPath: nil, expected: false},

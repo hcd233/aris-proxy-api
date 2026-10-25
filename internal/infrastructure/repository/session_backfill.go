@@ -10,7 +10,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 )
 
-// BackfillSessionAPIKeyID 按 api_key_name 幂等回填 sessions/traces 的 api_key_id。
+// BackfillSessionAPIKeyID 按 api_key_name 幂等回填 sessions 的 api_key_id。
 //
 // 仅回填能唯一确定归属的存量行，规则见 constant.APIKeyIDBackfillSQLTemplate。
 // 空归属、跨用户同名（含历史已删同名）、名称无对应 key 的行保持 0（仅 admin 可见），
@@ -22,21 +22,12 @@ import (
 //	@param ctx context.Context
 //	@param db *gorm.DB
 //	@return sessions int64 本次回填的 sessions 行数
-//	@return traces int64 本次回填的 traces 行数
 //	@return err error
 //	@author centonhuang
-//	@update 2026-09-27 10:00:00
-func BackfillSessionAPIKeyID(ctx context.Context, db *gorm.DB) (sessions, traces int64, err error) {
+//	@update 2026-10-26
+func BackfillSessionAPIKeyID(ctx context.Context, db *gorm.DB) (sessions int64, err error) {
 	db = db.WithContext(ctx)
-	sessions, err = backfillTable(db, constant.SessionTableName)
-	if err != nil {
-		return 0, 0, err
-	}
-	traces, err = backfillTable(db, constant.TraceTableName)
-	if err != nil {
-		return sessions, 0, err
-	}
-	return sessions, traces, nil
+	return backfillTable(db, constant.SessionTableName)
 }
 
 // backfillTable 对单表执行回填。table 只接受包内常量，不接受外部输入。

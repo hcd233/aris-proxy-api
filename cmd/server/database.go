@@ -40,9 +40,8 @@ func runMigrate(ctx context.Context) {
 
 	lo.Must0(database.AutoMigrate(ctx, db))
 
-	sessions, traces := lo.Must2(repository.BackfillSessionAPIKeyID(ctx, db))
-	logger.Logger().Info("[Migrate] Backfilled api_key_id",
-		zap.Int64("sessions", sessions), zap.Int64("traces", traces))
+	sessions := lo.Must(repository.BackfillSessionAPIKeyID(ctx, db))
+	logger.Logger().Info("[Migrate] Backfilled api_key_id", zap.Int64("sessions", sessions))
 }
 
 func init() {

@@ -58,14 +58,6 @@ _Avoid_: filter-export shortcut
 Step 3 中的导出确认区域，展示筛选摘要（分数阈值、模型、时间范围）、匹配总数、输出格式说明，配合主导出按钮。将导出从"底部浮动按钮"升级为"确认动作"，强化最终步骤的仪式感。
 _Avoid_: export bar, download footer
 
-## Trace Install（Trace 安装）
-
-**Trace Install Popover（Trace 安装入口）**:
-Trace 页面（`trace/page.tsx`）的安装入口。点击后展示一段简短的安装命令预览：`curl -fsSL <origin>/install.sh | sh`，复制后用户在终端执行。命令不含票据与 API Key；API Key 由用户通过 `aris` CLI 的交互式配置（`aris trace init`）输入，不进入安装脚本。安装脚本由后端 `GET /install.sh` 提供（自包含的 trace 客户端安装脚本，公开访问）。
-_Avoid_: codex hook dialog, setup script generator, install wizard
-
-> 已知债务：早期设计（`POST /api/v1/trace/client/ticket` 单次下载票据 + uname 探测 + 原子安装）未落地，当前为简化版；若未来需要约束下载者身份/审计，再按该方案演进。
-
 ## Models Page（模型管理页）
 
 **Model Alias（模型别名）**:

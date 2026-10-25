@@ -2,7 +2,6 @@ package status
 
 import (
 	"bytes"
-	"strings"
 	"testing"
 	"time"
 
@@ -22,14 +21,10 @@ func TestRenderHealthyReport(t *testing.T) {
 	report := &status.Report{
 		ConfigFound:   true,
 		Host:          "https://aris.example.com",
-		Agent:         "codex",
 		ServerOK:      true,
 		ServerLatency: 42 * time.Millisecond,
 		AuthOK:        true,
 		AuthMaskedKey: "••••5678",
-		HooksFound:    3,
-		HooksTotal:    3,
-		LogDir:        "/home/u/.aris/trace/logs",
 	}
 	var out bytes.Buffer
 	if err := status.Render(&out, report); err != nil {
@@ -41,14 +36,8 @@ func TestRenderHealthyReport(t *testing.T) {
   ✓ https://aris.example.com · reachable (42ms)
 ◆ Auth
   ✓ API key valid · ••••5678
-◆ Agent
-  ✓ codex · hooks 3/3 registered
 ◆ Providers
   ! agent configs · none configured — run aris model export
-◆ Local queue
-  ✓ no pending records
-◆ Diagnostics
-  ✓ no recent errors
 `
 	if out.String() != want {
 		t.Fatalf("Render =\n%s\nwant:\n%s", out.String(), want)
@@ -57,11 +46,7 @@ func TestRenderHealthyReport(t *testing.T) {
 
 func TestRenderNotInitialized(t *testing.T) {
 	t.Parallel()
-	report := &status.Report{
-		HooksTotal:   3,
-		HooksMissing: []string{"SessionStart", "Stop", "SubagentStop"},
-		LogDir:       "/home/u/.aris/trace/logs",
-	}
+	report := &status.Report{}
 	var out bytes.Buffer
 	if err := status.Render(&out, report); err != nil {
 		t.Fatal(err)
@@ -72,70 +57,25 @@ func TestRenderNotInitialized(t *testing.T) {
   ! not initialized · run ` + "`aris init`" + ` to configure
 ◆ Auth
   ! not configured
-◆ Agent
-  ! codex · hooks 0/3 registered, missing: SessionStart, Stop, SubagentStop
 ◆ Providers
   ! agent configs · none configured — run aris model export
-◆ Local queue
-  ✓ no pending records
-◆ Diagnostics
-  ✓ no recent errors
 `
 	if out.String() != want {
 		t.Fatalf("Render =\n%s\nwant:\n%s", out.String(), want)
 	}
 }
 
-func TestRenderQueueBacklog(t *testing.T) {
-	t.Parallel()
-	report := &status.Report{
-		ConfigFound:   true,
-		Host:          "https://aris.example.com",
-		Agent:         "codex",
-		ServerOK:      true,
-		ServerLatency: 42 * time.Millisecond,
-		AuthOK:        true,
-		AuthMaskedKey: "••••5678",
-		HooksFound:    3,
-		HooksTotal:    3,
-		PendingCount:  3,
-		PendingBytes:  12700,
-		RejectedCount: 1,
-		RecentErrors:  2,
-		LogDir:        "/home/u/.aris/trace/logs",
-	}
-	var out bytes.Buffer
-	if err := status.Render(&out, report); err != nil {
-		t.Fatal(err)
-	}
-	text := out.String()
-	for _, fragment := range []string{
-		"! 3 pending (12.4 KB) · 1 rejected",
-		"! 2 recent error(s) · see /home/u/.aris/trace/logs",
-	} {
-		if !strings.Contains(text, fragment) {
-			t.Fatalf("Render missing %q:\n%s", fragment, text)
-		}
-	}
-}
-
 func TestRenderJSONSchema(t *testing.T) {
 	t.Parallel()
 	report := &status.Report{
-		ConfigFound:   true,
-		Host:          "https://aris.example.com",
-		Agent:         "codex",
-		ServerOK:      true,
-		ServerLatency: 42 * time.Millisecond,
-		AuthOK:        true,
-		AuthMaskedKey: "••••5678",
-		HooksFound:    7,
-		HooksTotal:    3,
-		HooksMissing:  []string{"Stop"},
-		PendingCount:  3,
-		PendingBytes:  12700,
-		RejectedCount: 1,
-		RecentErrors:  2,
+		ConfigFound:      true,
+		Host:             "https://aris.example.com",
+		ServerOK:         true,
+		ServerLatency:    42 * time.Millisecond,
+		AuthOK:           true,
+		AuthMaskedKey:    "••••5678",
+		ProvidersFound:   []string{"opencode"},
+		ProvidersMissing: []string{"codex"},
 	}
 	var out bytes.Buffer
 	if err := status.RenderJSON(&out, report); err != nil {
@@ -146,9 +86,8 @@ func TestRenderJSONSchema(t *testing.T) {
 		t.Fatalf("RenderJSON output is not valid JSON: %v", err)
 	}
 	for _, key := range []string{
-		"configFound", "host", "agent", "serverOk", "serverLatencyMs",
-		"authOk", "authMaskedKey", "hooksFound", "hooksTotal", "hooksMissing",
-		"pendingCount", "pendingBytes", "rejectedCount", "recentErrors",
+		"configFound", "host", "serverOk", "serverLatencyMs",
+		"authOk", "authMaskedKey", "providersFound", "providersMissing",
 	} {
 		if _, ok := decoded[key]; !ok {
 			t.Fatalf("RenderJSON missing key %q:\n%s", key, out.String())

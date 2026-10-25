@@ -15,7 +15,6 @@ import (
 	modelport "github.com/hcd233/aris-proxy-api/internal/application/model/port"
 	oauthport "github.com/hcd233/aris-proxy-api/internal/application/oauth2/port"
 	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
-	traceport "github.com/hcd233/aris-proxy-api/internal/application/trace/port"
 	triggerport "github.com/hcd233/aris-proxy-api/internal/application/trigger/port"
 	upstreamport "github.com/hcd233/aris-proxy-api/internal/application/upstream/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
@@ -61,8 +60,6 @@ var HandlerModule = fx.Module(constant.DigNameHandlerModule,
 		handler.NewMetricsHandler,
 		NewDatasetDependencies,
 		handler.NewDatasetHandler,
-		NewTraceDependencies,
-		handler.NewTraceHandler,
 		handler.NewClientHandler,
 		NewUpstreamDependencies,
 		handler.NewUpstreamHandler,
@@ -213,20 +210,4 @@ func NewMetricsDependencies(runtimeMetrics metricsport.RuntimeMetricsService) ha
 
 func NewDatasetDependencies(preview datasetport.PreviewDatasetHandler, export datasetport.ExportDatasetHandler, previewFormat datasetport.PreviewFormatDatasetHandler) handler.DatasetDependencies {
 	return handler.DatasetDependencies{Preview: preview, Export: export, PreviewFormat: previewFormat}
-}
-
-func NewTraceDependencies(
-	report traceport.ReportTraceEventHandler,
-	list traceport.ListTracesHandler,
-	get traceport.GetTraceHandler,
-	events traceport.ListTraceEventsHandler,
-	deleteTrace traceport.DeleteTraceHandler,
-) handler.TraceDependencies {
-	return handler.TraceDependencies{
-		Report: report,
-		List:   list,
-		Get:    get,
-		Events: events,
-		Delete: deleteTrace,
-	}
 }

@@ -200,7 +200,6 @@ const (
 	TagOpenAI     = "OpenAI"
 	TagSession    = "Session"
 	TagUpstream   = "Upstream"
-	TagTrace      = "Trace"
 	TagTrigger    = "Trigger"
 	TagDataset    = "Dataset"
 	TagUser       = "User"
@@ -210,7 +209,7 @@ const (
 
 	// API 路由分区前缀（2026-08-27 路由四分区治理）：
 	//   - WebAPIPrefix  web 前端 JWT 路由
-	//   - CLIAPIPrefix  aris CLI 的 API-key 路由（trace 上报、client models 等）
+	//   - CLIAPIPrefix  aris CLI 的 API-key 路由（client models、客户端 API Key 校验等）
 	// 所有分区前缀与客户端可见路径常量在此收敛，服务端注册与客户端 SDK 均从
 	// 这里的常量派生，禁止在任何一侧重新硬编码（#165/#166 两次 404 的根因）。
 	WebAPIPrefix = "/api/web/v1"
@@ -234,9 +233,8 @@ const (
 
 	// CLIAPIPrefix 下的组内注册路径（服务端 router/cli.go 消费；客户端可见的
 	// 绝对路径常量由 CLIAPIPrefix + RoutePath 派生）。
-	ArisClientIngestRoutePath = "/trace/event"
-	ArisClientCheckRoutePath  = "/aris/client/check"
-	ClientModelsRoutePath     = "/model/list"
+	ArisClientCheckRoutePath = "/aris/client/check"
+	ClientModelsRoutePath    = "/model/list"
 
 	// ClientModelsAPIPrefix 客户端模型分发接口前缀，与 CLI 分区前缀同源。
 	ClientModelsAPIPrefix = CLIAPIPrefix
@@ -249,12 +247,6 @@ const (
 	SessionDeleteErrorNotFound     = "session not found"
 	SessionDeleteErrorNoPermission = "no permission"
 	SessionDeleteErrorDeleteFailed = "failed to delete"
-
-	// ── Trace delete error messages ──
-	TraceDeleteErrorFindFailed   = "failed to find trace"
-	TraceDeleteErrorNotFound     = "trace not found"
-	TraceDeleteErrorNoPermission = "no permission"
-	TraceDeleteErrorDeleteFailed = "failed to delete"
 
 	// ── Session option values ──
 	SessionOptionScoreValueUnscored = "unscored"

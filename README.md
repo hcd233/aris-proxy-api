@@ -2,7 +2,7 @@
 
 **English** | [简体中文](README.zh-CN.md)
 
-A **MaaS model aggregation gateway + usage-data curation platform + Agent Harness call-trace analysis platform** for personal large-model usage.
+A **MaaS model aggregation gateway + usage-data curation platform** for personal large-model usage.
 
 Aris unifies access to multiple MaaS platforms, models, and API protocols. Through model aliases, upstream endpoint management, protocol translation, authentication, rate limiting, auditing, and a visual admin console, clients only need to talk to a single gateway address and a model alias — they never need to know the vendor, the real model name, or the upstream API differences.
 
@@ -11,7 +11,6 @@ Aris unifies access to multiple MaaS platforms, models, and API protocols. Throu
 - **Model aggregation & single entry point**: two-level Endpoint/Model configuration (user-level multi-tenancy — ordinary users manage their own endpoints and models, admins can filter by user and create on their behalf); model aliases hide upstream differences, and one alias can be bound to multiple endpoints. Provides OpenAI Chat Completions, OpenAI Responses, and Anthropic Messages compatible entry points, plus cross-protocol translation between OpenAI and Anthropic (including SSE streaming events).
 - **Data curation & governance**: model interactions are aggregated into Sessions; Messages/Tools are stored in a protocol-neutral structure and deduplicated by checksum content addressing. Supports rating, share links, session filtering, and ShareGPT JSONL streaming export — curating data assets for private-model SFT.
 - **Audit & runtime monitoring**: every call records four categories of token usage, time to first token, streaming duration, upstream status code, and Trace ID. Provides trend / success-rate / throughput / usage statistics and cron auditing, plus cross-pod runtime monitoring of QPS, P95, SSE connections, goroutines/heap/CPU.
-- **Agent Harness Trace analysis**: the separately compiled `aris` CLI collects Codex hook events and rollout records and batch-uploads them from a local spool; the server rebuilds events into a readable TraceConversation to observe the Agent's model requests, reasoning, and tool-call chains.
 - **Subscription account OAuth (Claude Code / Codex)**: subscription accounts join as a dedicated endpoint type (`oauth_anthropic` / `oauth_openai`) via official OAuth flows. Access tokens refresh automatically (request-path with a 3-minute skew, plus a maintenance cron) and credentials are stored AES-256-GCM encrypted; the breaker key uses a stable per-endpoint identity, so token rotation never resets circuit state. Model aliases bind them like any endpoint — scheduling, fallback, auditing, pricing, and data curation apply unchanged — and subscription quota windows (Claude 5h/7d, Codex primary/secondary) are probed on a cron and shown in the console.
 - **Client config export**: generate OpenCode, Claude Code, Codex, Pi, and DSH connection configs or install scripts from the admin console in one click — idempotent patching, `.bak` backups, atomic replacement, credential files at `0600`.
 - **Security & governance**: GitHub/Google OAuth2 login + JWT admin auth, Proxy API Key call auth, four-tier `pending`/`demo`/`user`/`admin` permissions with user approval (demo account: module whitelist + session-whitelist / full-masking dual views + one-click login + access auditing), Aho-Corasick trigger-word blocking, and Redis token-bucket request rate limiting plus token-usage limiting.
@@ -24,7 +23,6 @@ Three structural differences stand out:
 
 - **Conversation bodies are a data-model choice, not a roadmap item.** Aris persists them, so checksum deduplication, scoring and ShareGPT/SFT export are structural capabilities. The other four have no conversation aggregate — LiteLLM can opt in, but its payload stays spend-log-shaped and its dataset export targets evaluation.
 - **Quota enforcement and cost estimation are different designs.** new-api and sub2api deduct from quotas and balances (pre-deduct → settle, window soft caps); LiteLLM's budget family requires a database and **fails open without one**; Aris only estimates cost, with no budget gate.
-- **Agent observability is three answers to one question.** Aris: client hooks + local spool + server-side rebuild, with the agent runtime untouched. LiteLLM: SDK harness + CLI wrappers + server-side agentic loop, with trace analysis in a separate Lens service. OmniRoute: capture at the traffic layer, visualising routing and compression rather than agent steps.
 
 Legend: ✅ yes · ◐ partial · — no. Ratings follow each project's own README/official docs at the snapshot date; numbered cells are explained under [Notes](#notes).
 
@@ -43,14 +41,12 @@ Legend: ✅ yes · ◐ partial · — no. Ratings follow each project's own READ
 | **Call audit & usage stats** | ✅[11] | ✅[11] | ✅ | ◐ | ◐[11] |
 | **Conversation body persisted** | ✅[12] | —[12] | ◐[12] | — | — |
 | **Conversation dataset export (ShareGPT/SFT)** | ✅[13] | — | ◐[13] | — | — |
-| **Agent Harness trace ingestion** | ✅[14] | — | ✅[14] | ◐[14] | — |
-| **Trace rebuild & visualisation** | ✅[15] | — | ✅[15] | ◐[15] | — |
-| **Content safety & masking** | ✅[16] | ◐[16] | ✅[16] | ✅ | ◐ |
-| **Observability & runtime monitoring** | ✅ | ◐[17] | ✅[17] | ◐[17] | ◐[17] |
-| **Token compression** | ✅[18] | — | ◐[18] | ✅[18] | — |
-| **MCP / A2A** | — | ◐[19] | ✅[19] | ✅[19] | ◐[19] |
-| **Deployment & horizontal scaling** | ✅[20] | ✅[20] | ✅[20] | ◐[20] | ✅ |
-| **Extensibility** | ◐[21] | ✅[21] | ✅[21] | ✅[21] | ✅[21] |
+| **Content safety & masking** | ✅[14] | ◐[14] | ✅[14] | ✅ | ◐ |
+| **Observability & runtime monitoring** | ✅ | ◐[15] | ✅[15] | ◐[15] | ◐[15] |
+| **Token compression** | ✅[16] | — | ◐[16] | ✅[16] | — |
+| **MCP / A2A** | — | ◐[17] | ✅[17] | ✅[17] | ◐[17] |
+| **Deployment & horizontal scaling** | ✅[18] | ✅[18] | ✅[18] | ◐[18] | ✅ |
+| **Extensibility** | ◐[19] | ✅[19] | ✅[19] | ✅[19] | ✅[19] |
 
 ### Notes
 
@@ -80,25 +76,21 @@ Legend: ✅ yes · ◐ partial · — no. Ratings follow each project's own READ
 
 **13 · Conversation dataset export** — Aris ✅: ShareGPT JSONL streaming export (SSE with progress) preserving multi-turn context, `<think>` reasoning and tool calls, with score/model/time filters and pre-export statistics. LiteLLM ◐: Lens datasets (Export JSONL) are **evaluation**-oriented, need the separate Lens service + ClickHouse and have no ShareGPT/SFT format.
 
-**14 · Agent Harness trace ingestion** — Aris ✅: a separately built `aris` CLI registers Codex and Claude Code hooks, is fail-open, spools locally (`0600`, 256 MiB cap) and batch-uploads. LiteLLM ✅: three coexisting mechanisms — `litellm.agent()` SDK harness (8 typed events), `lite claude\|codex\|opencode` wrappers tagging `harness,<name>`, and a server-side `agentic_loop_hook` (default 3 re-runs, not triggered by streaming Chat); all beta, sandbox needs the CLI preinstalled. OmniRoute ◐: one-command CLI onboarding and MITM/TPROXY capture — traffic-level, not hook-event level.
+**14 · Content safety & masking** — Aris ✅: Aho-Corasick trigger words with `deny` / `omit` / `capture` actions, hot-reloaded via Redis pub/sub and version polling. LiteLLM ✅: ~50 guardrail integrations in four modes, but masking does **not** apply to streamed output and `llmguard` / `llamaguard` / `hide_secrets` / `lakera` need the enterprise licence. new-api ◐: per-channel extra settings and upstream header overrides only.
 
-**15 · Trace rebuild & visualisation** — Aris ✅: the server rebuilds events into a readable `TraceConversation` rendered as a message/tool/`session_meta` timeline with expandable raw payloads. LiteLLM ✅: Lens (separate service + ClickHouse) with conversation view, subagent branches, Investigations and OTLP APIs — early access, `/lens` is proxy-admin only, Claude Code relies on its own OTel exporter (documented gaps) and Codex on a third-party integration (macOS-only auto-install). OmniRoute ◐: Studios visualise routing cascades and compression waterfalls, not agent call chains.
+**15 · Observability & runtime monitoring** — LiteLLM ✅: the fullest metric families (TTFT, overhead, budget remaining, admission/rejection, DB queues), two official Grafana dashboards and a dedicated metrics port that bypasses virtual-key auth (do not expose publicly). new-api ◐: dashboards, health probes with webhook alerts, pprof/Pyroscope, and a custom `/api/perf-metrics` route — but **no Prometheus dependency**. sub2api ◐: dashboard and channel monitor, no Prometheus dependency in `go.mod`. OmniRoute ◐: dashboards, `X-OmniRoute-*` headers and a SQLite audit trail, but no `/metrics`.
 
-**16 · Content safety & masking** — Aris ✅: Aho-Corasick trigger words with `deny` / `omit` / `capture` actions, hot-reloaded via Redis pub/sub and version polling. LiteLLM ✅: ~50 guardrail integrations in four modes, but masking does **not** apply to streamed output and `llmguard` / `llamaguard` / `hide_secrets` / `lakera` need the enterprise licence. new-api ◐: per-channel extra settings and upstream header overrides only.
+**16 · Token compression** — Aris ✅: deterministic tool-output compression applied in place on typed DTOs before forwarding, with `smart_crusher` / `log_compressor` / `search_compressor` / `passthrough` strategies and before/after records. OmniRoute ✅: a 12-engine pipeline (RTK, Caveman, LLMLingua-2, GCF v3.2, OmniGlyph) with a default-on inflation guard. LiteLLM ◐: `compress()` (beta).
 
-**17 · Observability & runtime monitoring** — LiteLLM ✅: the fullest metric families (TTFT, overhead, budget remaining, admission/rejection, DB queues), two official Grafana dashboards and a dedicated metrics port that bypasses virtual-key auth (do not expose publicly). new-api ◐: dashboards, health probes with webhook alerts, pprof/Pyroscope, and a custom `/api/perf-metrics` route — but **no Prometheus dependency**. sub2api ◐: dashboard and channel monitor, no Prometheus dependency in `go.mod`. OmniRoute ◐: dashboards, `X-OmniRoute-*` headers and a SQLite audit trail, but no `/metrics`.
+**17 · MCP / A2A** — LiteLLM ✅: MCP Gateway (per-key server/tool permissions, MCP cost tracking, `/mcp` usable from Cursor) + A2A Agent Gateway. OmniRoute ✅: built-in MCP server with 110 tools (stdio/HTTP/SSE, 33 scopes) + A2A v0.3. new-api ◐: JS task plugins and a marketplace only. sub2api ◐: a `hashicorp/go-plugin` system only.
 
-**18 · Token compression** — Aris ✅: deterministic tool-output compression applied in place on typed DTOs before forwarding, with `smart_crusher` / `log_compressor` / `search_compressor` / `passthrough` strategies and before/after records. OmniRoute ✅: a 12-engine pipeline (RTK, Caveman, LLMLingua-2, GCF v3.2, OmniGlyph) with a default-on inflation guard. LiteLLM ◐: `compress()` (beta).
+**18 · Deployment & horizontal scaling** — Aris ✅: Compose/K8s with `preStop` + `terminationGracePeriodSeconds: 660` and an ordered eight-step graceful shutdown that drains SSE; cross-pod state in Redis. new-api ✅: multi-node needs a shared main DB and identical `SESSION_SECRET`/`CRYPTO_SECRET`, plus Redis for shared rate limits. LiteLLM ✅: Helm (HPA/KEDA), official AWS/GCP Terraform (no Azure), cosign-signed images, Prisma migrations, Redis required for multi-instance. OmniRoute ◐: single-node SQLite, with a remote mode driven by scoped tokens.
 
-**19 · MCP / A2A** — LiteLLM ✅: MCP Gateway (per-key server/tool permissions, MCP cost tracking, `/mcp` usable from Cursor) + A2A Agent Gateway. OmniRoute ✅: built-in MCP server with 110 tools (stdio/HTTP/SSE, 33 scopes) + A2A v0.3. new-api ◐: JS task plugins and a marketplace only. sub2api ◐: a `hashicorp/go-plugin` system only.
-
-**20 · Deployment & horizontal scaling** — Aris ✅: Compose/K8s with `preStop` + `terminationGracePeriodSeconds: 660` and an ordered eight-step graceful shutdown that drains SSE; cross-pod state in Redis. new-api ✅: multi-node needs a shared main DB and identical `SESSION_SECRET`/`CRYPTO_SECRET`, plus Redis for shared rate limits. LiteLLM ✅: Helm (HPA/KEDA), official AWS/GCP Terraform (no Azure), cosign-signed images, Prisma migrations, Redis required for multi-instance. OmniRoute ◐: single-node SQLite, with a remote mode driven by scoped tokens.
-
-**21 · Extensibility** — Aris ◐: no plugin system — extension points are the separately built `aris` client (one adapter file + two registry lines per agent), models.dev import and Fx wiring. new-api ✅: JS task plugins with a documented API and marketplace, plus custom OAuth providers. LiteLLM ✅: eight `CustomLogger` hooks, guardrail APIs in any language, custom auth/SSO/secret managers, provider registration by editing one JSON, callbacks from `s3://`/`gcs://`. OmniRoute ✅: plugin framework, marketplace and skills frameworks. sub2api ✅: `hashicorp/go-plugin` and module skills.
+**19 · Extensibility** — Aris ◐: no plugin system — extension points are models.dev import and Fx wiring. new-api ✅: JS task plugins with a documented API and marketplace, plus custom OAuth providers. LiteLLM ✅: eight `CustomLogger` hooks, guardrail APIs in any language, custom auth/SSO/secret managers, provider registration by editing one JSON, callbacks from `s3://`/`gcs://`. OmniRoute ✅: plugin framework, marketplace and skills frameworks. sub2api ✅: `hashicorp/go-plugin` and module skills.
 
 ## System Architecture
 
-The backend is organized by DDD layering: interface layer (router / ten-level middleware chain / handler / dto) → application layer (17 use-case modules with `command`/`query`/`port`) → domain layer (aggregates, value objects, repository interfaces); the infrastructure layer implements repository interfaces in reverse to achieve dependency inversion, with Cron scheduled governance and `bootstrap`/Fx wiring as cross-cutting concerns. There are three classes of callers: the Web admin console (JWT), the `aris` Trace CLI, and agentic clients (`X-API-Key`).
+The backend is organized by DDD layering: interface layer (router / ten-level middleware chain / handler / dto) → application layer (16 use-case modules with `command`/`query`/`port`) → domain layer (aggregates, value objects, repository interfaces); the infrastructure layer implements repository interfaces in reverse to achieve dependency inversion, with Cron scheduled governance and `bootstrap`/Fx wiring as cross-cutting concerns. There are two classes of callers: the Web admin console (JWT) and agentic clients (`X-API-Key`).
 
 ![System overview · DDD layering](docs/diagrams/archify/aris-arch-01.gif)
 
@@ -112,15 +104,11 @@ Interactive version (node search / impact tracing / light-dark themes / guided t
 
 ![Upstream fault tolerance: circuit breaking / isolation / degradation](docs/diagrams/archify/aris-arch-14.gif)
 
-**Session data model & lifecycle**: LLM forwarding and Trace ingestion both write into the Session aggregate root; Messages/Tools are deduplicated by checksum content addressing, and audit, cache, export, and background consumption revolve around it.
+**Session data model & lifecycle**: LLM forwarding writes into the Session aggregate root; Messages/Tools are deduplicated by checksum content addressing, and audit, cache, export, and background consumption revolve around it.
 
 ![Session data model & lifecycle](docs/diagrams/archify/aris-arch-03.gif)
 
-**Agent Harness Trace ingestion**: Codex / Claude Code hook and rollout events are collected by the `aris` CLI (fail-open) and batch-uploaded from a local spool; after authentication and dedup they are persisted, and the web side projects them into a readable call trace.
-
-![Agent Harness Trace ingestion](docs/diagrams/archify/aris-arch-04.gif)
-
-**Web admin console frontend architecture**: the browser loads the statically exported assets → a root-layout Provider chain (I18n → Theme → Auth) → route groups (14 admin pages / 3 public pages, admin pages guarded by `PermissionGuard`) → components and 6 shared hooks → `src/lib` as the sole backend gateway (Bearer injection, 401 single-flight refresh, error-code toasts, dataset SSE export).
+**Web admin console frontend architecture**: the browser loads the statically exported assets → a root-layout Provider chain (I18n → Theme → Auth) → route groups (13 admin pages / 3 public pages, admin pages guarded by `PermissionGuard`) → components and 6 shared hooks → `src/lib` as the sole backend gateway (Bearer injection, 401 single-flight refresh, error-code toasts, dataset SSE export).
 
 ![Web admin console frontend architecture](docs/diagrams/archify/aris-arch-05.gif)
 
@@ -213,7 +201,7 @@ cd web && npm ci && npm run dev   # http://localhost:3000
 
 | Command | Description |
 | --- | --- |
-| `make build` | Production build of server + four-platform Trace client |
+| `make build` | Production build of server + four-platform `aris` client |
 | `make build-server` / `make build-client[-all]` | Build the server / the `aris` client respectively |
 | `make web-build` | Build the frontend into `internal/web/dist` and gzip pre-compress |
 | `make test` / `make test-cover` | Full test suite / coverage report |
@@ -221,7 +209,7 @@ cd web && npm ci && npm run dev   # http://localhost:3000
 | `make web-lint` / `make web-format` | Frontend ESLint / Prettier |
 | `make fgprof` | Pull a remote fgprof profile and open the flame graph |
 
-Server CLI: `server start`, `database migrate`, `lint conv/static` (`cmd/server`); Trace client CLI: `aris init`, `aris model export`, `aris trace ingest`, `aris trace install`, `aris status`, `aris update` (`cmd/client`).
+Server CLI: `server start`, `database migrate`, `lint conv/static` (`cmd/server`); `aris` client CLI: `aris init`, `aris model export`, `aris status`, `aris update` (`cmd/client`).
 
 ## API Overview
 
@@ -230,14 +218,14 @@ All APIs are registered with Huma and generate OpenAPI; in development they can 
 | Prefix | Auth | Description |
 | --- | --- | --- |
 | `/api/openai/v1` · `/api/anthropic/v1` | `X-API-Key` | LLM-compatible entry points: chat/completions, responses, messages, count_tokens, models |
-| `/api/cli/v1/model/list` · `/trace/event` · `/aris/client/check` | `X-API-Key` | `aris` client model distribution, Trace event upload, and client key check |
+| `/api/cli/v1/model/list` · `/aris/client/check` | `X-API-Key` | `aris` client model distribution and client key check |
 | `/api/web/v1/oauth2` · `/token` | Public (rate-limited) | OAuth2 login/callback, token refresh |
 | `/api/web/v1/user` | JWT | Profile; admins can list, approve/demote, and delete users |
-| `/api/web/v1/apikey` · `/session` · `/dataset` · `/trace` | JWT + owner isolation | API keys, sessions/sharing, dataset export, Trace queries |
+| `/api/web/v1/apikey` · `/session` · `/dataset` | JWT + owner isolation | API keys, sessions/sharing, dataset export |
 | `/api/web/v1/endpoint` · `/model` · `/upstream` | JWT (user-level multi-tenancy) | Endpoints, models (user-isolated; admins can filter by user and create on their behalf), aggregated upstream view |
 | `/api/web/v1/trigger` · `/cron` · `/audit/cron` · `/metrics` | JWT + admin | Trigger words, Cron management/triggering, Cron audit, runtime metrics |
 | `/api/web/v1/audit` | JWT | Model-call audit & statistics (admins see global) |
-| `/health` `/ready` `/ssehealth` `/metrics` `/install.sh` | Public | Probes, Prometheus metrics, Trace client install script |
+| `/health` `/ready` `/ssehealth` `/metrics` `/install.sh` | Public | Probes, Prometheus metrics, `aris` client install script |
 
 ## Deployment
 
@@ -251,19 +239,19 @@ All APIs are registered with Huma and generate OpenAPI; in development they can 
 
 ```text
 cmd/server        Server entry (start / database migrate / lint)
-cmd/client        aris Trace client entry
+cmd/client        aris client entry
 internal/
   router/         Route registration (Huma Operation + middleware binding)
   handler/        HTTP adaptation layer
-  application/    Use-case orchestration (identity/session/llmproxy/trace/...)
+  application/    Use-case orchestration (identity/session/llmproxy/...)
   domain/         Domain models and rules
   infrastructure/ GORM Repository, Redis, JWT, LLM Transport, goroutine pool
   cron/           Scheduled tasks (terminal cleanup, soft-deleted purge, Think extraction, trigger-hit sync)
   bootstrap/      Fx dependency injection & lifecycle
   web/dist        Frontend build output (embed.FS)
 web/              Next.js admin console source
-  src/app/        App Router route groups ((dashboard) 14 pages · login / callback / share)
-  src/components/ Base & business components (ui / charts / chat / session-detail / trace-detail)
+  src/app/        App Router route groups ((dashboard) 13 pages · login / callback / share)
+  src/components/ Base & business components (ui / charts / chat / session-detail)
   src/lib/        api-client · auth-context · i18n · theme · types (backend DTO mirrors)
 docker/           Dockerfile and Compose configs
 env/              Environment variable templates

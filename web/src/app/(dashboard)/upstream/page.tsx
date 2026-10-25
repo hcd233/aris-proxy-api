@@ -19,7 +19,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { PaginationBar } from "@/components/pagination-bar";
-import TraceInstallPopover from "@/components/trace-install-popover";
 import { PageHeader } from "@/components/page-header";
 import { ListEmptyState } from "@/components/list-empty-state";
 import { TableSkeleton } from "@/components/table-skeleton";
@@ -748,7 +747,6 @@ export default function UpstreamPage() {
             description={t("upstream.subtitle")}
             actions={
               <div className="flex gap-2">
-                <TraceInstallPopover />
                 {/* demo 只读账户写入口统一锁定（DeleteButton 的 locked 模式） */}
                 <Button onClick={openCreateEndpoint} disabled={isDemo()}>
                   {isDemo() ? <Lock className="mr-1 size-4" /> : <Plus className="mr-1 size-4" />}

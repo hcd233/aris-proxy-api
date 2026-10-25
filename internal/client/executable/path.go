@@ -1,7 +1,6 @@
 // Package executable 解析当前 aris 可执行文件的真实路径。
 //
-// 从 trace（hook 安装）与 setup（配置向导）各自的重复实现中抽出，供 hook 安装、
-// 状态检查与 `aris update` 自替换共用：自更新不应反向依赖 hook 安装包。
+// 供 `aris update` 自替换使用；独立成包，避免自更新反向依赖其他客户端包。
 package executable
 
 import (

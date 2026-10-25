@@ -23,7 +23,6 @@ func newRootCommand() *cobra.Command {
 	root.SetVersionTemplate("{{.Version}}\n")
 	root.AddCommand(newInitCommand())
 	root.AddCommand(newStatusCommand())
-	root.AddCommand(newTraceCommand())
 	root.AddCommand(newModelCommand())
 	root.AddCommand(newVersionCommand())
 	root.AddCommand(newUpdateCommand())
