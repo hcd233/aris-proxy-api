@@ -9,7 +9,7 @@ import (
 
 // IsSafeInstallHost 校验 Host 头是否仅包含 URL host 允许的字符。
 //
-// trace 安装脚本模板将 origin 直接嵌入 bash 脚本（host='{{.Host}}'），
+// 安装脚本模板将 origin 直接嵌入 bash 脚本（host='{{.Host}}'），
 // Host 头由客户端可控，若包含单引号 / 反引号 / $() 等字符可突破 shell 字符串注入任意命令。
 // 白名单仅放行字母数字与 . : [ ] -（覆盖域名、端口、IPv6 字面量）。
 //

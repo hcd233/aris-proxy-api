@@ -30,8 +30,12 @@ func TestStoreRoundTrip(t *testing.T) {
 	if got != want {
 		t.Fatalf("load = %+v, want %+v", got, want)
 	}
-	if _, err := os.Stat(paths.ConfigFile()); err != nil {
+	info, err := os.Stat(paths.ConfigFile())
+	if err != nil {
 		t.Fatalf("config file not written: %v", err)
+	}
+	if perm := info.Mode().Perm(); perm != 0o600 {
+		t.Fatalf("config file perm = %o, want 600", perm)
 	}
 }
 
