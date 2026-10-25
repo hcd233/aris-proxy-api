@@ -12,7 +12,7 @@ Aris 将多个 MaaS 平台、多种模型和多种 API 协议统一接入，通�
 - **数据沉淀与治理**：模型交互聚合为 Session，Message/Tool 以协议无关结构存储并按 checksum 内容寻址去重；支持评分、分享链接、会话筛选与 ShareGPT JSONL 流式导出，为私有模型 SFT 沉淀数据资产。
 - **审计与运行监控**：每次调用记录 Token 四类用量、首 Token 延迟、流式时长、上游状态码和 Trace ID；提供趋势/成功率/吞吐/用量统计、Cron 审计，以及跨 Pod 的 QPS、P95、SSE 连接、goroutines/heap/CPU 运行时监控。
 - **订阅账号 OAuth 接入（Claude Code / Codex）**：订阅账号以独立的端点类型（`oauth_anthropic` / `oauth_openai`）经官方 OAuth 授权接入。access token 自动刷新（请求路径 3 分钟提前量 + 维护 Cron），凭据以 AES-256-GCM 密文存储；熔断键使用端点级稳定身份，token 轮换不会重置熔断状态。模型别名像普通端点一样绑定——调度、fallback、审计、计价与数据治理零改动复用；订阅窗口用量（Claude 5h/7d、Codex primary/secondary）由 Cron 探测并在管理端展示。
-- **客户端配置导出**：从管理后台一键生成 OpenCode、Claude Code、Codex、Pi、DSH 的接入配置或安装脚本，幂等 patch、`.bak` 备份、原子替换、凭证文件 `0600`。
+- **客户端配置导出**：`aris model export` 从服务端启用模型列表生成 OpenCode、Claude Code、Codex、Pi、DSH 的接入配置，幂等 patch、`.bak` 备份、原子替换、凭证文件 `0600`。
 - **安全与治理**：GitHub/Google OAuth2 登录 + JWT 管理鉴权，Proxy API Key 调用鉴权，`pending`/`demo`/`user`/`admin` 四级权限与用户审核（demo 演示账户：模块白名单 + 会话白名单/全量脱敏双视角 + 一键登录 + 访问审计），Aho-Corasick 触发词拦截，Redis 令牌桶请求限流与 Token 用量限流。
 
 ## 同类项目横向对比
