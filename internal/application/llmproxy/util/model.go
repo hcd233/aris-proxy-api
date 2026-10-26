@@ -61,10 +61,9 @@ func MarshalOpenAIResponseBodyForModel(req *dto.OpenAICreateResponseReq, modelNa
 	body.Model = &modelName
 	if req.Input != nil && req.Input.Items != nil {
 		input := *req.Input
-		input.Items = make([]*dto.ResponseInputItem, 0, len(req.Input.Items))
-		for _, item := range req.Input.Items {
-			input.Items = append(input.Items, normalizeResponseInputItemForUpstream(item))
-		}
+		input.Items = lo.Map(req.Input.Items, func(item *dto.ResponseInputItem, _ int) *dto.ResponseInputItem {
+			return normalizeResponseInputItemForUpstream(item)
+		})
 		body.Input = &input
 	}
 	return lo.Must1(MarshalUpstreamBody(&body))

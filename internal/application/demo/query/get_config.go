@@ -3,8 +3,8 @@ package query
 
 import (
 	"context"
+	"slices"
 
-	"github.com/samber/lo"
 	"go.uber.org/zap"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/demo/port"
@@ -81,5 +81,5 @@ func (a *demoModuleAccessor) IsModuleOpen(ctx context.Context, module enum.DemoM
 			zap.String("module", module), zap.Error(err))
 		return false
 	}
-	return lo.Contains(entity.Modules, module)
+	return slices.Contains(entity.Modules, module)
 }

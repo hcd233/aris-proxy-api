@@ -309,7 +309,7 @@ func (r *modelRepository) Paginate(ctx context.Context, param model.CommonParam,
 func (r *modelRepository) PaginateWithFilter(ctx context.Context, param model.CommonParam, filter llmproxy.ModelListFilter, scopeUserID *uint) ([]*aggregate.Model, *model.PageInfo, error) {
 	// 白名单外回退默认列但保留调用方排序方向，不报错（避免前端拼错导致整页 500）。
 	// 必须先于缓存键计算：等价参数归一到同一个键
-	if !lo.Contains(constant.ModelListSortFields, param.SortField) {
+	if !slices.Contains(constant.ModelListSortFields, param.SortField) {
 		param.SortField = constant.ModelListDefaultSortField
 	}
 
@@ -355,7 +355,7 @@ func (r *modelRepository) loadModelPage(ctx context.Context, param model.CommonP
 		db = db.Where(constant.WhereEndpointIDEquals, filter.EndpointID)
 	}
 	// 未知能力值视为不过滤，避免前端拼错参数导致整页空白
-	if lo.Contains(enum.InputModalities, filter.Capability) {
+	if slices.Contains(enum.InputModalities, filter.Capability) {
 		db = db.Where(constant.WhereCapabilitiesLike, `%"`+filter.Capability+`"%`)
 	}
 	if filter.MissingOnly {

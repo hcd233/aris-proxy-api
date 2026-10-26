@@ -82,17 +82,13 @@ func (r *endpointRepository) BatchFindByIDs(ctx context.Context, ids []uint) (ma
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "batch find endpoints by ids")
 	}
-	aggs := make([]*aggregate.Endpoint, 0, len(records))
-	for _, rec := range records {
-		aggs = append(aggs, toEndpointAggregate(rec))
-	}
+	aggs := lo.Map(records, func(rec *dbmodel.Endpoint, _ int) *aggregate.Endpoint {
+		return toEndpointAggregate(rec)
+	})
 	if err := r.fillOAuthStatus(ctx, aggs); err != nil {
 		return nil, err
 	}
-	out = make(map[uint]*aggregate.Endpoint, len(aggs))
-	for _, agg := range aggs {
-		out[agg.AggregateID()] = agg
-	}
+	out = lo.KeyBy(aggs, func(agg *aggregate.Endpoint) uint { return agg.AggregateID() })
 	return out, nil
 }
 
@@ -101,12 +97,9 @@ func (r *endpointRepository) BatchFindByIDs(ctx context.Context, ids []uint) (ma
 // 缺凭据行的 OAuth 端点保守标记为 reauth_required（配置不完整不可用，fail-closed）——
 // 只跳过填充会让解析层把零值当"非 OAuth"放行，失效端点仍会被选中。
 func (r *endpointRepository) fillOAuthStatus(ctx context.Context, eps []*aggregate.Endpoint) error {
-	oauthIDs := make([]uint, 0, len(eps))
-	for _, ep := range eps {
-		if ep.AuthType().IsOAuth() {
-			oauthIDs = append(oauthIDs, ep.AggregateID())
-		}
-	}
+	oauthIDs := lo.FilterMap(eps, func(ep *aggregate.Endpoint, _ int) (uint, bool) {
+		return ep.AggregateID(), ep.AuthType().IsOAuth()
+	})
 	if len(oauthIDs) == 0 {
 		return nil
 	}
@@ -119,10 +112,9 @@ func (r *endpointRepository) fillOAuthStatus(ctx context.Context, eps []*aggrega
 		Find(&records).Error; err != nil {
 		return ierr.Wrap(ierr.ErrDBQuery, err, "fill oauth credential status")
 	}
-	statusByEndpoint := make(map[uint]enum.OAuthCredentialStatus, len(records))
-	for _, record := range records {
-		statusByEndpoint[record.EndpointID] = enum.OAuthCredentialStatus(record.Status)
-	}
+	statusByEndpoint := lo.SliceToMap(records, func(record *dbmodel.EndpointOAuthCredential) (uint, enum.OAuthCredentialStatus) {
+		return record.EndpointID, enum.OAuthCredentialStatus(record.Status)
+	})
 	for _, ep := range eps {
 		if !ep.AuthType().IsOAuth() {
 			continue

@@ -9,6 +9,7 @@ import (
 	"os"
 
 	"github.com/charmbracelet/huh"
+	"github.com/samber/lo"
 	"golang.org/x/term"
 
 	"github.com/hcd233/aris-proxy-api/internal/client/api"
@@ -68,12 +69,10 @@ func RunExport(ctx context.Context, opts ExportOptions) error {
 	// 回显拉取结果（spinner 结束会清屏，保留上下文到终端输出）
 	printLine(out, ui.CheckRowOK(fmt.Sprintf(constant.ClientModelExportFetchDoneFormat, len(models)), ""))
 
-	selectedIdx := map[string]bool{}
-	options := make([]huh.Option[string], 0, len(models))
-	for _, m := range models {
+	options := lo.Map(models, func(m api.ClientModel, _ int) huh.Option[string] {
 		label := fmt.Sprintf(constant.ClientModelExportOptionFormat, m.Alias, m.UpstreamModel, m.ContextLength, m.MaxOutputTokens)
-		options = append(options, huh.NewOption(label, m.Alias))
-	}
+		return huh.NewOption(label, m.Alias)
+	})
 	var selectedAliases []string
 	field := huh.NewMultiSelect[string]().
 		Title(constant.ClientModelExportSelectModelsTitle).
@@ -88,23 +87,18 @@ func RunExport(ctx context.Context, opts ExportOptions) error {
 	if formErr := newForm(ttyIn, ttyOut, field).Run(); formErr != nil {
 		return formErr
 	}
-	for _, a := range selectedAliases {
-		selectedIdx[a] = true
-	}
+	selectedIdx := lo.SliceToMap(selectedAliases, func(alias string) (string, bool) { return alias, true })
 
-	var selected []TargetModel
-	for _, m := range models {
-		if selectedIdx[m.Alias] {
-			selected = append(selected, TargetModel{
-				Alias:           m.Alias,
-				UpstreamModel:   m.UpstreamModel,
-				ContextLength:   m.ContextLength,
-				MaxOutputTokens: m.MaxOutputTokens,
-				Capabilities:    m.Capabilities,
-				Cost:            toTargetCost(m.Cost),
-			})
-		}
-	}
+	selected := lo.FilterMap(models, func(m api.ClientModel, _ int) (TargetModel, bool) {
+		return TargetModel{
+			Alias:           m.Alias,
+			UpstreamModel:   m.UpstreamModel,
+			ContextLength:   m.ContextLength,
+			MaxOutputTokens: m.MaxOutputTokens,
+			Capabilities:    m.Capabilities,
+			Cost:            toTargetCost(m.Cost),
+		}, selectedIdx[m.Alias]
+	})
 	// 回显选中模型（huh 表单结束会清屏，保留交互上下文到终端输出）
 	printLine(out, ui.SectionTitle(constant.ClientModelExportSelectedTitle))
 	for _, m := range selected {
@@ -112,10 +106,9 @@ func RunExport(ctx context.Context, opts ExportOptions) error {
 	}
 
 	targets := Targets()
-	targetOptions := make([]huh.Option[string], 0, len(targets))
-	for _, tgt := range targets {
-		targetOptions = append(targetOptions, huh.NewOption(tgt.Label(), tgt.Key()))
-	}
+	targetOptions := lo.Map(targets, func(tgt Target, _ int) huh.Option[string] {
+		return huh.NewOption(tgt.Label(), tgt.Key())
+	})
 	var targetKey string
 	selectField := huh.NewSelect[string]().
 		Title(constant.ClientModelExportSelectTargetTitle).
@@ -125,13 +118,7 @@ func RunExport(ctx context.Context, opts ExportOptions) error {
 		return formErr
 	}
 
-	var target Target
-	for _, tgt := range targets {
-		if tgt.Key() == targetKey {
-			target = tgt
-			break
-		}
-	}
+	target, _ := lo.Find(targets, func(tgt Target) bool { return tgt.Key() == targetKey })
 
 	home, homeErr := os.UserHomeDir()
 	if homeErr != nil {

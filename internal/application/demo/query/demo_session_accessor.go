@@ -2,8 +2,7 @@ package query
 
 import (
 	"context"
-
-	"github.com/samber/lo"
+	"slices"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/demo/port"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
@@ -31,5 +30,5 @@ func (a *demoSessionAccessor) IsAllowed(ctx context.Context, sessionID uint) (bo
 	if err != nil {
 		return false, err
 	}
-	return lo.Contains(ids, sessionID), nil
+	return slices.Contains(ids, sessionID), nil
 }

@@ -72,10 +72,7 @@ func (h *listUpstreamHandler) Handle(ctx context.Context, q port.ListUpstreamQue
 		return nil, 0, nil, err
 	}
 
-	modelsByEp := make(map[uint][]*llmagg.Model, len(allIDs))
-	for _, m := range models {
-		modelsByEp[m.EndpointID()] = append(modelsByEp[m.EndpointID()], m)
-	}
+	modelsByEp := lo.GroupBy(models, func(m *llmagg.Model) uint { return m.EndpointID() })
 
 	matchedIDs := allIDs
 	if q.Query != "" {
@@ -146,12 +143,10 @@ func (h *listUpstreamHandler) loadUsers(ctx context.Context, epsByID map[uint]*l
 // loadOAuthDisplays 批量拉取本页 OAuth 端点的凭据展示投影（一次 IN 查询，不解密 token）；
 // 查询失败 fail-soft（该组 OAuth 视图缺省）。
 func (h *listUpstreamHandler) loadOAuthDisplays(ctx context.Context, pageIDs []uint, epsByID map[uint]*llmagg.Endpoint) map[uint]vo.OAuthCredentialDisplay {
-	oauthIDs := make([]uint, 0, len(pageIDs))
-	for _, id := range pageIDs {
-		if ep := epsByID[id]; ep != nil && ep.AuthType().IsOAuth() {
-			oauthIDs = append(oauthIDs, id)
-		}
-	}
+	oauthIDs := lo.FilterMap(pageIDs, func(id uint, _ int) (uint, bool) {
+		ep := epsByID[id]
+		return id, ep != nil && ep.AuthType().IsOAuth()
+	})
 	if len(oauthIDs) == 0 {
 		return map[uint]vo.OAuthCredentialDisplay{}
 	}
@@ -262,15 +257,14 @@ func toOAuthView(authType enum.EndpointAuthType, cred *vo.OAuthCredentialDisplay
 
 // toUpstreamQuotaView 领域额度快照 → 扁平视图（Windows 恒非 nil，前端无需 null 分支）。
 func toUpstreamQuotaView(snapshot vo.QuotaSnapshot) *port.UpstreamQuotaSnapshotView {
-	windows := make([]port.UpstreamQuotaWindowView, 0, len(snapshot.Windows))
-	for _, w := range snapshot.Windows {
-		windows = append(windows, port.UpstreamQuotaWindowView{
+	windows := lo.Map(snapshot.Windows, func(w vo.QuotaWindow, _ int) port.UpstreamQuotaWindowView {
+		return port.UpstreamQuotaWindowView{
 			Key:           w.Key,
 			UsedPercent:   w.UsedPercent,
 			ResetsAt:      w.ResetsAt,
 			WindowMinutes: w.WindowMinutes,
-		})
-	}
+		}
+	})
 	return &port.UpstreamQuotaSnapshotView{Windows: windows, PlanType: snapshot.PlanType, CapturedAt: snapshot.CapturedAt}
 }
 

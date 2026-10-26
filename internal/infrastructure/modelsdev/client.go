@@ -14,6 +14,7 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/redis/go-redis/v9"
+	"github.com/samber/lo"
 
 	"github.com/hcd233/aris-proxy-api/internal/application/model/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
@@ -177,10 +178,9 @@ func buildQuote(cost modelsDevCost) (port.PricingQuote, error) {
 		}
 		byMin[tier.ContextMin] = tier // 同起点以 tiers 条目为准
 	}
-	out := make([]port.PricingTier, 0, len(byMin))
-	for _, min := range slices.Sorted(maps.Keys(byMin)) {
-		out = append(out, byMin[min])
-	}
+	out := lo.Map(slices.Sorted(maps.Keys(byMin)), func(minCtx int64, _ int) port.PricingTier {
+		return byMin[minCtx]
+	})
 	return port.PricingQuote{Tiers: out}, nil
 }
 

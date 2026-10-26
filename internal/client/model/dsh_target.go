@@ -13,6 +13,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/samber/lo"
 	"gopkg.in/yaml.v3"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
@@ -84,23 +85,17 @@ func dshProfileName(home string) string {
 	if err != nil {
 		return constant.ClientModelDSHDefaultProfile
 	}
-	names := make([]string, 0, len(entries))
-	for _, entry := range entries {
-		if entry.IsDir() {
-			names = append(names, entry.Name())
-		}
-	}
+	names := lo.FilterMap(entries, func(entry os.DirEntry, _ int) (string, bool) {
+		return entry.Name(), entry.IsDir()
+	})
 	if len(names) == 0 {
 		return constant.ClientModelDSHDefaultProfile
 	}
-	for _, name := range names {
-		if name == constant.ClientModelDSHDefaultProfile {
-			return name
-		}
+	if slices.Contains(names, constant.ClientModelDSHDefaultProfile) {
+		return constant.ClientModelDSHDefaultProfile
 	}
 	// ponytail: 多 profile 取字典序第一个；需要指定 profile 时再加 DSH_PROFILE 开关
-	slices.Sort(names)
-	return names[0]
+	return slices.Min(names)
 }
 
 // dshCredentialsPath 由补丁层路径反推 DSH home 下的凭证文件
@@ -262,12 +257,9 @@ func capitalizeFirstLetter(word string) string {
 
 // dshInputModalities 与 Pi 同一套 schema：只保留 text/image，其余模态丢弃
 func dshInputModalities(capabilities []string) []string {
-	modalities := make([]string, 0, len(capabilities))
-	for _, capability := range capabilities {
-		if slices.Contains(constant.ClientModelPiInputModalities, capability) {
-			modalities = append(modalities, capability)
-		}
-	}
+	modalities := lo.Filter(capabilities, func(capability string, _ int) bool {
+		return slices.Contains(constant.ClientModelPiInputModalities, capability)
+	})
 	if len(modalities) == 0 {
 		return []string{enum.InputModalityText}
 	}

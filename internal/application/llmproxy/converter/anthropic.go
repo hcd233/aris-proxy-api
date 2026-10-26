@@ -438,21 +438,19 @@ func convertAnthropicContentToOpenAIMessage(blocks []*dto.AnthropicContentBlock)
 		}
 		return "", false
 	})
-	var toolCalls []*dto.OpenAIChatCompletionMessageToolCall
-	for _, block := range blocks {
+	toolCalls := lo.FilterMap(blocks, func(block *dto.AnthropicContentBlock, _ int) (*dto.OpenAIChatCompletionMessageToolCall, bool) {
 		if block.Type != enum.AnthropicContentBlockTypeToolUse {
-			continue
+			return nil, false
 		}
-		name := lo.FromPtr(block.Name)
-		toolCalls = append(toolCalls, &dto.OpenAIChatCompletionMessageToolCall{
+		return &dto.OpenAIChatCompletionMessageToolCall{
 			ID:   block.ID,
 			Type: enum.ToolTypeFunction,
 			Function: &dto.OpenAIChatCompletionMessageFunctionToolCall{
-				Name:      name,
+				Name:      lo.FromPtr(block.Name),
 				Arguments: string(block.Input),
 			},
-		})
-	}
+		}, true
+	})
 
 	if joined := strings.Join(textParts, "\n"); joined != "" {
 		msg.Content = &dto.OpenAIMessageContent{Text: joined}

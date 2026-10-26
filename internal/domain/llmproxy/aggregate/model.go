@@ -1,6 +1,7 @@
 package aggregate
 
 import (
+	"slices"
 	"time"
 
 	"github.com/samber/lo"
@@ -73,7 +74,7 @@ func validateCapabilities(capabilities []enum.InputModality) error {
 	if len(capabilities) == 0 {
 		return ierr.New(ierr.ErrValidation, "model capabilities cannot be empty")
 	}
-	if !lo.Contains(capabilities, enum.InputModalityText) {
+	if !slices.Contains(capabilities, enum.InputModalityText) {
 		return ierr.New(ierr.ErrValidation, "model capabilities must contain text")
 	}
 	if !lo.Every(enum.InputModalities, capabilities) {
