@@ -297,7 +297,7 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
         </Sheet>
       )}
 
-      <div className="flex min-w-0 flex-1 flex-col items-center px-1 leading-tight">
+      <div className="order-last flex w-full min-w-0 shrink-0 flex-col items-center px-1 leading-tight md:order-none md:w-auto md:flex-1 md:shrink">
         <h1
           className={[
             "truncate font-display font-semibold tracking-tight text-foreground",
@@ -323,15 +323,26 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
             .replace("{s}", messageCount === 1 ? "" : "s")}
           {metadata.apiKeyName ? ` · ${metadata.apiKeyName}` : ""}
         </p>
+        {isMobile && !isDemo() && (
+          <div className="mt-1">
+            <ScoreDots
+              score={score}
+              scoring={scoring}
+              onScore={handleScore}
+              onClear={handleDeleteScore}
+              size={16}
+            />
+          </div>
+        )}
       </div>
 
-      {!isDemo() && (
+      {!isDemo() && !isMobile && (
         <ScoreDots
           score={score}
           scoring={scoring}
           onScore={handleScore}
           onClear={handleDeleteScore}
-          size={isMobile ? 20 : 16}
+          size={16}
         />
       )}
 

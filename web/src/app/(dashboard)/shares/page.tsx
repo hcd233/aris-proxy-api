@@ -21,6 +21,7 @@ import { ListEmptyState } from "@/components/list-empty-state";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { useDeleteConfirm } from "@/hooks/use-delete-confirm";
 import { useRequestSeq } from "@/hooks/use-request-seq";
+import { formatDateTime, formatExpiry } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -197,7 +198,7 @@ export default function SharesPage() {
                             </a>
                           </TableCell>
                           <TableCell className="text-xs text-muted-foreground">
-                            {new Date(share.createdAt).toLocaleString()}
+                            {formatDateTime(share.createdAt)}
                           </TableCell>
                           <TableCell
                             className={
@@ -206,7 +207,7 @@ export default function SharesPage() {
                                 : "text-xs text-muted-foreground"
                             }
                           >
-                            {new Date(share.expiresAt).toLocaleString()}
+                            {formatExpiry(share.expiresAt, t("shares.never_expires"))}
                           </TableCell>
                           <TableCell>
                             <Badge variant={expired ? "destructive" : "secondary"}>

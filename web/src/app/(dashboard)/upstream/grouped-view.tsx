@@ -27,7 +27,7 @@ import { Switch } from "@/components/ui/switch";
 import { ProviderIcon } from "@/components/provider-icon";
 import { Plus, Pencil, ChevronRight, Coins, Info, Lock } from "lucide-react";
 import { useT } from "@/lib/i18n";
-import { cn } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 import type { UpstreamGroupItem, UpstreamModelItem, UpstreamEndpointItem } from "@/lib/types";
 import {
   CapabilityBadges,
@@ -168,7 +168,7 @@ function EndpointDetailPopover({
           )}
           {field(
             t("upstream.created_at"),
-            endpoint.createdAt ? new Date(endpoint.createdAt).toLocaleDateString() : "",
+            endpoint.createdAt ? formatDate(endpoint.createdAt) : "",
             false,
           )}
         </div>
@@ -475,7 +475,7 @@ export function GroupedView({
           <TableHead className="w-[9rem]">{t("upstream.col_capabilities")}</TableHead>
           <TableHead className="w-[7rem]">{t("upstream.col_pricing")}</TableHead>
           <TableHead className="w-[3.5rem]">{t("upstream.col_status")}</TableHead>
-          <TableHead className="w-[5.5rem]">{t("upstream.col_created")}</TableHead>
+          <TableHead className="w-[6.5rem]">{t("upstream.col_created")}</TableHead>
           {/* 操作列宽按最宽语言（en「Delete」）实测 ≈168px 给足：7.5rem 时 fixed 布局
               加上 justify-end 会把最左侧的「编辑」按钮裁到不可见（裁剪发生在左侧，无省略号） */}
           <TableHead className="w-[11rem] text-right">{t("upstream.col_actions")}</TableHead>
@@ -646,7 +646,7 @@ export function GroupedView({
                       />
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {new Date(m.createdAt).toLocaleDateString()}
+                      {formatDate(m.createdAt)}
                     </TableCell>
                     <ModelActionsCell
                       isDemo={isDemo}

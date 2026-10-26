@@ -16,8 +16,8 @@ export function ScoreDots({ score, scoring, onScore, onClear, size = 16 }: Score
   const t = useT();
   const [hover, setHover] = useState<number | null>(null);
 
-  const dotSize = Math.round(size * 0.625);
-  const gap = Math.round(size * 0.25);
+  const dotSize = Math.round(size * 0.75);
+  const gap = Math.round(size * 0.75);
   const dotsWidth = 5 * dotSize + 4 * gap;
   const clearReserved = size + gap;
   const containerWidth = dotsWidth + clearReserved;
@@ -49,10 +49,10 @@ export function ScoreDots({ score, scoring, onScore, onClear, size = 16 }: Score
             aria-label={t("score_dots.rate").replace("{value}", String(v))}
             className={cn(
               "relative rounded-full transition-all duration-150 disabled:opacity-30 active:scale-90",
-              "before:absolute before:-inset-1 before:content-['']",
+              "before:absolute before:-inset-1.5 before:content-['']",
               displayScore != null && v <= displayScore
-                ? "bg-primary"
-                : "bg-muted-foreground/30 hover:bg-primary/70",
+                ? "bg-primary ring-1 ring-primary"
+                : "bg-transparent ring-1 ring-muted-foreground/70 hover:bg-primary/15",
             )}
             style={{
               width: `${dotSize}px`,
@@ -69,8 +69,8 @@ export function ScoreDots({ score, scoring, onScore, onClear, size = 16 }: Score
           disabled={scoring}
           aria-label={t("score_dots.remove")}
           className={cn(
-            "absolute right-0 top-1/2 inline-flex -translate-y-1/2 items-center justify-center rounded text-muted-foreground/50 transition-colors hover:text-destructive disabled:opacity-30",
-            "before:absolute before:-inset-1 before:content-['']",
+            "absolute right-0 top-1/2 inline-flex -translate-y-1/2 items-center justify-center rounded text-muted-foreground transition-colors hover:text-destructive disabled:opacity-30",
+            "before:absolute before:-inset-1.5 before:content-['']",
           )}
           style={{
             width: `${size}px`,

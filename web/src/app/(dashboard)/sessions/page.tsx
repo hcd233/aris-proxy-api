@@ -410,7 +410,7 @@ export default function SessionsPage() {
                                 scoring={scoring === s.id}
                                 onScore={(v) => handleScoreSession(s.id, v)}
                                 onClear={() => handleDeleteScore(s.id)}
-                                size={isMobile ? 20 : 16}
+                                size={16}
                               />
                             )}
                             <Badge variant="secondary" className="text-xs">
@@ -481,7 +481,7 @@ export default function SessionsPage() {
                         </TableHead>
                         {/* 摘要不声明宽度：fixed 布局把剩余空间全给这一列 */}
                         <TableHead>{t("sessions.summary")}</TableHead>
-                        <TableHead className="w-[7rem] text-center">
+                        <TableHead className="w-[10rem] text-center">
                           {t("sessions.score")}
                         </TableHead>
                         <TableHead

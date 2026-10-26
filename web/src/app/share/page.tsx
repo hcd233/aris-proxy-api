@@ -2,6 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { MessagesSquare, Share2, Wrench } from "lucide-react";
 
 import { api, ApiError } from "@/lib/api-client";
@@ -250,9 +251,13 @@ function SharedSessionView() {
 
   const headerContent = (
     <>
-      <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
-        <Share2 className="size-[18px]" />
-      </div>
+      <Link
+        href="/"
+        aria-label="Aris Proxy"
+        className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary font-display text-sm font-semibold text-primary-foreground"
+      >
+        A
+      </Link>
       <div className="flex min-w-0 flex-1 flex-col items-center leading-tight">
         <h1
           className={[

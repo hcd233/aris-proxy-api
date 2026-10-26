@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { api } from "@/lib/api-client";
 import { showErrorToast } from "@/lib/api-error-handler";
 import type { CreateShareReqBody } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { cn, formatExpiry } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Spinner } from "@/components/ui/spinner";
@@ -162,7 +162,7 @@ export function ShareDialog({ sessionId, existingShareID, open, onOpenChange }: 
               <p className="text-xs text-muted-foreground">
                 {t("share_dialog.expires_at")}{" "}
                 <span className="font-medium text-foreground/80">
-                  {new Date(expiresAt).toLocaleString()}
+                  {formatExpiry(expiresAt, t("shares.never_expires"))}
                 </span>
               </p>
             )}
