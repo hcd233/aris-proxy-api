@@ -109,9 +109,8 @@
 | Trigger | `/api/web/v1/trigger` | `POST /`、`GET /list`、`PATCH /`、`DELETE /` |
 | Metrics | `/api/web/v1/metrics` | `GET /runtime` |
 | Dataset | `/api/web/v1/dataset` | `GET /preview`、`GET /export`（SSE）、`GET /sample` |
-| Trace | `/api/web/v1/trace` | `GET /list`、`GET /`、`GET /event/list`、`DELETE /` |
 | Demo（公开） | `/api/web/v1/demo` | `POST /login`、`GET /status` |
 | Demo | `/api/web/v1/demo` | `GET /config`、`PATCH /config`、`GET /sessions/list`、`POST /sessions`、`DELETE /sessions` |
-| Client | `/api/cli/v1` | `GET /model/list`、`POST /trace/event`、`GET /aris/client/check` |
+| Client | `/api/cli/v1` | `GET /model/list`、`GET /aris/client/check` |
 | OpenAI | `/api/openai/v1` | `GET /models`、`POST /chat/completions`、`POST /responses` |
 | Anthropic | `/api/anthropic/v1` | `GET /models`、`POST /messages`、`POST /messages/count_tokens` |

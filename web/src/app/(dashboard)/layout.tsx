@@ -52,7 +52,6 @@ import {
   Timer,
   Activity,
   Database,
-  Radar,
   Users,
   Lock,
   Settings2,
@@ -107,7 +106,6 @@ const NAV_GROUPS: NavGroup[] = [
         demoModule: "audit",
       },
       { labelKey: "nav.dataset", href: "/dataset/", icon: <Database className="size-4" /> },
-      { labelKey: "nav.trace", href: "/trace/", icon: <Radar className="size-4" /> },
     ],
   },
   {

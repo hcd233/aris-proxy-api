@@ -57,7 +57,6 @@ import (
 // 嵌入接口空结构体：注册期满足方法集、不解引用（cross_tenant_reference 包惯例）
 type (
 	stubPingHandler       struct{ handler.PingHandler }
-	stubTraceHandler      struct{ handler.TraceHandler }
 	stubTokenHandler      struct{ handler.TokenHandler }
 	stubOauth2Handler     struct{ handler.Oauth2Handler }
 	stubUserHandler       struct{ handler.UserHandler }
@@ -239,7 +238,6 @@ func (f *crossTenantSessionFixture) buildApp(t *testing.T, db *gorm.DB, rdb *red
 		Cache:             rdb,
 		AccessSigner:      jwt.NewAccessTokenSigner(),
 		PingHandler:       &stubPingHandler{},
-		TraceHandler:      &stubTraceHandler{},
 		TokenHandler:      &stubTokenHandler{},
 		Oauth2Handler:     &stubOauth2Handler{},
 		UserHandler:       &stubUserHandler{},
@@ -323,7 +321,7 @@ func bizErrorCode(t *testing.T, data []byte) int64 {
 
 // requireRejected 断言请求被归属守卫拒绝：HTTP 200 信封 + 「无权限」或「不存在」业务码。
 //
-// 两个码都接受：详情/元数据走 ErrNoPermission，trace/demo 风格路径走
+// 两个码都接受：详情/元数据走 ErrNoPermission，demo 风格路径走
 // ErrDataNotExists（防遍历）。但**不接受 0（成功）与其它错误码**——
 // 后者说明没走到守卫（如 DB 错误兜底），会掩盖真实缺陷。
 func requireRejected(t *testing.T, status int, data []byte, what string) {

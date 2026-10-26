@@ -807,7 +807,7 @@ func applyExportFilter(sql *gorm.DB, f session.ExportFilter) *gorm.DB {
 func (r *sessionReadRepository) ListSessionsForExport(ctx context.Context, f session.ExportFilter) ([]*session.ExportSessionRow, error) {
 	// OwnerIDs 为 nil 表示不过滤（admin 路径）；非 nil 且为空（用户名下无 Key）
 	// 短路返回空结果，防止空 owner 列表退化为全量导出（越权泄露全平台会话；
-	// 与 audit/trace 守卫的入口短路风格统一）
+	// 与 audit 守卫的入口短路风格统一）
 	if f.OwnerIDs != nil && len(f.OwnerIDs) == 0 {
 		return []*session.ExportSessionRow{}, nil
 	}

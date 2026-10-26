@@ -13,13 +13,12 @@ import (
 // RegisterCLIAPIRoutes 注册 CLI 分区路由（aris 客户端）。
 //
 // 路径契约：组内路径全部取 constant 的 RoutePath 常量，客户端可见的绝对路径
-// 由 CLIAPIPrefix + RoutePath 同源派生（trace 上报两条与 model/list 一致，
-// 不再各自硬编码）。
+// 由 CLIAPIPrefix + RoutePath 同源派生，不再各自硬编码。
 //
 //	@param cliGroup huma.API
 //	@param deps APIRouterDependencies
 //	@author centonhuang
-//	@update 2026-08-27
+//	@update 2026-10-26
 func RegisterCLIAPIRoutes(cliGroup huma.API, deps APIRouterDependencies) {
 	cliGroup.UseMiddleware(middleware.APIKeyMiddleware(deps.DB, deps.Cache))
 
@@ -36,16 +35,9 @@ func RegisterCLIAPIRoutes(cliGroup huma.API, deps APIRouterDependencies) {
 	}, deps.ClientHandler.HandleListModels)
 
 	huma.Register(cliGroup, huma.Operation{
-		OperationID: "reportTraceEvent", Method: http.MethodPost, Path: constant.ArisClientIngestRoutePath,
-		Summary: "ReportTraceEvent", Description: "Report a codex hook event (API key auth)",
-		Tags:     []string{constant.TagTrace},
-		Security: []map[string][]string{{constant.SecuritySchemeAPIKey: {}}},
-	}, deps.TraceHandler.HandleReportTraceEvent)
-
-	huma.Register(cliGroup, huma.Operation{
 		OperationID: "checkArisClientAPIKey", Method: http.MethodGet, Path: constant.ArisClientCheckRoutePath,
 		Summary: "CheckArisClientAPIKey", Description: "Validate the aris client API key",
-		Tags:     []string{constant.TagTrace},
+		Tags:     []string{constant.TagClient},
 		Security: []map[string][]string{{constant.SecuritySchemeAPIKey: {}}},
-	}, deps.TraceHandler.HandleCheckArisClient)
+	}, deps.ClientHandler.HandleCheckArisClient)
 }

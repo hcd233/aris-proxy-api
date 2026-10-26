@@ -80,7 +80,4 @@ func RegisterWebAPIRoutes(webRoot huma.API, deps APIRouterDependencies) {
 
 	datasetGroup := huma.NewGroup(jwtGroup, "/dataset")
 	initDatasetRouter(datasetGroup, deps.DatasetHandler)
-
-	traceGroup := huma.NewGroup(jwtGroup, "/trace")
-	initTraceQueryRouter(traceGroup, deps.TraceHandler)
 }

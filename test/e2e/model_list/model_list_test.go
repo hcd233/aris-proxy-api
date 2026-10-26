@@ -51,7 +51,6 @@ const (
 // 只有真正请求某条路由时才会 panic。
 type (
 	stubPingHandler       struct{ handler.PingHandler }
-	stubTraceHandler      struct{ handler.TraceHandler }
 	stubTokenHandler      struct{ handler.TokenHandler }
 	stubOauth2Handler     struct{ handler.Oauth2Handler }
 	stubUserHandler       struct{ handler.UserHandler }
@@ -106,7 +105,6 @@ func TestModelListRouteRegistered(t *testing.T) {
 	router.RegisterAPIRouter(api, router.APIRouterDependencies{
 		DB:                db,
 		PingHandler:       &stubPingHandler{},
-		TraceHandler:      &stubTraceHandler{},
 		TokenHandler:      &stubTokenHandler{},
 		Oauth2Handler:     &stubOauth2Handler{},
 		UserHandler:       &stubUserHandler{},

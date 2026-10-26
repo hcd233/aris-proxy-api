@@ -6,14 +6,14 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/hcd233/aris-proxy-api/internal/client/trace"
+	clientconfig "github.com/hcd233/aris-proxy-api/internal/client/config"
 	"github.com/hcd233/aris-proxy-api/internal/client/ui"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 )
 
 // StatusOptions aris status 运行参数
 type StatusOptions struct {
-	Paths      trace.Paths
+	Paths      clientconfig.Paths
 	In         io.Reader
 	Out        io.Writer
 	JSON       bool
@@ -24,7 +24,7 @@ type StatusOptions struct {
 func RunStatus(ctx context.Context, opts StatusOptions) error {
 	paths := opts.Paths
 	if paths.Root == "" {
-		resolved, err := trace.DefaultPaths()
+		resolved, err := clientconfig.DefaultPaths()
 		if err != nil {
 			return err
 		}

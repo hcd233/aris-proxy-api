@@ -34,7 +34,6 @@ const routeTestAPIKey = "sk-route-regression"
 // 注册期不会解引用，只有真正请求该路由才会 panic（本用例只请求模型分发路由）。
 type (
 	stubPingHandler       struct{ handler.PingHandler }
-	stubTraceHandler      struct{ handler.TraceHandler }
 	stubTokenHandler      struct{ handler.TokenHandler }
 	stubOauth2Handler     struct{ handler.Oauth2Handler }
 	stubUserHandler       struct{ handler.UserHandler }
@@ -95,7 +94,6 @@ func TestClientModelsRouteMatchesSDKPath(t *testing.T) {
 	router.RegisterAPIRouter(api, router.APIRouterDependencies{
 		DB:                db,
 		PingHandler:       &stubPingHandler{},
-		TraceHandler:      &stubTraceHandler{},
 		TokenHandler:      &stubTokenHandler{},
 		Oauth2Handler:     &stubOauth2Handler{},
 		UserHandler:       &stubUserHandler{},

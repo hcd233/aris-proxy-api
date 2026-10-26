@@ -59,7 +59,6 @@ func TestClientSDKListModelsAgainstProductionRoutes(t *testing.T) {
 	router.RegisterAPIRouter(api, router.APIRouterDependencies{
 		DB:                db,
 		PingHandler:       &stubPingHandler{},
-		TraceHandler:      &stubTraceHandler{},
 		TokenHandler:      &stubTokenHandler{},
 		Oauth2Handler:     &stubOauth2Handler{},
 		UserHandler:       &stubUserHandler{},

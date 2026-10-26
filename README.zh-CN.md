@@ -2,7 +2,7 @@
 
 [English](README.md) | **简体中文**
 
-面向个人大模型使用场景的 **MaaS 模型服务聚合网关 + 使用数据沉淀平台 + Agent Harness 调用链路分析平台**。
+面向个人大模型使用场景的 **MaaS 模型服务聚合网关 + 使用数据沉淀平台**。
 
 Aris 将多个 MaaS 平台、多种模型和多种 API 协议统一接入，通过模型别名、上游端点管理、协议转换、鉴权、限流、审计和可视化管理，客户端只需面向统一网关地址和模型别名发起请求，无需感知供应商、真实模型名和上游接口差异。
 
@@ -11,9 +11,8 @@ Aris 将多个 MaaS 平台、多种模型和多种 API 协议统一接入，通�
 - **模型聚合与统一入口**：Endpoint/Model 两级配置（用户级多租户，普通用户管理自己的端点与模型，admin 可按用户过滤与代建），模型别名屏蔽上游差异，一个别名可关联多个 Endpoint；同时提供 OpenAI Chat Completions、OpenAI Responses、Anthropic Messages 兼容入口，并支持 OpenAI 与 Anthropic 之间的跨协议转换（含 SSE 流式事件）。
 - **数据沉淀与治理**：模型交互聚合为 Session，Message/Tool 以协议无关结构存储并按 checksum 内容寻址去重；支持评分、分享链接、会话筛选与 ShareGPT JSONL 流式导出，为私有模型 SFT 沉淀数据资产。
 - **审计与运行监控**：每次调用记录 Token 四类用量、首 Token 延迟、流式时长、上游状态码和 Trace ID；提供趋势/成功率/吞吐/用量统计、Cron 审计，以及跨 Pod 的 QPS、P95、SSE 连接、goroutines/heap/CPU 运行时监控。
-- **Agent Harness Trace 分析**：独立编译的 `aris` CLI 采集 Codex Hook 事件与 rollout 记录，本地 spool 批量上报；服务端将事件重建为可阅读的 TraceConversation，用于观察 Agent 的模型请求、推理过程与工具调用链路。
 - **订阅账号 OAuth 接入（Claude Code / Codex）**：订阅账号以独立的端点类型（`oauth_anthropic` / `oauth_openai`）经官方 OAuth 授权接入。access token 自动刷新（请求路径 3 分钟提前量 + 维护 Cron），凭据以 AES-256-GCM 密文存储；熔断键使用端点级稳定身份，token 轮换不会重置熔断状态。模型别名像普通端点一样绑定——调度、fallback、审计、计价与数据治理零改动复用；订阅窗口用量（Claude 5h/7d、Codex primary/secondary）由 Cron 探测并在管理端展示。
-- **客户端配置导出**：从管理后台一键生成 OpenCode、Claude Code、Codex、Pi、DSH 的接入配置或安装脚本，幂等 patch、`.bak` 备份、原子替换、凭证文件 `0600`。
+- **客户端配置导出**：`aris model export` 从服务端启用模型列表生成 OpenCode、Claude Code、Codex、Pi、DSH 的接入配置，幂等 patch、`.bak` 备份、原子替换、凭证文件 `0600`。
 - **安全与治理**：GitHub/Google OAuth2 登录 + JWT 管理鉴权，Proxy API Key 调用鉴权，`pending`/`demo`/`user`/`admin` 四级权限与用户审核（demo 演示账户：模块白名单 + 会话白名单/全量脱敏双视角 + 一键登录 + 访问审计），Aho-Corasick 触发词拦截，Redis 令牌桶请求限流与 Token 用量限流。
 
 ## 同类项目横向对比
@@ -24,7 +23,6 @@ Aris 将多个 MaaS 平台、多种模型和多种 API 协议统一接入，通�
 
 - **对话正文是数据模型选择，不是路线图排期。** Aris 落库，因此内容寻址去重、评分与 ShareGPT/SFT 导出是结构性能力；其余四家没有会话聚合——LiteLLM 可显式开启，但数据仍是 spend-log 形态，其数据集导出面向评测。
 - **「配额强控」与「成本估算」是两种设计。** new-api 与 sub2api 走配额/余额扣减（预扣 → 结算、窗口软上限）；LiteLLM 的预算族依赖数据库，**无 DB 时 fail open**；Aris 只做成本估算，没有预算闸门。
-- **Agent 可观测性是同一个问题的三种答案。** Aris：客户端 Hook + 本地 spool + 服务端重建，不改动 Agent 运行时；LiteLLM：SDK harness + CLI 包装 + 服务端 agentic loop，且 trace 分析落在独立的 Lens 服务；OmniRoute：在流量层捕获，可视化对象是路由与压缩而非 Agent 步骤。
 
 标记：✅ 有 · ◐ 部分 · — 无。评分依据各项目在快照时点的自身 README/官方文档；带编号的单元格见下方[说明](#说明)。
 
@@ -43,14 +41,12 @@ Aris 将多个 MaaS 平台、多种模型和多种 API 协议统一接入，通�
 | **调用审计与用量统计** | ✅[11] | ✅[11] | ✅ | ◐ | ◐[11] |
 | **对话正文落库** | ✅[12] | —[12] | ◐[12] | — | — |
 | **对话数据集导出（ShareGPT/SFT）** | ✅[13] | — | ◐[13] | — | — |
-| **Agent Harness 调用链采集** | ✅[14] | — | ✅[14] | ◐[14] | — |
-| **Trace 重建与可视化** | ✅[15] | — | ✅[15] | ◐[15] | — |
-| **内容安全与脱敏** | ✅[16] | ◐[16] | ✅[16] | ✅ | ◐ |
-| **可观测性与运行时监控** | ✅ | ◐[17] | ✅[17] | ◐[17] | ◐[17] |
-| **Token 压缩** | ✅[18] | — | ◐[18] | ✅[18] | — |
-| **MCP / A2A** | — | ◐[19] | ✅[19] | ✅[19] | ◐[19] |
-| **部署与水平扩展** | ✅[20] | ✅[20] | ✅[20] | ◐[20] | ✅ |
-| **扩展机制** | ◐[21] | ✅[21] | ✅[21] | ✅[21] | ✅[21] |
+| **内容安全与脱敏** | ✅[14] | ◐[14] | ✅[14] | ✅ | ◐ |
+| **可观测性与运行时监控** | ✅ | ◐[15] | ✅[15] | ◐[15] | ◐[15] |
+| **Token 压缩** | ✅[16] | — | ◐[16] | ✅[16] | — |
+| **MCP / A2A** | — | ◐[17] | ✅[17] | ✅[17] | ◐[17] |
+| **部署与水平扩展** | ✅[18] | ✅[18] | ✅[18] | ◐[18] | ✅ |
+| **扩展机制** | ◐[19] | ✅[19] | ✅[19] | ✅[19] | ✅[19] |
 
 ### 说明
 
@@ -80,25 +76,23 @@ Aris 将多个 MaaS 平台、多种模型和多种 API 协议统一接入，通�
 
 **13 · 对话数据集导出** — Aris ✅：ShareGPT JSONL 流式导出（SSE 带进度），保留多轮对话、`<think>` 思维链与工具调用，支持评分/模型/时间窗筛选与导出前统计预览。LiteLLM ◐：Lens datasets（Export JSONL）面向**评测**，需独立 Lens 服务 + ClickHouse，无 ShareGPT/SFT 格式。
 
-**14 · Agent Harness 调用链采集** — Aris ✅：独立编译的 `aris` CLI 注册 Codex/Claude Code Hook，fail-open，本地 spool（`0600`，256 MiB 上限）批量上报。LiteLLM ✅：三套并存——`litellm.agent()` SDK harness（8 类 typed event）、`lite claude\|codex\|opencode` 包装器（打 `harness,<name>` 标签）、服务端 `agentic_loop_hook`（默认 3 次重跑，流式 Chat 不触发）；均 beta，沙箱需预装 CLI。OmniRoute ◐：一键 CLI 接入 + MITM/TPROXY 捕获，属流量层而非 Hook 事件级。
 
-**15 · Trace 重建与可视化** — Aris ✅：服务端重建为 `TraceConversation`，按消息/工具/`session_meta` 时间线渲染并可展开原始 payload。LiteLLM ✅：Lens（独立服务 + ClickHouse）提供对话视图、subagent 分支、Investigations 与 OTLP API——early access，`/lens` 仅 proxy admin 可用，Claude Code 依赖其自带 OTel exporter（有覆盖缺口），Codex 依赖第三方集成（自动安装仅 macOS）。OmniRoute ◐：Studios 可视化路由级联与压缩瀑布，非 Agent 调用链。
 
-**16 · 内容安全与脱敏** — Aris ✅：Aho-Corasick 触发词三动作（`deny`/`omit`/`capture`），Redis pub/sub + 版本轮询热更新。LiteLLM ✅：约 50 个 guardrail 集成、四种模式，但**流式输出上改写不生效**，且 `llmguard`/`llamaguard`/`hide_secrets`/`lakera` 需企业授权。new-api ◐：仅有渠道额外设置与上游 Header 覆盖。
+**14 · 内容安全与脱敏** — Aris ✅：Aho-Corasick 触发词三动作（`deny`/`omit`/`capture`），Redis pub/sub + 版本轮询热更新。LiteLLM ✅：约 50 个 guardrail 集成、四种模式，但**流式输出上改写不生效**，且 `llmguard`/`llamaguard`/`hide_secrets`/`lakera` 需企业授权。new-api ◐：仅有渠道额外设置与上游 Header 覆盖。
 
-**17 · 可观测性与运行时监控** — LiteLLM ✅：指标族最完整（TTFT、overhead、预算余量、准入/拒绝、数据库队列）、2 个官方 Grafana 面板，专用指标端口绕过虚拟 Key 鉴权（勿暴露公网）。new-api ◐：看板 + 健康探测 + Webhook 告警 + pprof/Pyroscope，仅自定义 `/api/perf-metrics`，**无 Prometheus 依赖**。sub2api ◐：管理台 + 渠道监控，`go.mod` 无 Prometheus 依赖。OmniRoute ◐：看板 + `X-OmniRoute-*` 头 + SQLite 审计轨迹，无 `/metrics`。
+**15 · 可观测性与运行时监控** — LiteLLM ✅：指标族最完整（TTFT、overhead、预算余量、准入/拒绝、数据库队列）、2 个官方 Grafana 面板，专用指标端口绕过虚拟 Key 鉴权（勿暴露公网）。new-api ◐：看板 + 健康探测 + Webhook 告警 + pprof/Pyroscope，仅自定义 `/api/perf-metrics`，**无 Prometheus 依赖**。sub2api ◐：管理台 + 渠道监控，`go.mod` 无 Prometheus 依赖。OmniRoute ◐：看板 + `X-OmniRoute-*` 头 + SQLite 审计轨迹，无 `/metrics`。
 
-**18 · Token 压缩** — Aris ✅：转发前对 tool output 做确定性压缩，typed DTO 就地修改，策略 `smart_crusher`/`log_compressor`/`search_compressor`/`passthrough` 并记录压缩前后。OmniRoute ✅：12 引擎流水线（RTK、Caveman、LLMLingua-2、GCF v3.2、OmniGlyph）+ 默认开启膨胀保护。LiteLLM ◐：`compress()`（beta）。
+**16 · Token 压缩** — Aris ✅：转发前对 tool output 做确定性压缩，typed DTO 就地修改，策略 `smart_crusher`/`log_compressor`/`search_compressor`/`passthrough` 并记录压缩前后。OmniRoute ✅：12 引擎流水线（RTK、Caveman、LLMLingua-2、GCF v3.2、OmniGlyph）+ 默认开启膨胀保护。LiteLLM ◐：`compress()`（beta）。
 
-**19 · MCP / A2A** — LiteLLM ✅：MCP Gateway（按 Key 的 server/tool 权限、MCP 成本追踪、`/mcp` 可被 Cursor 接入）+ A2A Agent Gateway。OmniRoute ✅：内置 MCP 服务端 110 工具（stdio/HTTP/SSE，33 scope）+ A2A v0.3。new-api ◐：仅 JS 任务插件 + 市场。sub2api ◐：仅 `hashicorp/go-plugin` 插件体系。
+**17 · MCP / A2A** — LiteLLM ✅：MCP Gateway（按 Key 的 server/tool 权限、MCP 成本追踪、`/mcp` 可被 Cursor 接入）+ A2A Agent Gateway。OmniRoute ✅：内置 MCP 服务端 110 工具（stdio/HTTP/SSE，33 scope）+ A2A v0.3。new-api ◐：仅 JS 任务插件 + 市场。sub2api ◐：仅 `hashicorp/go-plugin` 插件体系。
 
-**20 · 部署与水平扩展** — Aris ✅：Compose/K8s（`preStop` + `terminationGracePeriodSeconds: 660`）+ 八步优雅关闭排空 SSE，跨 Pod 状态走 Redis。new-api ✅：多节点需共享主库 + 统一 `SESSION_SECRET`/`CRYPTO_SECRET`，共享限流需 Redis。LiteLLM ✅：Helm（HPA/KEDA）+ AWS/GCP 官方 Terraform（无 Azure）+ cosign 签名 + Prisma 迁移，多实例必须 Redis。OmniRoute ◐：单节点 SQLite，远程模式用作用域 token 驱动另一实例。
+**18 · 部署与水平扩展** — Aris ✅：Compose/K8s（`preStop` + `terminationGracePeriodSeconds: 660`）+ 八步优雅关闭排空 SSE，跨 Pod 状态走 Redis。new-api ✅：多节点需共享主库 + 统一 `SESSION_SECRET`/`CRYPTO_SECRET`，共享限流需 Redis。LiteLLM ✅：Helm（HPA/KEDA）+ AWS/GCP 官方 Terraform（无 Azure）+ cosign 签名 + Prisma 迁移，多实例必须 Redis。OmniRoute ◐：单节点 SQLite，远程模式用作用域 token 驱动另一实例。
 
-**21 · 扩展机制** — Aris ◐：无插件体系，扩展点是独立编译的 `aris` 客户端（新增 agent = 1 adapter 文件 + 2 行注册）、models.dev 导入与 Fx 装配。new-api ✅：JS 任务插件（文档化 API + 市场）+ 自定义 OAuth 提供商。LiteLLM ✅：8 个 `CustomLogger` 挂载点 + 任意语言 guardrail API + 自定义认证/SSO/密钥管理 + 改一个 JSON 注册提供商 + `s3://`/`gcs://` 加载回调。OmniRoute ✅：插件框架、市场与 skills 框架。sub2api ✅：`hashicorp/go-plugin` 与模块化 skills。
+**19 · 扩展机制** — Aris ◐：无插件体系，扩展点是 models.dev 导入与 Fx 装配。new-api ✅：JS 任务插件（文档化 API + 市场）+ 自定义 OAuth 提供商。LiteLLM ✅：8 个 `CustomLogger` 挂载点 + 任意语言 guardrail API + 自定义认证/SSO/密钥管理 + 改一个 JSON 注册提供商 + `s3://`/`gcs://` 加载回调。OmniRoute ✅：插件框架、市场与 skills 框架。sub2api ✅：`hashicorp/go-plugin` 与模块化 skills。
 
 ## 系统架构
 
-后端按 DDD 分层组织：接口层（router / 十级中间件链 / handler / dto）→ 应用层（17 个用例模块的 `command`/`query`/`port`）→ 领域层（聚合、值对象、仓储接口）；基础设施层反向实现仓储接口完成依赖倒置，Cron 定时治理与 `bootstrap`/Fx 装配作为横切关注点。三类调用方分别是 Web 管理后台（JWT）、`aris` Trace CLI 与 Agentic 客户端（`X-API-Key`）。
+后端按 DDD 分层组织：接口层（router / 十级中间件链 / handler / dto）→ 应用层（16 个用例模块的 `command`/`query`/`port`）→ 领域层（聚合、值对象、仓储接口）；基础设施层反向实现仓储接口完成依赖倒置，Cron 定时治理与 `bootstrap`/Fx 装配作为横切关注点。两类调用方分别是 Web 管理后台（JWT）与 Agentic 客户端（`X-API-Key`）。
 
 ![系统总览 · DDD 分层](docs/diagrams/archify/aris-arch-01.gif)
 
@@ -112,15 +106,11 @@ Aris 将多个 MaaS 平台、多种模型和多种 API 协议统一接入，通�
 
 ![上游容错：熔断 / 隔离 / 降级](docs/diagrams/archify/aris-arch-14.gif)
 
-**会话数据模型与生命周期**：LLM 转发与 Trace 摄取两路写入 Session 聚合根，Message/Tool 按 checksum 内容寻址去重，审计、缓存、导出与后台消费围绕其展开。
+**会话数据模型与生命周期**：LLM 转发写入 Session 聚合根，Message/Tool 按 checksum 内容寻址去重，审计、缓存、导出与后台消费围绕其展开。
 
 ![会话数据模型与生命周期](docs/diagrams/archify/aris-arch-03.gif)
 
-**Agent Harness Trace 摄取**：Codex / Claude Code Hook 与 Rollout 事件由 `aris` CLI（fail-open）本地 spool 批量上报，鉴权去重后落库，Web 端投影为可阅读的调用链路。
-
-![Agent Harness Trace 摄取](docs/diagrams/archify/aris-arch-04.gif)
-
-**Web 管理后台前端架构**：浏览器加载静态导出产物 → 根布局 Provider 链（I18n → Theme → Auth）→ 路由组（后台 14 页 / 公开 3 页，管理员页由 `PermissionGuard` 守卫）→ 组件与 6 个通用 hooks → `src/lib` 作为唯一后端出入口（Bearer 注入、401 单飞刷新、错误码 toast、数据集 SSE 导出）。
+**Web 管理后台前端架构**：浏览器加载静态导出产物 → 根布局 Provider 链（I18n → Theme → Auth）→ 路由组（后台 13 页 / 公开 3 页，管理员页由 `PermissionGuard` 守卫）→ 组件与 6 个通用 hooks → `src/lib` 作为唯一后端出入口（Bearer 注入、401 单飞刷新、错误码 toast、数据集 SSE 导出）。
 
 ![Web 管理后台前端架构](docs/diagrams/archify/aris-arch-05.gif)
 
@@ -213,7 +203,7 @@ cd web && npm ci && npm run dev   # http://localhost:3000
 
 | 命令 | 说明 |
 | --- | --- |
-| `make build` | 生产构建服务端 + 四平台 Trace 客户端 |
+| `make build` | 生产构建服务端 + 四平台 `aris` 客户端 |
 | `make build-server` / `make build-client[-all]` | 分别构建服务端 / `aris` 客户端 |
 | `make web-build` | 构建前端到 `internal/web/dist` 并 gzip 预压缩 |
 | `make test` / `make test-cover` | 全量测试 / 覆盖率报告 |
@@ -221,7 +211,7 @@ cd web && npm ci && npm run dev   # http://localhost:3000
 | `make web-lint` / `make web-format` | 前端 ESLint / Prettier |
 | `make fgprof` | 拉取远程 fgprof profile 并打开火焰图 |
 
-服务端 CLI：`server start`、`database migrate`、`lint conv/static`（`cmd/server`）；Trace 客户端 CLI：`aris init`、`aris model export`、`aris trace ingest`、`aris trace install`、`aris status`、`aris update`（`cmd/client`）。
+服务端 CLI：`server start`、`database migrate`、`lint conv/static`（`cmd/server`）；`aris` 客户端 CLI：`aris init`、`aris model export`、`aris status`、`aris update`（`cmd/client`）。
 
 ## API 概览
 
@@ -230,14 +220,14 @@ cd web && npm ci && npm run dev   # http://localhost:3000
 | 前缀 | 认证 | 说明 |
 | --- | --- | --- |
 | `/api/openai/v1` · `/api/anthropic/v1` | `X-API-Key` | LLM 兼容入口：chat/completions、responses、messages、count_tokens、models |
-| `/api/cli/v1/model/list` · `/trace/event` · `/aris/client/check` | `X-API-Key` | `aris` 客户端模型分发、Trace 事件上报与客户端 Key 检查 |
+| `/api/cli/v1/model/list` · `/aris/client/check` | `X-API-Key` | `aris` 客户端模型分发与客户端 Key 检查 |
 | `/api/web/v1/oauth2` · `/token` | 公开（限流） | OAuth2 登录/回调、Token 刷新 |
 | `/api/web/v1/user` | JWT | 个人资料；管理员可列表、审核（approve/demote）、删除用户 |
-| `/api/web/v1/apikey` · `/session` · `/dataset` · `/trace` | JWT + Owner 隔离 | API Key、会话/分享、数据集导出、Trace 查询 |
+| `/api/web/v1/apikey` · `/session` · `/dataset` | JWT + Owner 隔离 | API Key、会话/分享、数据集导出 |
 | `/api/web/v1/endpoint` · `/model` · `/upstream` | JWT（用户级多租户） | 端点、模型（用户隔离，admin 可按用户过滤与代建）、上游聚合视图 |
 | `/api/web/v1/trigger` · `/cron` · `/audit/cron` · `/metrics` | JWT + admin | 触发词、Cron 管理/触发、Cron 审计、运行时指标 |
 | `/api/web/v1/audit` | JWT | 模型调用审计与统计（管理员可见全局） |
-| `/health` `/ready` `/ssehealth` `/metrics` `/install.sh` | 公开 | 探针、Prometheus 指标、Trace 客户端安装脚本 |
+| `/health` `/ready` `/ssehealth` `/metrics` `/install.sh` | 公开 | 探针、Prometheus 指标、`aris` 客户端安装脚本 |
 
 ## 部署
 
@@ -251,19 +241,19 @@ cd web && npm ci && npm run dev   # http://localhost:3000
 
 ```text
 cmd/server        服务端入口（start / database migrate / lint）
-cmd/client        aris Trace 客户端入口
+cmd/client        aris 客户端入口
 internal/
   router/         路由注册（Huma Operation + 中间件绑定）
   handler/        HTTP 适配层
-  application/    用例编排（identity/session/llmproxy/trace/...）
+  application/    用例编排（identity/session/llmproxy/...）
   domain/         领域模型与规则
   infrastructure/ GORM Repository、Redis、JWT、LLM Transport、协程池
   cron/           定时任务（终态清理、软删数据清理、Think 提取、触发词命中同步）
   bootstrap/      Fx 依赖注入与生命周期
   web/dist        前端构建产物（embed.FS）
 web/              Next.js 管理后台源码
-  src/app/        App Router 路由组（(dashboard) 14 页 · login / callback / share）
-  src/components/ 基础与业务组件（ui / charts / chat / session-detail / trace-detail）
+  src/app/        App Router 路由组（(dashboard) 13 页 · login / callback / share）
+  src/components/ 基础与业务组件（ui / charts / chat / session-detail）
   src/lib/        api-client · auth-context · i18n · theme · types（后端 DTO 镜像）
 docker/           Dockerfile 与 Compose 配置
 env/              环境变量模板

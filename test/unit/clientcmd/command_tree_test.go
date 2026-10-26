@@ -1,7 +1,7 @@
-package trace
+// Package clientcmd 守护 server/lint/aris 三入口的命令树契约与客户端跨平台构建。
+package clientcmd
 
 import (
-	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -11,7 +11,7 @@ import (
 
 func repoRoot(t *testing.T) string {
 	t.Helper()
-	root, err := filepath.Abs(filepath.Join("..", "..", "..", ".."))
+	root, err := filepath.Abs(filepath.Join("..", "..", ".."))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -20,7 +20,7 @@ func repoRoot(t *testing.T) string {
 
 func runGo(t *testing.T, args ...string) string {
 	t.Helper()
-	cmd := exec.CommandContext(context.Background(), "go", args...)
+	cmd := exec.CommandContext(t.Context(), "go", args...)
 	cmd.Dir = repoRoot(t)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -61,21 +61,28 @@ func TestLintCommandTree(t *testing.T) {
 func TestClientCommandTree(t *testing.T) {
 	t.Parallel()
 	out := runGo(t, "run", "./cmd/client", "--help")
-	for _, name := range []string{"init", "status", "trace", "model"} {
+	for _, name := range []string{"init", "status", "model", "version", "update"} {
 		if !strings.Contains(out, name) {
 			t.Errorf("client help missing %q:\n%s", name, out)
 		}
 	}
-	for _, forbidden := range []string{"server", "database", "object", "lint"} {
+	for _, forbidden := range []string{"trace", "server", "database", "object", "lint"} {
 		if strings.Contains(out, forbidden) {
 			t.Errorf("client help contains %q:\n%s", forbidden, out)
 		}
 	}
-	traceOut := runGo(t, "run", "./cmd/client", "trace", "--help")
-	for _, name := range []string{"ingest", "install"} {
-		if !strings.Contains(traceOut, name) {
-			t.Errorf("trace help missing %q:\n%s", name, traceOut)
-		}
+}
+
+func TestClientTraceCommandRemoved(t *testing.T) {
+	t.Parallel()
+	cmd := exec.CommandContext(t.Context(), "go", "run", "./cmd/client", "trace", "--help")
+	cmd.Dir = repoRoot(t)
+	out, err := cmd.CombinedOutput()
+	if err == nil {
+		t.Fatalf("aris trace should be removed, got help:\n%s", out)
+	}
+	if !strings.Contains(string(out), `unknown command "trace"`) {
+		t.Fatalf("expected unknown command error, got:\n%s", out)
 	}
 }
 
@@ -89,7 +96,7 @@ func TestClientBuildsForSupportedPlatforms(t *testing.T) {
 	}
 	for _, target := range targets {
 		out := filepath.Join(t.TempDir(), "aris")
-		cmd := exec.CommandContext(context.Background(), "go", "build",
+		cmd := exec.CommandContext(t.Context(), "go", "build",
 			"-buildvcs=false", "-trimpath", "-ldflags=-s -w", "-o", out, "./cmd/client")
 		cmd.Dir = repoRoot(t)
 		cmd.Env = append(append([]string{}, os.Environ()...),

@@ -7,8 +7,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 )
 
-// TestMessagesNameTheirCommand 回归：三条交互命令曾共用同一个常量，导致 aris init 无 TTY
-// 时报出 "trace init"，与用户实际执行的命令不符。
+// TestMessagesNameTheirCommand 回归：交互命令曾共用同一个常量，报错文案与用户实际执行的命令不符。
 func TestMessagesNameTheirCommand(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
@@ -16,7 +15,6 @@ func TestMessagesNameTheirCommand(t *testing.T) {
 		message string
 	}{
 		{command: "aris init", message: constant.ArisClientInitNonInteractiveMessage},
-		{command: "aris trace install", message: constant.ArisClientInstallNonInteractiveMessage},
 		{command: "aris model export", message: constant.ClientModelExportNonInteractiveMessage},
 	}
 	seen := make(map[string]string, len(cases))

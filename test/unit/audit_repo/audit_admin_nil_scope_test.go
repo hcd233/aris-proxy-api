@@ -11,9 +11,9 @@
 // 确保 admin 查看全平台数据（含非自身 owner）的行为不被覆盖。
 //
 // audit 的 Query* 携带 date_trunc/AT TIME ZONE 等 PG 专属语法，sqlite 无法真实执行；
-// "nil 落库 → sqlite 报语法错误"恰好构成"未被短路"的判据。trace/dataset 领域的
+// "nil 落库 → sqlite 报语法错误"恰好构成"未被短路"的判据。dataset 领域的
 // 同构三态（nil 全量 / 空恒假 / 非空 IN）已由可执行 SQL 的行为测试完整覆盖
-// （见 trace_owner_scope_test.go 与 session_export_scope_test.go）。
+// （见 session_export_scope_test.go）。
 package audit_repo
 
 import (

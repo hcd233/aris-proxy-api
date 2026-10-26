@@ -58,7 +58,6 @@ func TestOAuth2LoginRouteNotAPIKeyProtected(t *testing.T) {
 	router.RegisterAPIRouter(api, router.APIRouterDependencies{
 		DB:                db,
 		PingHandler:       &stubPingHandler{},
-		TraceHandler:      &stubTraceHandler{},
 		TokenHandler:      &stubTokenHandler{},
 		Oauth2Handler:     &fakeOauth2Handler{},
 		UserHandler:       &stubUserHandler{},

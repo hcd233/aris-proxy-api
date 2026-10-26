@@ -30,7 +30,6 @@ import type {
   DatasetFormatPreviewRsp,
   DatasetPreviewRsp,
   DeleteSessionRsp,
-  DeleteTraceRsp,
   DeleteTriggerRsp,
   DemoAccessAuditOptionListReq,
   DemoAccessAuditOptionListRsp,
@@ -42,7 +41,6 @@ import type {
   GetSessionMetadataRsp,
   GetSessionRsp,
   GetShareMetadataRsp,
-  GetTraceRsp,
   Granularity,
   ListAPIKeysRsp,
   ListAuditLogsRsp,
@@ -57,8 +55,6 @@ import type {
   ListShareMessagesRsp,
   ListShareToolsRsp,
   ListSharesRsp,
-  ListTraceEventsRsp,
-  ListTracesRsp,
   ListTriggerRsp,
   ListUpstreamRsp,
   ListUsersRsp,
@@ -854,45 +850,6 @@ class ApiClient {
     return this.request<CommonRsp>(`${API_PREFIX}/trigger?id=${id}`, {
       method: "PATCH",
       body: JSON.stringify(body),
-    });
-  }
-
-  // ─── Trace (codex hooks) ─────────────────────────────────────────────────────
-
-  async listTraces(
-    page: number = 1,
-    pageSize: number = 20,
-    query?: string,
-  ): Promise<ListTracesRsp> {
-    const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
-    if (query) params.set("query", query);
-    return this.request<ListTracesRsp>(`${API_PREFIX}/trace/list?${params}`);
-  }
-
-  async getTrace(id: number): Promise<GetTraceRsp> {
-    return this.request<GetTraceRsp>(`${API_PREFIX}/trace?id=${id}`);
-  }
-
-  async listTraceEvents(
-    traceId: number,
-    page: number = 1,
-    pageSize: number = 50,
-  ): Promise<ListTraceEventsRsp> {
-    const params = new URLSearchParams({
-      id: String(traceId),
-      page: String(page),
-      pageSize: String(pageSize),
-    });
-    return this.request<ListTraceEventsRsp>(`${API_PREFIX}/trace/event/list?${params}`);
-  }
-
-  async deleteTrace(traceId: number): Promise<DeleteTraceRsp> {
-    return this.request<DeleteTraceRsp>(`${API_PREFIX}/trace?ids=${traceId}`, { method: "DELETE" });
-  }
-
-  async batchDeleteTraces(ids: number[]): Promise<DeleteTraceRsp> {
-    return this.request<DeleteTraceRsp>(`${API_PREFIX}/trace?ids=${ids.join(",")}`, {
-      method: "DELETE",
     });
   }
 

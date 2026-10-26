@@ -1,4 +1,4 @@
-// Package session_owner_id 会话/Trace 归属改按 API Key ID 判定的回归测试。
+// Package session_owner_id 会话归属改按 API Key ID 判定的回归测试。
 //
 // 背景：归属原依赖 api_key_name，而该名称在 (user_id, name) 维度唯一、
 // 可跨用户重复，导致普通用户建同名 Key 即可越权操作他人会话。
@@ -29,21 +29,6 @@ func TestSessionAPIKeyIDColumnAndIndex(t *testing.T) {
 	}
 	if !db.Migrator().HasIndex(&dbmodel.Session{}, "idx_sessions_api_key_id") {
 		t.Error("index idx_sessions_api_key_id missing")
-	}
-}
-
-// TestTraceAPIKeyIDColumnAndIndex traces 表同理。
-func TestTraceAPIKeyIDColumnAndIndex(t *testing.T) {
-	t.Parallel()
-	db := sqlitetest.OpenPrivateMemoryDB(t)
-	if err := db.AutoMigrate(&dbmodel.Trace{}); err != nil {
-		t.Fatalf("automigrate traces: %v", err)
-	}
-	if !db.Migrator().HasColumn(&dbmodel.Trace{}, "api_key_id") {
-		t.Error("traces.api_key_id column missing")
-	}
-	if !db.Migrator().HasIndex(&dbmodel.Trace{}, "idx_traces_api_key_id") {
-		t.Error("index idx_traces_api_key_id missing")
 	}
 }
 

@@ -30,8 +30,6 @@ var Models = []any{
 	&Trigger{},
 	&CronJob{},
 	&CronCallAudit{},
-	&Trace{},
-	&TraceEvent{},
 	&DemoConfig{},
 	&DemoSession{},
 	&DemoAccessAudit{},

@@ -72,13 +72,7 @@ const (
 	FieldMessageCount             = "message_count"
 	FieldToolCount                = "tool_count"
 
-	FieldSessionID     = "session_id"
-	FieldCWD           = "cwd"
-	FieldSource        = "source"
-	FieldEvent         = "event"
-	FieldTurnID        = "turn_id"
-	FieldAgent         = "agent"
-	FieldParentTraceID = "parent_trace_id"
+	FieldSessionID = "session_id"
 
 	DBSelectAll = "*"
 )
@@ -220,10 +214,9 @@ var (
 	// ponytail: 上限写死 200；需要真分页时再引入组内游标
 	UpstreamGroupModelLimit = 200
 
-	// SessionTableName / TraceTableName 归属回填的目标表名（仅供包内常量拼接，
+	// SessionTableName 归属回填的目标表名（仅供包内常量拼接，
 	// 不得接受外部输入，避免注入面）。
 	SessionTableName = "sessions"
-	TraceTableName   = "traces"
 
 	// APIKeyIDBackfillSQLTemplate 按 api_key_name 幂等回填 api_key_id（%s 为目标表名，
 	// 出现 4 次）。规则「宁漏勿越」：
@@ -480,72 +473,4 @@ var (
 
 	CronPanicMessageTemplate = "panic: %v"
 	CronJobNotFoundMessage   = "cron job not found: "
-
-	// ── Trace 分页/状态常量 ──
-	TraceListPageSize  = 20
-	TraceEventPageSize = 50
-	TraceAgentCodex    = "codex"
-	TraceAgentClaude   = "claude"
-
-	// ── Trace hook 事件名 ──
-	TraceEventSessionStart       = "SessionStart"
-	TraceEventUserPromptSubmit   = "UserPromptSubmit"
-	TraceEventPreToolUse         = "PreToolUse"
-	TraceEventPermissionRequest  = "PermissionRequest"
-	TraceEventPostToolUse        = "PostToolUse"
-	TraceEventStop               = "Stop"
-	TraceEventSubagentStart      = "SubagentStart"
-	TraceEventSubagentStop       = "SubagentStop"
-	TraceEventPreCompact         = "PreCompact"
-	TraceEventPostCompact        = "PostCompact"
-	TraceEventSessionEnd         = "SessionEnd"
-	TraceEventPostToolUseFailure = "PostToolUseFailure"
-
-	// ── Claude transcript 记录类型与事件名 ──
-	TraceClaudeRecordUser                = "user"
-	TraceClaudeRecordAssistant           = "assistant"
-	TraceClaudeRecordAttachment          = "attachment"
-	TraceClaudeRecordSystem              = "system"
-	TraceClaudeRecordPermissionMode      = "permission-mode"
-	TraceClaudeRecordFileHistorySnapshot = "file-history-snapshot"
-	TraceClaudeRecordLastPrompt          = "last-prompt"
-	TraceClaudeRecordSummary             = "summary"
-	TraceClaudeRecordProgress            = "progress"
-
-	TraceClaudeEventUserPrompt       = "user_prompt"
-	TraceClaudeEventToolResult       = "tool_result"
-	TraceClaudeEventAssistantMessage = "assistant_message"
-
-	TraceClaudeBlockToolUse = "tool_use"
-
-	TraceRecordSourceHook              = "hook"
-	TraceRecordSourceRollout           = "rollout"
-	TraceRecordTypeHookEvent           = "hook_event"
-	TraceRecordTypeSessionMeta         = "session_meta"
-	TraceRecordTypeTurnContext         = "turn_context"
-	TraceRecordTypeResponseItem        = "response_item"
-	TraceRecordTypeEventMsg            = "event_msg"
-	TraceRecordStatusAccepted          = "accepted"
-	TraceRecordStatusDuplicate         = "duplicate"
-	TraceRecordStatusRejected          = "rejected"
-	TraceRecordMessageInvalid          = "invalid record"
-	TraceRecordMessageStorageFailed    = "storage failed"
-	TraceRecordMessageTraceDeleted     = "trace deleted"
-	TraceMetadataAgentID               = "agent_id"
-	TraceMetadataAgentType             = "agent_type"
-	TraceEventTaskStarted              = "task_started"
-	TraceEventTaskComplete             = "task_complete"
-	TraceEventTokenCount               = "token_count"
-	TraceRecordMessageUnknown          = "unknown record type"
-	TraceRolloutTypeSessionMeta        = "session_meta"
-	TraceRolloutTypeTurnContext        = "turn_context"
-	TraceRolloutTypeResponseItem       = "response_item"
-	TraceRolloutTypeEventMsg           = "event_msg"
-	TraceRolloutTypeUnknown            = "unknown"
-	TracePayloadFieldType              = "type"
-	TracePayloadFieldTurnID            = "turn_id"
-	TracePayloadFieldCallID            = "call_id"
-	TracePayloadFieldArguments         = "arguments"
-	TraceConversationEventFunctionCall = "function_call"
-	TraceNotFoundMessage               = "trace not found"
 )

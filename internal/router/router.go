@@ -52,7 +52,6 @@ type APIRouterDependencies struct {
 	TriggerHandler     handler.TriggerHandler
 	MetricsHandler     handler.MetricsHandler
 	DatasetHandler     handler.DatasetHandler
-	TraceHandler       handler.TraceHandler
 	ClientHandler      handler.ClientHandler
 	UpstreamHandler    handler.UpstreamHandler
 }

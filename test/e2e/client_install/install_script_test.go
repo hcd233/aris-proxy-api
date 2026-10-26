@@ -1,4 +1,4 @@
-package trace_e2e
+package client_install
 
 import (
 	"io"
@@ -19,14 +19,14 @@ import (
 
 func TestInstallScript_ReturnsScriptWithHost(t *testing.T) {
 	t.Parallel()
-	traceHandler := handler.NewTraceHandler(handler.TraceDependencies{})
+	clientHandler := handler.NewClientHandler(handler.ClientDependencies{})
 
 	app := fiber.New()
 	api := humafiber.New(app, huma.DefaultConfig("Install Script Test", "1.0"))
 	huma.Register(api, huma.Operation{
-		OperationID: "installTraceScript", Method: http.MethodGet, Path: "/install.sh",
-		Tags: []string{constant.TagTrace},
-	}, traceHandler.HandleInstallScript)
+		OperationID: "installArisClientScript", Method: http.MethodGet, Path: "/install.sh",
+		Tags: []string{constant.TagClient},
+	}, clientHandler.HandleInstallScript)
 
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/install.sh", http.NoBody)
 	req.Host = "aris.example.com"
@@ -99,14 +99,14 @@ func TestInstallScript_ReturnsScriptWithHost(t *testing.T) {
 
 func TestInstallScript_InvalidSchemeReturnsErrorScript(t *testing.T) {
 	t.Parallel()
-	traceHandler := handler.NewTraceHandler(handler.TraceDependencies{})
+	clientHandler := handler.NewClientHandler(handler.ClientDependencies{})
 
 	app := fiber.New()
 	api := humafiber.New(app, huma.DefaultConfig("Install Script Test", "1.0"))
 	huma.Register(api, huma.Operation{
-		OperationID: "installTraceScript", Method: http.MethodGet, Path: "/install.sh",
-		Tags: []string{constant.TagTrace},
-	}, traceHandler.HandleInstallScript)
+		OperationID: "installArisClientScript", Method: http.MethodGet, Path: "/install.sh",
+		Tags: []string{constant.TagClient},
+	}, clientHandler.HandleInstallScript)
 
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/install.sh", http.NoBody)
 	req.Host = ""
@@ -126,14 +126,14 @@ func TestInstallScript_InvalidSchemeReturnsErrorScript(t *testing.T) {
 
 func TestInstallScript_ShellSyntaxValid(t *testing.T) {
 	t.Parallel()
-	traceHandler := handler.NewTraceHandler(handler.TraceDependencies{})
+	clientHandler := handler.NewClientHandler(handler.ClientDependencies{})
 
 	app := fiber.New()
 	api := humafiber.New(app, huma.DefaultConfig("Install Script Test", "1.0"))
 	huma.Register(api, huma.Operation{
-		OperationID: "installTraceScript", Method: http.MethodGet, Path: "/install.sh",
-		Tags: []string{constant.TagTrace},
-	}, traceHandler.HandleInstallScript)
+		OperationID: "installArisClientScript", Method: http.MethodGet, Path: "/install.sh",
+		Tags: []string{constant.TagClient},
+	}, clientHandler.HandleInstallScript)
 
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/install.sh", http.NoBody)
 	req.Host = "aris.example.com"

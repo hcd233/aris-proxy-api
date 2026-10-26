@@ -48,8 +48,6 @@ const (
 	// ArisClientVersionPrefixV 版本 tag 的 v 前缀
 	ArisClientVersionPrefixV = "v"
 
-	// ArisClientCommandTrace hook 高频命令，不参与使用中更新检查
-	ArisClientCommandTrace = "trace"
 	// ArisClientCommandUpdate 自更新命令，不参与使用中更新检查
 	ArisClientCommandUpdate = "update"
 	// ArisClientCommandVersion 版本命令，不参与使用中更新检查

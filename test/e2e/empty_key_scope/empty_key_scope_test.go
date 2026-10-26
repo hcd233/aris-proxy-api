@@ -1,7 +1,7 @@
 // Package empty_key_scope 端到端回归：名下无 API Key 的普通用户不得越权
 // 查看全平台数据（2026-08-25 越权修复）。
 //
-// 背景：audit 图表（6 个 stats 接口）、trace 列表、dataset 导出预览的仓储层
+// 背景：audit 图表（6 个 stats 接口）、dataset 导出预览的仓储层
 // 旧实现用 `if len(scope) > 0` 决定是否加范围过滤——无 Key 用户拿到的空列表
 // 使过滤被整体跳过，退化为全平台查询。
 //
@@ -149,26 +149,7 @@ func TestEmptyKeyUser_SeesNoPlatformData(t *testing.T) {
 		}
 	}
 
-	// 2. trace 列表：无 Key 用户必须拿到空列表
-	status, body = doGetJSON(t, client,
-		baseURL+"/api/web/v1/trace/list?page=1&pageSize=10", userToken)
-	if status != http.StatusOK {
-		t.Fatalf("trace list expected 200, got %d: %s", status, body)
-	}
-	if code := bizErrorCode(body); code != 0 {
-		t.Fatalf("trace list unexpected biz error code %d: %s", code, body)
-	}
-	var traceRsp struct {
-		Traces []any `json:"traces"`
-	}
-	if err := sonic.Unmarshal(body, &traceRsp); err != nil {
-		t.Fatalf("unmarshal trace list failed: %v", err)
-	}
-	if len(traceRsp.Traces) != 0 {
-		t.Errorf("trace list: no-key user sees platform traces (len=%d), scope isolation broken", len(traceRsp.Traces))
-	}
-
-	// 3. dataset 导出统计预览：无 Key 用户必须拿到 0 会话
+	// 2. dataset 导出统计预览：无 Key 用户必须拿到 0 会话
 	start, end := timeWindow()
 	previewQuery := url.Values{}
 	previewQuery.Set("startTime", start)
@@ -191,7 +172,7 @@ func TestEmptyKeyUser_SeesNoPlatformData(t *testing.T) {
 		t.Errorf("dataset preview: no-key user sees %d platform sessions, scope isolation broken", previewRsp.TotalSessions)
 	}
 
-	// 4. 筛选选项接口（2026-08-26 修复）：此前对普通用户返回全平台维度
+	// 3. 筛选选项接口（2026-08-26 修复）：此前对普通用户返回全平台维度
 	// （用户名/邮箱等），与列表接口的 owner 隔离语义不一致；现在无 Key 用户
 	// 必须拿到空选项列表。
 	optionPaths := []string{

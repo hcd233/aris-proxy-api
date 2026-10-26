@@ -62,7 +62,6 @@ type syncHistoryFixture struct {
 // stubSyncHandlers 嵌入接口空结构体：注册期满足方法集、不解引用（cross_tenant 惯例）
 type (
 	stubSyncPingHandler       struct{ handler.PingHandler }
-	stubSyncTraceHandler      struct{ handler.TraceHandler }
 	stubSyncTokenHandler      struct{ handler.TokenHandler }
 	stubSyncOauth2Handler     struct{ handler.Oauth2Handler }
 	stubSyncUserHandler       struct{ handler.UserHandler }
@@ -127,7 +126,6 @@ func newSyncHistoryFixture(t *testing.T) *syncHistoryFixture {
 		Cache:             rdb,
 		AccessSigner:      jwt.NewAccessTokenSigner(),
 		PingHandler:       &stubSyncPingHandler{},
-		TraceHandler:      &stubSyncTraceHandler{},
 		TokenHandler:      &stubSyncTokenHandler{},
 		Oauth2Handler:     &stubSyncOauth2Handler{},
 		UserHandler:       &stubSyncUserHandler{},
