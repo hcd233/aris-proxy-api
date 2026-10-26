@@ -137,9 +137,9 @@ func (r *userRepository) BatchFindByIDs(ctx context.Context, ids []uint) (map[ui
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "batch find users by ids")
 	}
-	for _, record := range records {
-		out[record.ID] = toUserAggregate(record)
-	}
+	out = lo.SliceToMap(records, func(record *dbmodel.User) (uint, *aggregate.User) {
+		return record.ID, toUserAggregate(record)
+	})
 	return out, nil
 }
 

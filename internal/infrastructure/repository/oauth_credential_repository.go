@@ -100,8 +100,8 @@ func (r *oauthCredentialRepository) ListDisplayByEndpointIDs(ctx context.Context
 		Find(&records).Error; err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "list oauth credential displays")
 	}
-	for _, record := range records {
-		displays[record.EndpointID] = vo.OAuthCredentialDisplay{
+	displays = lo.SliceToMap(records, func(record *dbmodel.EndpointOAuthCredential) (uint, vo.OAuthCredentialDisplay) {
+		return record.EndpointID, vo.OAuthCredentialDisplay{
 			EndpointID:     record.EndpointID,
 			Provider:       enum.OAuthProvider(record.Provider),
 			AccountEmail:   record.AccountEmail,
@@ -111,7 +111,7 @@ func (r *oauthCredentialRepository) ListDisplayByEndpointIDs(ctx context.Context
 			Quota:          toOAuthQuotaSnapshotVO(record.QuotaSnapshot),
 			QuotaUpdatedAt: record.QuotaUpdatedAt,
 		}
-	}
+	})
 	return displays, nil
 }
 

@@ -4,8 +4,11 @@ import (
 	"context"
 	"time"
 
+	"github.com/samber/lo"
+
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
+	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
 )
 
 // OAuthQuotaWindowView 额度窗口视图（应用层扁平结构，handler 逐字段映射到 DTO）
@@ -87,15 +90,14 @@ type OAuthQuotaView struct {
 // 同一端点会在两个接口返回不同形态。
 func NewOAuthQuotaView(cred *aggregate.OAuthCredential) *OAuthQuotaView {
 	quota := cred.Quota()
-	windows := make([]OAuthQuotaWindowView, 0, len(quota.Windows))
-	for _, w := range quota.Windows {
-		windows = append(windows, OAuthQuotaWindowView{
+	windows := lo.Map(quota.Windows, func(w vo.QuotaWindow, _ int) OAuthQuotaWindowView {
+		return OAuthQuotaWindowView{
 			Key:           w.Key,
 			UsedPercent:   w.UsedPercent,
 			ResetsAt:      w.ResetsAt,
 			WindowMinutes: w.WindowMinutes,
-		})
-	}
+		}
+	})
 	view := &OAuthQuotaView{
 		Status:    string(cred.Status()),
 		PlanType:  cred.PlanType(),

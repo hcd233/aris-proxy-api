@@ -243,13 +243,11 @@ func buildRangeCondition(expr string, f Filter) (sql string, args []any, err err
 		return "", nil, ierr.Newf(ierr.ErrBadRequest, constant.FilterErrUnsupportedOp, f.Operator)
 	}
 
-	ranges := make([]rangeValue, 0, len(f.Values))
-	for _, v := range f.Values {
-		r, parseErr := parseRangeValue(v)
-		if parseErr != nil {
-			return "", nil, parseErr
-		}
-		ranges = append(ranges, r)
+	ranges, err := util.MapErr(f.Values, func(v string, _ int) (rangeValue, error) {
+		return parseRangeValue(v)
+	})
+	if err != nil {
+		return "", nil, err
 	}
 
 	frag := func(r rangeValue) (string, []any) {
@@ -306,23 +304,15 @@ func buildJSONBArrayCondition(column string, f Filter) (sql string, args []any, 
 		if len(f.Values) == 1 {
 			return frag, []any{f.Values[0]}, nil
 		}
-		parts := make([]string, len(f.Values))
-		args = make([]any, len(f.Values))
-		for i, v := range f.Values {
-			parts[i] = frag
-			args[i] = v
-		}
+		parts := lo.RepeatBy(len(f.Values), func(_ int) string { return frag })
+		args = lo.ToAnySlice(f.Values)
 		return "(" + strings.Join(parts, constant.FilterSQLOR) + ")", args, nil
 	case enum.OpNotEqual:
 		if len(f.Values) == 1 {
 			return "NOT " + frag, []any{f.Values[0]}, nil
 		}
-		parts := make([]string, len(f.Values))
-		args = make([]any, len(f.Values))
-		for i, v := range f.Values {
-			parts[i] = "NOT " + frag
-			args[i] = v
-		}
+		parts := lo.RepeatBy(len(f.Values), func(_ int) string { return "NOT " + frag })
+		args = lo.ToAnySlice(f.Values)
 		return "(" + strings.Join(parts, constant.FilterSQLAND) + ")", args, nil
 	default:
 		return "", nil, ierr.Newf(ierr.ErrBadRequest, constant.FilterErrUnsupportedOp, f.Operator)

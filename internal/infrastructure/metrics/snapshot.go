@@ -4,6 +4,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/samber/lo"
+
 	"github.com/hcd233/aris-proxy-api/internal/application/metrics/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/prometheus/client_golang/prometheus"
@@ -129,10 +131,9 @@ func histogramBuckets(f *metricpb.MetricFamily) (buckets map[string]float64, cou
 		return nil, 0
 	}
 	h := f.GetMetric()[0].GetHistogram()
-	buckets = make(map[string]float64, len(h.GetBucket()))
-	for _, b := range h.GetBucket() {
+	buckets = lo.SliceToMap(h.GetBucket(), func(b *metricpb.Bucket) (string, float64) {
 		le := strconv.FormatFloat(b.GetUpperBound(), 'g', -1, constant.ParseFloat64BitSize)
-		buckets[le] = float64(b.GetCumulativeCount())
-	}
+		return le, float64(b.GetCumulativeCount())
+	})
 	return buckets, float64(h.GetSampleCount())
 }

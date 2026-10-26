@@ -19,9 +19,8 @@ func PricingFromDTO(d *dto.PricingDTO) (vo.Pricing, error) {
 	if d == nil {
 		return vo.Pricing{}, nil
 	}
-	rules := make([]vo.PricingRule, 0, len(d.Rules))
-	for _, r := range d.Rules {
-		rules = append(rules, vo.PricingRule{
+	rules := lo.Map(d.Rules, func(r dto.PricingRuleDTO, _ int) vo.PricingRule {
+		return vo.PricingRule{
 			TimeWindows: lo.Map(r.TimeWindows, func(w dto.TimeWindowDTO, _ int) vo.TimeWindow {
 				return vo.TimeWindow{Days: w.Days, Start: w.Start, End: w.End, Timezone: w.Timezone}
 			}),
@@ -32,8 +31,8 @@ func PricingFromDTO(d *dto.PricingDTO) (vo.Pricing, error) {
 			CacheCreateMicro:   dto.PriceMicroFromDisplay(r.CacheCreationPrice),
 			CacheCreate1hMicro: dto.PriceMicroFromDisplay(r.CacheCreation1hPrice),
 			CacheReadMicro:     dto.PriceMicroFromDisplay(r.CacheReadPrice),
-		})
-	}
+		}
+	})
 	return vo.NewPricing(d.Currency, rules)
 }
 

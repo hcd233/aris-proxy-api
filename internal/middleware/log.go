@@ -168,10 +168,9 @@ func buildResponseHeadersFields(c fiber.Ctx) []zap.Field {
 //	@author centonhuang
 //	@update 2026-03-30 10:00:00
 func LogMiddleware(cfg LogMiddlewareConfig) fiber.Handler {
-	samplingIndex := make(map[string]time.Duration, len(cfg.SamplingRules))
-	for _, rule := range cfg.SamplingRules {
-		samplingIndex[rule.Path] = rule.Interval
-	}
+	samplingIndex := lo.SliceToMap(cfg.SamplingRules, func(rule LogSamplingRule) (string, time.Duration) {
+		return rule.Path, rule.Interval
+	})
 
 	sampler := &logSampler{lastLogs: make(map[string]time.Time, len(cfg.SamplingRules))}
 

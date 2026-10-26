@@ -51,7 +51,7 @@ func (pm *PoolManager) runMessageStoreTask(task *dto.MessageStoreTask) {
 
 	messages := lo.Map(task.Messages, func(m *vo.UnifiedMessage, _ int) *dbmodel.Message {
 		modelID := ""
-		if lo.Contains([]enum.Role{enum.RoleAssistant}, m.Role) {
+		if m.Role == enum.RoleAssistant {
 			modelID = task.ModelID
 		}
 		return &dbmodel.Message{
