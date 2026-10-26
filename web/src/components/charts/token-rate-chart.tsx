@@ -5,30 +5,69 @@ import { api } from "@/lib/api-client";
 import type { TokenRateItem } from "@/lib/types";
 import { LineChartCard, formatTooltipRow } from "@/components/charts/line-chart-card";
 import { ReferenceLine } from "recharts";
+import { useI18n } from "@/lib/i18n";
+
+/** 色板只有 8 色；超过 8 个模型时把尾部模型并成「其他」，避免颜色复用后不可区分。 */
+const MAX_SERIES = 7;
+const OTHER_KEY = "__other__";
 
 export function TokenRateChart() {
-  const toChart = useCallback((data: TokenRateItem[], colors: readonly string[]) => {
-    const models = [...new Set(data.map((d) => d.modelId))];
-    const series = models.map((m, i) => ({
-      key: m,
-      label: m,
-      color: colors[i % colors.length],
-    }));
-    const timeSet = new Set<string>();
-    const pointMap = new Map<string, Record<string, number | null>>();
-    for (const item of data) {
-      for (const p of item.points) {
-        timeSet.add(p.time);
-        if (!pointMap.has(p.time)) pointMap.set(p.time, {});
-        pointMap.get(p.time)![item.modelId] =
-          p.outputTokensPerSecond === 0 ? null : p.outputTokensPerSecond;
+  const { t, locale } = useI18n();
+  const toChart = useCallback(
+    (data: TokenRateItem[], colors: readonly string[]) => {
+      const models = [...new Set(data.map((d) => d.modelId))];
+      const totals = new Map<string, number>();
+      for (const item of data) {
+        for (const p of item.points) {
+          totals.set(item.modelId, (totals.get(item.modelId) ?? 0) + p.outputTokensPerSecond);
+        }
       }
-    }
-    const rows = Array.from(timeSet)
-      .sort()
-      .map((time) => ({ time, ...pointMap.get(time) }));
-    return { rows, series };
-  }, []);
+      const ranked = [...models].sort((a, b) => (totals.get(b) ?? 0) - (totals.get(a) ?? 0));
+      const fold = ranked.length > MAX_SERIES + 1;
+      const visible = fold ? ranked.slice(0, MAX_SERIES) : ranked;
+      const otherModels = fold ? new Set(ranked.slice(MAX_SERIES)) : null;
+
+      const series = visible.map((m, i) => ({
+        key: m,
+        label: m,
+        color: colors[i % colors.length],
+      }));
+      if (otherModels) {
+        series.push({
+          key: OTHER_KEY,
+          label: t("charts.other"),
+          color: "#8C8C8C",
+        });
+      }
+
+      const timeSet = new Set<string>();
+      const pointMap = new Map<string, Record<string, number | null>>();
+      for (const item of data) {
+        const key = otherModels?.has(item.modelId) ? OTHER_KEY : item.modelId;
+        for (const p of item.points) {
+          timeSet.add(p.time);
+          if (!pointMap.has(p.time)) pointMap.set(p.time, {});
+          const row = pointMap.get(p.time)!;
+          if (key === OTHER_KEY) {
+            row[key] = (row[key] ?? 0) + p.outputTokensPerSecond;
+          } else {
+            row[key] = p.outputTokensPerSecond === 0 ? null : p.outputTokensPerSecond;
+          }
+        }
+      }
+      const rows = Array.from(timeSet)
+        .sort()
+        .map((time) => {
+          const row: Record<string, number | string | null> = { time, ...pointMap.get(time) };
+          if (otherModels && row[OTHER_KEY] === 0) row[OTHER_KEY] = null;
+          return row;
+        });
+      return { rows, series };
+    },
+    // locale 必须在依赖里：t 引用已稳定（见 lib/i18n.tsx），「其他」标签刷新只能靠 locale 驱动重算
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [locale, t],
+  );
 
   return (
     <LineChartCard<TokenRateItem>

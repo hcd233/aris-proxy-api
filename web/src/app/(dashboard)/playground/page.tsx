@@ -359,7 +359,7 @@ function PlaygroundPage() {
         <PageHeader title={t("playground.title")} description={t("playground.description")} />
         <div className="flex h-[calc(100dvh-13rem)] gap-4">
           {/* 会话侧栏：lg+ 常驻；< lg 走 Sheet 抽屉 */}
-          <aside className="hidden w-60 shrink-0 lg:block">
+          <aside className="hidden w-60 shrink-0 border-r border-border/60 pr-4 lg:block">
             <SessionSidebar
               sessions={sessions}
               activeId={active.id}
@@ -375,11 +375,12 @@ function PlaygroundPage() {
               <div className="flex items-center gap-2 lg:hidden">
                 <Button
                   variant="outline"
-                  size="icon-sm"
+                  size="sm"
                   aria-label={t("playground.session.open")}
                   onClick={() => setSidebarOpen(true)}
                 >
                   <PanelLeft className="size-4" />
+                  {t("playground.session.open")}
                 </Button>
               </div>
               <ConversationView

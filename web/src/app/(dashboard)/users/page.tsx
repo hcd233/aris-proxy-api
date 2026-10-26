@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { MoreHorizontal, Users } from "lucide-react";
+import { Lock, MoreHorizontal, Users } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { showErrorToast } from "@/lib/api-error-handler";
 import { useAuth } from "@/lib/auth-context";
@@ -42,6 +42,7 @@ import { useOptimisticUpdate } from "@/hooks/use-optimistic-update";
 import { useRequestSeq } from "@/hooks/use-request-seq";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useI18n } from "@/lib/i18n";
+import { formatDate } from "@/lib/utils";
 import { FilterBar } from "@/components/filter-bar/filter-bar";
 import { useFilterBar } from "@/components/filter-bar/use-filter-bar";
 import type { FacetDef, FilterBarQueryParams } from "@/components/filter-bar/types";
@@ -61,7 +62,18 @@ function UserRowActions({ user, currentUserId, onAction }: UserRowActionsProps) 
   const { t } = useI18n();
   const canOperate = user.permission !== "admin" && user.id !== currentUserId;
   if (!canOperate) {
-    return null;
+    // 空白操作列会被误读为"加载失败"；给一个明确的只读锁。
+    return (
+      <Button
+        variant="ghost"
+        size="icon"
+        disabled
+        aria-label={t("users.read_only")}
+        className="text-muted-foreground/60"
+      >
+        <Lock className="size-4" />
+      </Button>
+    );
   }
   return (
     <DropdownMenu>
@@ -338,10 +350,10 @@ export default function UsersPage() {
                             {t(`permission.${user.permission}`)}
                           </TableCell>
                           <TableCell className="text-muted-foreground">
-                            {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "—"}
+                            {user.createdAt ? formatDate(user.createdAt) : "—"}
                           </TableCell>
                           <TableCell className="text-muted-foreground">
-                            {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : "—"}
+                            {user.lastLogin ? formatDate(user.lastLogin) : "—"}
                           </TableCell>
                           <TableCell className="text-right">
                             <UserRowActions

@@ -12,7 +12,7 @@ const toggleVariants = cva(
         default: "bg-transparent aria-pressed:bg-muted",
         // 多选标签（星期、能力）：选中项染主色，未选中保持描边。
         outline:
-          "border border-input bg-transparent hover:bg-muted aria-pressed:border-primary/40 aria-pressed:bg-primary/10 aria-pressed:text-primary aria-pressed:hover:bg-primary/15",
+          "border border-input bg-transparent hover:bg-muted aria-pressed:border-primary/40 aria-pressed:bg-primary/10 aria-pressed:text-[color:var(--primary-hover)] aria-pressed:hover:bg-primary/15",
         // 分段控件（时间范围、视图切换）：放在 ToggleGroup 的 muted 轨道里，选中项抬成卡片。
         segmented:
           "text-xs text-muted-foreground hover:bg-transparent aria-pressed:bg-background aria-pressed:text-foreground aria-pressed:shadow-sm",

@@ -29,19 +29,13 @@ import { FilterBar } from "@/components/filter-bar/filter-bar";
 import { useFilterBar } from "@/components/filter-bar/use-filter-bar";
 import type { FacetDef, FilterBarQueryParams } from "@/components/filter-bar/types";
 import { copyTextToClipboard } from "@/lib/clipboard";
-import { cronJobLabel } from "@/lib/utils";
+import { cronJobLabel, formatDateTime } from "@/lib/utils";
 import {
   TooltipProvider,
   TooltipRoot,
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip";
-
-function formatTime(iso: string): string {
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-}
 
 export default function CronAuditPage() {
   const { t, locale } = useI18n();
@@ -283,7 +277,7 @@ export default function CronAuditPage() {
                       className={log.status === "success" ? "" : "bg-destructive/5"}
                     >
                       <TableCell className="whitespace-nowrap text-muted-foreground">
-                        {formatTime(log.createdAt)}
+                        {formatDateTime(log.createdAt)}
                       </TableCell>
                       <TableCell className="font-medium">{cronJobLabel(log.cronName, t)}</TableCell>
                       <TableCell>

@@ -56,18 +56,38 @@ export function formatPct(value: number, total: number): string {
 }
 
 /**
+ * 本地日期 `YYYY/MM/DD`（月/日补零，跨页表格宽度可预测）。
+ * 非法日期原样返回，避免渲染 "NaN/NaN/NaN"。
+ */
+export function formatDate(date: string | Date): string {
+  const d = typeof date === "string" ? new Date(date) : date;
+  if (Number.isNaN(d.getTime())) return typeof date === "string" ? date : "";
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}/${month}/${day}`;
+}
+
+/**
  * 本地时间 `YYYY/MM/DD HH:mm:ss`。非法日期原样返回，避免渲染 "NaN/NaN/NaN"。
  */
 export function formatDateTime(dateStr: string): string {
   const d = new Date(dateStr);
   if (Number.isNaN(d.getTime())) return dateStr;
-  const year = d.getFullYear();
-  const month = d.getMonth() + 1;
-  const day = d.getDate();
   const hours = String(d.getHours()).padStart(2, "0");
   const minutes = String(d.getMinutes()).padStart(2, "0");
   const seconds = String(d.getSeconds()).padStart(2, "0");
-  return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
+  return `${formatDate(d)} ${hours}:${minutes}:${seconds}`;
+}
+
+/**
+ * 分享过期时间：后端对「永久」使用 ~100 年后的哨兵值，直接显示 2126 年
+ * 会让用户以为数据坏了；超过 50 年一律渲染 neverLabel。
+ */
+export function formatExpiry(dateStr: string, neverLabel: string): string {
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return dateStr;
+  if (d.getFullYear() > new Date().getFullYear() + 50) return neverLabel;
+  return formatDateTime(dateStr);
 }
 
 /**

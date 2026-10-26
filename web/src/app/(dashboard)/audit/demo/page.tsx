@@ -28,12 +28,7 @@ import { computeRange } from "@/lib/time-range";
 import { FilterBar } from "@/components/filter-bar/filter-bar";
 import { useFilterBar } from "@/components/filter-bar/use-filter-bar";
 import type { FacetDef, FilterBarQueryParams } from "@/components/filter-bar/types";
-
-function formatTime(iso: string): string {
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-}
+import { formatDateTime } from "@/lib/utils";
 
 export default function DemoAccessAuditPage() {
   const { t, locale } = useI18n();
@@ -264,7 +259,7 @@ export default function DemoAccessAuditPage() {
                       }
                     >
                       <TableCell className="whitespace-nowrap text-muted-foreground">
-                        {formatTime(log.createdAt)}
+                        {formatDateTime(log.createdAt)}
                       </TableCell>
                       <TableCell>
                         <Badge variant={actionBadgeVariant(log.action)} className="text-xs">

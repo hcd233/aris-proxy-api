@@ -15,11 +15,12 @@ type DeleteButtonProps = Omit<
 
 /**
  * 管理列表（表格/卡片行内）的统一删除按钮：
- * destructive 实心小按钮 + 垃圾桶图标 + 文字标签。
+ * destructive-ghost 小按钮 + 垃圾桶图标 + 文字标签——行内低频动作保持安静，
+ * 真正的强提示交给确认对话框里的 destructive 主按钮。
  */
 export function DeleteButton({ label, locked = false, disabled, ...props }: DeleteButtonProps) {
   return (
-    <Button variant="destructive" size="xs" disabled={locked || disabled} {...props}>
+    <Button variant="destructive-ghost" size="xs" disabled={locked || disabled} {...props}>
       {locked ? <Lock /> : <Trash2 />}
       {label}
     </Button>

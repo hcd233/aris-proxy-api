@@ -26,7 +26,7 @@ export function CollapsibleText({
       {isLong && (
         <CollapsibleTrigger
           onClick={(e) => e.stopPropagation()}
-          className="mt-1 inline-flex items-center gap-0.5 font-medium text-primary/90 transition-colors hover:text-primary"
+          className="mt-1 inline-flex items-center gap-0.5 font-medium text-primary transition-colors hover:text-primary"
         >
           {open ? t("collapsible.show_less") : t("collapsible.show_more")}
           <ChevronRight className="size-3 in-data-panel-open:rotate-90" />

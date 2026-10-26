@@ -52,6 +52,7 @@ import { FilterBar } from "@/components/filter-bar/filter-bar";
 import { useFilterBar } from "@/components/filter-bar/use-filter-bar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useT } from "@/lib/i18n";
+import { formatDate } from "@/lib/utils";
 import { copyTextToClipboard } from "@/lib/clipboard";
 
 export default function APIKeysPage() {
@@ -308,7 +309,7 @@ export default function APIKeysPage() {
                           />
                         </ItemActions>
                         <ItemFooter className="justify-start text-xs text-muted-foreground">
-                          {t("apikeys.created")} {new Date(key.createdAt).toLocaleDateString()}
+                          {t("apikeys.created")} {formatDate(key.createdAt)}
                         </ItemFooter>
                       </Item>
                     ))}
@@ -358,7 +359,7 @@ export default function APIKeysPage() {
                             {key.key}
                           </TableCell>
                           <TableCell className="text-muted-foreground">
-                            {new Date(key.createdAt).toLocaleDateString()}
+                            {formatDate(key.createdAt)}
                           </TableCell>
                           <TableCell className="text-right">
                             <DeleteButton

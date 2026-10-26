@@ -26,7 +26,7 @@ import { useRequestSeq } from "@/hooks/use-request-seq";
 import { useI18n } from "@/lib/i18n";
 import { PermissionGuard } from "@/components/permission-guard";
 import { formatCost } from "@/lib/money";
-import { cn } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
 import {
   TooltipProvider,
   TooltipRoot,
@@ -40,12 +40,6 @@ import { FilterBar } from "@/components/filter-bar/filter-bar";
 import { useFilterBar } from "@/components/filter-bar/use-filter-bar";
 import type { FacetDef, FilterBarQueryParams } from "@/components/filter-bar/types";
 import { copyTextToClipboard } from "@/lib/clipboard";
-
-function formatTime(iso: string): string {
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-}
 
 function formatTokens(input: number, output: number): string {
   const fmt = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n));
@@ -374,7 +368,7 @@ export default function AuditPage() {
                           </TooltipProvider>
                         </div>
                         <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground/70">
-                          <span>{formatTime(log.createdAt)}</span>
+                          <span>{formatDateTime(log.createdAt)}</span>
                           <span
                             className="inline-block transition-transform duration-200 motion-reduce:transition-none"
                             style={{ transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }}
@@ -481,7 +475,7 @@ export default function AuditPage() {
 
                             <div className="mt-2 flex items-center justify-between border-t border-border pt-2 text-xs">
                               <span className="text-muted-foreground">
-                                {formatTime(log.createdAt)}
+                                {formatDateTime(log.createdAt)}
                               </span>
                               <span
                                 className="cursor-pointer font-mono text-muted-foreground underline-offset-2 hover:underline"
@@ -538,7 +532,7 @@ export default function AuditPage() {
                     return (
                       <TableRow key={log.id} className={ok ? "" : "bg-destructive/5"}>
                         <TableCell className="whitespace-nowrap text-xs tabular-nums text-muted-foreground">
-                          {formatTime(log.createdAt)}
+                          {formatDateTime(log.createdAt)}
                         </TableCell>
                         <TableCell>
                           {/* 端点与协议并入模型列次行：原「端点」「协议」两列的信息一行说清，表格少两列 */}

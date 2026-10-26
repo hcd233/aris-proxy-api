@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { PageHeader } from "@/components/page-header";
+import { formatDate } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
@@ -106,10 +107,7 @@ export default function ProfilePage() {
                 </Badge>
                 {localUser.createdAt && (
                   <p className="text-xs text-muted-foreground">
-                    {t("profile.joined").replace(
-                      "{date}",
-                      new Date(localUser.createdAt).toLocaleDateString(),
-                    )}
+                    {t("profile.joined").replace("{date}", formatDate(localUser.createdAt))}
                   </p>
                 )}
               </div>

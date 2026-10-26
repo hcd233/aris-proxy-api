@@ -19,7 +19,7 @@ import { ListEmptyState } from "@/components/list-empty-state";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { Pencil, ArrowUp, ArrowDown, ArrowUpDown, Coins, Layers, Lock } from "lucide-react";
 import { useT } from "@/lib/i18n";
-import { cn } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 import type { ModelListSortField, ModelListItem, UpstreamUser } from "@/lib/types";
 import {
   CapabilityBadges,
@@ -279,7 +279,7 @@ export function FlatView({
             sortField={sortField}
             sort={sort}
             onSort={onSort}
-            className="w-[5.5rem]"
+            className="w-[6.5rem]"
           />
           {/* 同分组视图：操作列按最宽语言实测给足，否则 fixed 布局会裁掉最左侧的「编辑」按钮 */}
           <TableHead className="w-[11rem] text-right">{t("upstream.col_actions")}</TableHead>
@@ -319,9 +319,7 @@ export function FlatView({
                 aria-label={m.enabled ? t("models.enabled") : t("models.disabled")}
               />
             </TableCell>
-            <TableCell className="text-muted-foreground">
-              {new Date(m.createdAt).toLocaleDateString()}
-            </TableCell>
+            <TableCell className="text-muted-foreground">{formatDate(m.createdAt)}</TableCell>
             <ModelActionsCell
               isDemo={isDemo}
               readOnly={!isAdmin && m.endpoint?.visibility === "public"}
