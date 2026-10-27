@@ -732,6 +732,32 @@ export interface ModelTrendRsp extends CommonRsp {
   data?: ModelTrendItem[];
 }
 
+export interface HarnessRuleItem {
+  id: number;
+  pattern: string;
+  name: string;
+  sort: number;
+}
+
+export interface ListHarnessRulesRsp extends CommonRsp {
+  rules?: HarnessRuleItem[];
+}
+
+export interface HarnessRuleRsp extends CommonRsp {
+  rule?: HarnessRuleItem;
+}
+
+export interface HarnessRuleReqBody {
+  pattern: string;
+  name: string;
+  sort: number;
+}
+
+export interface PreviewHarnessRsp extends CommonRsp {
+  harness: string;
+  rule?: HarnessRuleItem;
+}
+
 export interface HarnessTrendItem {
   harness: string;
   points: TrendPoint[];

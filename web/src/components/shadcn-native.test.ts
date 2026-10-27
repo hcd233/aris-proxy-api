@@ -277,3 +277,12 @@ describe("agent harness 走势图", () => {
     expect(chart).toContain('chartType="area"');
   });
 });
+
+describe("harness 规则管理页", () => {
+  it("提供规则表格、增删改与 UA 预览", () => {
+    const src = read("app/(dashboard)/harness/page.tsx");
+    expect(src).toContain("listHarnessRules");
+    expect(src).toContain("previewHarnessRule");
+    expect(src).toContain("deleteHarnessRule");
+  });
+});
