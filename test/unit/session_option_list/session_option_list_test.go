@@ -31,7 +31,7 @@ func (r *fakeSessionReadRepo) ListSessionsByOwnerIDs(ctx context.Context, ownerI
 	return nil, nil, nil
 }
 
-func (r *fakeSessionReadRepo) ListSessionsByIDs(ctx context.Context, ids []uint, param model.CommonParam) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
+func (r *fakeSessionReadRepo) ListSessionsByIDs(ctx context.Context, ids []uint, param model.CommonParam, startTime, endTime time.Time, keyword string, criteria *filter.FilterCriteria) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
 	return nil, nil, nil
 }
 

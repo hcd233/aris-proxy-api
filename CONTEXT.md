@@ -165,6 +165,14 @@ _Avoid_: model level, model size, model class
 一次完整的 LLM 交互聚合：由 Proxy Capture 沉淀，包含多个 Message（消息）和 Tool（工具调用）。归属于某个 API Key Owner。支持人工评分（`SessionScore`，范围 1-5）。可被分享（`SessionShare`）给未登录用户查看。会话列表支持按消息数区间筛选：固定边界桶（0-10 / 11-50 / 51-100 / 101-200 / 201-500）+ 当前时间范围最大消息数为动态上限的末桶。
 _Avoid_: conversation（"Conversation" 用于其他语境不可混用）, chat, thread
 
+**AgentHarness（来源 Agent Harness）**:
+会话与调用流量的来源客户端类别（DSH / ZCode / Pi / Codex / Claude Code / OpenCode / Other）。**不是持久化字段**：由会话创建时固化的原始 User-Agent（`sessions.client_ua`）与 **HarnessRule** 表现算得出，因此改规则后历史数据自动重标、无需回填。会话的 harness 取**首轮**语义（合并同组会话时 `client_ua` 不前滚），归因稳定不随最近一次请求漂移。命中不到任何规则（含空 UA、SDK 直连、curl）一律归 `Other`。仅用于展示与统计，永不参与鉴权、计费或路由（UA 可伪造）。
+_Avoid_: client type, agent name, source tag
+
+**HarnessRule（Harness 规则）**:
+`agent_harness_rules` 表里的一条「UA 前缀 → harness 名称」映射：`pattern`（小写前缀，拒绝 LIKE 通配符与反斜杠）、`name`（展示名，`Other` 为保留名）、`sort`（升序优先命中）。由 admin 后台维护，**运行时可改且不缓存**，改完下一次查询即生效；硬删除后历史数据回落 `Other`。会话筛选、会话展示、调用量走势图三者共用这一份规则（SQL 用标量子查询按 `sort, id` 取首命中，与 Go 侧 `Match` 同语义）。
+_Avoid_: harness mapping, client rule, ua rule
+
 **Message（消息）**:
 一次 LLM 请求/响应中的单条消息。含 Role（user / assistant / tool / system）、Content（UnifiedMessage）、上游模型名、校验和。基于内容寻址去重（`checksum`），不可变（无 Update 接口）。存储在 `messages` 表，内容为 JSON 列。
 _Avoid_: chat message, prompt, response
