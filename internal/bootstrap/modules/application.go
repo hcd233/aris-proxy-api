@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	harnesscommand "github.com/hcd233/aris-proxy-api/internal/application/agentharness/command"
+	harnessport "github.com/hcd233/aris-proxy-api/internal/application/agentharness/port"
+	harnessquery "github.com/hcd233/aris-proxy-api/internal/application/agentharness/query"
 	apikeycommand "github.com/hcd233/aris-proxy-api/internal/application/apikey/command"
 	apikeyport "github.com/hcd233/aris-proxy-api/internal/application/apikey/port"
 	apikeyquery "github.com/hcd233/aris-proxy-api/internal/application/apikey/query"
@@ -134,6 +137,11 @@ var ApplicationModule = fx.Module(constant.DigNameApplicationModule,
 		NewListDemoAccessAuditOptionsHandler,
 		NewListCronCallAuditOptionsHandler,
 		NewListSessionsByUserHandler,
+		NewListHarnessRulesHandler,
+		NewCreateHarnessRuleHandler,
+		NewUpdateHarnessRuleHandler,
+		NewDeleteHarnessRuleHandler,
+		NewPreviewHarnessHandler,
 		NewGetSessionByUserHandler,
 		NewGetSessionMetaByUserHandler,
 		NewListSessionMessagesHandler,
@@ -417,6 +425,26 @@ func NewModelCostHandler(repo modelcall.AuditRepository) auditquery.ModelCostHan
 // NewModelCostByUserHandler 构造模型成本排行处理器（user 视角）
 func NewModelCostByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apikey.APIKeyRepository) auditquery.ModelCostByUserHandler {
 	return auditquery.NewModelCostByUserHandler(repo, apiKeyRepo)
+}
+
+func NewListHarnessRulesHandler(rules agentharness.RuleRepository) harnessport.ListHarnessRulesHandler {
+	return harnessquery.NewListHarnessRulesHandler(rules)
+}
+
+func NewCreateHarnessRuleHandler(rules agentharness.RuleRepository) harnessport.CreateHarnessRuleHandler {
+	return harnesscommand.NewCreateHarnessRuleHandler(rules)
+}
+
+func NewUpdateHarnessRuleHandler(rules agentharness.RuleRepository) harnessport.UpdateHarnessRuleHandler {
+	return harnesscommand.NewUpdateHarnessRuleHandler(rules)
+}
+
+func NewDeleteHarnessRuleHandler(rules agentharness.RuleRepository) harnessport.DeleteHarnessRuleHandler {
+	return harnesscommand.NewDeleteHarnessRuleHandler(rules)
+}
+
+func NewPreviewHarnessHandler(rules agentharness.RuleRepository) harnessport.PreviewHarnessHandler {
+	return harnessquery.NewPreviewHarnessHandler(rules)
 }
 
 func NewListSessionsByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository, rules agentharness.RuleRepository) sessionport.ListSessionsByUserHandler {

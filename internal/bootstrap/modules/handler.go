@@ -1,6 +1,7 @@
 package modules
 
 import (
+	harnessport "github.com/hcd233/aris-proxy-api/internal/application/agentharness/port"
 	apikeyport "github.com/hcd233/aris-proxy-api/internal/application/apikey/port"
 	auditport "github.com/hcd233/aris-proxy-api/internal/application/audit/port"
 	cronauditport "github.com/hcd233/aris-proxy-api/internal/application/cronaudit/port"
@@ -56,6 +57,8 @@ var HandlerModule = fx.Module(constant.DigNameHandlerModule,
 		handler.NewPlaygroundHandler,
 		NewTriggerDependencies,
 		handler.NewTriggerHandler,
+		NewHarnessDependencies,
+		handler.NewHarnessHandler,
 		NewMetricsDependencies,
 		handler.NewMetricsHandler,
 		NewDatasetDependencies,
@@ -202,6 +205,16 @@ func NewUpstreamDependencies(list upstreamport.ListUpstreamHandler) handler.Upst
 
 func NewTriggerDependencies(create triggerport.CreateTriggerHandler, update triggerport.UpdateTriggerHandler, del triggerport.DeleteTriggerHandler, list triggerport.ListTriggerHandler) handler.TriggerDependencies {
 	return handler.TriggerDependencies{Create: create, Update: update, Delete: del, List: list}
+}
+
+func NewHarnessDependencies(
+	list harnessport.ListHarnessRulesHandler,
+	create harnessport.CreateHarnessRuleHandler,
+	update harnessport.UpdateHarnessRuleHandler,
+	del harnessport.DeleteHarnessRuleHandler,
+	preview harnessport.PreviewHarnessHandler,
+) handler.HarnessDependencies {
+	return handler.HarnessDependencies{List: list, Create: create, Update: update, Delete: del, Preview: preview}
 }
 
 func NewMetricsDependencies(runtimeMetrics metricsport.RuntimeMetricsService) handler.MetricsDependencies {

@@ -54,6 +54,7 @@ type APIRouterDependencies struct {
 	DatasetHandler     handler.DatasetHandler
 	ClientHandler      handler.ClientHandler
 	UpstreamHandler    handler.UpstreamHandler
+	HarnessHandler     handler.HarnessHandler
 }
 
 // RegisterAPIRouter 注册 API 路由（分区编排入口）。
