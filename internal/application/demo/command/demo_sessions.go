@@ -2,6 +2,7 @@ package command
 
 import (
 	"context"
+	"time"
 
 	"github.com/samber/lo"
 
@@ -41,7 +42,7 @@ func (h *addDemoSessionsHandler) Handle(ctx context.Context, cmd port.AddDemoSes
 // 查询失败返回 error（fail-closed 拒绝添加），仅"无匹配结果"返回空 map（无 error）。
 func existingSessionIDs(ctx context.Context, readRepo session.SessionReadRepository, ids []uint) (map[uint]bool, error) {
 	param := model.CommonParam{PageParam: model.PageParam{Page: 1, PageSize: len(ids)}}
-	projections, _, err := readRepo.ListSessionsByIDs(ctx, ids, param)
+	projections, _, err := readRepo.ListSessionsByIDs(ctx, ids, param, time.Time{}, time.Time{}, "", nil)
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "validate demo session ids")
 	}

@@ -76,7 +76,7 @@ func (h *listSessionsByUserHandler) Handle(ctx context.Context, q sessionport.Li
 	}
 
 	// 解析 filter
-	criteria, err := parseSessionFilterCriteria(q.Filter)
+	criteria, err := ParseSessionFilterCriteria(q.Filter)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -87,7 +87,7 @@ func (h *listSessionsByUserHandler) Handle(ctx context.Context, q sessionport.Li
 	if q.IsAdmin {
 		projections, pageInfo, err = h.readRepo.ListAllSessions(ctx, param, q.StartTime, q.EndTime, q.Keyword, criteria)
 	} else if q.IsDemo {
-		projections, pageInfo, err = h.readRepo.ListSessionsByIDs(ctx, q.SessionIDs, param)
+		projections, pageInfo, err = h.readRepo.ListSessionsByIDs(ctx, q.SessionIDs, param, q.StartTime, q.EndTime, q.Keyword, criteria)
 	} else {
 		ownerIDs, lookupErr := h.apiKeyRepo.LookupIDsByUserID(ctx, q.UserID)
 		if lookupErr != nil {
@@ -176,8 +176,8 @@ func sanitizeSessionListParam(ctx context.Context, q sessionport.ListSessionsByU
 	}, nil
 }
 
-// parseSessionFilterCriteria 解析 session filter 表达式为 FilterCriteria
-func parseSessionFilterCriteria(filterExpr string) (*filter.FilterCriteria, error) {
+// ParseSessionFilterCriteria 解析 session filter 表达式为 FilterCriteria（导出供测试与 demo 路径复用）。
+func ParseSessionFilterCriteria(filterExpr string) (*filter.FilterCriteria, error) {
 	if filterExpr == "" {
 		return nil, nil
 	}
