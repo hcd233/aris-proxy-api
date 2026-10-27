@@ -915,5 +915,6 @@
   "endpoints.visibility_owner_only": "Only the endpoint owner can change visibility.",
   "sessions.filter_harness": "Filter harness",
   "sessions.harness": "Agent",
-  "sessions.ua_missing": "This session predates harness tracking, or the request carried no User-Agent"
+  "sessions.ua_missing": "This session predates harness tracking, or the request carried no User-Agent",
+  "dashboard.harness_trend": "Harness call trend"
 }

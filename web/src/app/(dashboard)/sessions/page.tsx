@@ -94,7 +94,7 @@ export default function SessionsPage() {
   const [batchDeleteConfirmOpen, setBatchDeleteConfirmOpen] = useState(false);
 
   const fetchOptionsFor = useCallback(
-    (field: "score" | "model" | "messageCount") => async () => {
+    (field: "score" | "model" | "messageCount" | "harness") => async () => {
       const { startTime, endTime } = computeRange(timeRange, customStart, customEnd);
       const rsp = await api.listSessionOptions({ field, startTime, endTime });
       return rsp.items ?? [];

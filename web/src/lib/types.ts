@@ -732,6 +732,15 @@ export interface ModelTrendRsp extends CommonRsp {
   data?: ModelTrendItem[];
 }
 
+export interface HarnessTrendItem {
+  harness: string;
+  points: TrendPoint[];
+}
+
+export interface HarnessTrendRsp extends CommonRsp {
+  data?: HarnessTrendItem[];
+}
+
 export interface RatePoint {
   time: string;
   total: number;
@@ -817,7 +826,7 @@ export interface AuditOptionListRsp extends CommonRsp {
 // ─── Session Option List ─────────────────────────────────────────────────────
 
 export interface SessionOptionListReq {
-  field: "score" | "model" | "messageCount";
+  field: "score" | "model" | "messageCount" | "harness";
   keyword?: string;
   startTime?: string;
   endTime?: string;

@@ -11,6 +11,7 @@ import { Key, MessageSquare, Server, Cpu } from "lucide-react";
 import { MetricNumber } from "@/components/motion/metric-number";
 import { ModelCostBarChart } from "@/components/charts/model-cost-bar-chart";
 import { ModelTrendChart } from "@/components/charts/model-trend-chart";
+import { HarnessTrendChart } from "@/components/charts/harness-trend-chart";
 import { RequestRateChart } from "@/components/charts/request-rate-chart";
 import { TokenVolumeChart } from "@/components/charts/token-volume-chart";
 import { TokenRateChart } from "@/components/charts/token-rate-chart";
@@ -153,6 +154,7 @@ export default function DashboardPage() {
           <ModelCostBarChart />
           <ModelTokenBarChart />
           <ModelTrendChart />
+          <HarnessTrendChart />
           <RequestRateChart />
           <TokenVolumeChart />
           <TokenRateChart />

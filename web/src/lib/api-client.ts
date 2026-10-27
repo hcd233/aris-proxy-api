@@ -64,6 +64,7 @@ import type {
   ModelListSortField,
   ModelSpecPrefillRsp,
   ModelTrendRsp,
+  HarnessTrendRsp,
   ModelUpdateRsp,
   ModelUsageRsp,
   OAuth2Provider,
@@ -774,6 +775,15 @@ class ApiClient {
   }): Promise<ModelTrendRsp> {
     const sp = new URLSearchParams(params);
     return this.request<ModelTrendRsp>(`${API_PREFIX}/audit/stats/model/trend?${sp}`);
+  }
+
+  async fetchHarnessTrend(params: {
+    startTime: string;
+    endTime: string;
+    granularity: Granularity;
+  }): Promise<HarnessTrendRsp> {
+    const sp = new URLSearchParams(params);
+    return this.request<HarnessTrendRsp>(`${API_PREFIX}/audit/stats/harness/trend?${sp}`);
   }
 
   async fetchRequestRate(params: {

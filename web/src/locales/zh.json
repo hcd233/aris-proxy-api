@@ -915,5 +915,6 @@
   "endpoints.visibility_owner_only": "只有端点归属者可以修改可见性。",
   "sessions.filter_harness": "筛选 Harness",
   "sessions.harness": "Agent",
-  "sessions.ua_missing": "该会话创建于功能上线前，或该轮请求未携带 User-Agent"
+  "sessions.ua_missing": "该会话创建于功能上线前，或该轮请求未携带 User-Agent",
+  "dashboard.harness_trend": "Harness 调用量走势"
 }

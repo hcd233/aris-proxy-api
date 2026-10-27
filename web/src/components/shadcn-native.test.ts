@@ -267,3 +267,13 @@ describe("agent harness 详情", () => {
     expect(src).toContain("metadata.clientUA");
   });
 });
+
+describe("agent harness 走势图", () => {
+  it("dashboard 使用堆叠面积图展示各 harness 调用量", () => {
+    const page = read("app/(dashboard)/page.tsx");
+    expect(page).toContain("HarnessTrendChart");
+    const chart = read("components/charts/harness-trend-chart.tsx");
+    expect(chart).toContain('stackId="harness"');
+    expect(chart).toContain('chartType="area"');
+  });
+});
