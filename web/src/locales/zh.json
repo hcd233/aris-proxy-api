@@ -912,5 +912,7 @@
   "endpoints.visibility_desc": "公开端点对所有用户可见、可调用，但只有管理员能修改。",
   "upstream.public_badge": "公开",
   "upstream.public_readonly": "公开端点由管理员维护。",
-  "endpoints.visibility_owner_only": "只有端点归属者可以修改可见性。"
+  "endpoints.visibility_owner_only": "只有端点归属者可以修改可见性。",
+  "sessions.filter_harness": "筛选 Harness",
+  "sessions.harness": "Agent"
 }

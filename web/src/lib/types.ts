@@ -154,6 +154,8 @@ export interface DeleteUserReq {
 // ─── Session ───────────────────────────────────────────────────────────────────
 
 export interface SessionSummary {
+  /** 来源 Agent Harness（后端由 UA 现算；未识别为 "Other"） */
+  agentHarness?: string;
   id: number;
   createdAt: string;
   updatedAt: string;
