@@ -96,7 +96,7 @@ func (f *fakeOwnerIDLookup) LookupIDsByUserID(ctx context.Context, userID uint) 
 func TestListSessionOptionHandler_FieldModel(t *testing.T) {
 	t.Parallel()
 	repo := &fakeSessionReadRepo{}
-	handler := query.NewListSessionOptionHandler(repo, &fakeOwnerIDLookup{})
+	handler := query.NewListSessionOptionHandler(repo, &fakeOwnerIDLookup{}, nil)
 	items, err := handler.Handle(context.Background(), port.ListSessionOptionQuery{Field: constant.SessionFilterFieldModel, IsAdmin: true})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -117,7 +117,7 @@ func TestListSessionOptionHandler_PassesSessionIDs(t *testing.T) {
 
 	sessionIDs := []uint{1, 3, 5}
 	repo := &fakeSessionReadRepo{}
-	handler := query.NewListSessionOptionHandler(repo, &fakeOwnerIDLookup{})
+	handler := query.NewListSessionOptionHandler(repo, &fakeOwnerIDLookup{}, nil)
 	if _, err := handler.Handle(context.Background(), port.ListSessionOptionQuery{
 		Field:      constant.SessionFilterFieldMessageCount,
 		SessionIDs: sessionIDs,
@@ -140,7 +140,7 @@ func TestListSessionOptionHandler_PassesSessionIDs(t *testing.T) {
 func TestListSessionOptionHandler_FieldScore(t *testing.T) {
 	t.Parallel()
 	repo := &fakeSessionReadRepo{}
-	handler := query.NewListSessionOptionHandler(repo, &fakeOwnerIDLookup{})
+	handler := query.NewListSessionOptionHandler(repo, &fakeOwnerIDLookup{}, nil)
 	items, err := handler.Handle(context.Background(), port.ListSessionOptionQuery{Field: constant.FieldScore, IsAdmin: true})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -156,7 +156,7 @@ func TestListSessionOptionHandler_FieldScore(t *testing.T) {
 func TestListSessionOptionHandler_UnknownField(t *testing.T) {
 	t.Parallel()
 	repo := &fakeSessionReadRepo{}
-	handler := query.NewListSessionOptionHandler(repo, &fakeOwnerIDLookup{})
+	handler := query.NewListSessionOptionHandler(repo, &fakeOwnerIDLookup{}, nil)
 	items, err := handler.Handle(context.Background(), port.ListSessionOptionQuery{Field: "unknown", IsAdmin: true})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -169,7 +169,7 @@ func TestListSessionOptionHandler_UnknownField(t *testing.T) {
 func TestListSessionOptionHandler_FieldMessageCount(t *testing.T) {
 	t.Parallel()
 	repo := &fakeSessionReadRepo{}
-	handler := query.NewListSessionOptionHandler(repo, &fakeOwnerIDLookup{})
+	handler := query.NewListSessionOptionHandler(repo, &fakeOwnerIDLookup{}, nil)
 	items, err := handler.Handle(context.Background(), port.ListSessionOptionQuery{Field: constant.SessionFilterFieldMessageCount, IsAdmin: true})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -203,7 +203,7 @@ func TestListSessionOptionHandler_UserScopeRestricted(t *testing.T) {
 			return []uint{11, 12}, nil
 		},
 	}
-	handler := query.NewListSessionOptionHandler(repo, lookup)
+	handler := query.NewListSessionOptionHandler(repo, lookup, nil)
 
 	if _, err := handler.Handle(context.Background(), port.ListSessionOptionQuery{
 		Field:   constant.SessionFilterFieldModel,
@@ -231,7 +231,7 @@ func TestListSessionOptionHandler_UserWithoutKeysReturnsEmpty(t *testing.T) {
 			return []uint{}, nil
 		},
 	}
-	handler := query.NewListSessionOptionHandler(repo, lookup)
+	handler := query.NewListSessionOptionHandler(repo, lookup, nil)
 
 	items, err := handler.Handle(context.Background(), port.ListSessionOptionQuery{
 		Field:   constant.SessionFilterFieldModel,

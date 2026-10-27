@@ -224,7 +224,7 @@ func (f *crossTenantSessionFixture) buildApp(t *testing.T, db *gorm.DB, rdb *red
 		ScoreSession:       sessioncommand.NewScoreSessionHandler(sessionRepo, apiKeyRepo),
 		DeleteScoreSession: sessioncommand.NewDeleteScoreSessionHandler(sessionRepo, apiKeyRepo),
 		SessionCache:       detailCache,
-		ListOption:         sessionquery.NewListSessionOptionHandler(readRepo, apiKeyRepo),
+		ListOption:         sessionquery.NewListSessionOptionHandler(readRepo, apiKeyRepo, rulesRepo),
 	})
 
 	datasetHandler := handler.NewDatasetHandler(handler.DatasetDependencies{

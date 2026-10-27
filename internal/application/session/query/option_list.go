@@ -9,6 +9,7 @@ import (
 
 	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/domain/agentharness"
 	"github.com/hcd233/aris-proxy-api/internal/domain/session"
 )
 
@@ -17,10 +18,11 @@ import (
 type listSessionOptionHandler struct {
 	readRepo   session.SessionReadRepository
 	apiKeyRepo ownerIDLookup
+	rules      agentharness.RuleRepository
 }
 
-func NewListSessionOptionHandler(readRepo session.SessionReadRepository, apiKeyRepo ownerIDLookup) sessionport.ListSessionOptionHandler {
-	return &listSessionOptionHandler{readRepo: readRepo, apiKeyRepo: apiKeyRepo}
+func NewListSessionOptionHandler(readRepo session.SessionReadRepository, apiKeyRepo ownerIDLookup, rules agentharness.RuleRepository) sessionport.ListSessionOptionHandler {
+	return &listSessionOptionHandler{readRepo: readRepo, apiKeyRepo: apiKeyRepo, rules: rules}
 }
 
 // Handle 执行筛选选项查询。
@@ -68,6 +70,16 @@ func (h *listSessionOptionHandler) Handle(ctx context.Context, q sessionport.Lis
 		return items, nil
 	case constant.SessionFilterFieldModel:
 		return h.readRepo.ListDistinctModels(ctx, ownerIDs, q.Keyword, q.StartTime, q.EndTime, q.SessionIDs)
+	case constant.SessionFilterFieldHarness:
+		names := lo.Uniq(lo.FilterMap(LoadHarnessRules(ctx, h.rules), func(rule agentharness.Rule, _ int) (string, bool) {
+			return rule.Name, rule.Name != ""
+		}))
+		if q.Keyword != "" {
+			names = lo.Filter(names, func(name string, _ int) bool {
+				return strings.Contains(name, q.Keyword)
+			})
+		}
+		return append(names, constant.AgentHarnessOther), nil
 	case constant.SessionFilterFieldMessageCount:
 		maxCount, bucketCounts, err := h.readRepo.ListMessageCountStats(ctx, ownerIDs, q.StartTime, q.EndTime, q.SessionIDs)
 		if err != nil {

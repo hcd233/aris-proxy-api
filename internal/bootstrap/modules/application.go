@@ -455,8 +455,8 @@ func NewCreateShareHandler(getByUser sessionport.GetSessionByUserHandler, shareC
 	return sessioncommand.NewCreateShareHandler(getByUser, shareCache)
 }
 
-func NewSessionOptionHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository) sessionport.ListSessionOptionHandler {
-	return sessionquery.NewListSessionOptionHandler(readRepo, apiKeyRepo)
+func NewSessionOptionHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository, rules agentharness.RuleRepository) sessionport.ListSessionOptionHandler {
+	return sessionquery.NewListSessionOptionHandler(readRepo, apiKeyRepo, rules)
 }
 
 func NewTriggerService(repo triggerdomain.TriggerRepository, hitRecorder triggerport.HitRecorder, cache *redis.Client) *triggerapp.TriggerService {

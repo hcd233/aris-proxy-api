@@ -31,6 +31,9 @@ type FilterCriteria struct {
 
 // FieldConfig 字段配置
 type FieldConfig struct {
+	// Custom 自定义条件构造：非 nil 时优先于列/操作符推导，
+	// 用于「取值决定 SQL 形态」的字段（如 harness 需要按名字生成子查询）。
+	Custom       func(f Filter) (sql string, args []any, err error)
 	SQLColumn    string
 	SQLExpr      string // 优先于 SQLColumn 的 SQL 表达式片段（如 jsonb_array_length(message_ids::jsonb)）
 	IsFuzzy      bool
@@ -176,6 +179,9 @@ func ToSQL(filters []Filter, fieldConfigs map[string]FieldConfig) (sql string, a
 
 // buildCondition 构建单个 SQL 条件（单值或多值）
 func buildCondition(f Filter, config FieldConfig) (sql string, args []any, err error) {
+	if config.Custom != nil {
+		return config.Custom(f)
+	}
 	column := config.SQLColumn
 	if config.SQLExpr != "" {
 		column = config.SQLExpr

@@ -44,6 +44,9 @@ var sessionFieldConfigs = map[string]filter.FieldConfig{
 		SQLExpr: constant.SessionMessageCountSQLExpr,
 		IsRange: true,
 	},
+	constant.SessionFilterFieldHarness: {
+		Custom: BuildHarnessFilterCondition,
+	},
 }
 
 // ownerIDLookup 归属 API Key ID 查询（由 apikey 仓储实现）。

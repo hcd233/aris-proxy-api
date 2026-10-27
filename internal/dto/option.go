@@ -28,7 +28,7 @@ type AuditOptionListRsp struct {
 //	@author centonhuang
 //	@update 2026-08-12 16:00:00
 type SessionOptionListReq struct {
-	Field     string    `query:"field" required:"true" enum:"score,model,messageCount" doc:"筛选字段"`
+	Field     string    `query:"field" required:"true" enum:"score,model,messageCount,harness" doc:"筛选字段"`
 	Keyword   string    `query:"keyword" maxLength:"100" doc:"搜索关键词"`
 	StartTime time.Time `query:"startTime" doc:"筛选起始时间"`
 	EndTime   time.Time `query:"endTime" doc:"筛选结束时间"`

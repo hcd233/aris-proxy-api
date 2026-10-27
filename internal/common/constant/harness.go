@@ -19,6 +19,15 @@ const (
 
 	// AgentHarnessRuleFingerprintFormat 规则指纹的输出格式：<条数>:<最近更新时间 UnixNano>。
 	AgentHarnessRuleFingerprintFormat = "%d:%d"
+
+	// SessionFilterFieldHarness 会话筛选的 harness 维度（Filter DSL 字段名）。
+	SessionFilterFieldHarness = "harness"
+
+	// SessionHarnessResolveSQL 会话侧「UA → 首命中规则名」的标量子查询。
+	//
+	// 与 Go 侧 Match 同语义（ORDER BY sort, id LIMIT 1）；未命中时返回 NULL，
+	// 因此 `IS NULL` 等价于 Other，且空 UA 天然落入。
+	SessionHarnessResolveSQL = "(SELECT r.name FROM agent_harness_rules r WHERE lower(client_ua) LIKE r.pattern || '%' ORDER BY r.sort, r.id LIMIT 1)"
 )
 
 // AgentHarnessRuleSeedRule 内置种子规则的形状。
