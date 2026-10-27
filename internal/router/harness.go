@@ -12,7 +12,15 @@ import (
 )
 
 // initHarnessRouter 注册 harness 规则管理路由（GET/POST/PATCH/DELETE 均为 admin only）。
+//
+// harnessHandler 为 nil 时跳过注册：e2e 夹具只装配被测 handler，其余用 nil 占位，
+// 不跳过会在取方法值时 nil pointer panic。生产接线由 test/unit/bootstrap 守护
+// （routeParams 缺字段会直接 FAIL），因此这里的降级只影响未接线的夹具。
 func initHarnessRouter(group huma.API, harnessHandler handler.HarnessHandler) {
+	if harnessHandler == nil {
+		return
+	}
+
 	huma.Register(group, huma.Operation{
 		OperationID: "listHarnessRules",
 		Method:      http.MethodGet,
