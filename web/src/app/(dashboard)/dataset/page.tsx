@@ -44,6 +44,7 @@ import {
 import { PermissionGuard } from "@/components/permission-guard";
 import { PageHeader } from "@/components/page-header";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { formatInteger } from "@/lib/utils";
 
 hljs.registerLanguage("json", json);
 
@@ -66,10 +67,6 @@ function formatAndHighlight(jsonStr: string): string {
   } catch {
     return escapeHtml(jsonStr);
   }
-}
-
-function formatNumber(value: number): string {
-  return new Intl.NumberFormat().format(value);
 }
 
 function formatTimeRange(startTime: string, endTime: string): string {
@@ -200,7 +197,7 @@ function DistributionList({
                   </TooltipRoot>
                 </TooltipProvider>
                 <span className="font-mono tabular-nums text-muted-foreground">
-                  {formatNumber(item.value)}
+                  {formatInteger(item.value)}
                 </span>
               </div>
               <Progress value={Math.max(6, (item.value / max) * 100)} />
@@ -346,7 +343,7 @@ export default function DatasetPage() {
       a.remove();
       URL.revokeObjectURL(url);
 
-      toast.success(`${t("dataset.export_success")} · ${formatNumber(total)}`);
+      toast.success(`${t("dataset.export_success")} · ${formatInteger(total)}`);
     } catch (err) {
       showErrorToast(err, { title: t("dataset.export_error") });
     } finally {
@@ -505,7 +502,7 @@ export default function DatasetPage() {
             <div className="grid gap-3 md:grid-cols-3">
               <MetricCard
                 label={t("dataset.total_sessions")}
-                value={formatNumber(totalSessions)}
+                value={formatInteger(totalSessions)}
                 loading={loadingPreview}
               />
               <MetricCard
@@ -631,7 +628,7 @@ export default function DatasetPage() {
               <div className="min-w-64 space-y-3 rounded-xl border border-primary/15 bg-card p-4">
                 <CardDescription>
                   {replaceVars(t("dataset.export_confirm_total"), {
-                    total: formatNumber(totalSessions),
+                    total: formatInteger(totalSessions),
                   })}
                 </CardDescription>
                 {exporting && <Progress value={exportProgress} />}

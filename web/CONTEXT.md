@@ -112,6 +112,24 @@ _Avoid_: prompt tokens, total tokens
 金额展示统一入口：去尾零、小数位上限 6，规避浮点尾差直出（`0.30000000000000004`）；null/undefined 渲染 `—`。
 _Avoid_: money format
 
+## Numeric Display（数值展示）
+
+**Compact Token Count（token 量级缩写）**:
+token 数值（输入/输出/缓存读/缓存写、上下文窗口、最大输出、吞吐图坐标轴与 tooltip）的统一入口 `formatTokenCount`：≥1000 起缩写为 `K`/`M`/`B`，最多 1 位小数并省略尾零（`1.5K`、`1M`、`1.2B`），四舍五入满千自动进一级（`999_960 → 1M`，不会出现 `1000K`）。表格与徽标只显示缩写，精确值收进 Tooltip 或详情面板。
+_Avoid_: token abbreviation, K suffix, compact tokens
+
+**formatInteger（计数格式化）**:
+计数类数值（总数、分页 total、分布统计、token 精确值）的统一入口：固定 en-US 千分位分组，空值渲染 `—`。固定 locale 保证 SSR/hydration 一致，切换语言时数字宽度不抖动。
+_Avoid_: thousands separator, number format
+
+**formatDurationMs（时长格式化）**:
+时长（首字延迟、流式时长、cron 耗时、Playground 轮次耗时）的统一入口：<1s 显示 `850ms`，≥1s 换算成 `1.3s`（最多 2 位小数、省略尾零）。
+_Avoid_: latency format, ms format
+
+**formatDecimal（小数格式化）**:
+非计数的小数（速率、占比、CPU/内存等运行时指标）的统一入口：千分位 + 最多 N 位小数（默认 2）。
+_Avoid_: float format
+
 ## Playground（模型调试台）
 
 **Playground Session（调试会话）**:

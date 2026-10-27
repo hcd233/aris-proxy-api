@@ -45,7 +45,8 @@ import { Spinner } from "@/components/ui/spinner";
 import { useT } from "@/lib/i18n";
 import { api } from "@/lib/api-client";
 import type { ModelCapability } from "@/lib/types";
-import { DEFAULT_CONTEXT_LENGTH, DEFAULT_MAX_OUTPUT, formatTokens, type ModelForm } from "./shared";
+import { formatTokenCount } from "@/lib/utils";
+import { DEFAULT_CONTEXT_LENGTH, DEFAULT_MAX_OUTPUT, type ModelForm } from "./shared";
 
 // 输入模态 chips：text 必选（保存校验的 UI 呈现），其余点击切换
 const CAPABILITY_CHIPS: { value: ModelCapability; labelKey: string; Icon: LucideIcon }[] = [
@@ -107,7 +108,7 @@ function TokenPresetPopover({
         >
           {presets.map((preset) => (
             <ToggleGroupItem key={preset} value={String(preset)} className="font-mono tabular-nums">
-              {formatTokens(preset)}
+              {formatTokenCount(preset)}
             </ToggleGroupItem>
           ))}
         </ToggleGroup>

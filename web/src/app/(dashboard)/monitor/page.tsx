@@ -12,6 +12,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { RuntimeGaugeCard } from "@/components/charts/runtime-gauge-card";
 import { RuntimeChart } from "@/components/charts/runtime-chart";
 import { useChartSeriesColors } from "@/lib/theme";
+import { formatDecimal, formatInteger } from "@/lib/utils";
 
 const POLL_INTERVAL_MS = 5000;
 
@@ -339,14 +340,14 @@ export default function MonitorPage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <RuntimeGaugeCard
             label={t("monitor.goroutines")}
-            value={goroutinesTotal}
+            value={formatInteger(goroutinesTotal)}
             icon={<Activity className="size-4" />}
             tone="primary"
             loading={loading}
           />
           <RuntimeGaugeCard
             label={t("monitor.heap")}
-            value={heapTotal}
+            value={formatDecimal(heapTotal, 2)}
             unit="MB"
             icon={<MemoryStick className="size-4" />}
             tone="blue"
@@ -354,7 +355,7 @@ export default function MonitorPage() {
           />
           <RuntimeGaugeCard
             label={t("monitor.sse_active")}
-            value={sseTotal}
+            value={formatInteger(sseTotal)}
             icon={<Radio className="size-4" />}
             tone="violet"
             loading={loading}

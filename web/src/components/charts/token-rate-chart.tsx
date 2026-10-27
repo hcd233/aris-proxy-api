@@ -4,6 +4,7 @@ import { useCallback } from "react";
 import { api } from "@/lib/api-client";
 import type { TokenRateItem } from "@/lib/types";
 import { LineChartCard, formatTooltipRow } from "@/components/charts/line-chart-card";
+import { formatDecimal } from "@/lib/utils";
 import { ReferenceLine } from "recharts";
 import { useI18n } from "@/lib/i18n";
 
@@ -77,7 +78,7 @@ export function TokenRateChart() {
       fetchData={(p) => api.fetchTokenRate(p)}
       toChart={toChart}
       tooltipFormatter={(value, name, item) =>
-        formatTooltipRow(value, name, item, (v) => `${v.toFixed(2)} tok/s`)
+        formatTooltipRow(value, name, item, (v) => `${formatDecimal(v, 2)} tok/s`)
       }
       extraElements={({ data, series, chartConfig, activeLegend }) => {
         // Calculate average output token rate per model
@@ -101,11 +102,7 @@ export function TokenRateChart() {
               strokeWidth={1.5}
               label={({ viewBox }: { viewBox: { x?: number; y?: number; width?: number } }) => {
                 const color = chartConfig[model]?.color ?? "#888";
-                const formatted =
-                  average >= 1000
-                    ? average.toLocaleString(undefined, { maximumFractionDigits: 0 })
-                    : average.toFixed(2);
-                const text = `avg ${formatted} tok/s`;
+                const text = `avg ${formatDecimal(average, average >= 1000 ? 0 : 2)} tok/s`;
                 const labelWidth = 120;
                 const right = (viewBox.x ?? 0) + (viewBox.width ?? 0);
                 return (
