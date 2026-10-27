@@ -2,7 +2,6 @@ package query
 
 import (
 	"context"
-	"strings"
 
 	harnessport "github.com/hcd233/aris-proxy-api/internal/application/agentharness/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
@@ -27,23 +26,17 @@ func (h *previewHarnessHandler) Handle(ctx context.Context, q harnessport.Previe
 		return nil, err
 	}
 
-	harness := agentharness.Match(q.UA, rules)
-	result := &harnessport.PreviewHarnessResult{Harness: harness}
-	if harness == constant.AgentHarnessOther {
+	matched := agentharness.MatchRule(q.UA, rules)
+	result := &harnessport.PreviewHarnessResult{Harness: constant.AgentHarnessOther}
+	if matched == nil {
 		return result, nil
 	}
 
-	normalized := strings.ToLower(strings.TrimSpace(q.UA))
-	for _, rule := range rules {
-		if strings.HasPrefix(normalized, rule.Pattern) {
-			result.Rule = &harnessport.HarnessRuleView{
-				ID:      rule.ID,
-				Pattern: rule.Pattern,
-				Name:    rule.Name,
-				Sort:    rule.Sort,
-			}
-			return result, nil
-		}
+	result.Harness = matched.Name
+	result.Rule = &harnessport.HarnessRuleView{
+		ID:      matched.ID,
+		Pattern: matched.Pattern,
+		Name:    matched.Name,
 	}
 	return result, nil
 }

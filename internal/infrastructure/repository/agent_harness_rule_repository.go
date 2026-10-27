@@ -24,7 +24,7 @@ func NewAgentHarnessRuleRepository(db *gorm.DB) agentharness.RuleRepository {
 	return &agentHarnessRuleRepository{db: db}
 }
 
-// List 返回全部规则，按 (sort, id) 升序——与 SQL 侧标量子查询的首命中顺序一致。
+// List 返回全部规则，按前缀长度降序——越具体的规则越靠前，与命中优先级同序。
 func (r *agentHarnessRuleRepository) List(ctx context.Context) ([]agentharness.Rule, error) {
 	var rows []dbmodel.AgentHarnessRule
 	if err := r.db.WithContext(ctx).
@@ -77,7 +77,6 @@ func (r *agentHarnessRuleRepository) Update(ctx context.Context, rule agentharne
 		Updates(map[string]any{
 			constant.FieldPattern: row.Pattern,
 			constant.FieldName:    row.Name,
-			constant.FieldSort:    row.Sort,
 		}).Error
 	if err != nil {
 		return ierr.Wrap(ierr.ErrDBUpdate, err, "update harness rule")
@@ -123,7 +122,6 @@ func toAgentHarnessRule(row dbmodel.AgentHarnessRule) agentharness.Rule {
 		ID:      row.ID,
 		Pattern: row.Pattern,
 		Name:    row.Name,
-		Sort:    row.Sort,
 	}
 }
 
@@ -145,5 +143,5 @@ func BuildAgentHarnessRuleRow(rule agentharness.Rule) (*dbmodel.AgentHarnessRule
 	if err != nil {
 		return nil, err
 	}
-	return &dbmodel.AgentHarnessRule{BaseModel: dbmodel.BaseModel{ID: rule.ID}, Pattern: pattern, Name: name, Sort: rule.Sort}, nil
+	return &dbmodel.AgentHarnessRule{BaseModel: dbmodel.BaseModel{ID: rule.ID}, Pattern: pattern, Name: name}, nil
 }

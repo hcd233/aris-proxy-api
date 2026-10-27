@@ -5,7 +5,6 @@ type HarnessRuleItem struct {
 	ID      uint   `json:"id" doc:"规则 ID"`
 	Pattern string `json:"pattern" doc:"UA 前缀（入库统一小写）"`
 	Name    string `json:"name" doc:"harness 展示名"`
-	Sort    int    `json:"sort" doc:"排序，升序优先命中"`
 }
 
 // ListHarnessRulesReq 规则列表请求
@@ -14,7 +13,7 @@ type ListHarnessRulesReq struct{}
 // ListHarnessRulesRsp 规则列表响应
 type ListHarnessRulesRsp struct {
 	CommonRsp
-	Rules []*HarnessRuleItem `json:"rules" doc:"规则列表（顺序即匹配优先级）"`
+	Rules []*HarnessRuleItem `json:"rules" doc:"规则列表（按前缀长度降序，越具体的规则越靠前）"`
 }
 
 // CreateHarnessRuleReq 新增规则请求
@@ -26,7 +25,6 @@ type CreateHarnessRuleReq struct {
 type CreateHarnessRuleReqBody struct {
 	Pattern string `json:"pattern" required:"true" minLength:"1" maxLength:"200" doc:"UA 前缀（大小写不敏感，入库转小写）"`
 	Name    string `json:"name" required:"true" minLength:"1" maxLength:"64" doc:"harness 展示名（Other 为保留名）"`
-	Sort    int    `json:"sort,omitempty" doc:"排序，升序优先命中"`
 }
 
 // CreateHarnessRuleRsp 新增规则响应
@@ -45,7 +43,6 @@ type UpdateHarnessRuleReq struct {
 type UpdateHarnessRuleReqBody struct {
 	Pattern string `json:"pattern" required:"true" minLength:"1" maxLength:"200" doc:"UA 前缀（大小写不敏感，入库转小写）"`
 	Name    string `json:"name" required:"true" minLength:"1" maxLength:"64" doc:"harness 展示名（Other 为保留名）"`
-	Sort    int    `json:"sort,omitempty" doc:"排序，升序优先命中"`
 }
 
 // UpdateHarnessRuleRsp 修改规则响应

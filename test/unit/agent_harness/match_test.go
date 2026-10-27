@@ -11,13 +11,13 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/domain/agentharness"
 )
 
-// ruleSet 构造一组按 (Sort, ID) 升序排列的规则：
-// sort=5 的窄前缀先命中，sort=10/20 的宽前缀兜底。
+// ruleSet 构造一组规则：一条窄前缀 + 两条宽前缀，故意把窄前缀排在最后。
+// 命中结果只由前缀长度决定，与规则在切片里的顺序无关。
 func ruleSet() []agentharness.Rule {
 	return []agentharness.Rule{
-		{ID: 3, Pattern: "deepseek-harness/0.2.1-rc.2", Name: "DSH-RC2", Sort: 5},
-		{ID: 2, Pattern: "zcode/", Name: "ZCode", Sort: 10},
-		{ID: 1, Pattern: "deepseek-harness/", Name: "DSH", Sort: 20},
+		{ID: 1, Pattern: "deepseek-harness/", Name: "DSH"},
+		{ID: 2, Pattern: "zcode/", Name: "ZCode"},
+		{ID: 3, Pattern: "deepseek-harness/0.2.1-rc.2", Name: "DSH-RC2"},
 	}
 }
 
@@ -29,7 +29,7 @@ func TestMatch(t *testing.T) {
 		ua       string
 		expected string
 	}{
-		{"sort priority wins", "deepseek-harness/0.2.1-rc.2 (+https://github.com/deepseek-ai/deepseek-harness)", "DSH-RC2"},
+		{"longest prefix wins", "deepseek-harness/0.2.1-rc.2 (+https://github.com/deepseek-ai/deepseek-harness)", "DSH-RC2"},
 		{"broader prefix fallback", "deepseek-harness/0.2.1-rc.3 (+https://github.com/deepseek-ai/deepseek-harness)", "DSH"},
 		{"case insensitive", "ZCode/3.15.3 ai-sdk/provider-utils/4.0.39", "ZCode"},
 		{"tolerates surrounding spaces", "  zcode/3.14.5", "ZCode"},
@@ -47,6 +47,47 @@ func TestMatch(t *testing.T) {
 				t.Errorf("Match(%q) = %q, want %q", c.ua, got, c.expected)
 			}
 		})
+	}
+}
+
+// TestMatchIgnoresRuleOrder 钉住「规则之间没有先后关系」：同一组规则正序与
+// 倒序得到完全一致的匹配结果，这样才允许规则表不存排序字段。
+func TestMatchIgnoresRuleOrder(t *testing.T) {
+	t.Parallel()
+
+	rules := ruleSet()
+	reversed := []agentharness.Rule{rules[2], rules[1], rules[0]}
+	uas := []string{
+		"deepseek-harness/0.2.1-rc.2 (+https://github.com/deepseek-ai/deepseek-harness)",
+		"deepseek-harness/0.2.1-rc.3 (+https://github.com/deepseek-ai/deepseek-harness)",
+		"zcode/3.15.3",
+		"OpenAI/Python 2.24.0",
+	}
+	for _, ua := range uas {
+		t.Run(ua, func(t *testing.T) {
+			t.Parallel()
+
+			forward := agentharness.Match(ua, rules)
+			backward := agentharness.Match(ua, reversed)
+			if forward != backward {
+				t.Errorf("Match(%q) depends on rule order: forward=%q backward=%q", ua, forward, backward)
+			}
+		})
+	}
+}
+
+// TestMatchRuleReturnsLongestRule 预览要能说出「命中了哪条」，
+// 因此返回的必须是那条最长前缀规则，而不是任意一条同名的。
+func TestMatchRuleReturnsLongestRule(t *testing.T) {
+	t.Parallel()
+
+	matched := agentharness.MatchRule("deepseek-harness/0.2.1-rc.2", ruleSet())
+	if matched == nil || matched.ID != 3 {
+		t.Fatalf("MatchRule = %+v, want rule 3 (the longest prefix)", matched)
+	}
+
+	if got := agentharness.MatchRule("OpenAI/Python 2.24.0", ruleSet()); got != nil {
+		t.Errorf("MatchRule on unknown UA = %+v, want nil", got)
 	}
 }
 

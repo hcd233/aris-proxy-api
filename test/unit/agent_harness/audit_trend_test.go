@@ -158,10 +158,7 @@ func TestFillHarnessTrendSeries(t *testing.T) {
 			zcode = item
 		}
 	}
-	if zcode == nil {
-		t.Fatal("ZCode series missing")
-	}
-	if zcode.Points[0].Count != 2 || zcode.Points[1].Count != 0 {
-		t.Errorf("ZCode points = %+v, want 2 then 0", zcode.Points)
+	if zcode == nil || zcode.Points[0].Count != 2 || zcode.Points[1].Count != 0 {
+		t.Fatalf("ZCode points = %+v, want 2 then 0", zcode)
 	}
 }

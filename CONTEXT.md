@@ -170,7 +170,7 @@ _Avoid_: conversation（"Conversation" 用于其他语境不可混用）, chat, 
 _Avoid_: client type, agent name, source tag
 
 **HarnessRule（Harness 规则）**:
-`agent_harness_rules` 表里的一条「UA 前缀 → harness 名称」映射：`pattern`（小写前缀，拒绝 LIKE 通配符与反斜杠）、`name`（展示名，`Other` 为保留名）、`sort`（升序优先命中）。由 admin 后台维护，**运行时可改且不缓存**，改完下一次查询即生效；硬删除后历史数据回落 `Other`。会话筛选、会话展示、调用量走势图三者共用这一份规则（SQL 用标量子查询按 `sort, id` 取首命中，与 Go 侧 `Match` 同语义）。
+`agent_harness_rules` 表里的一条「UA 前缀 → harness 名称」映射：`pattern`（小写前缀，拒绝 LIKE 通配符与反斜杠）、`name`（展示名，`Other` 为保留名）。**规则之间没有先后关系**：多条规则同时命中时取**最长前缀**——两条能命中同一 UA 的前缀必有一条是另一条的前缀，故长度严格可比、归属唯一，规则表不需要排序字段。由 admin 后台维护，**运行时可改且不缓存**，改完下一次查询即生效；硬删除后历史数据回落 `Other`。会话筛选、会话展示、调用量走势图三者共用这一份规则（SQL 用标量子查询按 `length(pattern)` 降序取一条，与 Go 侧 `MatchRule` 同语义）。
 _Avoid_: harness mapping, client rule, ua rule
 
 **Message（消息）**:

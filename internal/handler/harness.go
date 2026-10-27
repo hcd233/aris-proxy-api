@@ -68,7 +68,6 @@ func (h *harnessHandler) HandleCreateHarnessRule(ctx context.Context, req *dto.C
 	view, err := h.create.Handle(ctx, harnessport.CreateHarnessRuleCommand{
 		Pattern: req.Body.Pattern,
 		Name:    req.Body.Name,
-		Sort:    req.Body.Sort,
 	})
 	if err != nil {
 		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
@@ -82,7 +81,6 @@ func (h *harnessHandler) HandleUpdateHarnessRule(ctx context.Context, req *dto.U
 		ID:      req.ID,
 		Pattern: req.Body.Pattern,
 		Name:    req.Body.Name,
-		Sort:    req.Body.Sort,
 	})
 	if err != nil {
 		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
@@ -119,6 +117,5 @@ func toHarnessRuleItem(view *harnessport.HarnessRuleView) *dto.HarnessRuleItem {
 		ID:      view.ID,
 		Pattern: view.Pattern,
 		Name:    view.Name,
-		Sort:    view.Sort,
 	}
 }

@@ -41,7 +41,7 @@ func (h *createHarnessRuleHandler) Handle(ctx context.Context, cmd port.CreateHa
 		}
 	}
 
-	created, err := h.repo.Create(ctx, agentharness.Rule{Pattern: pattern, Name: name, Sort: cmd.Sort})
+	created, err := h.repo.Create(ctx, agentharness.Rule{Pattern: pattern, Name: name})
 	if err != nil {
 		return nil, err
 	}
@@ -56,6 +56,5 @@ func toHarnessRuleView(rule *agentharness.Rule) *port.HarnessRuleView {
 		ID:      rule.ID,
 		Pattern: rule.Pattern,
 		Name:    rule.Name,
-		Sort:    rule.Sort,
 	}
 }

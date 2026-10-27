@@ -736,7 +736,6 @@ export interface HarnessRuleItem {
   id: number;
   pattern: string;
   name: string;
-  sort: number;
 }
 
 export interface ListHarnessRulesRsp extends CommonRsp {
@@ -750,7 +749,6 @@ export interface HarnessRuleRsp extends CommonRsp {
 export interface HarnessRuleReqBody {
   pattern: string;
   name: string;
-  sort: number;
 }
 
 export interface PreviewHarnessRsp extends CommonRsp {

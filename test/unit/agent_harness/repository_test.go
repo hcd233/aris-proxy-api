@@ -45,7 +45,7 @@ func captureCreateDest(t *testing.T, db *gorm.DB) *[]*dbmodel.AgentHarnessRule {
 	return &dests
 }
 
-func TestRuleRepositoryListOrdersBySortThenID(t *testing.T) {
+func TestRuleRepositoryListOrdersByLongestPattern(t *testing.T) {
 	t.Parallel()
 
 	db := newRuleDryRunDB(t)
@@ -69,15 +69,15 @@ func TestRuleRepositoryListOrdersBySortThenID(t *testing.T) {
 	if !strings.Contains(sqls[0], `FROM "agent_harness_rules"`) {
 		t.Errorf("List SQL does not scan agent_harness_rules: %s", sqls[0])
 	}
-	if !strings.Contains(strings.ToLower(sqls[0]), "order by sort, id") {
-		t.Errorf("List must order by sort,id: %s", sqls[0])
+	if !strings.Contains(strings.ToLower(sqls[0]), "order by length(pattern) desc, pattern") {
+		t.Errorf("List must order by longest pattern first: %s", sqls[0])
 	}
 }
 
 func TestBuildAgentHarnessRuleRowNormalizesPattern(t *testing.T) {
 	t.Parallel()
 
-	row, err := repository.BuildAgentHarnessRuleRow(agentharness.Rule{Pattern: "  ZCode/ ", Name: "ZCode", Sort: 20})
+	row, err := repository.BuildAgentHarnessRuleRow(agentharness.Rule{Pattern: "  ZCode/ ", Name: "ZCode"})
 	if err != nil {
 		t.Fatalf("BuildAgentHarnessRuleRow returned error: %v", err)
 	}

@@ -44,10 +44,9 @@ interface RuleDraft {
   id?: number;
   pattern: string;
   name: string;
-  sort: number;
 }
 
-const EMPTY_DRAFT: RuleDraft = { pattern: "", name: "", sort: 0 };
+const EMPTY_DRAFT: RuleDraft = { pattern: "", name: "" };
 
 export default function HarnessPage() {
   const t = useT();
@@ -85,7 +84,7 @@ export default function HarnessPage() {
     if (!draft) return;
     setSaving(true);
     try {
-      const body = { pattern: draft.pattern, name: draft.name, sort: draft.sort };
+      const body = { pattern: draft.pattern, name: draft.name };
       if (draft.id) {
         await api.updateHarnessRule(draft.id, body);
       } else {
@@ -177,7 +176,6 @@ export default function HarnessPage() {
               <TableRow>
                 <TableHead>{t("harness.pattern")}</TableHead>
                 <TableHead>{t("harness.name")}</TableHead>
-                <TableHead className="w-[100px]">{t("harness.sort")}</TableHead>
                 <TableHead className="w-[104px] sr-only">{t("harness.actions")}</TableHead>
               </TableRow>
             </TableHeader>
@@ -186,7 +184,6 @@ export default function HarnessPage() {
                 <TableRow key={rule.id}>
                   <TableCell className="font-mono text-xs">{rule.pattern}</TableCell>
                   <TableCell>{rule.name}</TableCell>
-                  <TableCell className="tabular-nums">{rule.sort}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
                       <Button
@@ -198,7 +195,6 @@ export default function HarnessPage() {
                             id: rule.id,
                             pattern: rule.pattern,
                             name: rule.name,
-                            sort: rule.sort,
                           })
                         }
                       >
@@ -218,7 +214,7 @@ export default function HarnessPage() {
               ))}
               {!loading && rules.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center text-sm text-muted-foreground">
+                  <TableCell colSpan={3} className="text-center text-sm text-muted-foreground">
                     {t("harness.empty")}
                   </TableCell>
                 </TableRow>
@@ -251,19 +247,6 @@ export default function HarnessPage() {
                 value={draft?.name ?? ""}
                 onChange={(e) => setDraft((d) => (d ? { ...d, name: e.target.value } : d))}
                 placeholder="DSH"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="harness-sort">{t("harness.sort")}</Label>
-              <Input
-                id="harness-sort"
-                type="number"
-                value={draft?.sort ?? 0}
-                onChange={(e) =>
-                  setDraft((d) =>
-                    d ? { ...d, sort: Number.parseInt(e.target.value || "0", 10) || 0 } : d,
-                  )
-                }
               />
             </div>
           </div>
