@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useChartLegendHighlight } from "@/hooks/use-chart-legend-highlight";
+import { formatDecimal } from "@/lib/utils";
 
 interface RuntimeChartSeries {
   key: string;
@@ -117,9 +118,7 @@ export function RuntimeChart({
                           <div className="flex flex-1 items-center justify-between leading-none gap-3">
                             <span className="text-muted-foreground">{seriesLabel as string}</span>
                             <span className="font-mono font-medium text-foreground tabular-nums">
-                              {Number(value).toLocaleString(undefined, {
-                                maximumFractionDigits: 2,
-                              })}
+                              {formatDecimal(Number(value), 2)}
                               {unit ?? ""}
                             </span>
                           </div>

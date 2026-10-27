@@ -2,10 +2,12 @@
 
 import { useState, useCallback, useMemo } from "react";
 import { format, startOfDay, endOfDay } from "date-fns";
+import { enUS, ja, zhCN } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 
 import { useI18n } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -34,6 +36,7 @@ export function TimeRangePicker({
 }: TimeRangePickerProps) {
   // t 引用已稳定化（见 lib/i18n.tsx），依赖 t 的 useMemo 改依赖 locale 以响应语言切换
   const { t, locale } = useI18n();
+  const dateLocale = locale === "zh" ? zhCN : locale === "ja" ? ja : enUS;
   const [open, setOpen] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
     if (value === "custom" && customStart && customEnd) {
@@ -135,17 +138,17 @@ export function TimeRangePicker({
   const draftLabel = useMemo(() => {
     if (dateRange?.from && dateRange?.to) {
       if (showTimePicker) {
-        return `${format(dateRange.from, "MMM d HH:mm")} – ${format(dateRange.to, "MMM d HH:mm")}`;
+        return `${format(dateRange.from, "MMM d HH:mm", { locale: dateLocale })} – ${format(dateRange.to, "MMM d HH:mm", { locale: dateLocale })}`;
       }
-      return `${format(dateRange.from, "MMM d")} – ${format(dateRange.to, "MMM d")}`;
+      return `${format(dateRange.from, "MMM d", { locale: dateLocale })} – ${format(dateRange.to, "MMM d", { locale: dateLocale })}`;
     }
     if (dateRange?.from) {
-      return `${format(dateRange.from, "MMM d")} – ${t("time_range.select_end")}`;
+      return `${format(dateRange.from, "MMM d", { locale: dateLocale })} – ${t("time_range.select_end")}`;
     }
     return t("time_range.select_date_range");
     // locale 必须在依赖里：t 引用已稳定（见 lib/i18n.tsx），翻译文本刷新只能靠 locale 驱动重算
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dateRange, showTimePicker, locale, t]);
+  }, [dateRange, showTimePicker, locale, dateLocale, t]);
 
   const customRangeError =
     customRange && !customRange.isValid ? t("time_range.start_before_end") : "";
@@ -155,12 +158,12 @@ export function TimeRangePicker({
     if (value === "custom" && customStart && customEnd) {
       const start = new Date(customStart);
       const end = new Date(customEnd);
-      return `${format(start, "MMM d")} – ${format(end, "MMM d")}`;
+      return `${format(start, "MMM d", { locale: dateLocale })} – ${format(end, "MMM d", { locale: dateLocale })}`;
     }
     return t("time.custom");
     // locale 必须在依赖里：t 引用已稳定（见 lib/i18n.tsx），翻译文本刷新只能靠 locale 驱动重算
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value, customStart, customEnd, locale, t]);
+  }, [value, customStart, customEnd, locale, dateLocale, t]);
 
   const timeLabels: Record<TimeRangeKey, string> = {
     "1h": t("time.last_1h"),
@@ -174,7 +177,7 @@ export function TimeRangePicker({
     <ToggleGroup
       variant="segmented"
       spacing={0.5}
-      className={className}
+      className={cn("no-scrollbar max-w-full overflow-x-auto", className)}
       value={[value]}
       onValueChange={(next) => {
         // 「自定义」只负责打开弹层，真正切换要等弹层里点「应用」
@@ -194,9 +197,11 @@ export function TimeRangePicker({
           <span className="hidden sm:inline">{customDisplayLabel}</span>
         </PopoverTrigger>
         <PopoverContent
-          className="w-auto p-0 rounded-lg border bg-popover shadow-sm"
+          className="max-h-[min(80dvh,640px)] w-auto overflow-y-auto rounded-lg border bg-popover p-0 shadow-sm"
           align="end"
           sideOffset={8}
+          collisionPadding={12}
+          collisionAvoidance={{ side: "flip", align: "shift" }}
         >
           <div className="p-3">
             <Calendar
@@ -205,6 +210,7 @@ export function TimeRangePicker({
               onSelect={handleDateRangeSelect}
               numberOfMonths={2}
               defaultMonth={dateRange?.from}
+              locale={dateLocale}
               className="rounded-md border bg-background"
             />
           </div>

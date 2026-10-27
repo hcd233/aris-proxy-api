@@ -65,7 +65,7 @@ export function ReadingLayout({
         >
           <div
             className={cn(
-              "flex items-center gap-1 px-2 pt-[calc(1rem+0.25rem)]",
+              "flex flex-wrap items-center gap-1 gap-y-1 px-2 pt-[calc(1rem+0.25rem)]",
               "transition-[padding] duration-200 ease-out",
               headerCompact ? "pb-1.5" : "pb-2",
             )}

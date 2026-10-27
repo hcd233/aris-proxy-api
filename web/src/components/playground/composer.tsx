@@ -18,6 +18,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ProviderIcon } from "@/components/provider-icon";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { ArrowUp, KeyRound, Plus, Square } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import type { APIKeyItem } from "@/lib/types";
@@ -65,12 +66,13 @@ function InsertRoleButton({ label, onInsert }: { label: string; onInsert: () => 
             <Button
               type="button"
               variant="ghost"
-              size="icon-sm"
+              size="xs"
               aria-label={label}
-              className="rounded-full text-muted-foreground hover:text-foreground"
+              className="rounded-full px-2 text-muted-foreground hover:text-foreground"
               onClick={onInsert}
             >
-              <Plus className="size-3.5" />
+              <Plus className="size-3" />
+              <span className="font-mono text-[11px]">{label}</span>
             </Button>
           }
         />
@@ -93,6 +95,7 @@ export function Composer({
   onInsertRole,
 }: ComposerProps) {
   const t = useT();
+  const isMobile = useIsMobile();
   const [value, setValue] = useState("");
 
   const submit = () => {
@@ -206,7 +209,11 @@ export function Composer({
       <div className="rounded-[1.5rem] border border-border bg-card px-3 pt-2 pb-2 shadow-sm transition-[border-color,box-shadow] focus-within:border-primary/40 focus-within:shadow-md">
         <Textarea
           value={value}
-          placeholder={t("playground.composer.placeholder")}
+          placeholder={
+            isMobile
+              ? t("playground.composer.placeholder_mobile")
+              : t("playground.composer.placeholder")
+          }
           className="max-h-48 min-h-[3rem] resize-none border-0 bg-transparent px-1 py-1.5 text-[15px] leading-[1.6] shadow-none focus-visible:ring-0 dark:bg-transparent"
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => {

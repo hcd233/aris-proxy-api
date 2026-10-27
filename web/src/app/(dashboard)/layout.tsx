@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useState, type ReactNode } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
@@ -216,7 +216,7 @@ function SidebarNav({
 }) {
   const pathname = usePathname();
   const { isAdmin, isDemo, isModuleOpen } = useAuth();
-  const { state, isMobile, setOpenMobile } = useSidebar();
+  const { state, isMobile, setOpenMobile, openMobile } = useSidebar();
   const collapsed = state === "collapsed";
   const t = useT();
 
@@ -240,9 +240,23 @@ function SidebarNav({
       .join(","),
   ].join("|");
 
+  // 视口较矮时侧栏会溢出：导航到新页面后把激活项滚进视口，
+  // 否则当前页可能落在用户卡片下方，wayfinding 完全失效。
+  // 只在 pathname / 移动端抽屉打开时滚动；同页展开/折叠分组不应把用户拽回激活项。
+  const navRef = useRef<HTMLElement>(null);
+  const lastScrolledKey = useRef<string | null>(null);
+  const scrollKey = isMobile && openMobile ? `${pathname}|mobile-open` : pathname;
+  useEffect(() => {
+    if (lastScrolledKey.current === scrollKey) return;
+    const active = navRef.current?.querySelector<HTMLElement>("[data-nav-item][data-active]");
+    if (!active) return;
+    active.scrollIntoView({ block: "nearest" });
+    lastScrolledKey.current = scrollKey;
+  }, [layoutKey, scrollKey]);
+
   return (
     <TooltipProvider>
-      <nav className="relative flex flex-col px-2">
+      <nav ref={navRef} className="relative flex flex-col px-2">
         <NavIndicator layoutKey={layoutKey} />
         {visibleGroups.map((group, groupIndex) => {
           // 窄栏模式无组头，子项平铺不折叠

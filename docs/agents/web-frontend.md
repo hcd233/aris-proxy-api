@@ -36,6 +36,7 @@
 - 图标：统一 `lucide-react`，不要混用其他图标库。
 - Toast：用 `sonner` 的 `toast.*`，禁止 `alert/confirm`。
 - 路径前缀：所有内部跳转链接必须考虑 `basePath=/web`；用 `next/link`、`next/navigation` 即可，框架自动加前缀，**不要手动拼 `/web` 前缀**。
+- 数值展示：统一走 `src/lib/utils.ts` 的格式化入口——token 用 `formatTokenCount`（K/M/B 量级缩写）、计数用 `formatInteger`（千分位）、小数用 `formatDecimal`、时长用 `formatDurationMs`、占比用 `formatPct`、金额用 `formatCost`（`src/lib/money.ts`）。禁止在页面/组件里自写 `toLocaleString`、`toFixed` 拼数值文案（日期格式化除外）。
 - 修改前端 DTO 时如发现后端字段缺失，按 `huma-dto-conventions` 流程到 `internal/dto/` 同步更新。
 - **不适用的上游 skill**：`next-cache-components-adoption` / `next-cache-components-optimizer` / `next-partial-prefetching-adoption` 都要求服务端渲染 + 流式 Suspense，与本项目 `output: "export"` 静态导出（88/101 个组件是 `"use client"`，数据全部经 `api-client.ts` 在浏览器 fetch）架构冲突，**不要引入**。
 

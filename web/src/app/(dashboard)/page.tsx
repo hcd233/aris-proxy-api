@@ -1,13 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { api } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
 import { useT } from "@/lib/i18n";
 import { PermissionGuard } from "@/components/permission-guard";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Key, MessageSquare, Server, Cpu } from "lucide-react";
+import { AlertCircle, Key, MessageSquare, Server, Cpu } from "lucide-react";
 import { MetricNumber } from "@/components/motion/metric-number";
 import { ModelCostBarChart } from "@/components/charts/model-cost-bar-chart";
 import { ModelTrendChart } from "@/components/charts/model-trend-chart";
@@ -30,34 +33,41 @@ function StatCard({
   value,
   icon,
   loading,
+  href,
 }: {
   title: string;
   value: number;
   icon: React.ReactNode;
   loading: boolean;
+  href: string;
 }) {
   return (
-    <Card data-interactive>
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <div className="flex items-center gap-2.5">
-          <span className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            {icon}
-          </span>
-          <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            {title}
-          </span>
-        </div>
-      </CardHeader>
-      <CardContent className="pt-0">
-        {loading ? (
-          <Skeleton className="h-10 w-20" />
-        ) : (
-          <div className="font-display text-3xl font-semibold tabular-nums text-foreground">
-            <MetricNumber value={value} />
+    <Link
+      href={href}
+      className="block rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+    >
+      <Card data-interactive>
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <div className="flex items-center gap-2.5">
+            <span className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              {icon}
+            </span>
+            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              {title}
+            </span>
           </div>
-        )}
-      </CardContent>
-    </Card>
+        </CardHeader>
+        <CardContent className="pt-0">
+          {loading ? (
+            <Skeleton className="h-10 w-20" />
+          ) : (
+            <div className="font-display text-3xl font-semibold tabular-nums text-foreground">
+              <MetricNumber value={value} />
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </Link>
   );
 }
 
@@ -71,9 +81,11 @@ export default function DashboardPage() {
     models: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   const fetchDashboard = useCallback(async () => {
     setLoading(true);
+    setLoadError(false);
     const demoUser = isDemo();
     try {
       // demo 未开放 apikeys 模块，跳过探测（避免 403）
@@ -94,8 +106,13 @@ export default function DashboardPage() {
         endpoints: upstreamRsp?.pageInfo?.total ?? 0,
         models: upstreamRsp?.modelTotal ?? 0,
       });
+      // 0 和"加载失败"必须可区分：任一实际发起的请求失败都提示，而不是静默显示 0。
+      const results = [sessionsRsp !== null];
+      if (!demoUser) results.push(keysRsp !== null);
+      if (canListUpstream) results.push(upstreamRsp !== null);
+      setLoadError(results.some((ok) => !ok));
     } catch {
-      // Errors handled silently — dashboard shows zeros
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -117,13 +134,26 @@ export default function DashboardPage() {
           <p className="mt-1.5 text-sm text-muted-foreground">{t("dashboard.overview")}</p>
         </div>
 
-        <div className="stagger-rise grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {loadError && (
+          <Alert variant="destructive" className="items-center">
+            <AlertCircle />
+            <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
+              <span>{t("dashboard.load_error")}</span>
+              <Button variant="outline" size="sm" onClick={fetchDashboard}>
+                {t("common.retry")}
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <div className="stagger-rise grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           {!isDemo() && (
             <StatCard
               title={t("apikeys.title")}
               value={stats.apiKeys}
               icon={<Key className="size-4" />}
               loading={loading}
+              href="/apikeys/"
             />
           )}
           <StatCard
@@ -131,6 +161,7 @@ export default function DashboardPage() {
             value={stats.sessions}
             icon={<MessageSquare className="size-4" />}
             loading={loading}
+            href="/sessions/"
           />
           {(isAdmin() || isModuleOpen("upstream")) && (
             <StatCard
@@ -138,6 +169,7 @@ export default function DashboardPage() {
               value={stats.endpoints}
               icon={<Server className="size-4" />}
               loading={loading}
+              href="/upstream/"
             />
           )}
           {(isAdmin() || isModuleOpen("upstream")) && (
@@ -146,6 +178,7 @@ export default function DashboardPage() {
               value={stats.models}
               icon={<Cpu className="size-4" />}
               loading={loading}
+              href="/upstream/"
             />
           )}
         </div>
@@ -158,7 +191,9 @@ export default function DashboardPage() {
           <RequestRateChart />
           <TokenVolumeChart />
           <TokenRateChart />
-          <FirstTokenLatencyChart />
+          <div className="lg:col-span-2">
+            <FirstTokenLatencyChart />
+          </div>
         </div>
       </div>
     </PermissionGuard>

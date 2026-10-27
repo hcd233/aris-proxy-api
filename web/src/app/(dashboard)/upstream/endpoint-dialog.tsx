@@ -130,7 +130,7 @@ export function EndpointDialog({
                 }
               >
                 <SelectTrigger id="ep-owner">
-                  <SelectValue placeholder={t("upstream.owner_default")} />
+                  <SelectValue placeholder={t("upstream.owner_select")} />
                 </SelectTrigger>
                 <SelectContent>
                   {ownerItems.map((item) => (
@@ -239,7 +239,7 @@ export function EndpointDialog({
               />
             </Field>
           )}
-          {oauthMode === null && !editingOAuth && (
+          {oauthMode === null && !editingOAuth && form.supportAnthropicMessage && (
             <Field>
               <FieldLabel htmlFor="ep-anthropic-url">
                 {t("endpoints.anthropic_base_url")}

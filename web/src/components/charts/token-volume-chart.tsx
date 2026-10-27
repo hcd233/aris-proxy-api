@@ -7,18 +7,7 @@ import type { TokenThroughputPoint } from "@/lib/types";
 import { LineChartCard } from "@/components/charts/line-chart-card";
 import { useTokenLayerColors } from "@/lib/theme";
 import { toTokenVolumeRows, colorLuminance } from "@/lib/token-volume";
-
-function formatTokenCount(v: number): string {
-  if (v >= 1_000_000) {
-    const millions = v / 1_000_000;
-    return `${Number.isInteger(millions) ? millions : millions.toFixed(1)}M`;
-  }
-  if (v >= 1_000) {
-    const thousands = v / 1_000;
-    return `${Number.isInteger(thousands) ? thousands : thousands.toFixed(1)}K`;
-  }
-  return String(v);
-}
+import { formatTokenCount } from "@/lib/utils";
 
 export function TokenVolumeChart() {
   // t 引用已稳定化（见 lib/i18n.tsx），useMemo 改依赖 locale 以响应语言切换

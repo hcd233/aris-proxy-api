@@ -43,12 +43,7 @@ import { BusinessErrorCode, parseError } from "@/lib/api-errors";
 import type { ApiError } from "@/lib/api-client";
 import { ScheduleEditorDialog } from "@/components/cron/schedule-editor";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
-
-function formatTime(iso: string): string {
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-}
+import { formatDateTime } from "@/lib/utils";
 
 function specToHuman(spec: string, locale: string): string {
   try {
@@ -218,6 +213,7 @@ export default function CronPage() {
                       <TableHead>{t("cron.description")}</TableHead>
                       <TableHead className="w-[5rem]">{t("cron.enabled")}</TableHead>
                       <TableHead className="w-[10.5rem]">{t("cron.updated_at")}</TableHead>
+                      <TableHead className="w-[6rem] text-right">{t("common.actions")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -244,58 +240,39 @@ export default function CronPage() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            <div className="min-w-0">
-                              <TooltipRoot>
-                                <TooltipTrigger
-                                  render={
-                                    <p className="max-w-[20ch] truncate text-sm">
-                                      {specToHuman(job.spec, locale)}
-                                    </p>
-                                  }
-                                />
-                                <TooltipContent
-                                  side="top"
-                                  align="start"
-                                  className="max-w-xs break-all"
-                                >
-                                  {specToHuman(job.spec, locale)}
-                                </TooltipContent>
-                              </TooltipRoot>
-                              <TooltipRoot>
-                                <TooltipTrigger
-                                  render={
-                                    <p className="max-w-[20ch] truncate font-mono text-xs text-muted-foreground">
-                                      {job.spec}
-                                    </p>
-                                  }
-                                />
-                                <TooltipContent
-                                  side="top"
-                                  align="start"
-                                  className="max-w-xs break-all"
-                                >
-                                  {job.spec}
-                                </TooltipContent>
-                              </TooltipRoot>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="size-7 shrink-0"
-                              onClick={() => setEditingJob(job)}
-                            >
-                              <Pencil className="size-3.5" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="size-7 shrink-0"
-                              onClick={() => setTriggeringJob(job)}
-                              aria-label={t("cron.trigger")}
-                            >
-                              <Play className="size-3.5" />
-                            </Button>
+                          <div className="min-w-0">
+                            <TooltipRoot>
+                              <TooltipTrigger
+                                render={
+                                  <p className="max-w-[24ch] truncate text-sm">
+                                    {specToHuman(job.spec, locale)}
+                                  </p>
+                                }
+                              />
+                              <TooltipContent
+                                side="top"
+                                align="start"
+                                className="max-w-xs break-all"
+                              >
+                                {specToHuman(job.spec, locale)}
+                              </TooltipContent>
+                            </TooltipRoot>
+                            <TooltipRoot>
+                              <TooltipTrigger
+                                render={
+                                  <p className="max-w-[20ch] truncate font-mono text-xs text-muted-foreground">
+                                    {job.spec}
+                                  </p>
+                                }
+                              />
+                              <TooltipContent
+                                side="top"
+                                align="start"
+                                className="max-w-xs break-all"
+                              >
+                                {job.spec}
+                              </TooltipContent>
+                            </TooltipRoot>
                           </div>
                         </TableCell>
                         <TableCell className="text-muted-foreground">
@@ -325,7 +302,27 @@ export default function CronPage() {
                           </div>
                         </TableCell>
                         <TableCell className="text-muted-foreground">
-                          {formatTime(job.updatedAt)}
+                          {formatDateTime(job.updatedAt)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              onClick={() => setEditingJob(job)}
+                              aria-label={t("common.edit")}
+                            >
+                              <Pencil className="size-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              onClick={() => setTriggeringJob(job)}
+                              aria-label={t("cron.trigger")}
+                            >
+                              <Play className="size-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}

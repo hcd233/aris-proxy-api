@@ -20,19 +20,9 @@ import { Button } from "@/components/ui/button";
 import { TimeRangePicker } from "@/components/ui/time-range-picker";
 import type { TimeRangeKey } from "@/lib/time-range";
 import { computeRange } from "@/lib/time-range";
-import { formatPct } from "@/lib/utils";
+import { formatInteger, formatPct, formatTokenCount } from "@/lib/utils";
 import { useRatioSegmentColors } from "@/lib/theme";
 import { RatioLegend, StackedRatioBar } from "@/components/charts/stacked-ratio-bar";
-
-function formatTokenCount(v: number): string {
-  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
-  if (v >= 1_000) return `${(v / 1_000).toFixed(1)}K`;
-  return String(v);
-}
-
-function formatExactTokenCount(v: number): string {
-  return v.toLocaleString();
-}
 
 /** tokenTotal 总计 = 输入 + 输出 + 缓存读 + 缓存写。 */
 function tokenTotal(item: ModelUsageItem): number {
@@ -177,7 +167,7 @@ export function ModelTokenBarChart() {
                     </TableCell>
                     <TableCell className="w-[360px] pr-6">
                       <StackedRatioBar
-                        formatValue={formatExactTokenCount}
+                        formatValue={formatInteger}
                         segments={[
                           { ...legend[0], value: item.inputTokens },
                           { ...legend[1], value: item.outputTokens },

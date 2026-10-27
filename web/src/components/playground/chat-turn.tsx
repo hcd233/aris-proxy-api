@@ -12,7 +12,7 @@ import { ProviderIcon } from "@/components/provider-icon";
 import { copyTextToClipboard } from "@/lib/clipboard";
 import { formatCost } from "@/lib/money";
 import { useT } from "@/lib/i18n";
-import { cn } from "@/lib/utils";
+import { cn, formatDurationMs, formatTokenCount } from "@/lib/utils";
 import { buildCurl, type PlaygroundMessage } from "@/app/(dashboard)/playground/playground-logic";
 import {
   AlertTriangle,
@@ -34,11 +34,6 @@ interface ChatTurnProps {
   onDelete: (index: number) => void;
   onRerun: (index: number) => void;
   onRetry: (index: number) => void;
-}
-
-function formatDuration(ms?: number): string {
-  if (ms === undefined) return "—";
-  return ms < 1000 ? `${Math.round(ms)}ms` : `${(ms / 1000).toFixed(1)}s`;
 }
 
 function DetailCopyButton({ label, value }: { label: string; value: string }) {
@@ -316,8 +311,10 @@ export function ChatTurn({
                 <CollapsibleTrigger className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground">
                   <ChevronRight className="size-3 in-data-panel-open:rotate-90" />
                   <span>
-                    {usage ? `${usage.promptTokens + usage.completionTokens} tok` : "—"} ·{" "}
-                    {formatDuration(meta.totalMs)} · {formatCost(meta.cost)}
+                    {usage
+                      ? `${formatTokenCount(usage.promptTokens + usage.completionTokens)} tok`
+                      : "—"}{" "}
+                    · {formatDurationMs(meta.totalMs)} · {formatCost(meta.cost)}
                     {meta.interrupted ? ` · ${t("playground.metrics.interrupted")}` : ""}
                   </span>
                 </CollapsibleTrigger>
@@ -325,20 +322,20 @@ export function ChatTurn({
                   <div className="mt-1.5 rounded-xl border bg-background p-2.5 text-[11px] text-muted-foreground">
                     <div>
                       {t("playground.metrics.tokens_in")}{" "}
-                      <strong>{usage?.promptTokens ?? "—"}</strong>
+                      <strong>{formatTokenCount(usage?.promptTokens)}</strong>
                       {" · "}
                       {t("playground.metrics.tokens_cached")}{" "}
-                      <strong>{usage?.cachedTokens ?? "—"}</strong>
+                      <strong>{formatTokenCount(usage?.cachedTokens)}</strong>
                       {" · "}
                       {t("playground.metrics.tokens_out")}{" "}
-                      <strong>{usage?.completionTokens ?? "—"}</strong>
+                      <strong>{formatTokenCount(usage?.completionTokens)}</strong>
                     </div>
                     <div>
                       {t("playground.metrics.first_token")}{" "}
-                      <strong>{formatDuration(meta.firstTokenMs)}</strong>
+                      <strong>{formatDurationMs(meta.firstTokenMs)}</strong>
                       {" · "}
                       {t("playground.metrics.total_time")}{" "}
-                      <strong>{formatDuration(meta.totalMs)}</strong>
+                      <strong>{formatDurationMs(meta.totalMs)}</strong>
                     </div>
                     <div className="mt-1">{t("playground.metrics.estimate_hint")}</div>
                     <div className="mt-1.5 flex flex-wrap gap-1.5">

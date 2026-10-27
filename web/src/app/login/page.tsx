@@ -7,9 +7,11 @@ import { api } from "@/lib/api-client";
 import { parseOAuthCallbackParams, resolveOAuthPlatform } from "@/lib/oauth";
 import type { OAuth2Provider } from "@/lib/types";
 import { AlertCircle } from "lucide-react";
+import { Github, Google } from "@lobehub/icons";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { FieldSeparator } from "@/components/ui/field";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { SplitText } from "@/components/motion/split-text";
 
 /* Runs during HTML parsing, before the first animated frame: marks repeat
@@ -138,6 +140,10 @@ export default function LoginPage() {
   return (
     <div className="login-stage page-surface flex min-h-screen items-center justify-center bg-background px-4 py-10">
       <script dangerouslySetInnerHTML={{ __html: LOGIN_SEEN_SCRIPT }} />
+      {/* 登录前也能切语言：fixed 到页面右上，避免挤进窄屏卡片标题 */}
+      <div className="fixed top-4 right-4 z-50">
+        <LanguageSwitcher />
+      </div>
       <div className="login-card relative grid w-full max-w-5xl overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xl md:grid-cols-[1.05fr_0.95fr]">
         <div className="hidden bg-sidebar p-10 text-sidebar-foreground md:flex md:flex-col md:justify-between bg-[radial-gradient(120%_90%_at_0%_0%,color-mix(in_oklab,var(--sidebar-primary)_14%,transparent),transparent_55%)]">
           <div>
@@ -187,6 +193,9 @@ export default function LoginPage() {
               aria-busy={pending === "github"}
               onClick={() => startOAuth("github")}
             >
+              <span aria-hidden="true" className="inline-flex">
+                <Github size={18} />
+              </span>
               {t("auth.login_github")}
             </Button>
             <Button
@@ -198,6 +207,9 @@ export default function LoginPage() {
               aria-busy={pending === "google"}
               onClick={() => startOAuth("google")}
             >
+              <span aria-hidden="true" className="inline-flex">
+                <Google size={18} />
+              </span>
               {t("auth.login_google")}
             </Button>
             {demoAvailable && (

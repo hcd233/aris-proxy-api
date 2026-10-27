@@ -4,6 +4,7 @@ import { useCallback } from "react";
 import { api } from "@/lib/api-client";
 import type { RequestRateItem } from "@/lib/types";
 import { LineChartCard, formatTooltipRow } from "@/components/charts/line-chart-card";
+import { formatDecimal } from "@/lib/utils";
 
 export function RequestRateChart() {
   const toChart = useCallback((data: RequestRateItem[], colors: readonly string[]) => {
@@ -41,7 +42,7 @@ export function RequestRateChart() {
         tickFormatter: (v) => `${v}%`,
       }}
       tooltipFormatter={(value, name, item) =>
-        formatTooltipRow(value, name, item, (v) => `${v.toFixed(1)}%`)
+        formatTooltipRow(value, name, item, (v) => `${formatDecimal(v, 1)}%`)
       }
     />
   );

@@ -18,6 +18,7 @@ import {
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { api } from "@/lib/api-client";
 import { showErrorToast } from "@/lib/api-error-handler";
+import { formatDateTime } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
 import type { DatasetFormatPreviewRsp, DatasetPreviewRsp } from "@/lib/types";
 import { computeRange, type TimeRangeKey } from "@/lib/time-range";
@@ -41,7 +42,9 @@ import {
   TooltipContent,
 } from "@/components/ui/tooltip";
 import { PermissionGuard } from "@/components/permission-guard";
+import { PageHeader } from "@/components/page-header";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { formatInteger } from "@/lib/utils";
 
 hljs.registerLanguage("json", json);
 
@@ -66,14 +69,8 @@ function formatAndHighlight(jsonStr: string): string {
   }
 }
 
-function formatNumber(value: number): string {
-  return new Intl.NumberFormat().format(value);
-}
-
 function formatTimeRange(startTime: string, endTime: string): string {
-  const start = new Date(startTime).toLocaleString();
-  const end = new Date(endTime).toLocaleString();
-  return `${start} - ${end}`;
+  return `${formatDateTime(startTime)} - ${formatDateTime(endTime)}`;
 }
 
 function replaceVars(text: string, vars: Record<string, string>): string {
@@ -98,7 +95,7 @@ function StepCard({
     <Card>
       <CardHeader>
         <div className="flex items-start gap-3">
-          <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+          <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
             {index}
           </div>
           <div>
@@ -118,21 +115,30 @@ function MetricCard({
   value,
   hint,
   loading,
+  textValue = false,
 }: {
   label: string;
   value: string;
   hint?: string;
   loading: boolean;
+  /** 长字符串（模型名/格式名）用小一号并允许换行，避免 3xl 衬线字撑成标题 */
+  textValue?: boolean;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-muted/30 p-4">
+    <div className="min-w-0 rounded-xl border border-border bg-muted/30 p-4">
       <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
         {label}
       </div>
       {loading ? (
         <Skeleton className="mt-3 h-8 w-24" />
       ) : (
-        <div className="mt-2 font-display text-3xl font-semibold text-foreground">{value}</div>
+        <div
+          className={`mt-2 font-display font-semibold text-foreground ${
+            textValue ? "text-xl break-words" : "text-3xl"
+          }`}
+        >
+          {value}
+        </div>
       )}
       {hint && <div className="mt-1 text-xs text-muted-foreground">{hint}</div>}
     </div>
@@ -141,9 +147,11 @@ function MetricCard({
 
 function StatPill({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2.5 text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="ml-auto font-mono font-medium tabular-nums text-foreground">{value}</span>
+    <div className="flex min-w-0 items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2.5 text-sm">
+      <span className="shrink-0 text-muted-foreground">{label}</span>
+      <span className="ml-auto min-w-0 break-words text-right font-mono font-medium tabular-nums text-foreground">
+        {value}
+      </span>
     </div>
   );
 }
@@ -189,7 +197,7 @@ function DistributionList({
                   </TooltipRoot>
                 </TooltipProvider>
                 <span className="font-mono tabular-nums text-muted-foreground">
-                  {formatNumber(item.value)}
+                  {formatInteger(item.value)}
                 </span>
               </div>
               <Progress value={Math.max(6, (item.value / max) * 100)} />
@@ -335,7 +343,7 @@ export default function DatasetPage() {
       a.remove();
       URL.revokeObjectURL(url);
 
-      toast.success(`${t("dataset.export_success")} · ${formatNumber(total)}`);
+      toast.success(`${t("dataset.export_success")} · ${formatInteger(total)}`);
     } catch (err) {
       showErrorToast(err, { title: t("dataset.export_error") });
     } finally {
@@ -361,38 +369,13 @@ export default function DatasetPage() {
   return (
     <PermissionGuard>
       <div className="space-y-8">
-        {/* Page Header — consistent with other dashboard pages */}
-        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div className="max-w-2xl">
-            <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
-              {t("dataset.title")}
-            </h1>
-            <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground md:text-base">
-              {t("dataset.subtitle")}
-            </p>
-          </div>
-
-          {/* Quick stats */}
-          <div className="grid grid-cols-2 gap-3 md:min-w-64">
-            <div className="rounded-xl border border-border bg-muted/20 p-3.5">
-              <div className="text-xs text-muted-foreground">{t("dataset.total_sessions")}</div>
-              <div className="mt-1 font-mono text-2xl font-semibold tabular-nums text-foreground">
-                {loadingPreview ? "..." : formatNumber(totalSessions)}
-              </div>
-            </div>
-            <div className="rounded-xl border border-border bg-muted/20 p-3.5">
-              <div className="text-xs text-muted-foreground">{t("dataset.active_filters")}</div>
-              <div className="mt-1 font-mono text-2xl font-semibold tabular-nums text-foreground">
-                {activeFilters}
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* Page Header — 与其他 dashboard 页面共用同一套标题区 */}
+        <PageHeader title={t("dataset.title")} description={t("dataset.subtitle")} />
 
         {/* Step flow indicator */}
         <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
           <span className="flex items-center gap-1.5 text-primary">
-            <span className="flex size-5 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold">
+            <span className="flex size-5 items-center justify-center rounded-full bg-primary text-[11px] font-semibold text-primary-foreground">
               1
             </span>
             {t("dataset.step_configure")}
@@ -422,7 +405,7 @@ export default function DatasetPage() {
           <div className="space-y-5 pt-2">
             <div className="grid gap-4 lg:grid-cols-[1fr_1.3fr]">
               {/* Quality gate */}
-              <div className="rounded-xl border border-border bg-muted/20 p-5">
+              <div className="min-w-0 rounded-xl border border-border bg-muted/20 p-5">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <div className="flex items-center gap-2 text-sm font-medium text-foreground">
@@ -454,7 +437,7 @@ export default function DatasetPage() {
               </div>
 
               {/* Filters */}
-              <div className="flex flex-col gap-4 rounded-xl border border-border bg-muted/20 p-5">
+              <div className="flex min-w-0 flex-col gap-4 rounded-xl border border-border bg-muted/20 p-5">
                 <div className="flex flex-wrap items-center gap-2">
                   <TimeRangePicker
                     value={timeRange}
@@ -519,18 +502,20 @@ export default function DatasetPage() {
             <div className="grid gap-3 md:grid-cols-3">
               <MetricCard
                 label={t("dataset.total_sessions")}
-                value={formatNumber(totalSessions)}
+                value={formatInteger(totalSessions)}
                 loading={loadingPreview}
               />
               <MetricCard
                 label={t("dataset.top_model")}
                 value={topModel}
                 loading={loadingPreview}
+                textValue
               />
               <MetricCard
                 label={t("dataset.export_format")}
                 value={t("dataset.export_format_value")}
                 loading={loadingPreview}
+                textValue
               />
             </div>
 
@@ -608,7 +593,7 @@ export default function DatasetPage() {
         <Card className="border-primary/20 bg-primary/[0.03]">
           <CardHeader>
             <div className="flex items-start gap-3">
-              <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+              <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
                 3
               </div>
               <div>
@@ -643,7 +628,7 @@ export default function DatasetPage() {
               <div className="min-w-64 space-y-3 rounded-xl border border-primary/15 bg-card p-4">
                 <CardDescription>
                   {replaceVars(t("dataset.export_confirm_total"), {
-                    total: formatNumber(totalSessions),
+                    total: formatInteger(totalSessions),
                   })}
                 </CardDescription>
                 {exporting && <Progress value={exportProgress} />}
@@ -656,9 +641,13 @@ export default function DatasetPage() {
                   {exporting ? (
                     <Spinner data-icon="inline-start" />
                   ) : (
-                    <Download data-icon="inline-start" />
+                    totalSessions > 0 && <Download data-icon="inline-start" />
                   )}
-                  {exporting ? t("dataset.exporting") : t("dataset.export")}
+                  {exporting
+                    ? t("dataset.exporting")
+                    : totalSessions === 0 && !loadingPreview
+                      ? t("dataset.export_empty")
+                      : t("dataset.export")}
                 </Button>
               </div>
             </div>

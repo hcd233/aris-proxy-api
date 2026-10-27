@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { formatCost } from "@/lib/money";
-import { cn } from "@/lib/utils";
+import { cn, formatInteger, formatTokenCount } from "@/lib/utils";
 import type {
   ConfigMissing,
   ModelCapability,
@@ -36,18 +36,9 @@ import { isDefaultRule } from "./pricing-rule";
 export const DEFAULT_CONTEXT_LENGTH = 256000;
 export const DEFAULT_MAX_OUTPUT = 65536;
 
-// 将 token 数格式化为紧凑可读形式：128000 -> 128K，1048576 -> 1M
-export function formatTokens(n: number): string {
-  if (!n || n <= 0) return "—";
-  if (n >= 1_000_000) {
-    const v = n / 1_000_000;
-    return `${Number.isInteger(v) ? v : v.toFixed(1)}M`;
-  }
-  if (n >= 1_000) {
-    const v = n / 1_000;
-    return `${Number.isInteger(v) ? v : v.toFixed(1)}K`;
-  }
-  return String(n);
+// 规格值展示：未填（0）渲染 —，其余按量级缩写（128000 -> 128K，1048576 -> 1M）
+function formatSpecTokens(n: number): string {
+  return n > 0 ? formatTokenCount(n) : "—";
 }
 
 // 未计价表单/展示的初值：currency 为空 ⇔ rules 为空 ⇔ 未计价
@@ -160,12 +151,12 @@ export function SpecBadges({
           render={
             <Badge variant="secondary" className="px-2 font-mono tabular-nums">
               <ArrowLeftRight />
-              {formatTokens(contextLength)}
+              {formatSpecTokens(contextLength)}
             </Badge>
           }
         />
         <TooltipContent side="top" align="start" className="max-w-xs break-all">
-          {`${t("models.context_length")}: ${contextLength.toLocaleString()}`}
+          {`${t("models.context_length")}: ${formatInteger(contextLength)}`}
         </TooltipContent>
       </TooltipRoot>
       <TooltipRoot>
@@ -173,12 +164,12 @@ export function SpecBadges({
           render={
             <Badge variant="secondary" className="px-2 font-mono tabular-nums">
               <ArrowUpFromLine />
-              {formatTokens(maxOutputTokens)}
+              {formatSpecTokens(maxOutputTokens)}
             </Badge>
           }
         />
         <TooltipContent side="top" align="start" className="max-w-xs break-all">
-          {`${t("models.max_output")}: ${maxOutputTokens.toLocaleString()}`}
+          {`${t("models.max_output")}: ${formatInteger(maxOutputTokens)}`}
         </TooltipContent>
       </TooltipRoot>
     </div>
@@ -202,8 +193,8 @@ export function PricingInline({ pricing }: { pricing?: PricingDTO }) {
   const tierLabel = (r: PricingRuleDTO): string => {
     if (isDefaultRule(r)) return t("upstream.pricing.rule.default");
     if ((r.time_windows ?? []).length > 0) return t("upstream.pricing.opt.timeWindow");
-    if ((r.context_max ?? 0) > 0) return `≤ ${formatTokens(r.context_max ?? 0)}`;
-    return `≥ ${formatTokens(r.context_min ?? 0)}`;
+    if ((r.context_max ?? 0) > 0) return `≤ ${formatSpecTokens(r.context_max ?? 0)}`;
+    return `≥ ${formatSpecTokens(r.context_min ?? 0)}`;
   };
   return (
     <TooltipRoot>
