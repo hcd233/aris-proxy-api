@@ -4,6 +4,7 @@ package port
 import (
 	"math"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/samber/lo"
@@ -169,4 +170,33 @@ func FillTokenThroughputSeries(points []*modelcall.TokenThroughputPoint, start, 
 		return tp
 	})
 	return pts
+}
+
+// FillHarnessTrendSeries 把稀疏的 (harness, 时间桶) 点集补齐为完整时间轴。
+//
+// 排序：按接口返回顺序（仓储已按 harness 名排序），Other 恒定排在最后，
+// 这样前端堆叠图不会让未识别流量挡住已知 harness。
+func FillHarnessTrendSeries(points []*modelcall.HarnessTrendPoint, start, end time.Time, granularity enum.Granularity) []*dto.HarnessTrendItem {
+	order, byHarness, timeSet := IndexSeries(points,
+		func(p *modelcall.HarnessTrendPoint) string { return p.Harness },
+		func(p *modelcall.HarnessTrendPoint) time.Time { return p.Time.UTC() },
+		func(p *modelcall.HarnessTrendPoint) int { return p.Count },
+	)
+	slices.SortStableFunc(order, func(a, b string) int {
+		if a == constant.AgentHarnessOther {
+			return 1
+		}
+		if b == constant.AgentHarnessOther {
+			return -1
+		}
+		return strings.Compare(a, b)
+	})
+	buckets := BuildBuckets(start.UTC(), end.UTC(), granularity, timeSet)
+	items := lo.Map(order, func(name string, _ int) *dto.HarnessTrendItem {
+		pts := lo.Map(buckets, func(t time.Time, _ int) *dto.TrendPoint {
+			return &dto.TrendPoint{Time: t, Count: byHarness[name][t]}
+		})
+		return &dto.HarnessTrendItem{Harness: name, Points: pts}
+	})
+	return items
 }

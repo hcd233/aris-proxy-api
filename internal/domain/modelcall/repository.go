@@ -67,6 +67,9 @@ type AuditRepository interface {
 
 	// QueryModelTrend 按模型 + 时间桶统计调用次数（仅统计上游状态码 200 的记录）。apiKeyIDs 为 nil 时查全部（admin），非 nil 时按 key 过滤（空列表返回空结果，名下无 Key 不得越权查全量）。
 	QueryModelTrend(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*ModelTrendPoint, error)
+	// QueryHarnessTrend 按 agent harness 聚合调用量走势（统计全部调用，含失败）。
+	// rulesFingerprint 参与读缓存键：规则变更后键随之变化，历史数据立即按新规则分组。
+	QueryHarnessTrend(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity, rulesFingerprint string) ([]*HarnessTrendPoint, error)
 
 	// QueryRequestRate 按模型 + 时间桶统计请求成功率。apiKeyIDs 为 nil 时查全部（admin），非 nil 时按 key 过滤（空列表返回空结果，名下无 Key 不得越权查全量）。
 	QueryRequestRate(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*RequestRatePoint, error)
@@ -76,6 +79,13 @@ type AuditRepository interface {
 
 	// QueryFirstTokenLatency 按模型 + 时间桶统计平均首 Token 延迟（仅统计上游状态码 200 的记录）。apiKeyIDs 为 nil 时查全部（admin），非 nil 时按 key 过滤（空列表返回空结果，名下无 Key 不得越权查全量）。
 	QueryFirstTokenLatency(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*FirstTokenLatencyPoint, error)
+}
+
+// HarnessTrendPoint agent harness 调用趋势的数据点
+type HarnessTrendPoint struct {
+	Harness string
+	Time    time.Time
+	Count   int
 }
 
 // ModelTrendPoint 模型调用趋势的数据点

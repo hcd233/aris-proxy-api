@@ -129,6 +129,8 @@ var ApplicationModule = fx.Module(constant.DigNameApplicationModule,
 		NewFirstTokenLatencyByUserHandler,
 		NewListAuditOptionHandler,
 		NewAuditService,
+		NewHarnessTrendHandler,
+		NewHarnessTrendByUserHandler,
 		NewListCronJobsHandler,
 		NewUpdateCronJobHandler,
 		NewTriggerCronJobHandler,
@@ -401,6 +403,8 @@ func NewAuditService(
 	listAuditOption auditquery.ListAuditOptionHandler,
 	modelTrend auditquery.ModelTrendHandler,
 	modelTrendByUser auditquery.ModelTrendByUserHandler,
+	harnessTrend auditquery.HarnessTrendHandler,
+	harnessTrendByUser auditquery.HarnessTrendByUserHandler,
 	requestRate auditquery.RequestRateHandler,
 	requestRateByUser auditquery.RequestRateByUserHandler,
 	tokenThroughput auditquery.TokenThroughputHandler,
@@ -414,10 +418,18 @@ func NewAuditService(
 	modelCost auditquery.ModelCostHandler,
 	modelCostByUser auditquery.ModelCostByUserHandler,
 ) auditport.AuditService {
-	return auditquery.NewAuditService(listAll, listByUser, listAuditOption, modelTrend, modelTrendByUser, requestRate, requestRateByUser, tokenThroughput, tokenThroughputByUser, tokenRate, tokenRateByUser, modelUsage, modelUsageByUser, firstTokenLatency, firstTokenLatencyByUser, modelCost, modelCostByUser)
+	return auditquery.NewAuditService(listAll, listByUser, listAuditOption, modelTrend, modelTrendByUser, harnessTrend, harnessTrendByUser, requestRate, requestRateByUser, tokenThroughput, tokenThroughputByUser, tokenRate, tokenRateByUser, modelUsage, modelUsageByUser, firstTokenLatency, firstTokenLatencyByUser, modelCost, modelCostByUser)
 }
 
 // NewModelCostHandler 构造模型成本排行处理器（admin/demo 全量视角）
+func NewHarnessTrendHandler(repo modelcall.AuditRepository, rules agentharness.RuleRepository) auditquery.HarnessTrendHandler {
+	return auditquery.NewHarnessTrendHandler(repo, rules)
+}
+
+func NewHarnessTrendByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apikey.APIKeyRepository, rules agentharness.RuleRepository) auditquery.HarnessTrendByUserHandler {
+	return auditquery.NewHarnessTrendByUserHandler(repo, apiKeyRepo, rules)
+}
+
 func NewModelCostHandler(repo modelcall.AuditRepository) auditquery.ModelCostHandler {
 	return auditquery.NewModelCostHandler(repo)
 }

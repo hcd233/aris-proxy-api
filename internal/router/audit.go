@@ -57,6 +57,17 @@ func initAuditRouter(auditGroup huma.API, auditHandler handler.AuditHandler, cro
 	}, auditHandler.HandleModelCost)
 
 	huma.Register(auditGroup, huma.Operation{
+		OperationID: "queryHarnessTrend",
+		Method:      http.MethodGet,
+		Path:        "/stats/harness/trend",
+		Summary:     "QueryHarnessTrend",
+		Description: "Query model call count trend grouped by agent harness and time bucket. Admin sees all; user sees only their own keys.",
+		Tags:        []string{constant.TagAudit},
+		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("queryHarnessTrend", enum.PermissionUser, enum.DemoModuleAudit, demoAccessor, auditSubmitter)},
+	}, auditHandler.HandleHarnessTrend)
+
+	huma.Register(auditGroup, huma.Operation{
 		OperationID: "queryRequestRate",
 		Method:      http.MethodGet,
 		Path:        "/stats/request/rate",

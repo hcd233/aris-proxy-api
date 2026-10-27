@@ -34,6 +34,8 @@ func TestAuditService_DispatchesDemoToFullAll(t *testing.T) {
 		auditquery.NewListAuditOptionHandler(repo, &fakeAPIKeyIDLookup{}),
 		auditquery.NewModelTrendHandler(repo),
 		auditquery.NewModelTrendByUserHandler(repo, &fakeAPIKeyIDLookup{}),
+		nil,
+		nil,
 		auditquery.NewRequestRateHandler(repo),
 		auditquery.NewRequestRateByUserHandler(repo, &fakeAPIKeyIDLookup{}),
 		auditquery.NewTokenThroughputHandler(repo),
@@ -45,8 +47,7 @@ func TestAuditService_DispatchesDemoToFullAll(t *testing.T) {
 		auditquery.NewFirstTokenLatencyHandler(repo),
 		auditquery.NewFirstTokenLatencyByUserHandler(repo, &fakeAPIKeyIDLookup{}),
 		nil,
-		nil,
-	)
+		nil)
 
 	if _, _, err := svc.ListLogs(ctx, enum.PermissionDemo, 1, auditport.ListAuditLogsParams{
 		Page: 1, PageSize: 20, StartTime: t1, EndTime: t2,
@@ -96,6 +97,8 @@ func TestAuditService_DemoListLogsMasksIdentityAndConnection(t *testing.T) {
 		auditquery.NewListAuditOptionHandler(repo, &fakeAPIKeyIDLookup{}),
 		auditquery.NewModelTrendHandler(repo),
 		auditquery.NewModelTrendByUserHandler(repo, &fakeAPIKeyIDLookup{}),
+		nil,
+		nil,
 		auditquery.NewRequestRateHandler(repo),
 		auditquery.NewRequestRateByUserHandler(repo, &fakeAPIKeyIDLookup{}),
 		auditquery.NewTokenThroughputHandler(repo),
@@ -107,8 +110,7 @@ func TestAuditService_DemoListLogsMasksIdentityAndConnection(t *testing.T) {
 		auditquery.NewFirstTokenLatencyHandler(repo),
 		auditquery.NewFirstTokenLatencyByUserHandler(repo, &fakeAPIKeyIDLookup{}),
 		nil,
-		nil,
-	)
+		nil)
 
 	views, _, err := svc.ListLogs(ctx, enum.PermissionDemo, 1, auditport.ListAuditLogsParams{
 		Page: 1, PageSize: 20, StartTime: t1, EndTime: t1.Add(time.Hour),
@@ -167,7 +169,8 @@ func TestAuditService_DemoOptionsMaskUserField(t *testing.T) {
 		nil,
 		nil,
 		nil,
-	)
+		nil,
+		nil)
 
 	items, err := svc.ListAuditOption(ctx, enum.PermissionDemo, 0, constant.AuditFilterFieldUser, "", time.Time{}, time.Time{})
 	if err != nil {

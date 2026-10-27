@@ -42,12 +42,14 @@ const (
 	ReadCacheWindowTTLJitter = 10 * time.Second
 	// 读缓存-时间窗查询的用途标识（readCacheKey 的 purpose，参与键摘要）。
 	// 必须全局唯一：两个不同查询共用同一 purpose + 相同其余参数会互相串数据。
-	ReadCachePurposeAuditOptionUser      = "audit:option:user"
-	ReadCachePurposeAuditOptionModel     = "audit:option:model"
-	ReadCachePurposeAuditOptionStatus    = "audit:option:status"
-	ReadCachePurposeAuditOptionUA        = "audit:option:ua"
-	ReadCachePurposeAuditStatsCost       = "audit:stats:model-cost"
-	ReadCachePurposeAuditStatsTrend      = "audit:stats:model-trend"
+	ReadCachePurposeAuditOptionUser   = "audit:option:user"
+	ReadCachePurposeAuditOptionModel  = "audit:option:model"
+	ReadCachePurposeAuditOptionStatus = "audit:option:status"
+	ReadCachePurposeAuditOptionUA     = "audit:option:ua"
+	ReadCachePurposeAuditStatsCost    = "audit:stats:model-cost"
+	ReadCachePurposeAuditStatsTrend   = "audit:stats:model-trend"
+	// ReadCachePurposeAuditStatsHarness 审计统计-按 harness 的调用量走势
+	ReadCachePurposeAuditStatsHarness    = "audit:stats:harness"
 	ReadCachePurposeAuditStatsRate       = "audit:stats:request-rate"
 	ReadCachePurposeAuditStatsThroughput = "audit:stats:token-throughput"
 	ReadCachePurposeAuditStatsLatency    = "audit:stats:first-token-latency"
