@@ -91,15 +91,12 @@ func (pm *PoolManager) runMessageStoreTask(task *dto.MessageStoreTask) {
 			return err
 		}
 
-		session = &dbmodel.Session{
-			APIKeyName: task.APIKeyName,
-			APIKeyID:   task.APIKeyID,
+		session = BuildSessionRow(task, SessionRowColumns{
 			MessageIDs: messageIDs,
 			Questions:  questions,
 			ModelIDs:   modelIDs,
 			ToolIDs:    toolIDs,
-			Metadata:   task.Metadata,
-		}
+		})
 		if err := dao.GetSessionDAO().Create(tx, session); err != nil {
 			log.Error("[StorePool] Failed to create session", zap.Error(err))
 			return err
@@ -307,4 +304,29 @@ func (pm *PoolManager) SubmitDemoAccessAuditTask(task *dto.DemoAccessAuditTask) 
 			l.Error("[StorePool] Failed to store demo access audit", zap.Error(err))
 		}
 	})
+}
+
+// SessionRowColumns 本轮落库的会话列集合。
+type SessionRowColumns struct {
+	MessageIDs []uint
+	Questions  []uint
+	ModelIDs   []string
+	ToolIDs    []uint
+}
+
+// BuildSessionRow 构造本轮新增的会话行。
+//
+// ClientUA 固化会话创建那一刻的 User-Agent（首轮语义）：会话合并时该列不参与前滚，
+// 因此一条会话的 harness 归因始终是「谁建了它」，不随最近一次请求漂移。
+func BuildSessionRow(task *dto.MessageStoreTask, cols SessionRowColumns) *dbmodel.Session {
+	return &dbmodel.Session{
+		APIKeyName: task.APIKeyName,
+		APIKeyID:   task.APIKeyID,
+		MessageIDs: cols.MessageIDs,
+		Questions:  cols.Questions,
+		ModelIDs:   cols.ModelIDs,
+		ToolIDs:    cols.ToolIDs,
+		Metadata:   task.Metadata,
+		ClientUA:   util.CtxValueString(task.Ctx, constant.CtxKeyClient),
+	}
 }

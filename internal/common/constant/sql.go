@@ -12,6 +12,7 @@ const (
 	FieldScore                       = "score"
 	FieldScoredAt                    = "scored_at"
 	FieldName                        = "name"
+	FieldClientUA                    = "client_ua"
 	FieldPattern                     = "pattern"
 	FieldSort                        = "sort"
 	FieldKey                         = "key"

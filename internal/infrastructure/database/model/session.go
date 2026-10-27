@@ -27,6 +27,10 @@ type Session struct {
 	Questions  []uint            `json:"questions" gorm:"column:questions;comment:用户提问消息ID列表(仅role=user且tool_call_id为空);serializer:json"`
 	ModelIDs   []string          `json:"model_ids" gorm:"column:model_ids;comment:回答模型ID列表;serializer:json"`
 	Metadata   map[string]string `json:"metadata" gorm:"column:metadata;comment:请求元数据;serializer:json"`
-	Score      *int              `json:"score" gorm:"column:score;comment:人工评分(1-5)"`
-	ScoredAt   *time.Time        `json:"scored_at" gorm:"column:scored_at;comment:评分时间"`
+	// ClientUA 会话创建那一刻的原始 User-Agent（首轮语义）。
+	// 合并同组会话时不前滚该列：harness 归因稳定在「谁先建了这个会话」，
+	// 历史数据不做回填，存量行恒为空串（展示为 Other）。
+	ClientUA string     `json:"client_ua" gorm:"column:client_ua;not null;default:'';comment:创建会话的客户端User-Agent"`
+	Score    *int       `json:"score" gorm:"column:score;comment:人工评分(1-5)"`
+	ScoredAt *time.Time `json:"scored_at" gorm:"column:scored_at;comment:评分时间"`
 }
