@@ -2,6 +2,7 @@ package agent_harness
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -10,6 +11,7 @@ import (
 
 	sessionquery "github.com/hcd233/aris-proxy-api/internal/application/session/query"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
 )
@@ -96,5 +98,31 @@ func TestListSessionsByOwnerIDsKeepsFilterShape(t *testing.T) {
 	}
 	if !strings.Contains(pageSQL, "IS NULL") {
 		t.Errorf("harness:Other must compile to IS NULL: %s", pageSQL)
+	}
+}
+
+// TestListSessionsByOwnerIDsPreservesValidationError 回归：filter DSL 的用户输入错误
+// 必须保留 ErrValidation（400），不能被仓储包装成 ErrDBQuery（10000 Internal Error）。
+func TestListSessionsByOwnerIDsPreservesValidationError(t *testing.T) {
+	t.Parallel()
+
+	db := newRuleDryRunDB(t)
+	repo := repository.NewSessionReadRepository(db, nil)
+
+	criteria, err := sessionquery.ParseSessionFilterCriteria("harness:ZCode|DSH")
+	if err != nil {
+		t.Fatalf("ParseSessionFilterCriteria: %v", err)
+	}
+
+	_, _, err = repo.ListSessionsByOwnerIDs(context.Background(), []uint{7}, sessionListParam(), time.Time{}, time.Time{}, "", criteria)
+	if err == nil {
+		t.Fatal("expected an error for a multi-value harness filter")
+	}
+	if !errors.Is(err, ierr.ErrValidation) {
+		t.Fatalf("err = %v, want ErrValidation", err)
+	}
+	// 用户可见的是外层哨兵的 biz error：必须是 10006（Validation），不能是 10000（Internal）
+	if code := ierr.ToBizError(err, ierr.ErrInternal.BizError()).Code; code != ierr.ErrValidation.BizError().Code {
+		t.Fatalf("biz error code = %d, want %d", code, ierr.ErrValidation.BizError().Code)
 	}
 }

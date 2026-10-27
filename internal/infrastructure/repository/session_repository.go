@@ -369,6 +369,11 @@ func (r *sessionReadRepository) applySessionListFilters(ctx context.Context, bas
 	if criteria != nil && len(criteria.Filters) > 0 {
 		filterSQL, filterArgs, err := filter.ToSQL(criteria.Filters, criteria.FieldConfigs)
 		if err != nil {
+			// 用户输入导致的筛选错误（如 harness 传了多值）必须保留 400 语义，
+			// 包装成 ErrDBQuery 会让前端看到 10000 Internal Error。
+			if errors.Is(err, ierr.ErrValidation) {
+				return nil, false, err
+			}
 			return nil, false, ierr.Wrap(ierr.ErrDBQuery, err, "build filter SQL")
 		}
 		if filterSQL != "" {

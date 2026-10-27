@@ -111,7 +111,12 @@ export default function SessionsPage() {
         formatValue: (v) => (v === "unscored" ? t("sessions.filter_unscored") : `★${v}`),
       },
       { key: "model", label: t("sessions.filter_model"), options: fetchOptionsFor("model") },
-      { key: "harness", label: t("sessions.filter_harness"), options: fetchOptionsFor("harness") },
+      {
+        key: "harness",
+        label: t("sessions.filter_harness"),
+        options: fetchOptionsFor("harness"),
+        single: true,
+      },
       {
         key: "messageCount",
         label: t("sessions.filter_message_count"),

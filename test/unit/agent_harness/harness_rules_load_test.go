@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
 	"github.com/hcd233/aris-proxy-api/internal/application/session/query"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
@@ -72,5 +73,34 @@ func TestLoadHarnessRulesWithoutRepository(t *testing.T) {
 
 	if rules := query.LoadHarnessRules(context.Background(), nil); rules != nil {
 		t.Fatalf("LoadHarnessRules(nil repo) = %+v, want nil", rules)
+	}
+}
+
+func TestListSessionOptionsReturnsHarnessNames(t *testing.T) {
+	t.Parallel()
+
+	repo := &stubRuleRepository{rules: []agentharness.Rule{
+		{ID: 1, Pattern: "zcode/", Name: "ZCode", Sort: 10},
+		{ID: 2, Pattern: "pi (", Name: "Pi", Sort: 20},
+		{ID: 3, Pattern: "codex_cli_rs/", Name: "Codex", Sort: 30},
+		{ID: 4, Pattern: "codex desktop/", Name: "Codex", Sort: 31},
+	}}
+	handler := query.NewListSessionOptionHandler(nil, nil, repo)
+
+	items, err := handler.Handle(context.Background(), sessionport.ListSessionOptionQuery{
+		Field:   constant.SessionFilterFieldHarness,
+		IsAdmin: true,
+	})
+	if err != nil {
+		t.Fatalf("option list: %v", err)
+	}
+	want := []string{"ZCode", "Pi", "Codex", constant.AgentHarnessOther}
+	if len(items) != len(want) {
+		t.Fatalf("items = %v, want %v", items, want)
+	}
+	for i := range want {
+		if items[i] != want[i] {
+			t.Errorf("items[%d] = %q, want %q (order matters: rules first-match priority)", i, items[i], want[i])
+		}
 	}
 }

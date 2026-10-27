@@ -256,6 +256,7 @@ describe("agent harness 展示", () => {
   it("会话列表提供 harness 筛选维度与来源徽标", () => {
     const src = read("app/(dashboard)/sessions/page.tsx");
     expect(src).toContain('key: "harness"');
+    expect(src).toContain("single: true");
     expect(src).toContain("s.agentHarness");
   });
 });

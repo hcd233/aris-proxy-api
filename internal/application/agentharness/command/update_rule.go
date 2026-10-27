@@ -36,6 +36,16 @@ func (h *updateHarnessRuleHandler) Handle(ctx context.Context, cmd port.UpdateHa
 		return nil, err
 	}
 
+	all, err := h.repo.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, rule := range all {
+		if rule.ID != cmd.ID && rule.Pattern == pattern {
+			return nil, ierr.Newf(ierr.ErrValidation, "harness rule pattern %q already exists", pattern)
+		}
+	}
+
 	updated := agentharness.Rule{ID: cmd.ID, Pattern: pattern, Name: name, Sort: cmd.Sort}
 	if err := h.repo.Update(ctx, updated); err != nil {
 		return nil, err

@@ -6,11 +6,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alicebob/miniredis/v2"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
 
+	auditport "github.com/hcd233/aris-proxy-api/internal/application/audit/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall"
+	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
 	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
 )
 
@@ -91,5 +97,71 @@ func TestQueryHarnessTrendShortCircuitsEmptyScope(t *testing.T) {
 	}
 	if len(sqls) != 0 {
 		t.Errorf("empty scope must not query the database, got: %v", sqls)
+	}
+}
+
+// TestQueryHarnessTrendCacheKeyIncludesRulesFingerprint 钉住 D5：
+// 规则指纹参与读缓存键——指纹变了，必须落到不同的缓存键上（否则改规则后图会陈旧 5 分钟）。
+func TestQueryHarnessTrendCacheKeyIncludesRulesFingerprint(t *testing.T) {
+	t.Parallel()
+
+	mr := miniredis.RunT(t)
+	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	t.Cleanup(func() { _ = rdb.Close() })
+
+	db := newAuditDryRunDB(t)
+	repo := repository.NewAuditRepository(db, cache.NewReadCache(rdb))
+
+	start := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
+	end := time.Date(2026, 10, 27, 0, 0, 0, 0, time.UTC)
+
+	if _, err := repo.QueryHarnessTrend(context.Background(), []uint{7}, start, end, enum.GranularityDay, "7:100"); err != nil {
+		t.Fatalf("first query: %v", err)
+	}
+	if _, err := repo.QueryHarnessTrend(context.Background(), []uint{7}, start, end, enum.GranularityDay, "7:200"); err != nil {
+		t.Fatalf("second query: %v", err)
+	}
+
+	keys := mr.Keys()
+	if len(keys) < 2 {
+		t.Fatalf("expected one cache key per rules fingerprint, got %d keys: %v", len(keys), keys)
+	}
+}
+
+// TestFillHarnessTrendSeries 钉住前端依赖的形状：Other 恒在最后、时间轴零值补齐。
+func TestFillHarnessTrendSeries(t *testing.T) {
+	t.Parallel()
+
+	day1 := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
+	day2 := day1.Add(24 * time.Hour)
+	points := []*modelcall.HarnessTrendPoint{
+		{Harness: "ZCode", Time: day1, Count: 2},
+		{Harness: "Other", Time: day2, Count: 1},
+		{Harness: "DSH", Time: day2, Count: 3},
+	}
+
+	items := auditport.FillHarnessTrendSeries(points, day1, day2, enum.GranularityDay)
+	if len(items) != 3 {
+		t.Fatalf("series = %d, want 3", len(items))
+	}
+	if items[len(items)-1].Harness != "Other" {
+		t.Errorf("Other must be the last series, got %q", items[len(items)-1].Harness)
+	}
+	for _, item := range items {
+		if len(item.Points) != 2 {
+			t.Fatalf("%s has %d buckets, want 2 (zero-filled)", item.Harness, len(item.Points))
+		}
+	}
+	var zcode *dto.HarnessTrendItem
+	for _, item := range items {
+		if item.Harness == "ZCode" {
+			zcode = item
+		}
+	}
+	if zcode == nil {
+		t.Fatal("ZCode series missing")
+	}
+	if zcode.Points[0].Count != 2 || zcode.Points[1].Count != 0 {
+		t.Errorf("ZCode points = %+v, want 2 then 0", zcode.Points)
 	}
 }

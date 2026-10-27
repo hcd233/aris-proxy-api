@@ -225,3 +225,23 @@ func TestHarnessTrendContract(t *testing.T) {
 		}
 	}
 }
+
+// TestHarnessRuleAdminOnly 非 admin 访问规则管理必须被拒。
+//
+// 环境变量 USER_JWT_TOKEN（普通用户 JWT）缺失时跳过。
+func TestHarnessRuleAdminOnly(t *testing.T) {
+	t.Parallel()
+
+	baseURL, _ := mustEnv(t)
+	userJWT := os.Getenv("USER_JWT_TOKEN")
+	if userJWT == "" {
+		t.Skip("USER_JWT_TOKEN is required to verify admin-only access")
+	}
+
+	httpClient := &http.Client{Timeout: httpTimeout}
+	var listed listRulesRsp
+	status := doJSON(t, httpClient, http.MethodGet, baseURL+"/api/web/v1/harness/rule/list", userJWT, "", &listed)
+	if status != http.StatusForbidden {
+		t.Fatalf("non-admin list rules: status=%d, want 403", status)
+	}
+}

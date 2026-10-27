@@ -175,3 +175,21 @@ func TestListHarnessRulesOrdersByView(t *testing.T) {
 		t.Errorf("views = %+v, want rules in repository order", views)
 	}
 }
+
+func TestUpdateHarnessRuleRejectsDuplicatePattern(t *testing.T) {
+	t.Parallel()
+
+	repo := &fakeRuleRepo{rules: []agentharness.Rule{
+		{ID: 1, Pattern: "zcode/", Name: "ZCode", Sort: 10},
+		{ID: 2, Pattern: "pi (", Name: "Pi", Sort: 20},
+	}}
+	handler := command.NewUpdateHarnessRuleHandler(repo)
+
+	_, err := handler.Handle(context.Background(), harnessport.UpdateHarnessRuleCommand{ID: 1, Pattern: "PI (", Name: "Pi2"})
+	if !errors.Is(err, ierr.ErrValidation) {
+		t.Fatalf("err = %v, want ErrValidation for duplicate pattern", err)
+	}
+	if repo.updated != nil {
+		t.Error("repository.Update must not be called for a duplicate pattern")
+	}
+}
