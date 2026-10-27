@@ -48,6 +48,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	cronpkg "github.com/hcd233/aris-proxy-api/internal/cron"
+	"github.com/hcd233/aris-proxy-api/internal/domain/agentharness"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
 	apikeyservice "github.com/hcd233/aris-proxy-api/internal/domain/apikey/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
@@ -418,16 +419,16 @@ func NewModelCostByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apikey
 	return auditquery.NewModelCostByUserHandler(repo, apiKeyRepo)
 }
 
-func NewListSessionsByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository) sessionport.ListSessionsByUserHandler {
-	return sessionquery.NewListSessionsByUserHandler(readRepo, apiKeyRepo)
+func NewListSessionsByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository, rules agentharness.RuleRepository) sessionport.ListSessionsByUserHandler {
+	return sessionquery.NewListSessionsByUserHandler(readRepo, apiKeyRepo, rules)
 }
 
-func NewGetSessionByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository) sessionport.GetSessionByUserHandler {
-	return sessionquery.NewGetSessionByUserHandler(readRepo, apiKeyRepo)
+func NewGetSessionByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository, rules agentharness.RuleRepository) sessionport.GetSessionByUserHandler {
+	return sessionquery.NewGetSessionByUserHandler(readRepo, apiKeyRepo, rules)
 }
 
-func NewGetSessionMetaByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository, detailCache sessionport.SessionDetailCache) sessionport.GetSessionMetaByUserHandler {
-	return sessionquery.NewGetSessionMetaByUserHandler(readRepo, apiKeyRepo, detailCache)
+func NewGetSessionMetaByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository, detailCache sessionport.SessionDetailCache, rules agentharness.RuleRepository) sessionport.GetSessionMetaByUserHandler {
+	return sessionquery.NewGetSessionMetaByUserHandler(readRepo, apiKeyRepo, detailCache, rules)
 }
 
 func NewListSessionMessagesHandler(readRepo session.SessionReadRepository, metaQuery sessionport.GetSessionMetaByUserHandler, detailCache sessionport.SessionDetailCache) sessionport.ListSessionMessagesHandler {

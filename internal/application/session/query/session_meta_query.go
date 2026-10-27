@@ -8,6 +8,7 @@ import (
 
 	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-proxy-api/internal/domain/agentharness"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
 	"github.com/hcd233/aris-proxy-api/internal/domain/session"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
@@ -17,17 +18,19 @@ type getSessionMetaByUserHandler struct {
 	readRepo   session.SessionReadRepository
 	apiKeyRepo apikey.APIKeyRepository
 	cache      sessionport.SessionDetailCache
+	rules      agentharness.RuleRepository
 }
 
 // NewGetSessionMetaByUserHandler 构造 handler
 //
 //	@author centonhuang
 //	@update 2026-05-29 14:00:00
-func NewGetSessionMetaByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository, detailCache sessionport.SessionDetailCache) sessionport.GetSessionMetaByUserHandler {
+func NewGetSessionMetaByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository, detailCache sessionport.SessionDetailCache, rules agentharness.RuleRepository) sessionport.GetSessionMetaByUserHandler {
 	return &getSessionMetaByUserHandler{
 		readRepo:   readRepo,
 		apiKeyRepo: apiKeyRepo,
 		cache:      detailCache,
+		rules:      rules,
 	}
 }
 
@@ -91,6 +94,7 @@ func (h *getSessionMetaByUserHandler) Handle(ctx context.Context, q sessionport.
 			ScoredAt:   projection.ScoredAt,
 			MessageIDs: projection.MessageIDs,
 			ToolIDs:    projection.ToolIDs,
+			ClientUA:   projection.ClientUA,
 		}
 
 		if setErr := h.cache.SetSessionMeta(ctx, record); setErr != nil {
@@ -122,5 +126,7 @@ func (h *getSessionMetaByUserHandler) Handle(ctx context.Context, q sessionport.
 		ToolIDs:      record.ToolIDs,
 		MessageCount: len(record.MessageIDs),
 		ToolCount:    len(record.ToolIDs),
+		AgentHarness: agentharness.Match(record.ClientUA, LoadHarnessRules(ctx, h.rules)),
+		ClientUA:     record.ClientUA,
 	}, nil
 }

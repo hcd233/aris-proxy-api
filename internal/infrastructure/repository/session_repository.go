@@ -212,6 +212,7 @@ type sessionSummaryRow struct {
 	ToolCount    int       `gorm:"column:tool_count"`
 	Questions    []uint    `gorm:"column:questions;serializer:json"`
 	ModelIDs     []string  `gorm:"column:model_ids;serializer:json"`
+	ClientUA     string    `gorm:"column:client_ua"`
 }
 
 // FormatBigIntArray 把 id 集合序列化为 PG bigint[] 字面量（"{1,2,3}"）
@@ -420,6 +421,7 @@ func (r *sessionReadRepository) paginateSessions(base *gorm.DB, param model.Comm
 			Score:        row.Score,
 			MessageCount: row.MessageCount,
 			ToolCount:    row.ToolCount,
+			ClientUA:     row.ClientUA,
 		}
 	})
 	return out, &model.PageInfo{Page: param.Page, PageSize: param.PageSize, Total: total}, nil
@@ -461,6 +463,7 @@ func (r *sessionReadRepository) GetSessionDetail(ctx context.Context, id uint) (
 		ScoredAt:   sessionRecord.ScoredAt,
 		MessageIDs: sessionRecord.MessageIDs,
 		ToolIDs:    sessionRecord.ToolIDs,
+		ClientUA:   sessionRecord.ClientUA,
 		Messages:   BuildOrderedMessageProjections(sessionRecord.MessageIDs, messages),
 		Tools:      BuildOrderedToolProjections(sessionRecord.ToolIDs, tools),
 	}
@@ -527,6 +530,7 @@ func (r *sessionReadRepository) GetSessionMeta(ctx context.Context, id uint) (*s
 		ScoredAt:   sessionRecord.ScoredAt,
 		MessageIDs: sessionRecord.MessageIDs,
 		ToolIDs:    sessionRecord.ToolIDs,
+		ClientUA:   sessionRecord.ClientUA,
 	}, nil
 }
 

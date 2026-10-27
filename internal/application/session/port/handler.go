@@ -20,6 +20,8 @@ type SessionSummaryView struct {
 	MessageCount int
 	ToolCount    int
 	ModelIDs     []string
+	// AgentHarness 来源 harness 展示名（由 ClientUA 现算，未命中为 Other）。
+	AgentHarness string
 }
 
 // MessageView 消息视图
@@ -50,6 +52,8 @@ type SessionDetailView struct {
 	ToolIDs    []uint
 	Messages   []*MessageView
 	Tools      []*ToolView
+	// AgentHarness 来源 harness 展示名（由 ClientUA 现算）。
+	AgentHarness string
 }
 
 // SessionMetaView session 元数据视图（含 IDs 数组，仅在 application 层内部使用）
@@ -65,6 +69,10 @@ type SessionMetaView struct {
 	ToolIDs      []uint
 	MessageCount int
 	ToolCount    int
+	// AgentHarness 来源 harness 展示名（由 ClientUA 现算）。
+	AgentHarness string
+	// ClientUA 会话创建时的原始 User-Agent（详情页 tooltip 用）。
+	ClientUA string
 }
 
 // ListSessionsByUserQuery 列出 session 查询参数

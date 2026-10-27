@@ -49,6 +49,8 @@ type SessionSummaryProjection struct {
 	ToolCount    int
 	Questions    []uint
 	ModelIDs     []string
+	// ClientUA 会话创建那一刻的原始 UA（首轮语义）；harness 展示由它现算。
+	ClientUA string
 }
 
 // MessageDetailProjection 消息详情只读投影
@@ -84,6 +86,7 @@ type SessionMetaProjection struct {
 	ScoredAt   *time.Time
 	MessageIDs []uint
 	ToolIDs    []uint
+	ClientUA   string
 }
 
 // SessionDetailProjection Session 详情只读投影
@@ -98,6 +101,7 @@ type SessionDetailProjection struct {
 	ScoredAt   *time.Time
 	MessageIDs []uint
 	ToolIDs    []uint
+	ClientUA   string
 	Messages   []*MessageDetailProjection
 	Tools      []*ToolDetailProjection
 }

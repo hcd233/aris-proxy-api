@@ -23,6 +23,7 @@ type SessionSummary struct {
 	ToolCount    int               `json:"toolCount" doc:"工具数量"`
 	ModelIDs     []string          `json:"modelIds,omitempty" doc:"回答模型ID列表"`
 	Metadata     map[string]string `json:"metadata,omitempty" doc:"请求元数据"`
+	AgentHarness string            `json:"agentHarness" doc:"来源 Agent Harness（未识别为 Other）"`
 }
 
 // SessionDetail Session详情
@@ -30,16 +31,17 @@ type SessionSummary struct {
 //	@author centonhuang
 //	@update 2026-04-25 15:00:00
 type SessionDetail struct {
-	ID         uint              `json:"id" doc:"Session ID"`
-	APIKeyName string            `json:"apiKeyName" doc:"API密钥名称"`
-	CreatedAt  time.Time         `json:"createdAt" doc:"创建时间"`
-	UpdatedAt  time.Time         `json:"updatedAt" doc:"更新时间"`
-	Metadata   map[string]string `json:"metadata,omitempty" doc:"请求元数据"`
-	Score      *int              `json:"score,omitempty" doc:"人工评分(1-5)"`
-	ScoredAt   *time.Time        `json:"scoredAt,omitempty" doc:"评分时间"`
-	Messages   []*MessageItem    `json:"messages" doc:"消息列表"`
-	Tools      []*ToolItem       `json:"tools" doc:"工具列表"`
-	ShareID    string            `json:"shareID" doc:"分享ID（已分享时非空）"`
+	ID           uint              `json:"id" doc:"Session ID"`
+	APIKeyName   string            `json:"apiKeyName" doc:"API密钥名称"`
+	CreatedAt    time.Time         `json:"createdAt" doc:"创建时间"`
+	UpdatedAt    time.Time         `json:"updatedAt" doc:"更新时间"`
+	Metadata     map[string]string `json:"metadata,omitempty" doc:"请求元数据"`
+	Score        *int              `json:"score,omitempty" doc:"人工评分(1-5)"`
+	ScoredAt     *time.Time        `json:"scoredAt,omitempty" doc:"评分时间"`
+	Messages     []*MessageItem    `json:"messages" doc:"消息列表"`
+	Tools        []*ToolItem       `json:"tools" doc:"工具列表"`
+	ShareID      string            `json:"shareID" doc:"分享ID（已分享时非空）"`
+	AgentHarness string            `json:"agentHarness" doc:"来源 Agent Harness（未识别为 Other）"`
 }
 
 // MessageItem 消息列表项
@@ -119,6 +121,8 @@ type SessionMetadata struct {
 	MessageCount int               `json:"messageCount" doc:"消息总数"`
 	ToolCount    int               `json:"toolCount" doc:"工具总数"`
 	ShareID      string            `json:"shareID" doc:"分享ID（已分享时非空）"`
+	AgentHarness string            `json:"agentHarness" doc:"来源 Agent Harness（未识别为 Other）"`
+	ClientUA     string            `json:"clientUA" doc:"会话创建时的原始 User-Agent（仅详情返回）"`
 }
 
 // GetSessionMetadataReq 获取 Session 元数据请求（JWT 认证）

@@ -204,15 +204,16 @@ func (f *crossTenantSessionFixture) buildApp(t *testing.T, db *gorm.DB, rdb *red
 	sessionRepo := repository.NewSessionRepository(db)
 	readRepo := repository.NewSessionReadRepository(db, nil)
 	apiKeyRepo := repository.NewAPIKeyRepository(db)
+	rulesRepo := repository.NewAgentHarnessRuleRepository(db)
 
 	shareCache := cache.NewShareCache(rdb)
 	detailCache := cache.NewSessionDetailCache(rdb)
 
-	getByUser := sessionquery.NewGetSessionByUserHandler(readRepo, apiKeyRepo)
-	getMetaByUser := sessionquery.NewGetSessionMetaByUserHandler(readRepo, apiKeyRepo, detailCache)
+	getByUser := sessionquery.NewGetSessionByUserHandler(readRepo, apiKeyRepo, rulesRepo)
+	getMetaByUser := sessionquery.NewGetSessionMetaByUserHandler(readRepo, apiKeyRepo, detailCache, rulesRepo)
 
 	sessionHandler := handler.NewSessionHandler(handler.SessionDependencies{
-		ListByUser:         sessionquery.NewListSessionsByUserHandler(readRepo, apiKeyRepo),
+		ListByUser:         sessionquery.NewListSessionsByUserHandler(readRepo, apiKeyRepo, rulesRepo),
 		GetByUser:          getByUser,
 		ShareCache:         shareCache,
 		CreateShare:        sessioncommand.NewCreateShareHandler(getByUser, shareCache),
