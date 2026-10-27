@@ -176,6 +176,7 @@ func (h *sessionHandler) HandleListSessionsByUser(ctx context.Context, req *dto.
 			ToolCount:    v.ToolCount,
 			Score:        v.Score,
 			ModelIDs:     v.ModelIDs,
+			AgentHarness: v.AgentHarness,
 		}
 	})
 	rsp.PageInfo = pageInfo
@@ -240,16 +241,17 @@ func (h *sessionHandler) HandleGetSessionByUser(ctx context.Context, req *dto.Ge
 	}
 
 	rsp.Session = &dto.SessionDetail{
-		ID:         view.ID,
-		APIKeyName: view.APIKeyName,
-		CreatedAt:  view.CreatedAt,
-		UpdatedAt:  view.UpdatedAt,
-		Metadata:   view.Metadata,
-		Messages:   messageItems,
-		Tools:      toolItems,
-		ShareID:    shareID,
-		Score:      view.Score,
-		ScoredAt:   view.ScoredAt,
+		ID:           view.ID,
+		APIKeyName:   view.APIKeyName,
+		CreatedAt:    view.CreatedAt,
+		UpdatedAt:    view.UpdatedAt,
+		Metadata:     view.Metadata,
+		Messages:     messageItems,
+		Tools:        toolItems,
+		ShareID:      shareID,
+		Score:        view.Score,
+		ScoredAt:     view.ScoredAt,
+		AgentHarness: view.AgentHarness,
 	}
 
 	logger.WithCtx(ctx).Info("[SessionHandler] Get session detail by user",
@@ -428,6 +430,8 @@ func (h *sessionHandler) HandleGetSessionMetadata(ctx context.Context, req *dto.
 		ShareID:      shareID,
 		Score:        view.Score,
 		ScoredAt:     view.ScoredAt,
+		AgentHarness: view.AgentHarness,
+		ClientUA:     view.ClientUA,
 	}
 
 	logger.WithCtx(ctx).Info("[SessionHandler] Get session metadata",

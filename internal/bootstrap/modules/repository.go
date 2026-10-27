@@ -12,6 +12,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/inflight"
 	"github.com/hcd233/aris-proxy-api/internal/config"
+	"github.com/hcd233/aris-proxy-api/internal/domain/agentharness"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
 	apikeyservice "github.com/hcd233/aris-proxy-api/internal/domain/apikey/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
@@ -74,6 +75,7 @@ var RepositoryModule = fx.Module(constant.DigNameRepositoryModule,
 		NewCronRepository,
 		NewCronCallAuditRepository,
 		NewDemoAccessAuditRepository,
+		NewAgentHarnessRuleRepository,
 		fx.Annotate(
 			NewAccessTokenSignerImpl,
 			fx.ResultTags(`name:"accessSigner"`),
@@ -233,6 +235,10 @@ func NewCronRepository(db *gorm.DB) cronmgmtport.CronJobRepository {
 
 func NewCronCallAuditRepository(db *gorm.DB, rc *cache.ReadCache) cronauditport.CronCallAuditRepository {
 	return repository.NewCronCallAuditRepository(db, rc)
+}
+
+func NewAgentHarnessRuleRepository(db *gorm.DB) agentharness.RuleRepository {
+	return repository.NewAgentHarnessRuleRepository(db)
 }
 
 func NewAccessTokenSignerImpl() identityservice.TokenSigner {

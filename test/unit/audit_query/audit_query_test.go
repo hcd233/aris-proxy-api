@@ -69,6 +69,10 @@ func (f *fakeAuditRepo) BatchGetRelations(ctx context.Context, apiKeyIDs []uint)
 	return map[uint]*modelcall.AuditRelation{}, nil
 }
 
+func (f *fakeAuditRepo) QueryHarnessTrend(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity, rulesFingerprint string) ([]*modelcall.HarnessTrendPoint, error) {
+	return nil, nil
+}
+
 func (f *fakeAuditRepo) QueryModelTrend(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.ModelTrendPoint, error) {
 	f.queryModelTrendCnt++
 	return nil, nil
@@ -435,6 +439,8 @@ func TestAuditService_DemoOptionsUseFullQuery(t *testing.T) {
 		nil,
 		nil,
 		nil,
+		nil,
+		nil,
 	)
 
 	items, err := svc.ListAuditOption(context.Background(), enum.PermissionDemo, 0, constant.AuditFilterFieldUA, "", time.Time{}, time.Time{})
@@ -621,6 +627,8 @@ func TestAuditService_DispatchesByPermission(t *testing.T) {
 		auditquery.NewListAuditOptionHandler(repo, &fakeAPIKeyIDLookup{}),
 		auditquery.NewModelTrendHandler(repo),
 		auditquery.NewModelTrendByUserHandler(repo, &fakeAPIKeyIDLookup{}),
+		nil,
+		nil,
 		auditquery.NewRequestRateHandler(repo),
 		auditquery.NewRequestRateByUserHandler(repo, &fakeAPIKeyIDLookup{}),
 		auditquery.NewTokenThroughputHandler(repo),

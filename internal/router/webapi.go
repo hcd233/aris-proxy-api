@@ -72,6 +72,9 @@ func RegisterWebAPIRoutes(webRoot huma.API, deps APIRouterDependencies) {
 	cronGroup := huma.NewGroup(jwtGroup, "/cron")
 	initCronRouter(cronGroup, deps.CronHandler, deps.DemoModuleAccessor, deps.DemoAuditSubmitter)
 
+	harnessGroup := huma.NewGroup(jwtGroup, "/harness")
+	initHarnessRouter(harnessGroup, deps.HarnessHandler)
+
 	triggerGroup := huma.NewGroup(jwtGroup, "/trigger")
 	initTriggerRouter(triggerGroup, deps.TriggerHandler, deps.DemoModuleAccessor, deps.DemoAuditSubmitter)
 

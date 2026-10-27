@@ -212,6 +212,7 @@ type sessionSummaryRow struct {
 	ToolCount    int       `gorm:"column:tool_count"`
 	Questions    []uint    `gorm:"column:questions;serializer:json"`
 	ModelIDs     []string  `gorm:"column:model_ids;serializer:json"`
+	ClientUA     string    `gorm:"column:client_ua"`
 }
 
 // FormatBigIntArray 把 id 集合序列化为 PG bigint[] 字面量（"{1,2,3}"）
@@ -328,41 +329,61 @@ func (r *sessionReadRepository) ListSessionsByOwnerIDs(ctx context.Context, owne
 	base := db.Model(&dbmodel.Session{}).Where(constant.DBConditionDeletedAtZero)
 	base = base.Where(fmt.Sprintf(constant.DBConditionInTemplate, constant.FieldAPIKeyID), ownerIDs)
 
+	if param.Sort != "" && param.SortField != "" {
+		param.SortField = util.SafeSortField(param.SortField)
+	}
+
+	base, ok, err := r.applySessionListFilters(ctx, base, startTime, endTime, keyword, criteria)
+	if err != nil {
+		return nil, nil, err
+	}
+	if !ok {
+		return []*session.SessionSummaryProjection{}, &model.PageInfo{Page: param.Page, PageSize: param.PageSize}, nil
+	}
+
+	return r.paginateSessions(base, param)
+}
+
+// applySessionListFilters 叠加列表筛选（时间范围 / keyword / filter DSL）。
+//
+// 作用域条件（owner IDs 或 demo 抽样 IDs）由调用方先行注入；ok=false 表示
+// keyword 命中为空集，调用方应直接返回空页，避免退化成全量查询。
+func (r *sessionReadRepository) applySessionListFilters(ctx context.Context, base *gorm.DB, startTime, endTime time.Time, keyword string, criteria *filter.FilterCriteria) (*gorm.DB, bool, error) {
 	if !startTime.IsZero() {
 		base = base.Where(constant.FieldCreatedAt+" >= ?", startTime)
 	}
 	if !endTime.IsZero() {
 		base = base.Where(constant.FieldCreatedAt+" <= ?", endTime)
 	}
-	if param.Sort != "" && param.SortField != "" {
-		param.SortField = util.SafeSortField(param.SortField)
-	}
 	if keyword != "" {
 		filtered, ok, err := r.applyKeywordFilter(ctx, base, keyword)
 		if err != nil {
-			return nil, nil, err
+			return nil, false, err
 		}
 		if !ok {
-			return []*session.SessionSummaryProjection{}, &model.PageInfo{Page: param.Page, PageSize: param.PageSize}, nil
+			return nil, false, nil
 		}
 		base = filtered
 	}
 
-	// 注入 filter 条件
 	if criteria != nil && len(criteria.Filters) > 0 {
 		filterSQL, filterArgs, err := filter.ToSQL(criteria.Filters, criteria.FieldConfigs)
 		if err != nil {
-			return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "build filter SQL")
+			// 用户输入导致的筛选错误（如 harness 传了多值）必须保留 400 语义，
+			// 包装成 ErrDBQuery 会让前端看到 10000 Internal Error。
+			if errors.Is(err, ierr.ErrValidation) {
+				return nil, false, err
+			}
+			return nil, false, ierr.Wrap(ierr.ErrDBQuery, err, "build filter SQL")
 		}
 		if filterSQL != "" {
 			base = base.Where(filterSQL, filterArgs...)
 		}
 	}
-
-	return r.paginateSessions(base, param)
+	return base, true, nil
 }
 
-func (r *sessionReadRepository) ListSessionsByIDs(ctx context.Context, ids []uint, param model.CommonParam) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
+func (r *sessionReadRepository) ListSessionsByIDs(ctx context.Context, ids []uint, param model.CommonParam, startTime, endTime time.Time, keyword string, criteria *filter.FilterCriteria) ([]*session.SessionSummaryProjection, *model.PageInfo, error) {
 	if len(ids) == 0 {
 		return []*session.SessionSummaryProjection{}, &model.PageInfo{Page: param.Page, PageSize: param.PageSize, Total: 0}, nil
 	}
@@ -379,6 +400,14 @@ func (r *sessionReadRepository) ListSessionsByIDs(ctx context.Context, ids []uin
 
 	if param.Sort != "" && param.SortField != "" {
 		param.SortField = util.SafeSortField(param.SortField)
+	}
+
+	base, ok, err := r.applySessionListFilters(ctx, base, startTime, endTime, keyword, criteria)
+	if err != nil {
+		return nil, nil, err
+	}
+	if !ok {
+		return []*session.SessionSummaryProjection{}, &model.PageInfo{Page: param.Page, PageSize: param.PageSize}, nil
 	}
 
 	return r.paginateSessions(base, param)
@@ -420,6 +449,7 @@ func (r *sessionReadRepository) paginateSessions(base *gorm.DB, param model.Comm
 			Score:        row.Score,
 			MessageCount: row.MessageCount,
 			ToolCount:    row.ToolCount,
+			ClientUA:     row.ClientUA,
 		}
 	})
 	return out, &model.PageInfo{Page: param.Page, PageSize: param.PageSize, Total: total}, nil
@@ -461,6 +491,7 @@ func (r *sessionReadRepository) GetSessionDetail(ctx context.Context, id uint) (
 		ScoredAt:   sessionRecord.ScoredAt,
 		MessageIDs: sessionRecord.MessageIDs,
 		ToolIDs:    sessionRecord.ToolIDs,
+		ClientUA:   sessionRecord.ClientUA,
 		Messages:   BuildOrderedMessageProjections(sessionRecord.MessageIDs, messages),
 		Tools:      BuildOrderedToolProjections(sessionRecord.ToolIDs, tools),
 	}
@@ -527,6 +558,7 @@ func (r *sessionReadRepository) GetSessionMeta(ctx context.Context, id uint) (*s
 		ScoredAt:   sessionRecord.ScoredAt,
 		MessageIDs: sessionRecord.MessageIDs,
 		ToolIDs:    sessionRecord.ToolIDs,
+		ClientUA:   sessionRecord.ClientUA,
 	}, nil
 }
 

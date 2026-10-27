@@ -56,6 +56,7 @@ import {
   Lock,
   Settings2,
   ChevronDown,
+  Bot,
   Footprints,
   Layers,
 } from "lucide-react";
@@ -125,6 +126,12 @@ const NAV_GROUPS: NavGroup[] = [
         icon: <Ban className="size-4" />,
         adminOnly: true,
         demoModule: "trigger",
+      },
+      {
+        labelKey: "nav.harness",
+        href: "/harness/",
+        icon: <Bot className="size-4" />,
+        adminOnly: true,
       },
       {
         labelKey: "nav.playground",

@@ -13,6 +13,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/filter"
 	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
+	"github.com/hcd233/aris-proxy-api/internal/domain/agentharness"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
 	"github.com/hcd233/aris-proxy-api/internal/domain/session"
 	"github.com/hcd233/aris-proxy-api/internal/logger"
@@ -43,6 +44,9 @@ var sessionFieldConfigs = map[string]filter.FieldConfig{
 		SQLExpr: constant.SessionMessageCountSQLExpr,
 		IsRange: true,
 	},
+	constant.SessionFilterFieldHarness: {
+		Custom: BuildHarnessFilterCondition,
+	},
 }
 
 // ownerIDLookup 归属 API Key ID 查询（由 apikey 仓储实现）。
@@ -56,10 +60,11 @@ type ownerIDLookup interface {
 type listSessionsByUserHandler struct {
 	readRepo   session.SessionReadRepository
 	apiKeyRepo ownerIDLookup
+	rules      agentharness.RuleRepository
 }
 
-func NewListSessionsByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository) sessionport.ListSessionsByUserHandler {
-	return &listSessionsByUserHandler{readRepo: readRepo, apiKeyRepo: apiKeyRepo}
+func NewListSessionsByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository, rules agentharness.RuleRepository) sessionport.ListSessionsByUserHandler {
+	return &listSessionsByUserHandler{readRepo: readRepo, apiKeyRepo: apiKeyRepo, rules: rules}
 }
 
 func (h *listSessionsByUserHandler) Handle(ctx context.Context, q sessionport.ListSessionsByUserQuery) ([]*sessionport.SessionSummaryView, *model.PageInfo, error) {
@@ -71,7 +76,7 @@ func (h *listSessionsByUserHandler) Handle(ctx context.Context, q sessionport.Li
 	}
 
 	// 解析 filter
-	criteria, err := parseSessionFilterCriteria(q.Filter)
+	criteria, err := ParseSessionFilterCriteria(q.Filter)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -82,7 +87,7 @@ func (h *listSessionsByUserHandler) Handle(ctx context.Context, q sessionport.Li
 	if q.IsAdmin {
 		projections, pageInfo, err = h.readRepo.ListAllSessions(ctx, param, q.StartTime, q.EndTime, q.Keyword, criteria)
 	} else if q.IsDemo {
-		projections, pageInfo, err = h.readRepo.ListSessionsByIDs(ctx, q.SessionIDs, param)
+		projections, pageInfo, err = h.readRepo.ListSessionsByIDs(ctx, q.SessionIDs, param, q.StartTime, q.EndTime, q.Keyword, criteria)
 	} else {
 		ownerIDs, lookupErr := h.apiKeyRepo.LookupIDsByUserID(ctx, q.UserID)
 		if lookupErr != nil {
@@ -118,6 +123,7 @@ func (h *listSessionsByUserHandler) Handle(ctx context.Context, q sessionport.Li
 		}
 	}
 
+	rules := LoadHarnessRules(ctx, h.rules)
 	views := lo.Map(projections, func(p *session.SessionSummaryProjection, _ int) *sessionport.SessionSummaryView {
 		summary := ""
 		if len(p.Questions) > 0 {
@@ -134,6 +140,7 @@ func (h *listSessionsByUserHandler) Handle(ctx context.Context, q sessionport.Li
 			MessageCount: p.MessageCount,
 			ToolCount:    p.ToolCount,
 			ModelIDs:     p.ModelIDs,
+			AgentHarness: agentharness.Match(p.ClientUA, rules),
 		}
 	})
 	return views, pageInfo, nil
@@ -169,8 +176,8 @@ func sanitizeSessionListParam(ctx context.Context, q sessionport.ListSessionsByU
 	}, nil
 }
 
-// parseSessionFilterCriteria 解析 session filter 表达式为 FilterCriteria
-func parseSessionFilterCriteria(filterExpr string) (*filter.FilterCriteria, error) {
+// ParseSessionFilterCriteria 解析 session filter 表达式为 FilterCriteria（导出供测试与 demo 路径复用）。
+func ParseSessionFilterCriteria(filterExpr string) (*filter.FilterCriteria, error) {
 	if filterExpr == "" {
 		return nil, nil
 	}
@@ -187,10 +194,11 @@ func parseSessionFilterCriteria(filterExpr string) (*filter.FilterCriteria, erro
 type getSessionByUserHandler struct {
 	readRepo   session.SessionReadRepository
 	apiKeyRepo ownerIDLookup
+	rules      agentharness.RuleRepository
 }
 
-func NewGetSessionByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository) sessionport.GetSessionByUserHandler {
-	return &getSessionByUserHandler{readRepo: readRepo, apiKeyRepo: apiKeyRepo}
+func NewGetSessionByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository, rules agentharness.RuleRepository) sessionport.GetSessionByUserHandler {
+	return &getSessionByUserHandler{readRepo: readRepo, apiKeyRepo: apiKeyRepo, rules: rules}
 }
 
 func (h *getSessionByUserHandler) Handle(ctx context.Context, q sessionport.GetSessionByUserQuery) (*sessionport.SessionDetailView, error) {
@@ -247,16 +255,17 @@ func (h *getSessionByUserHandler) Handle(ctx context.Context, q sessionport.GetS
 	})
 
 	return &sessionport.SessionDetailView{
-		ID:         detail.ID,
-		APIKeyName: detail.APIKeyName,
-		CreatedAt:  detail.CreatedAt,
-		UpdatedAt:  detail.UpdatedAt,
-		Metadata:   detail.Metadata,
-		Score:      detail.Score,
-		ScoredAt:   detail.ScoredAt,
-		MessageIDs: detail.MessageIDs,
-		ToolIDs:    detail.ToolIDs,
-		Messages:   messages,
-		Tools:      tools,
+		ID:           detail.ID,
+		APIKeyName:   detail.APIKeyName,
+		CreatedAt:    detail.CreatedAt,
+		UpdatedAt:    detail.UpdatedAt,
+		Metadata:     detail.Metadata,
+		Score:        detail.Score,
+		ScoredAt:     detail.ScoredAt,
+		MessageIDs:   detail.MessageIDs,
+		ToolIDs:      detail.ToolIDs,
+		Messages:     messages,
+		Tools:        tools,
+		AgentHarness: agentharness.Match(detail.ClientUA, LoadHarnessRules(ctx, h.rules)),
 	}, nil
 }

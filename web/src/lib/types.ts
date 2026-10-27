@@ -154,6 +154,8 @@ export interface DeleteUserReq {
 // ─── Session ───────────────────────────────────────────────────────────────────
 
 export interface SessionSummary {
+  /** 来源 Agent Harness（后端由 UA 现算；未识别为 "Other"） */
+  agentHarness?: string;
   id: number;
   createdAt: string;
   updatedAt: string;
@@ -228,6 +230,10 @@ export interface GetSessionRsp extends CommonRsp {
 export interface SessionMetadata {
   id: number;
   apiKeyName: string;
+  /** 来源 Agent Harness（后端由 UA 现算；未识别为 "Other"） */
+  agentHarness?: string;
+  /** 会话创建时的原始 User-Agent（仅详情返回） */
+  clientUA?: string;
   createdAt: string;
   updatedAt: string;
   metadata?: Record<string, string>;
@@ -726,6 +732,41 @@ export interface ModelTrendRsp extends CommonRsp {
   data?: ModelTrendItem[];
 }
 
+export interface HarnessRuleItem {
+  id: number;
+  pattern: string;
+  name: string;
+  sort: number;
+}
+
+export interface ListHarnessRulesRsp extends CommonRsp {
+  rules?: HarnessRuleItem[];
+}
+
+export interface HarnessRuleRsp extends CommonRsp {
+  rule?: HarnessRuleItem;
+}
+
+export interface HarnessRuleReqBody {
+  pattern: string;
+  name: string;
+  sort: number;
+}
+
+export interface PreviewHarnessRsp extends CommonRsp {
+  harness: string;
+  rule?: HarnessRuleItem;
+}
+
+export interface HarnessTrendItem {
+  harness: string;
+  points: TrendPoint[];
+}
+
+export interface HarnessTrendRsp extends CommonRsp {
+  data?: HarnessTrendItem[];
+}
+
 export interface RatePoint {
   time: string;
   total: number;
@@ -811,7 +852,7 @@ export interface AuditOptionListRsp extends CommonRsp {
 // ─── Session Option List ─────────────────────────────────────────────────────
 
 export interface SessionOptionListReq {
-  field: "score" | "model" | "messageCount";
+  field: "score" | "model" | "messageCount" | "harness";
   keyword?: string;
   startTime?: string;
   endTime?: string;

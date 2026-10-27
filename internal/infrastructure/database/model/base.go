@@ -34,4 +34,5 @@ var Models = []any{
 	&DemoSession{},
 	&DemoAccessAudit{},
 	&EndpointOAuthCredential{},
+	&AgentHarnessRule{},
 }

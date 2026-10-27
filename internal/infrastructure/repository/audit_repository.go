@@ -550,6 +550,41 @@ func (r *auditRepository) loadModelTrend(ctx context.Context, apiKeyIDs []uint, 
 	return results, nil
 }
 
+func (r *auditRepository) QueryHarnessTrend(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity, rulesFingerprint string) ([]*modelcall.HarnessTrendPoint, error) {
+	key := readCacheKey(constant.ReadCachePurposeAuditStatsHarness, cacheScopeIDs(apiKeyIDs), cacheTimeBucket(startTime), cacheTimeBucket(endTime), granularity, rulesFingerprint)
+	return cachedSlice(ctx, r.cache, key, func(loadCtx context.Context) ([]*modelcall.HarnessTrendPoint, error) {
+		return r.loadHarnessTrend(loadCtx, apiKeyIDs, startTime, endTime, granularity)
+	})
+}
+
+// loadHarnessTrend 按 (harness, 时间桶) 统计调用量。
+//
+// 口径：统计全部调用（含失败），与 RequestRate 一致；harness 由规则表现算，
+// 因此规则变更会重标全部历史行，不需要回填。
+func (r *auditRepository) loadHarnessTrend(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.HarnessTrendPoint, error) {
+	// apiKeyIDs 非 nil 且为空（用户名下无 Key）：短路返回空结果，防止越权查全量；nil 表示不过滤（admin 路径）
+	if apiKeyIDs != nil && len(apiKeyIDs) == 0 {
+		return []*modelcall.HarnessTrendPoint{}, nil
+	}
+	db := r.db.WithContext(ctx).Model(&dbmodel.ModelCallAudit{}).
+		Where(constant.FieldCreatedAt+" >= ? AND "+constant.FieldCreatedAt+" <= ?", startTime, endTime).
+		Where(constant.DBConditionDeletedAtZero)
+
+	if len(apiKeyIDs) > 0 {
+		db = db.Where(constant.FieldAPIKeyID+" IN ?", apiKeyIDs)
+	}
+
+	timeBucketExpr := dateTruncSQL(granularity)
+	var results []*modelcall.HarnessTrendPoint
+	if err := db.Select(constant.AuditHarnessTrendSelectPrefix + timeBucketExpr + constant.AuditHarnessTrendSelectSuffix).
+		Group(constant.AuditHarnessTrendGroup).
+		Order(constant.AuditHarnessTrendGroup).
+		Find(&results).Error; err != nil {
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "query harness trend")
+	}
+	return results, nil
+}
+
 func (r *auditRepository) QueryRequestRate(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.RequestRatePoint, error) {
 	key := readCacheKey(constant.ReadCachePurposeAuditStatsRate, cacheScopeIDs(apiKeyIDs), cacheTimeBucket(startTime), cacheTimeBucket(endTime), granularity)
 	return cachedSlice(ctx, r.cache, key, func(loadCtx context.Context) ([]*modelcall.RequestRatePoint, error) {

@@ -27,6 +27,8 @@ type SessionMetaCacheRecord struct {
 	ScoredAt   *time.Time        `json:"scoredAt"`
 	MessageIDs []uint            `json:"messageIds"`
 	ToolIDs    []uint            `json:"toolIds"`
+	// ClientUA 会话创建时的原始 UA；harness 展示由它现算，因此必须随缓存一起存。
+	ClientUA string `json:"clientUA"`
 }
 
 // MessageCacheRecord is the cache payload for one immutable message.

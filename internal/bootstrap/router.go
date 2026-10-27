@@ -39,6 +39,7 @@ type routeParams struct {
 	PlaygroundHandler  handler.PlaygroundHandler
 	AnthropicHandler   handler.AnthropicHandler
 	TriggerHandler     handler.TriggerHandler
+	HarnessHandler     handler.HarnessHandler
 	MetricsHandler     handler.MetricsHandler
 	DatasetHandler     handler.DatasetHandler
 	ClientHandler      handler.ClientHandler
@@ -68,6 +69,7 @@ func registerRoutes(params routeParams) {
 		PlaygroundHandler:  params.PlaygroundHandler,
 		AnthropicHandler:   params.AnthropicHandler,
 		TriggerHandler:     params.TriggerHandler,
+		HarnessHandler:     params.HarnessHandler,
 		MetricsHandler:     params.MetricsHandler,
 		DatasetHandler:     params.DatasetHandler,
 		ClientHandler:      params.ClientHandler,

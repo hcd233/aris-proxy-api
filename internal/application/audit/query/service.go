@@ -22,6 +22,8 @@ type auditService struct {
 	listAuditOption         ListAuditOptionHandler
 	modelTrend              ModelTrendHandler
 	modelTrendByUser        ModelTrendByUserHandler
+	harnessTrend            HarnessTrendHandler
+	harnessTrendByUser      HarnessTrendByUserHandler
 	requestRate             RequestRateHandler
 	requestRateByUser       RequestRateByUserHandler
 	tokenThroughput         TokenThroughputHandler
@@ -43,6 +45,8 @@ func NewAuditService(
 	listAuditOption ListAuditOptionHandler,
 	modelTrend ModelTrendHandler,
 	modelTrendByUser ModelTrendByUserHandler,
+	harnessTrend HarnessTrendHandler,
+	harnessTrendByUser HarnessTrendByUserHandler,
 	requestRate RequestRateHandler,
 	requestRateByUser RequestRateByUserHandler,
 	tokenThroughput TokenThroughputHandler,
@@ -62,6 +66,8 @@ func NewAuditService(
 		listAuditOption:         listAuditOption,
 		modelTrend:              modelTrend,
 		modelTrendByUser:        modelTrendByUser,
+		harnessTrend:            harnessTrend,
+		harnessTrendByUser:      harnessTrendByUser,
 		requestRate:             requestRate,
 		requestRateByUser:       requestRateByUser,
 		tokenThroughput:         tokenThroughput,
@@ -188,6 +194,25 @@ func (s *auditService) ModelTrend(ctx context.Context, permission enum.Permissio
 	default:
 		return nil, ierr.ErrUnauthorized
 	}
+}
+
+func (s *auditService) HarnessTrend(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*dto.HarnessTrendItem, error) {
+	var (
+		points []*modelcall.HarnessTrendPoint
+		err    error
+	)
+	switch permission {
+	case enum.PermissionAdmin, enum.PermissionDemo:
+		points, err = s.harnessTrend.Handle(ctx, HarnessTrendQuery{StartTime: startTime, EndTime: endTime, Granularity: granularity})
+	case enum.PermissionUser:
+		points, err = s.harnessTrendByUser.Handle(ctx, HarnessTrendByUserQuery{UserID: userID, StartTime: startTime, EndTime: endTime, Granularity: granularity})
+	default:
+		return nil, ierr.ErrUnauthorized
+	}
+	if err != nil {
+		return nil, err
+	}
+	return port.FillHarnessTrendSeries(points, startTime, endTime, granularity), nil
 }
 
 func (s *auditService) RequestRate(ctx context.Context, permission enum.Permission, userID uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.RequestRatePoint, error) {

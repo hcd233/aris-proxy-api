@@ -19,6 +19,7 @@ type AuditHandler interface {
 	HandleListAuditLogs(ctx context.Context, req *dto.ListAuditLogsReq) (*dto.HTTPResponse[*dto.ListAuditLogsRsp], error)
 	HandleListAuditOption(ctx context.Context, req *dto.AuditOptionListReq) (*dto.HTTPResponse[*dto.AuditOptionListRsp], error)
 	HandleModelTrend(ctx context.Context, req *dto.ModelTrendReq) (*dto.HTTPResponse[*dto.ModelTrendRsp], error)
+	HandleHarnessTrend(ctx context.Context, req *dto.HarnessTrendReq) (*dto.HTTPResponse[*dto.HarnessTrendRsp], error)
 	HandleRequestRate(ctx context.Context, req *dto.RequestRateReq) (*dto.HTTPResponse[*dto.RequestRateRsp], error)
 	HandleTokenThroughput(ctx context.Context, req *dto.TokenThroughputReq) (*dto.HTTPResponse[*dto.TokenThroughputRsp], error)
 	HandleTokenRate(ctx context.Context, req *dto.TokenRateReq) (*dto.HTTPResponse[*dto.TokenRateRsp], error)
@@ -127,6 +128,22 @@ func (h *auditHandler) HandleModelTrend(ctx context.Context, req *dto.ModelTrend
 		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
 	}
 	rsp.Data = auditport.FillTrendSeries(points, req.StartTime, req.EndTime, req.Granularity)
+	return apiutil.WrapHTTPResponse(rsp, nil)
+}
+
+// HandleHarnessTrend 按 agent harness 的调用量走势
+func (h *auditHandler) HandleHarnessTrend(ctx context.Context, req *dto.HarnessTrendReq) (*dto.HTTPResponse[*dto.HarnessTrendRsp], error) {
+	rsp := &dto.HarnessTrendRsp{}
+	items, err := h.svc.HarnessTrend(ctx,
+		util.CtxValuePermission(ctx),
+		util.CtxValueUint(ctx, constant.CtxKeyUserID),
+		req.StartTime, req.EndTime, req.Granularity,
+	)
+	if err != nil {
+		logger.WithCtx(ctx).Error("[AuditHandler] Harness trend failed", zap.Error(err))
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
+	}
+	rsp.Data = items
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 

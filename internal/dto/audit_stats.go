@@ -27,6 +27,25 @@ type TrendPoint struct {
 	Count int       `json:"count" doc:"调用次数"`
 }
 
+// HarnessTrendReq 按 agent harness 的调用量走势请求
+type HarnessTrendReq struct {
+	StartTime   time.Time        `query:"startTime" required:"true"`
+	EndTime     time.Time        `query:"endTime" required:"true"`
+	Granularity enum.Granularity `query:"granularity" required:"true" enum:"minute,hour,day,week"`
+}
+
+// HarnessTrendRsp 按 agent harness 的调用量走势响应
+type HarnessTrendRsp struct {
+	CommonRsp
+	Data []*HarnessTrendItem `json:"data,omitempty" doc:"各 harness 的调用趋势（Other 始终在最后）"`
+}
+
+// HarnessTrendItem 单个 harness 的时间序列
+type HarnessTrendItem struct {
+	Harness string        `json:"harness" doc:"harness 展示名（未识别为 Other）"`
+	Points  []*TrendPoint `json:"points" doc:"时间序列点"`
+}
+
 type RequestRateReq struct {
 	StartTime   time.Time        `query:"startTime" required:"true"`
 	EndTime     time.Time        `query:"endTime" required:"true"`

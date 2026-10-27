@@ -17,6 +17,7 @@ import (
 	"go.uber.org/zap"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	gormlogger "gorm.io/gorm/logger"
 )
 
@@ -51,7 +52,34 @@ func AutoMigrate(ctx context.Context, db *gorm.DB) error {
 	if err := db.WithContext(ctx).AutoMigrate(model.Models...); err != nil {
 		return err
 	}
+	if err := seedAgentHarnessRules(ctx, db); err != nil {
+		// 种子失败不阻塞启动：规则可由 admin 后台补建，缺失时全部 UA 归 Other。
+		logger.WithCtx(ctx).Warn("[Database] Seed harness rules failed", zap.Error(err))
+	}
 	return ensureKeywordSearchIndex(ctx, db)
+}
+
+// seedAgentHarnessRules 首次启动时写入内置 harness 规则种子。
+//
+// 只在表为空时插入；之后完全由 admin 后台维护（删除全部规则时重启不会复活，
+// 因为这里以「表为空」为触发条件而非「缺某条」）。
+func seedAgentHarnessRules(ctx context.Context, db *gorm.DB) error {
+	var count int64
+	if err := db.WithContext(ctx).Model(&model.AgentHarnessRule{}).Count(&count).Error; err != nil {
+		return ierr.Wrap(ierr.ErrDBMigrate, err, "count harness rules")
+	}
+	if count > 0 {
+		return nil
+	}
+	seeds := lo.Map(constant.AgentHarnessRuleSeeds, func(seed constant.AgentHarnessRuleSeedRule, _ int) model.AgentHarnessRule {
+		return model.AgentHarnessRule{Pattern: seed.Pattern, Name: seed.Name, Sort: seed.Sort}
+	})
+	if err := db.WithContext(ctx).
+		Clauses(clause.OnConflict{Columns: []clause.Column{{Name: constant.FieldPattern}}, DoNothing: true}).
+		Create(&seeds).Error; err != nil {
+		return ierr.Wrap(ierr.ErrDBMigrate, err, "seed harness rules")
+	}
+	return nil
 }
 
 // ensureKeywordSearchIndex 建立 keyword 搜索依赖的 pg_trgm 表达式索引。

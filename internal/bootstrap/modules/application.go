@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	harnesscommand "github.com/hcd233/aris-proxy-api/internal/application/agentharness/command"
+	harnessport "github.com/hcd233/aris-proxy-api/internal/application/agentharness/port"
+	harnessquery "github.com/hcd233/aris-proxy-api/internal/application/agentharness/query"
 	apikeycommand "github.com/hcd233/aris-proxy-api/internal/application/apikey/command"
 	apikeyport "github.com/hcd233/aris-proxy-api/internal/application/apikey/port"
 	apikeyquery "github.com/hcd233/aris-proxy-api/internal/application/apikey/query"
@@ -48,6 +51,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	cronpkg "github.com/hcd233/aris-proxy-api/internal/cron"
+	"github.com/hcd233/aris-proxy-api/internal/domain/agentharness"
 	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
 	apikeyservice "github.com/hcd233/aris-proxy-api/internal/domain/apikey/service"
 	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
@@ -125,6 +129,8 @@ var ApplicationModule = fx.Module(constant.DigNameApplicationModule,
 		NewFirstTokenLatencyByUserHandler,
 		NewListAuditOptionHandler,
 		NewAuditService,
+		NewHarnessTrendHandler,
+		NewHarnessTrendByUserHandler,
 		NewListCronJobsHandler,
 		NewUpdateCronJobHandler,
 		NewTriggerCronJobHandler,
@@ -133,6 +139,11 @@ var ApplicationModule = fx.Module(constant.DigNameApplicationModule,
 		NewListDemoAccessAuditOptionsHandler,
 		NewListCronCallAuditOptionsHandler,
 		NewListSessionsByUserHandler,
+		NewListHarnessRulesHandler,
+		NewCreateHarnessRuleHandler,
+		NewUpdateHarnessRuleHandler,
+		NewDeleteHarnessRuleHandler,
+		NewPreviewHarnessHandler,
 		NewGetSessionByUserHandler,
 		NewGetSessionMetaByUserHandler,
 		NewListSessionMessagesHandler,
@@ -392,6 +403,8 @@ func NewAuditService(
 	listAuditOption auditquery.ListAuditOptionHandler,
 	modelTrend auditquery.ModelTrendHandler,
 	modelTrendByUser auditquery.ModelTrendByUserHandler,
+	harnessTrend auditquery.HarnessTrendHandler,
+	harnessTrendByUser auditquery.HarnessTrendByUserHandler,
 	requestRate auditquery.RequestRateHandler,
 	requestRateByUser auditquery.RequestRateByUserHandler,
 	tokenThroughput auditquery.TokenThroughputHandler,
@@ -405,10 +418,18 @@ func NewAuditService(
 	modelCost auditquery.ModelCostHandler,
 	modelCostByUser auditquery.ModelCostByUserHandler,
 ) auditport.AuditService {
-	return auditquery.NewAuditService(listAll, listByUser, listAuditOption, modelTrend, modelTrendByUser, requestRate, requestRateByUser, tokenThroughput, tokenThroughputByUser, tokenRate, tokenRateByUser, modelUsage, modelUsageByUser, firstTokenLatency, firstTokenLatencyByUser, modelCost, modelCostByUser)
+	return auditquery.NewAuditService(listAll, listByUser, listAuditOption, modelTrend, modelTrendByUser, harnessTrend, harnessTrendByUser, requestRate, requestRateByUser, tokenThroughput, tokenThroughputByUser, tokenRate, tokenRateByUser, modelUsage, modelUsageByUser, firstTokenLatency, firstTokenLatencyByUser, modelCost, modelCostByUser)
 }
 
 // NewModelCostHandler 构造模型成本排行处理器（admin/demo 全量视角）
+func NewHarnessTrendHandler(repo modelcall.AuditRepository, rules agentharness.RuleRepository) auditquery.HarnessTrendHandler {
+	return auditquery.NewHarnessTrendHandler(repo, rules)
+}
+
+func NewHarnessTrendByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apikey.APIKeyRepository, rules agentharness.RuleRepository) auditquery.HarnessTrendByUserHandler {
+	return auditquery.NewHarnessTrendByUserHandler(repo, apiKeyRepo, rules)
+}
+
 func NewModelCostHandler(repo modelcall.AuditRepository) auditquery.ModelCostHandler {
 	return auditquery.NewModelCostHandler(repo)
 }
@@ -418,16 +439,36 @@ func NewModelCostByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apikey
 	return auditquery.NewModelCostByUserHandler(repo, apiKeyRepo)
 }
 
-func NewListSessionsByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository) sessionport.ListSessionsByUserHandler {
-	return sessionquery.NewListSessionsByUserHandler(readRepo, apiKeyRepo)
+func NewListHarnessRulesHandler(rules agentharness.RuleRepository) harnessport.ListHarnessRulesHandler {
+	return harnessquery.NewListHarnessRulesHandler(rules)
 }
 
-func NewGetSessionByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository) sessionport.GetSessionByUserHandler {
-	return sessionquery.NewGetSessionByUserHandler(readRepo, apiKeyRepo)
+func NewCreateHarnessRuleHandler(rules agentharness.RuleRepository) harnessport.CreateHarnessRuleHandler {
+	return harnesscommand.NewCreateHarnessRuleHandler(rules)
 }
 
-func NewGetSessionMetaByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository, detailCache sessionport.SessionDetailCache) sessionport.GetSessionMetaByUserHandler {
-	return sessionquery.NewGetSessionMetaByUserHandler(readRepo, apiKeyRepo, detailCache)
+func NewUpdateHarnessRuleHandler(rules agentharness.RuleRepository) harnessport.UpdateHarnessRuleHandler {
+	return harnesscommand.NewUpdateHarnessRuleHandler(rules)
+}
+
+func NewDeleteHarnessRuleHandler(rules agentharness.RuleRepository) harnessport.DeleteHarnessRuleHandler {
+	return harnesscommand.NewDeleteHarnessRuleHandler(rules)
+}
+
+func NewPreviewHarnessHandler(rules agentharness.RuleRepository) harnessport.PreviewHarnessHandler {
+	return harnessquery.NewPreviewHarnessHandler(rules)
+}
+
+func NewListSessionsByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository, rules agentharness.RuleRepository) sessionport.ListSessionsByUserHandler {
+	return sessionquery.NewListSessionsByUserHandler(readRepo, apiKeyRepo, rules)
+}
+
+func NewGetSessionByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository, rules agentharness.RuleRepository) sessionport.GetSessionByUserHandler {
+	return sessionquery.NewGetSessionByUserHandler(readRepo, apiKeyRepo, rules)
+}
+
+func NewGetSessionMetaByUserHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository, detailCache sessionport.SessionDetailCache, rules agentharness.RuleRepository) sessionport.GetSessionMetaByUserHandler {
+	return sessionquery.NewGetSessionMetaByUserHandler(readRepo, apiKeyRepo, detailCache, rules)
 }
 
 func NewListSessionMessagesHandler(readRepo session.SessionReadRepository, metaQuery sessionport.GetSessionMetaByUserHandler, detailCache sessionport.SessionDetailCache) sessionport.ListSessionMessagesHandler {
@@ -454,8 +495,8 @@ func NewCreateShareHandler(getByUser sessionport.GetSessionByUserHandler, shareC
 	return sessioncommand.NewCreateShareHandler(getByUser, shareCache)
 }
 
-func NewSessionOptionHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository) sessionport.ListSessionOptionHandler {
-	return sessionquery.NewListSessionOptionHandler(readRepo, apiKeyRepo)
+func NewSessionOptionHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository, rules agentharness.RuleRepository) sessionport.ListSessionOptionHandler {
+	return sessionquery.NewListSessionOptionHandler(readRepo, apiKeyRepo, rules)
 }
 
 func NewTriggerService(repo triggerdomain.TriggerRepository, hitRecorder triggerport.HitRecorder, cache *redis.Client) *triggerapp.TriggerService {

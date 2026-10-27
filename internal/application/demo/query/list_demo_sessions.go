@@ -2,6 +2,7 @@ package query
 
 import (
 	"context"
+	"time"
 
 	"github.com/samber/lo"
 	"go.uber.org/zap"
@@ -37,7 +38,7 @@ func (h *listDemoSessionsHandler) Handle(ctx context.Context, q port.ListDemoSes
 		PageParam: model.PageParam{Page: max(q.Page, 1), PageSize: q.PageSize},
 		SortParam: model.SortParam{Sort: enum.SortDesc, SortField: constant.FieldCreatedAt},
 	}
-	projections, pageInfo, err := h.readRepo.ListSessionsByIDs(ctx, ids, param)
+	projections, pageInfo, err := h.readRepo.ListSessionsByIDs(ctx, ids, param, time.Time{}, time.Time{}, "", nil)
 	if err != nil {
 		return nil, nil, ierr.Wrap(ierr.ErrDBQuery, err, "list demo sessions by ids")
 	}

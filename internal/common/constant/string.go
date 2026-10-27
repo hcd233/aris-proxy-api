@@ -201,11 +201,16 @@ const (
 	TagSession    = "Session"
 	TagUpstream   = "Upstream"
 	TagTrigger    = "Trigger"
+	TagHarness    = "Harness"
 	TagDataset    = "Dataset"
 	TagUser       = "User"
 
 	// Router sub-paths
 	RoutePathList = "/list"
+
+	RoutePathRule        = "/rule"
+	RoutePathRuleList    = "/rule/list"
+	RoutePathRulePreview = "/rule/preview"
 
 	// API 路由分区前缀（2026-08-27 路由四分区治理）：
 	//   - WebAPIPrefix  web 前端 JWT 路由

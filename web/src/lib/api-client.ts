@@ -64,6 +64,11 @@ import type {
   ModelListSortField,
   ModelSpecPrefillRsp,
   ModelTrendRsp,
+  HarnessTrendRsp,
+  ListHarnessRulesRsp,
+  HarnessRuleRsp,
+  HarnessRuleReqBody,
+  PreviewHarnessRsp,
   ModelUpdateRsp,
   ModelUsageRsp,
   OAuth2Provider,
@@ -774,6 +779,44 @@ class ApiClient {
   }): Promise<ModelTrendRsp> {
     const sp = new URLSearchParams(params);
     return this.request<ModelTrendRsp>(`${API_PREFIX}/audit/stats/model/trend?${sp}`);
+  }
+
+  async fetchHarnessTrend(params: {
+    startTime: string;
+    endTime: string;
+    granularity: Granularity;
+  }): Promise<HarnessTrendRsp> {
+    const sp = new URLSearchParams(params);
+    return this.request<HarnessTrendRsp>(`${API_PREFIX}/audit/stats/harness/trend?${sp}`);
+  }
+
+  async listHarnessRules(): Promise<ListHarnessRulesRsp> {
+    return this.request<ListHarnessRulesRsp>(`${API_PREFIX}/harness/rule/list`);
+  }
+
+  async createHarnessRule(body: HarnessRuleReqBody): Promise<HarnessRuleRsp> {
+    return this.request<HarnessRuleRsp>(`${API_PREFIX}/harness/rule`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  }
+
+  async updateHarnessRule(id: number, body: HarnessRuleReqBody): Promise<HarnessRuleRsp> {
+    return this.request<HarnessRuleRsp>(`${API_PREFIX}/harness/rule?id=${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    });
+  }
+
+  async deleteHarnessRule(id: number): Promise<CommonRsp> {
+    return this.request<CommonRsp>(`${API_PREFIX}/harness/rule?id=${id}`, { method: "DELETE" });
+  }
+
+  async previewHarnessRule(ua: string): Promise<PreviewHarnessRsp> {
+    return this.request<PreviewHarnessRsp>(`${API_PREFIX}/harness/rule/preview`, {
+      method: "POST",
+      body: JSON.stringify({ ua }),
+    });
   }
 
   async fetchRequestRate(params: {

@@ -251,3 +251,39 @@ describe("⑥ 聊天区", () => {
     expect(src).toContain("data-streaming");
   });
 });
+
+describe("agent harness 展示", () => {
+  it("会话列表提供 harness 筛选维度与来源徽标", () => {
+    const src = read("app/(dashboard)/sessions/page.tsx");
+    expect(src).toContain('key: "harness"');
+    expect(src).toContain("single: true");
+    expect(src).toContain("s.agentHarness");
+  });
+});
+
+describe("agent harness 详情", () => {
+  it("会话详情展示 harness 徽标与原始 UA tooltip", () => {
+    const src = read("components/session-detail/session-detail-client.tsx");
+    expect(src).toContain("metadata.agentHarness");
+    expect(src).toContain("metadata.clientUA");
+  });
+});
+
+describe("agent harness 走势图", () => {
+  it("dashboard 使用堆叠面积图展示各 harness 调用量", () => {
+    const page = read("app/(dashboard)/page.tsx");
+    expect(page).toContain("HarnessTrendChart");
+    const chart = read("components/charts/harness-trend-chart.tsx");
+    expect(chart).toContain('stackId="harness"');
+    expect(chart).toContain('chartType="area"');
+  });
+});
+
+describe("harness 规则管理页", () => {
+  it("提供规则表格、增删改与 UA 预览", () => {
+    const src = read("app/(dashboard)/harness/page.tsx");
+    expect(src).toContain("listHarnessRules");
+    expect(src).toContain("previewHarnessRule");
+    expect(src).toContain("deleteHarnessRule");
+  });
+});

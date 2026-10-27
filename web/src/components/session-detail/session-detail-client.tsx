@@ -323,6 +323,25 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
             .replace("{s}", messageCount === 1 ? "" : "s")}
           {metadata.apiKeyName ? ` · ${metadata.apiKeyName}` : ""}
         </p>
+        <TooltipRoot>
+          <TooltipTrigger
+            render={
+              <Badge
+                variant={
+                  metadata.agentHarness && metadata.agentHarness !== "Other"
+                    ? "secondary"
+                    : "outline"
+                }
+                className="mt-1 text-[10px]"
+              >
+                {metadata.agentHarness || "Other"}
+              </Badge>
+            }
+          />
+          <TooltipContent side="bottom" className="max-w-xs break-all">
+            {metadata.clientUA || t("sessions.ua_missing")}
+          </TooltipContent>
+        </TooltipRoot>
         {isMobile && !isDemo() && (
           <div className="mt-1">
             <ScoreDots

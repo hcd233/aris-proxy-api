@@ -12,6 +12,9 @@ const (
 	FieldScore                       = "score"
 	FieldScoredAt                    = "scored_at"
 	FieldName                        = "name"
+	FieldClientUA                    = "client_ua"
+	FieldPattern                     = "pattern"
+	FieldSort                        = "sort"
 	FieldKey                         = "key"
 	FieldUserID                      = "user_id"
 	FieldModel                       = "model"
@@ -125,8 +128,8 @@ var (
 	// SessionRepoFieldsDetail / ReadDetail 含 FieldAPIKeyID：归属判定读该列，
 	// 漏列会读出 0 并把合法访问误判为越权（名称列仅用于展示）。
 	SessionRepoFieldsDetail     = []string{FieldID, FieldAPIKeyName, FieldAPIKeyID, FieldCreatedAt, FieldUpdatedAt, FieldMessageIDs, FieldToolIDs, FieldMetadata, FieldScore, FieldScoredAt}
-	SessionRepoFieldsReadList   = []string{FieldID, FieldCreatedAt, FieldUpdatedAt, FieldScore}
-	SessionRepoFieldsReadDetail = []string{FieldID, FieldAPIKeyName, FieldAPIKeyID, FieldCreatedAt, FieldUpdatedAt, FieldMessageIDs, FieldToolIDs, FieldMetadata, FieldScore, FieldScoredAt}
+	SessionRepoFieldsReadList   = []string{FieldID, FieldCreatedAt, FieldUpdatedAt, FieldScore, FieldClientUA}
+	SessionRepoFieldsReadDetail = []string{FieldID, FieldAPIKeyName, FieldAPIKeyID, FieldCreatedAt, FieldUpdatedAt, FieldMessageIDs, FieldToolIDs, FieldMetadata, FieldScore, FieldScoredAt, FieldClientUA}
 	SessionRepoFieldsDedup      = []string{FieldID, FieldMessageIDs, FieldToolIDs}
 	SessionRepoFieldsSummarize  = []string{FieldID, FieldMessageIDs}
 
@@ -280,7 +283,7 @@ var (
 	//   jsonb_array_length(message_ids)（每行一次 TOAST 解压）后再 top-N 排序；
 	//   2026-10-23 实测 11K 会话表上 119.6ms，拆分后 COUNT 1.0ms + 分页 4.1ms。
 	//   分页 SELECT 只解压当前页 20 行，message_count/tool_count 仍实时计算。
-	SessionSummarySelect = "id, created_at, updated_at, score, COALESCE(jsonb_array_length(message_ids::jsonb), 0) AS message_count, COALESCE(jsonb_array_length(tool_ids::jsonb), 0) AS tool_count, questions, model_ids"
+	SessionSummarySelect = "id, created_at, updated_at, score, COALESCE(jsonb_array_length(message_ids::jsonb), 0) AS message_count, COALESCE(jsonb_array_length(tool_ids::jsonb), 0) AS tool_count, questions, model_ids, client_ua"
 
 	// SessionKeywordMatchIDsSQL keyword 搜索第一段：关键词 → 用户消息 id 集合。
 	//

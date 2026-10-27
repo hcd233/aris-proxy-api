@@ -49,6 +49,8 @@ type SessionSummaryProjection struct {
 	ToolCount    int
 	Questions    []uint
 	ModelIDs     []string
+	// ClientUA 会话创建那一刻的原始 UA（首轮语义）；harness 展示由它现算。
+	ClientUA string
 }
 
 // MessageDetailProjection 消息详情只读投影
@@ -84,6 +86,7 @@ type SessionMetaProjection struct {
 	ScoredAt   *time.Time
 	MessageIDs []uint
 	ToolIDs    []uint
+	ClientUA   string
 }
 
 // SessionDetailProjection Session 详情只读投影
@@ -98,6 +101,7 @@ type SessionDetailProjection struct {
 	ScoredAt   *time.Time
 	MessageIDs []uint
 	ToolIDs    []uint
+	ClientUA   string
 	Messages   []*MessageDetailProjection
 	Tools      []*ToolDetailProjection
 }
@@ -152,7 +156,7 @@ type SessionReadRepository interface {
 	// ListSessionsByOwnerIDs 按多个归属 API Key ID 分页查询 Session 列表投影
 	ListSessionsByOwnerIDs(ctx context.Context, ownerIDs []uint, param model.CommonParam, startTime, endTime time.Time, keyword string, criteria *filter.FilterCriteria) ([]*SessionSummaryProjection, *model.PageInfo, error)
 	// ListSessionsByIDs 按会话 ID 集合分页查询列表投影（demo 白名单视角 / admin 管理列表）
-	ListSessionsByIDs(ctx context.Context, ids []uint, param model.CommonParam) ([]*SessionSummaryProjection, *model.PageInfo, error)
+	ListSessionsByIDs(ctx context.Context, ids []uint, param model.CommonParam, startTime, endTime time.Time, keyword string, criteria *filter.FilterCriteria) ([]*SessionSummaryProjection, *model.PageInfo, error)
 	// GetSessionDetail 查询 Session 详情（含 Message/Tool 投影）
 	GetSessionDetail(ctx context.Context, id uint) (*SessionDetailProjection, error)
 	// GetSessionMeta 查询 Session 元数据（不含 Message/Tool 内容，仅含 IDs 数组）；未找到返回 (nil, nil)

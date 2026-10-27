@@ -94,7 +94,7 @@ export default function SessionsPage() {
   const [batchDeleteConfirmOpen, setBatchDeleteConfirmOpen] = useState(false);
 
   const fetchOptionsFor = useCallback(
-    (field: "score" | "model" | "messageCount") => async () => {
+    (field: "score" | "model" | "messageCount" | "harness") => async () => {
       const { startTime, endTime } = computeRange(timeRange, customStart, customEnd);
       const rsp = await api.listSessionOptions({ field, startTime, endTime });
       return rsp.items ?? [];
@@ -111,6 +111,12 @@ export default function SessionsPage() {
         formatValue: (v) => (v === "unscored" ? t("sessions.filter_unscored") : `★${v}`),
       },
       { key: "model", label: t("sessions.filter_model"), options: fetchOptionsFor("model") },
+      {
+        key: "harness",
+        label: t("sessions.filter_harness"),
+        options: fetchOptionsFor("harness"),
+        single: true,
+      },
       {
         key: "messageCount",
         label: t("sessions.filter_message_count"),
@@ -440,6 +446,9 @@ export default function SessionsPage() {
                             <span>
                               {t("common.id")}: {s.id}
                             </span>
+                            <Badge variant="outline" className="text-xs">
+                              {s.agentHarness || "Other"}
+                            </Badge>
                             <span>
                               {t("sessions.tool_count").replace(
                                 "{count}",
@@ -500,6 +509,7 @@ export default function SessionsPage() {
                             {t("sessions.tools")} {renderSortIcon(SORTABLE_COLUMNS.toolCount)}
                           </span>
                         </TableHead>
+                        <TableHead className="w-[120px]">{t("sessions.harness")}</TableHead>
                         <TableHead className="w-[140px]">{t("sessions.models")}</TableHead>
                         <TableHead className="w-[104px] sr-only">{t("common.actions")}</TableHead>
                       </TableRow>
@@ -554,6 +564,18 @@ export default function SessionsPage() {
                             </TableCell>
                             <TableCell>{s.messageCount ?? 0}</TableCell>
                             <TableCell>{s.toolCount ?? 0}</TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={
+                                  s.agentHarness && s.agentHarness !== "Other"
+                                    ? "secondary"
+                                    : "outline"
+                                }
+                                className="text-xs"
+                              >
+                                {s.agentHarness || "Other"}
+                              </Badge>
+                            </TableCell>
                             <TableCell>
                               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                                 {s.modelIds && s.modelIds.length > 0 ? (
