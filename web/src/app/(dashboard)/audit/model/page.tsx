@@ -26,7 +26,7 @@ import { useRequestSeq } from "@/hooks/use-request-seq";
 import { useI18n } from "@/lib/i18n";
 import { PermissionGuard } from "@/components/permission-guard";
 import { formatCost } from "@/lib/money";
-import { cn, formatDateTime } from "@/lib/utils";
+import { cn, formatDateTime, formatDurationMs, formatInteger, formatTokenCount } from "@/lib/utils";
 import {
   TooltipProvider,
   TooltipRoot,
@@ -41,15 +41,13 @@ import { useFilterBar } from "@/components/filter-bar/use-filter-bar";
 import type { FacetDef, FilterBarQueryParams } from "@/components/filter-bar/types";
 import { copyTextToClipboard } from "@/lib/clipboard";
 
-function formatTokens(input: number, output: number): string {
-  const fmt = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n));
-  return `${fmt(input)} / ${fmt(output)}`;
+function formatTokenPair(input: number, output: number): string {
+  return `${formatTokenCount(input)} / ${formatTokenCount(output)}`;
 }
 
 function formatCacheTokens(write: number, read: number): string | null {
   if (write === 0 && read === 0) return null;
-  const fmt = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n));
-  return `ca: ${fmt(read)} / ${fmt(write)}`;
+  return `ca: ${formatTokenCount(read)} / ${formatTokenCount(write)}`;
 }
 
 function formatProtocol(protocol: string): string {
@@ -79,11 +77,6 @@ function formatStatusCode(code: string, t: (key: string, fallback?: string) => s
           ? t("audit.status_client_error")
           : t("audit.status_upstream_error");
   return `${label} (${code})`;
-}
-
-function formatMs(ms: number): string {
-  if (ms >= 1000) return `${(ms / 1000).toFixed(2)}s`;
-  return `${ms}ms`;
 }
 
 export default function AuditPage() {
@@ -339,10 +332,10 @@ export default function AuditPage() {
                           </div>
                         </div>
                         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                          <span>{formatTokens(log.inputTokens, log.outputTokens)}</span>
-                          <span>I: {formatMs(log.firstTokenLatencyMs)}</span>
+                          <span>{formatTokenPair(log.inputTokens, log.outputTokens)}</span>
+                          <span>I: {formatDurationMs(log.firstTokenLatencyMs)}</span>
                           {log.streamDurationMs > 0 && (
-                            <span>O: {formatMs(log.streamDurationMs)}</span>
+                            <span>O: {formatDurationMs(log.streamDurationMs)}</span>
                           )}
                           {cacheInfo && <span>{cacheInfo}</span>}
                           <span>{formatCost(log.cost, log.pricingCurrency)}</span>
@@ -398,38 +391,40 @@ export default function AuditPage() {
                                 <span className="text-muted-foreground">
                                   {t("audit.input_tokens_label")}
                                 </span>
-                                <p>{log.inputTokens.toLocaleString()}</p>
+                                <p>{formatInteger(log.inputTokens)}</p>
                               </div>
                               <div>
                                 <span className="text-muted-foreground">
                                   {t("audit.output_tokens_label")}
                                 </span>
-                                <p>{log.outputTokens.toLocaleString()}</p>
+                                <p>{formatInteger(log.outputTokens)}</p>
                               </div>
                               <div>
                                 <span className="text-muted-foreground">
                                   {t("audit.cache_read_colon")}
                                 </span>
-                                <p>{log.cacheReadInputTokens.toLocaleString()}</p>
+                                <p>{formatInteger(log.cacheReadInputTokens)}</p>
                               </div>
                               <div>
                                 <span className="text-muted-foreground">
                                   {t("audit.cache_creation")}
                                 </span>
-                                <p>{log.cacheCreationInputTokens.toLocaleString()}</p>
+                                <p>{formatInteger(log.cacheCreationInputTokens)}</p>
                               </div>
                               <div>
                                 <span className="text-muted-foreground">
                                   {t("audit.first_token_label")}
                                 </span>
-                                <p>{formatMs(log.firstTokenLatencyMs)}</p>
+                                <p>{formatDurationMs(log.firstTokenLatencyMs)}</p>
                               </div>
                               <div>
                                 <span className="text-muted-foreground">
                                   {t("audit.stream_label")}
                                 </span>
                                 <p>
-                                  {log.streamDurationMs > 0 ? formatMs(log.streamDurationMs) : "—"}
+                                  {log.streamDurationMs > 0
+                                    ? formatDurationMs(log.streamDurationMs)
+                                    : "—"}
                                 </p>
                               </div>
                               <div>
@@ -500,7 +495,7 @@ export default function AuditPage() {
                     <TableHead>{t("audit.filter_model")}</TableHead>
                     <TableHead className="w-[4rem]">{t("audit.user_name")}</TableHead>
                     <TableHead className="w-[4rem]">{t("audit.filter_status")}</TableHead>
-                    {/* 8.5rem 是 token 列的下限：cache 行 "ca: 4.1k / 113.5k" 再窄就被裁掉 */}
+                    {/* 8.5rem 是 token 列的下限：cache 行 "ca: 4.1K / 113.5K" 再窄就被裁掉 */}
                     <TableHead className="w-[8.5rem]">{t("audit.tokens")}</TableHead>
                     <TableHead className="w-[5rem]">{t("audit.latency")}</TableHead>
                     <TableHead className="w-[5rem]">{t("audit.cost.column")}</TableHead>
@@ -653,16 +648,20 @@ export default function AuditPage() {
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
                           <div className="text-xs">
-                            {formatTokens(log.inputTokens, log.outputTokens)}
+                            {formatTokenPair(log.inputTokens, log.outputTokens)}
                           </div>
                           {cacheInfo && (
                             <div className="text-xs text-muted-foreground/70">{cacheInfo}</div>
                           )}
                         </TableCell>
                         <TableCell className="whitespace-nowrap text-muted-foreground">
-                          <div className="text-xs">I: {formatMs(log.firstTokenLatencyMs)}</div>
+                          <div className="text-xs">
+                            I: {formatDurationMs(log.firstTokenLatencyMs)}
+                          </div>
                           {log.streamDurationMs > 0 && (
-                            <div className="text-xs">O: {formatMs(log.streamDurationMs)}</div>
+                            <div className="text-xs">
+                              O: {formatDurationMs(log.streamDurationMs)}
+                            </div>
                           )}
                         </TableCell>
                         <TableCell className="whitespace-nowrap text-xs tabular-nums">

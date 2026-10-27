@@ -4,6 +4,7 @@ import { useCallback } from "react";
 import { api } from "@/lib/api-client";
 import type { FirstTokenLatencyItem } from "@/lib/types";
 import { LineChartCard, formatTooltipRow } from "@/components/charts/line-chart-card";
+import { formatDurationMs } from "@/lib/utils";
 import { ReferenceLine } from "recharts";
 
 export function FirstTokenLatencyChart() {
@@ -37,7 +38,7 @@ export function FirstTokenLatencyChart() {
       fetchData={(p) => api.fetchFirstTokenLatency(p)}
       toChart={toChart}
       tooltipFormatter={(value, name, item) =>
-        formatTooltipRow(value, name, item, (v) => `${v.toFixed(0)} ms`)
+        formatTooltipRow(value, name, item, (v) => formatDurationMs(v))
       }
       extraElements={({ data, series, chartConfig, activeLegend }) => {
         // Calculate average latency per model
@@ -61,11 +62,7 @@ export function FirstTokenLatencyChart() {
               strokeWidth={1.5}
               label={({ viewBox }: { viewBox: { x?: number; y?: number; width?: number } }) => {
                 const color = chartConfig[model]?.color ?? "#888";
-                const formatted =
-                  average >= 1000
-                    ? average.toLocaleString(undefined, { maximumFractionDigits: 0 })
-                    : average.toFixed(0);
-                const text = `avg ${formatted} ms`;
+                const text = `avg ${formatDurationMs(average)}`;
                 const labelWidth = 120;
                 const right = (viewBox.x ?? 0) + (viewBox.width ?? 0);
                 return (

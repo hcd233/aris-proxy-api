@@ -29,7 +29,7 @@ import { FilterBar } from "@/components/filter-bar/filter-bar";
 import { useFilterBar } from "@/components/filter-bar/use-filter-bar";
 import type { FacetDef, FilterBarQueryParams } from "@/components/filter-bar/types";
 import { copyTextToClipboard } from "@/lib/clipboard";
-import { cronJobLabel, formatDateTime } from "@/lib/utils";
+import { cronJobLabel, formatDateTime, formatDurationMs } from "@/lib/utils";
 import {
   TooltipProvider,
   TooltipRoot,
@@ -330,7 +330,9 @@ export default function CronAuditPage() {
                           </Badge>
                         )}
                       </TableCell>
-                      <TableCell className="text-muted-foreground">{log.durationMs} ms</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {formatDurationMs(log.durationMs)}
+                      </TableCell>
                       <TableCell className="max-w-[250px] text-xs text-muted-foreground">
                         <TooltipProvider>
                           <TooltipRoot>

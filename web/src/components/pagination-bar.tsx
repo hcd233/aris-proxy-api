@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ChevronLeft, ChevronRight, ListFilter } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatInteger } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
 
 const PAGE_SIZES = [20, 50, 100, 200, 500];
@@ -85,7 +85,7 @@ export function PaginationBar({
         </DropdownMenu>
         <p className="hidden whitespace-nowrap text-sm tabular-nums text-muted-foreground md:block">
           {t("pagination.total_format")
-            .replace("{count}", String(pageInfo.total))
+            .replace("{count}", formatInteger(pageInfo.total))
             .replace("{label}", totalLabel)}
         </p>
       </div>

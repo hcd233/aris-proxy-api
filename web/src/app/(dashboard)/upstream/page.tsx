@@ -31,6 +31,7 @@ import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useI18n } from "@/lib/i18n";
 import { copyTextToClipboard } from "@/lib/clipboard";
+import { formatInteger } from "@/lib/utils";
 
 import {
   DEFAULT_CONTEXT_LENGTH,
@@ -602,7 +603,7 @@ export default function UpstreamPage() {
         });
         if (showSyncHistory && syncHistory) {
           toast.success(
-            `${t("models.history_synced")}: ${rsp.auditCount} / ${rsp.sessionCount} / ${rsp.messageCount}`,
+            `${t("models.history_synced")}: ${formatInteger(rsp.auditCount)} / ${formatInteger(rsp.sessionCount)} / ${formatInteger(rsp.messageCount)}`,
           );
         } else {
           toast.success(t("models.updated_success"));

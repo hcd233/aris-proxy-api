@@ -50,7 +50,7 @@ import { useDeleteConfirm } from "@/hooks/use-delete-confirm";
 import { useRequestSeq } from "@/hooks/use-request-seq";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useT } from "@/lib/i18n";
-import { cn, formatDate } from "@/lib/utils";
+import { cn, formatDate, formatInteger } from "@/lib/utils";
 import { copyTextToClipboard } from "@/lib/clipboard";
 
 /** 动作徽章：点击循环切换 deny→omit→capture，悬停用 Tooltip 展示切换提示 */
@@ -331,7 +331,7 @@ export default function TriggerPage() {
                                 </TooltipContent>
                               </TooltipRoot>
                               <ItemDescription>
-                                {t("trigger.hit_count")}: {item.hitCount}
+                                {t("trigger.hit_count")}: {formatInteger(item.hitCount)}
                               </ItemDescription>
                               <div>
                                 <ActionBadge
@@ -426,7 +426,7 @@ export default function TriggerPage() {
                                   }
                                 />
                               </TableCell>
-                              <TableCell>{item.hitCount}</TableCell>
+                              <TableCell>{formatInteger(item.hitCount)}</TableCell>
                               <TableCell className="text-muted-foreground">
                                 {formatDate(item.createdAt)}
                               </TableCell>
