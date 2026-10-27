@@ -15,27 +15,44 @@ import (
 // Rule 一条「UA 前缀 → harness 名称」规则。
 //
 // Pattern 必须是调用方已规范化的小写前缀；同一 Name 可以有多条规则
-// （例如 Codex 的 CLI 与 Desktop 两种 UA）。
+// （例如 Codex 的 CLI 与 Desktop 两种 UA）。规则之间没有先后关系：
+// 命中的是哪条由前缀长度决定，因此不带排序字段。
 type Rule struct {
 	ID      uint
 	Pattern string
 	Name    string
-	Sort    int
 }
 
-// Match 返回 UA 命中的 harness 名称。
+// MatchRule 返回 UA 命中的规则，取命中的最长前缀；未命中返回 nil。
 //
-// rules 必须已按 (Sort, ID) 升序排列，函数按该顺序取第一条前缀命中项；
-// ua 为空、仅有空白或全部不命中时返回 Other。
-func Match(ua string, rules []Rule) string {
+// 两条不同 Pattern 若能命中同一 UA，其中一条必然是另一条的前缀，
+// 于是长度严格可比、「最长」唯一确定归属——不存在并列，也就不需要排序。
+// ua 为空或仅有空白时返回 nil。
+func MatchRule(ua string, rules []Rule) *Rule {
 	normalized := strings.ToLower(strings.TrimSpace(ua))
 	if normalized == "" {
-		return constant.AgentHarnessOther
+		return nil
 	}
-	for _, rule := range rules {
-		if strings.HasPrefix(normalized, rule.Pattern) {
-			return rule.Name
+	var (
+		matched      *Rule
+		matchedRunes int
+	)
+	for i := range rules {
+		rule := &rules[i]
+		if !strings.HasPrefix(normalized, rule.Pattern) {
+			continue
 		}
+		if runes := utf8.RuneCountInString(rule.Pattern); runes > matchedRunes {
+			matched, matchedRunes = rule, runes
+		}
+	}
+	return matched
+}
+
+// Match 返回 UA 命中的 harness 名称；未命中返回 Other。
+func Match(ua string, rules []Rule) string {
+	if rule := MatchRule(ua, rules); rule != nil {
+		return rule.Name
 	}
 	return constant.AgentHarnessOther
 }

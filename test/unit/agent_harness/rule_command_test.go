@@ -67,7 +67,6 @@ func TestCreateHarnessRuleNormalizesInput(t *testing.T) {
 	view, err := handler.Handle(context.Background(), harnessport.CreateHarnessRuleCommand{
 		Pattern: "  ZCode/ ",
 		Name:    "ZCode",
-		Sort:    20,
 	})
 	if err != nil {
 		t.Fatalf("Create returned error: %v", err)
@@ -101,7 +100,7 @@ func TestCreateHarnessRuleRejectsReservedName(t *testing.T) {
 func TestCreateHarnessRuleRejectsDuplicatePattern(t *testing.T) {
 	t.Parallel()
 
-	repo := &fakeRuleRepo{rules: []agentharness.Rule{{ID: 1, Pattern: "zcode/", Name: "ZCode", Sort: 10}}}
+	repo := &fakeRuleRepo{rules: []agentharness.Rule{{ID: 1, Pattern: "zcode/", Name: "ZCode"}}}
 	handler := command.NewCreateHarnessRuleHandler(repo)
 
 	_, err := handler.Handle(context.Background(), harnessport.CreateHarnessRuleCommand{Pattern: "ZCode/", Name: "ZCode2"})
@@ -131,7 +130,7 @@ func TestUpdateHarnessRuleRejectsMissingRule(t *testing.T) {
 func TestPreviewHarnessResolvesRule(t *testing.T) {
 	t.Parallel()
 
-	repo := &fakeRuleRepo{rules: []agentharness.Rule{{ID: 1, Pattern: "zcode/", Name: "ZCode", Sort: 10}}}
+	repo := &fakeRuleRepo{rules: []agentharness.Rule{{ID: 1, Pattern: "zcode/", Name: "ZCode"}}}
 	handler := query.NewPreviewHarnessHandler(repo)
 
 	result, err := handler.Handle(context.Background(), harnessport.PreviewHarnessQuery{UA: "ZCode/3.15.3 ai-sdk"})
@@ -162,8 +161,8 @@ func TestListHarnessRulesOrdersByView(t *testing.T) {
 	t.Parallel()
 
 	repo := &fakeRuleRepo{rules: []agentharness.Rule{
-		{ID: 1, Pattern: "zcode/", Name: "ZCode", Sort: 10},
-		{ID: 2, Pattern: "pi (", Name: "Pi", Sort: 20},
+		{ID: 1, Pattern: "zcode/", Name: "ZCode"},
+		{ID: 2, Pattern: "pi (", Name: "Pi"},
 	}}
 	handler := query.NewListHarnessRulesHandler(repo)
 
@@ -180,8 +179,8 @@ func TestUpdateHarnessRuleRejectsDuplicatePattern(t *testing.T) {
 	t.Parallel()
 
 	repo := &fakeRuleRepo{rules: []agentharness.Rule{
-		{ID: 1, Pattern: "zcode/", Name: "ZCode", Sort: 10},
-		{ID: 2, Pattern: "pi (", Name: "Pi", Sort: 20},
+		{ID: 1, Pattern: "zcode/", Name: "ZCode"},
+		{ID: 2, Pattern: "pi (", Name: "Pi"},
 	}}
 	handler := command.NewUpdateHarnessRuleHandler(repo)
 

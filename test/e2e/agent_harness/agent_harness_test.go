@@ -41,7 +41,6 @@ type ruleItem struct {
 	ID      uint   `json:"id"`
 	Pattern string `json:"pattern"`
 	Name    string `json:"name"`
-	Sort    int    `json:"sort"`
 }
 
 type listRulesRsp struct {
@@ -105,7 +104,7 @@ func TestHarnessRuleLifecycle(t *testing.T) {
 	// 新增
 	var created ruleRsp
 	status := doJSON(t, httpClient, http.MethodPost, baseURL+"/api/web/v1/harness/rule", jwt,
-		fmt.Sprintf(`{"pattern":%q,"name":%q,"sort":900}`, pattern, name), &created)
+		fmt.Sprintf(`{"pattern":%q,"name":%q}`, pattern, name), &created)
 	if status != http.StatusOK || created.Rule == nil {
 		t.Fatalf("create rule: status=%d err=%+v", status, created.Error)
 	}
@@ -145,7 +144,7 @@ func TestHarnessRuleLifecycle(t *testing.T) {
 	var updated ruleRsp
 	if status := doJSON(t, httpClient, http.MethodPatch,
 		fmt.Sprintf("%s/api/web/v1/harness/rule?id=%d", baseURL, created.Rule.ID), jwt,
-		fmt.Sprintf(`{"pattern":%q,"name":%q,"sort":900}`, pattern, renamed), &updated); status != http.StatusOK {
+		fmt.Sprintf(`{"pattern":%q,"name":%q}`, pattern, renamed), &updated); status != http.StatusOK {
 		t.Fatalf("update rule: status=%d err=%+v", status, updated.Error)
 	}
 	var preview2 previewRsp

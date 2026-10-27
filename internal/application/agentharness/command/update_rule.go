@@ -46,7 +46,7 @@ func (h *updateHarnessRuleHandler) Handle(ctx context.Context, cmd port.UpdateHa
 		}
 	}
 
-	updated := agentharness.Rule{ID: cmd.ID, Pattern: pattern, Name: name, Sort: cmd.Sort}
+	updated := agentharness.Rule{ID: cmd.ID, Pattern: pattern, Name: name}
 	if err := h.repo.Update(ctx, updated); err != nil {
 		return nil, err
 	}

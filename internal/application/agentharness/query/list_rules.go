@@ -16,7 +16,7 @@ func NewListHarnessRulesHandler(repo agentharness.RuleRepository) harnessport.Li
 	return &listHarnessRulesHandler{repo: repo}
 }
 
-// Handle 返回全部规则，顺序即匹配优先级。
+// Handle 返回全部规则，顺序为「前缀越长越靠前」，与命中优先级一致。
 func (h *listHarnessRulesHandler) Handle(ctx context.Context) ([]*harnessport.HarnessRuleView, error) {
 	rules, err := h.repo.List(ctx)
 	if err != nil {
@@ -28,7 +28,6 @@ func (h *listHarnessRulesHandler) Handle(ctx context.Context) ([]*harnessport.Ha
 			ID:      rule.ID,
 			Pattern: rule.Pattern,
 			Name:    rule.Name,
-			Sort:    rule.Sort,
 		})
 	}
 	return views, nil

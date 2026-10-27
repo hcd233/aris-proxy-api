@@ -9,14 +9,12 @@ type HarnessRuleView struct {
 	ID      uint
 	Pattern string
 	Name    string
-	Sort    int
 }
 
 // CreateHarnessRuleCommand 新增规则
 type CreateHarnessRuleCommand struct {
 	Pattern string
 	Name    string
-	Sort    int
 }
 
 // UpdateHarnessRuleCommand 修改规则
@@ -24,7 +22,6 @@ type UpdateHarnessRuleCommand struct {
 	ID      uint
 	Pattern string
 	Name    string
-	Sort    int
 }
 
 // DeleteHarnessRuleCommand 删除规则

@@ -72,7 +72,7 @@ func seedAgentHarnessRules(ctx context.Context, db *gorm.DB) error {
 		return nil
 	}
 	seeds := lo.Map(constant.AgentHarnessRuleSeeds, func(seed constant.AgentHarnessRuleSeedRule, _ int) model.AgentHarnessRule {
-		return model.AgentHarnessRule{Pattern: seed.Pattern, Name: seed.Name, Sort: seed.Sort}
+		return model.AgentHarnessRule{Pattern: seed.Pattern, Name: seed.Name}
 	})
 	if err := db.WithContext(ctx).
 		Clauses(clause.OnConflict{Columns: []clause.Column{{Name: constant.FieldPattern}}, DoNothing: true}).

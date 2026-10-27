@@ -80,10 +80,10 @@ func TestListSessionOptionsReturnsHarnessNames(t *testing.T) {
 	t.Parallel()
 
 	repo := &stubRuleRepository{rules: []agentharness.Rule{
-		{ID: 1, Pattern: "zcode/", Name: "ZCode", Sort: 10},
-		{ID: 2, Pattern: "pi (", Name: "Pi", Sort: 20},
-		{ID: 3, Pattern: "codex_cli_rs/", Name: "Codex", Sort: 30},
-		{ID: 4, Pattern: "codex desktop/", Name: "Codex", Sort: 31},
+		{ID: 1, Pattern: "zcode/", Name: "ZCode"},
+		{ID: 2, Pattern: "pi (", Name: "Pi"},
+		{ID: 3, Pattern: "codex_cli_rs/", Name: "Codex"},
+		{ID: 4, Pattern: "codex desktop/", Name: "Codex"},
 	}}
 	handler := query.NewListSessionOptionHandler(nil, nil, repo)
 
@@ -100,7 +100,7 @@ func TestListSessionOptionsReturnsHarnessNames(t *testing.T) {
 	}
 	for i := range want {
 		if items[i] != want[i] {
-			t.Errorf("items[%d] = %q, want %q (order matters: rules first-match priority)", i, items[i], want[i])
+			t.Errorf("items[%d] = %q, want %q (order follows the rule list; Other is appended last)", i, items[i], want[i])
 		}
 	}
 }
