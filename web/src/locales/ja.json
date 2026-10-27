@@ -914,5 +914,6 @@
   "upstream.public_readonly": "公開エンドポイントは管理者が管理します。",
   "endpoints.visibility_owner_only": "公開範囲を変更できるのはエンドポイントの所有者のみです。",
   "sessions.filter_harness": "ハーネスで絞り込む",
-  "sessions.harness": "Agent"
+  "sessions.harness": "Agent",
+  "sessions.ua_missing": "このセッションは機能提供前に作成されたか、リクエストに User-Agent がありません"
 }

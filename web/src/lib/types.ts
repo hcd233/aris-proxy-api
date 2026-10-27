@@ -230,6 +230,10 @@ export interface GetSessionRsp extends CommonRsp {
 export interface SessionMetadata {
   id: number;
   apiKeyName: string;
+  /** 来源 Agent Harness（后端由 UA 现算；未识别为 "Other"） */
+  agentHarness?: string;
+  /** 会话创建时的原始 User-Agent（仅详情返回） */
+  clientUA?: string;
   createdAt: string;
   updatedAt: string;
   metadata?: Record<string, string>;

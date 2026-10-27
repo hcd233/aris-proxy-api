@@ -259,3 +259,11 @@ describe("agent harness 展示", () => {
     expect(src).toContain("s.agentHarness");
   });
 });
+
+describe("agent harness 详情", () => {
+  it("会话详情展示 harness 徽标与原始 UA tooltip", () => {
+    const src = read("components/session-detail/session-detail-client.tsx");
+    expect(src).toContain("metadata.agentHarness");
+    expect(src).toContain("metadata.clientUA");
+  });
+});
