@@ -270,12 +270,21 @@ describe("agent harness 详情", () => {
 });
 
 describe("agent harness 走势图", () => {
-  it("dashboard 使用堆叠面积图展示各 harness 调用量", () => {
+  it("dashboard 使用堆叠柱状图展示各 harness 调用量", () => {
     const page = read("app/(dashboard)/page.tsx");
     expect(page).toContain("HarnessTrendChart");
     const chart = read("components/charts/harness-trend-chart.tsx");
     expect(chart).toContain('stackId="harness"');
-    expect(chart).toContain('chartType="area"');
+    expect(chart).toContain('chartType="bar"');
+  });
+});
+
+describe("dashboard 图表布局", () => {
+  it("输出 token 速率与首 token 延迟同排各占一半", () => {
+    const page = read("app/(dashboard)/page.tsx");
+    expect(page).toContain("<TokenRateChart />");
+    expect(page).toContain("<FirstTokenLatencyChart />");
+    expect(page).not.toContain("lg:col-span-2");
   });
 });
 

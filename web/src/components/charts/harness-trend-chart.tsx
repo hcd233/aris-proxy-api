@@ -42,7 +42,7 @@ export function HarnessTrendChart() {
       titleKey="dashboard.harness_trend"
       storageKey="dashboard.chart.harnessTrend"
       defaultRange="7d"
-      chartType="area"
+      chartType="bar"
       stackId="harness"
       fetchData={(p) => api.fetchHarnessTrend(p)}
       toChart={toChart}

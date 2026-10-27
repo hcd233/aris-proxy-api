@@ -191,9 +191,7 @@ export default function DashboardPage() {
           <RequestRateChart />
           <TokenVolumeChart />
           <TokenRateChart />
-          <div className="lg:col-span-2">
-            <FirstTokenLatencyChart />
-          </div>
+          <FirstTokenLatencyChart />
         </div>
       </div>
     </PermissionGuard>
