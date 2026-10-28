@@ -71,7 +71,8 @@ func TestQueryGroupUsageSQL(t *testing.T) {
 	}{
 		{"model", enum.DashboardDimensionModel, []string{"model_id as group_key", "group by group_key"}},
 		{"apikey", enum.DashboardDimensionAPIKey, []string{"cast(api_key_id as text)"}},
-		{"harness", enum.DashboardDimensionHarness, []string{"agent_harness_rules", "'other'"}},
+		// harness 先按 user_agent 预聚合，规则子查询只对去重 UA 执行（生产 30d 从 312ms 降下来）
+		{"harness", enum.DashboardDimensionHarness, []string{"agent_harness_rules", "'other'", "group by user_agent", "as ua_usage"}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -81,11 +82,13 @@ func TestQueryGroupUsageSQL(t *testing.T) {
 			if _, err := repo.QueryGroupUsage(t.Context(), nil, rangeStart, rangeEnd, tc.dimension, "1:1"); err != nil {
 				t.Fatalf("QueryGroupUsage: %v", err)
 			}
+			// GORM 构建子查询时会以 DryRun 跑一遍 query 回调（不触库），捕获里会多一条内层 SQL；
+			// 最后一条才是实际下发的完整语句
 			sqls := captured.all()
-			if len(sqls) != 1 {
-				t.Fatalf("want 1 query, got %v", sqls)
+			if len(sqls) == 0 {
+				t.Fatal("want at least 1 query")
 			}
-			assertSQLContains(t, sqls[0], tc.fragments...)
+			assertSQLContains(t, sqls[len(sqls)-1], tc.fragments...)
 		})
 	}
 }
@@ -146,8 +149,14 @@ func TestQueryGroupUsageCacheKeyIncludesFingerprint(t *testing.T) {
 			t.Fatalf("QueryGroupUsage: %v", err)
 		}
 	}
-	if got := len(captured.all()); got != 2 {
-		t.Errorf("fingerprint must partition cache keys: want 2 db queries, got %d", got)
+	outer := 0
+	for _, q := range captured.all() {
+		if strings.Contains(q, "ua_usage") {
+			outer++
+		}
+	}
+	if outer != 2 {
+		t.Errorf("fingerprint must partition cache keys: want 2 db queries, got %d", outer)
 	}
 }
 

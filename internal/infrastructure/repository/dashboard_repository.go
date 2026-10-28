@@ -170,8 +170,16 @@ func (r *dashboardRepository) QueryGroupUsage(ctx context.Context, apiKeyIDs []u
 	key := readCacheKey(constant.ReadCachePurposeDashboardGroup, cacheScopeIDs(apiKeyIDs), cacheTimeBucket(start), cacheTimeBucket(end), dimension, rulesFingerprint)
 	return cachedSlice(ctx, r.cache, key, func(loadCtx context.Context) ([]*modelcall.DashboardGroupRow, error) {
 		var results []*modelcall.DashboardGroupRow
-		if err := r.windowQuery(loadCtx, apiKeyIDs, start, end).
-			Select(keyExpr + constant.DashboardGroupUsageSelect).
+		query := r.windowQuery(loadCtx, apiKeyIDs, start, end).Select(keyExpr + constant.DashboardGroupUsageSelect)
+		if dimension == enum.DashboardDimensionHarness {
+			inner := r.windowQuery(loadCtx, apiKeyIDs, start, end).
+				Select(constant.DashboardUAUsageSelect).
+				Group(constant.DashboardUAUsageGroup)
+			query = r.db.WithContext(loadCtx).
+				Table(constant.DashboardUAUsageFrom, inner).
+				Select(keyExpr + constant.DashboardUAUsageOuterSelect)
+		}
+		if err := query.
 			Group(constant.DashboardGroupUsageGroup).
 			Order(constant.DashboardGroupUsageOrder).
 			Find(&results).Error; err != nil {

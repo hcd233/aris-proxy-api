@@ -74,12 +74,29 @@ const (
 	// DashboardGroupKeyAPIKey API Key 维度分组键（转文本，与其他维度统一为字符串键）
 	DashboardGroupKeyAPIKey = "CAST(api_key_id AS TEXT)"
 	// DashboardGroupUsageSelect 分组用量投影的后半段（前缀 "<分组键> AS group_key, "）
-	DashboardGroupUsageSelect = " AS group_key, COUNT(*) AS requests, " +
+	DashboardGroupUsageSelect = " AS group_key, " + dashboardUsageAggregates
+
+	// dashboardUsageAggregates 用量聚合列（请求数统计全部调用；token/费用仅成功、已计价）
+	dashboardUsageAggregates = "COUNT(*) AS requests, " +
 		"COALESCE(SUM(input_tokens)" + dashboardSuccessFilter + ", 0) AS input_tokens, " +
 		"COALESCE(SUM(output_tokens)" + dashboardSuccessFilter + ", 0) AS output_tokens, " +
 		"COALESCE(SUM(cache_read_input_tokens)" + dashboardSuccessFilter + ", 0) AS cache_read_tokens, " +
 		"COALESCE(SUM(cache_creation_input_tokens)" + dashboardSuccessFilter + ", 0) AS cache_write_tokens, " +
 		"COALESCE(SUM(cost_micro)" + dashboardPricedFilter + ", 0) AS cost_micro"
+	// DashboardUAUsageSelect harness 维度内层：先按 user_agent 预聚合（UA 去重后通常只有几十个），
+	// 使「UA → 最长前缀规则」关联子查询只对去重 UA 执行，而不是对每一行审计执行
+	// （生产实测 30d 区间 312ms，逐行子查询占绝大部分）。
+	DashboardUAUsageSelect = "user_agent, " + dashboardUsageAggregates
+	// DashboardUAUsageGroup harness 维度内层分组
+	DashboardUAUsageGroup = "user_agent"
+	// DashboardUAUsageFrom harness 维度外层数据源（? 绑定内层子查询）
+	DashboardUAUsageFrom = "(?) AS ua_usage"
+	// DashboardUAUsageOuterSelect harness 维度外层投影的后半段（前缀规则分组表达式）
+	DashboardUAUsageOuterSelect = " AS group_key, SUM(requests) AS requests, " +
+		"SUM(input_tokens) AS input_tokens, SUM(output_tokens) AS output_tokens, " +
+		"SUM(cache_read_tokens) AS cache_read_tokens, SUM(cache_write_tokens) AS cache_write_tokens, " +
+		"SUM(cost_micro) AS cost_micro"
+
 	// DashboardGroupUsageGroup 分组用量分组
 	DashboardGroupUsageGroup = "group_key"
 	// DashboardGroupUsageOrder 分组用量排序：费用优先、请求数次之
