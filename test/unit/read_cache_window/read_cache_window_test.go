@@ -122,34 +122,6 @@ func TestAuditOptionCacheHits(t *testing.T) {
 	}
 }
 
-func TestAuditStatsCacheHits(t *testing.T) {
-	t.Parallel()
-
-	repo, queries := newAuditRepo(t)
-
-	if _, err := repo.QueryModelCost(t.Context(), nil, rangeStart, rangeEnd); err != nil {
-		t.Fatalf("model cost: %v", err)
-	}
-	if got := queries(); got != 1 {
-		t.Fatalf("first call should hit db once, got %d", got)
-	}
-
-	if _, err := repo.QueryModelCost(t.Context(), nil, rangeStart, rangeEnd); err != nil {
-		t.Fatalf("cached model cost: %v", err)
-	}
-	if got := queries(); got != 1 {
-		t.Fatalf("same params must be served by cache, got %d db queries", got)
-	}
-
-	// 换时间窗（跨分钟对齐边界）必须回源，证明时间参数参与键
-	if _, err := repo.QueryModelCost(t.Context(), nil, rangeStart, rangeEnd.Add(2*time.Minute)); err != nil {
-		t.Fatalf("shifted window model cost: %v", err)
-	}
-	if got := queries(); got != 2 {
-		t.Fatalf("different window must miss cache, got %d db queries", got)
-	}
-}
-
 func TestTimeBucketAlignsToMinute(t *testing.T) {
 	t.Parallel()
 

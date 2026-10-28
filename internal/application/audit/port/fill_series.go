@@ -1,96 +1,18 @@
-// Package port defines application-layer ports for audit use cases.
 package port
 
 import (
-	"math"
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/samber/lo"
 
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall"
-	"github.com/hcd233/aris-proxy-api/internal/dto"
 )
 
-// FillTrendSeries 把 SQL 返回的稀疏点集补齐为每个 model 拥有相同时间槽的折线数据。
-//
-// GROUP BY date_trunc 不会为没有调用的时间槽生成行；前端折线图需要这些槽位才能连续绘制。
-// 缺失槽位以 count=0 填充。start/end 非零时，按请求区间补齐完整时间轴。
-func FillTrendSeries(points []*modelcall.ModelTrendPoint, start, end time.Time, granularity enum.Granularity) []*dto.ModelTrendItem {
-	modelOrder, byModel, timeSet := IndexSeries(points,
-		func(p *modelcall.ModelTrendPoint) string { return p.ModelID },
-		func(p *modelcall.ModelTrendPoint) time.Time { return p.Time.UTC() },
-		func(p *modelcall.ModelTrendPoint) int { return p.Count },
-	)
-	buckets := BuildBuckets(start.UTC(), end.UTC(), granularity, timeSet)
-	items := lo.Map(modelOrder, func(m string, _ int) *dto.ModelTrendItem {
-		pts := lo.Map(buckets, func(t time.Time, _ int) *dto.TrendPoint {
-			return &dto.TrendPoint{Time: t, Count: byModel[m][t]}
-		})
-		return &dto.ModelTrendItem{ModelID: m, Points: pts}
-	})
-	return items
-}
-
-// FillRateSeries 同 FillTrendSeries，并计算 successRate 与 failed。
-func FillRateSeries(points []*modelcall.RequestRatePoint, start, end time.Time, granularity enum.Granularity) []*dto.RequestRateItem {
-	type slot struct{ total, success int }
-	modelOrder, byModel, timeSet := IndexSeries(points,
-		func(p *modelcall.RequestRatePoint) string { return p.ModelID },
-		func(p *modelcall.RequestRatePoint) time.Time { return p.Time.UTC() },
-		func(p *modelcall.RequestRatePoint) slot { return slot{total: p.Total, success: p.Success} },
-	)
-	buckets := BuildBuckets(start.UTC(), end.UTC(), granularity, timeSet)
-	items := lo.Map(modelOrder, func(m string, _ int) *dto.RequestRateItem {
-		pts := lo.Map(buckets, func(t time.Time, _ int) *dto.RatePoint {
-			s := byModel[m][t]
-			var rate float64
-			if s.total > 0 {
-				// 除法易产生无限循环小数（如 1/3），round 到万分位消除 0.3333333333333333 这类尾差
-				rate = math.Round(float64(s.success)/float64(s.total)*constant.AuditMetricsRateRoundScale) / constant.AuditMetricsRateRoundScale
-			}
-			return &dto.RatePoint{
-				Time:        t,
-				Total:       s.total,
-				Success:     s.success,
-				Failed:      s.total - s.success,
-				SuccessRate: rate,
-			}
-		})
-		return &dto.RequestRateItem{ModelID: m, Points: pts}
-	})
-	return items
-}
-
-// IndexSeries 提取 (model, time) 索引：返回 model 出现顺序 + 嵌套 map + 全局 time 桶集合。
-func IndexSeries[P any, V any](
-	points []P,
-	modelOf func(P) string,
-	timeOf func(P) time.Time,
-	valueOf func(P) V,
-) (modelOrder []string, byModel map[string]map[time.Time]V, timeSet map[time.Time]struct{}) {
-	seenModel := make(map[string]struct{}, len(points))
-	modelOrder = make([]string, 0, len(points))
-	byModel = make(map[string]map[time.Time]V, len(points))
-	timeSet = make(map[time.Time]struct{}, len(points))
-	for _, p := range points {
-		m := modelOf(p)
-		t := timeOf(p)
-		if _, ok := seenModel[m]; !ok {
-			seenModel[m] = struct{}{}
-			modelOrder = append(modelOrder, m)
-			byModel[m] = make(map[time.Time]V)
-		}
-		byModel[m][t] = valueOf(p)
-		timeSet[t] = struct{}{}
-	}
-	return modelOrder, byModel, timeSet
-}
-
 // BuildBuckets 生成完整时间桶序列；start/end 无效时退化为 fallback 集合中的桶。
+//
+// GROUP BY date_trunc 不会为没有调用的时间槽生成行；图表需要连续的槽位，由调用方按本序列补齐。
 func BuildBuckets(start, end time.Time, granularity enum.Granularity, fallback map[time.Time]struct{}) []time.Time {
 	if start.IsZero() || end.IsZero() || start.After(end) {
 		buckets := lo.Keys(fallback)
@@ -133,70 +55,4 @@ func truncateBucket(t time.Time, granularity enum.Granularity) time.Time {
 	default:
 		return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 	}
-}
-
-type throughputSlot struct {
-	inputTokens         int
-	outputTokens        int
-	cacheCreationTokens int
-	cacheReadTokens     int
-}
-
-// FillTokenThroughputSeries 把 SQL 返回的稀疏点集补齐为每个时间槽的 token 吞吐数据。
-func FillTokenThroughputSeries(points []*modelcall.TokenThroughputPoint, start, end time.Time, granularity enum.Granularity) []*dto.TokenThroughputPoint {
-	aggregated := make(map[time.Time]*throughputSlot)
-	timeSet := make(map[time.Time]struct{})
-	for _, p := range points {
-		t := p.Time.UTC()
-		timeSet[t] = struct{}{}
-		if aggregated[t] == nil {
-			aggregated[t] = &throughputSlot{}
-		}
-		s := aggregated[t]
-		s.inputTokens += p.InputTokens
-		s.outputTokens += p.OutputTokens
-		s.cacheCreationTokens += p.CacheCreationTokens
-		s.cacheReadTokens += p.CacheReadTokens
-	}
-	buckets := BuildBuckets(start.UTC(), end.UTC(), granularity, timeSet)
-	pts := lo.Map(buckets, func(t time.Time, _ int) *dto.TokenThroughputPoint {
-		tp := &dto.TokenThroughputPoint{Time: t}
-		if s, ok := aggregated[t]; ok {
-			tp.InputTokens = s.inputTokens
-			tp.OutputTokens = s.outputTokens
-			tp.CacheCreationTokens = s.cacheCreationTokens
-			tp.CacheReadTokens = s.cacheReadTokens
-		}
-		return tp
-	})
-	return pts
-}
-
-// FillHarnessTrendSeries 把稀疏的 (harness, 时间桶) 点集补齐为完整时间轴。
-//
-// 排序：按接口返回顺序（仓储已按 harness 名排序），Other 恒定排在最后，
-// 这样前端堆叠图不会让未识别流量挡住已知 harness。
-func FillHarnessTrendSeries(points []*modelcall.HarnessTrendPoint, start, end time.Time, granularity enum.Granularity) []*dto.HarnessTrendItem {
-	order, byHarness, timeSet := IndexSeries(points,
-		func(p *modelcall.HarnessTrendPoint) string { return p.Harness },
-		func(p *modelcall.HarnessTrendPoint) time.Time { return p.Time.UTC() },
-		func(p *modelcall.HarnessTrendPoint) int { return p.Count },
-	)
-	slices.SortStableFunc(order, func(a, b string) int {
-		if a == constant.AgentHarnessOther {
-			return 1
-		}
-		if b == constant.AgentHarnessOther {
-			return -1
-		}
-		return strings.Compare(a, b)
-	})
-	buckets := BuildBuckets(start.UTC(), end.UTC(), granularity, timeSet)
-	items := lo.Map(order, func(name string, _ int) *dto.HarnessTrendItem {
-		pts := lo.Map(buckets, func(t time.Time, _ int) *dto.TrendPoint {
-			return &dto.TrendPoint{Time: t, Count: byHarness[name][t]}
-		})
-		return &dto.HarnessTrendItem{Harness: name, Points: pts}
-	})
-	return items
 }

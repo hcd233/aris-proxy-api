@@ -579,7 +579,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <MobileTopBar />
           <div className="flex-1 overflow-y-auto p-4 md:p-8 lg:p-10">
             <LocaleFade>
-              <div className="mx-auto max-w-6xl">{children}</div>
+              {/* data-page-wide：信息密度高的页面（dashboard）放宽到 1600px，其余页面保持 6xl 阅读宽度 */}
+              <div className="mx-auto max-w-6xl has-[[data-page-wide]]:max-w-[1600px]">
+                {children}
+              </div>
             </LocaleFade>
           </div>
         </SidebarInset>

@@ -35,6 +35,9 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-positive: var(--positive);
+  --color-warning: var(--warning);
+  --color-negative: var(--negative);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -84,6 +87,10 @@
   --accent: #f5e6e0;
   --accent-foreground: #1f1a14;
   --destructive: #b3564f;
+  /* 状态色（dashboard 环比 / 健康度）：正向 = 鼠尾草青绿，警示 = 赭石，负向 = 赤陶 */
+  --positive: #4f7f6f;
+  --warning: #b9852f;
+  --negative: #b3564f;
   --border: #e8e0d8;
   --input: #9c8d7a;
   --ring: #b5543a;
@@ -123,6 +130,9 @@
   --accent: #3d362e;
   --accent-foreground: #f5f0eb;
   --destructive: #d4756a;
+  --positive: #7fb39f;
+  --warning: #e0a95a;
+  --negative: #d4756a;
   --border: #40382f;
   --input: #40382f;
   --ring: #d97757;
@@ -250,6 +260,10 @@
   --accent: rgb(38 38 38 / 0.8);
   --accent-foreground: #f5f5f5;
   --destructive: #d4606a;
+  /* 月面状态色：冰蓝 = 正向，月光奶油 = 警示，暗红 = 负向（不引入高饱和色） */
+  --positive: #a8bdd8;
+  --warning: #ffeed9;
+  --negative: #e07a80;
   --border: rgb(255 255 255 / 0.09);
   --input: rgb(255 255 255 / 0.4);
   --ring: rgb(255 255 255 / 0.35);

@@ -137,9 +137,20 @@ func TestPricing_ModelCostRanking(t *testing.T) {
 	start := now.Add(-24 * time.Hour).Format(time.RFC3339)
 	end := now.Format(time.RFC3339)
 	obj := getJSON(t, env["BASE_URL"], env["WEB_JWT"],
-		"/api/web/v1/audit/stats/model/cost?startTime="+start+"&endTime="+end)
-	if _, ok := obj["data"].([]any); !ok {
-		t.Fatalf("model cost data missing: %v", obj)
+		"/api/web/v1/audit/stats/dashboard/top/list?dimension=model&startTime="+start+"&endTime="+end)
+	data, ok := obj["data"].(map[string]any)
+	if !ok {
+		t.Fatalf("model cost ranking data missing: %v", obj)
+	}
+	items, ok := data["items"].([]any)
+	if !ok {
+		t.Fatalf("model cost ranking items missing: %v", obj)
+	}
+	for _, it := range items {
+		row, _ := it.(map[string]any)
+		if _, ok := row["cost"].(float64); !ok {
+			t.Fatalf("ranking row must carry numeric cost: %v", row)
+		}
 	}
 }
 

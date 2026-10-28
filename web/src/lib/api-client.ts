@@ -35,7 +35,6 @@ import type {
   DemoAccessAuditOptionListRsp,
   DemoLoginRsp,
   DemoStatusRsp,
-  FirstTokenLatencyRsp,
   GetCurUserRsp,
   GetDemoConfigRsp,
   GetSessionMetadataRsp,
@@ -60,28 +59,28 @@ import type {
   ListUsersRsp,
   LoginRsp,
   ModelCapability,
-  ModelCostRsp,
+  DashboardDimension,
+  DashboardEndpointListRsp,
+  DashboardErrorListRsp,
+  DashboardHeatmapRsp,
+  DashboardModelSeriesRsp,
+  DashboardOverviewRsp,
+  DashboardTopListRsp,
   ModelListSortField,
   ModelSpecPrefillRsp,
-  ModelTrendRsp,
-  HarnessTrendRsp,
   ListHarnessRulesRsp,
   HarnessRuleRsp,
   HarnessRuleReqBody,
   PreviewHarnessRsp,
   ModelUpdateRsp,
-  ModelUsageRsp,
   OAuth2Provider,
   RefreshTokenReqBody,
   RefreshTokenRsp,
-  RequestRateRsp,
   RuntimeMetricsRsp,
   ScoreSessionReqBody,
   ScoreSessionRsp,
   SessionOptionListReq,
   SessionOptionListRsp,
-  TokenRateRsp,
-  TokenThroughputRsp,
   UpdateCronJobReqBody,
   UpdateDemoConfigReqBody,
   UpdateEndpointReqBody,
@@ -757,10 +756,67 @@ class ApiClient {
     return this.request<ListAuditLogsRsp>(`${API_PREFIX}/audit/model/log/list?${sp}`);
   }
 
-  /** 模型成本排行（四维拆分 + 总费用，行 = 模型 × 币种） */
-  async fetchModelCost(params: { startTime: string; endTime: string }): Promise<ModelCostRsp> {
-    const sp = new URLSearchParams({ startTime: params.startTime, endTime: params.endTime });
-    return this.request<ModelCostRsp>(`${API_PREFIX}/audit/stats/model/cost?${sp}`);
+  // ─── Dashboard（一屏指挥台聚合接口） ───────────────────────────────────
+
+  async fetchDashboardOverview(params: {
+    startTime: string;
+    endTime: string;
+    granularity: Granularity;
+  }): Promise<DashboardOverviewRsp> {
+    const sp = new URLSearchParams(params);
+    return this.request<DashboardOverviewRsp>(`${API_PREFIX}/audit/stats/dashboard/overview?${sp}`);
+  }
+
+  async fetchDashboardModelSeries(params: {
+    startTime: string;
+    endTime: string;
+    granularity: Granularity;
+  }): Promise<DashboardModelSeriesRsp> {
+    const sp = new URLSearchParams(params);
+    return this.request<DashboardModelSeriesRsp>(
+      `${API_PREFIX}/audit/stats/dashboard/model/series?${sp}`,
+    );
+  }
+
+  async fetchDashboardErrors(params: {
+    startTime: string;
+    endTime: string;
+    limit: number;
+  }): Promise<DashboardErrorListRsp> {
+    const sp = new URLSearchParams({ ...params, limit: String(params.limit) });
+    return this.request<DashboardErrorListRsp>(
+      `${API_PREFIX}/audit/stats/dashboard/error/list?${sp}`,
+    );
+  }
+
+  async fetchDashboardEndpoints(params: {
+    startTime: string;
+    endTime: string;
+    limit: number;
+  }): Promise<DashboardEndpointListRsp> {
+    const sp = new URLSearchParams({ ...params, limit: String(params.limit) });
+    return this.request<DashboardEndpointListRsp>(
+      `${API_PREFIX}/audit/stats/dashboard/endpoint/list?${sp}`,
+    );
+  }
+
+  async fetchDashboardTop(params: {
+    startTime: string;
+    endTime: string;
+    dimension: DashboardDimension;
+    limit: number;
+  }): Promise<DashboardTopListRsp> {
+    const sp = new URLSearchParams({ ...params, limit: String(params.limit) });
+    return this.request<DashboardTopListRsp>(`${API_PREFIX}/audit/stats/dashboard/top/list?${sp}`);
+  }
+
+  async fetchDashboardHeatmap(params: {
+    startTime: string;
+    endTime: string;
+    tz: string;
+  }): Promise<DashboardHeatmapRsp> {
+    const sp = new URLSearchParams(params);
+    return this.request<DashboardHeatmapRsp>(`${API_PREFIX}/audit/stats/dashboard/heatmap?${sp}`);
   }
 
   async listAuditOptions(params: AuditOptionListReq): Promise<AuditOptionListRsp> {
@@ -770,24 +826,6 @@ class ApiClient {
     if (params.startTime) sp.set("startTime", params.startTime);
     if (params.endTime) sp.set("endTime", params.endTime);
     return this.request<AuditOptionListRsp>(`${API_PREFIX}/audit/model/option/list?${sp}`);
-  }
-
-  async fetchModelTrend(params: {
-    startTime: string;
-    endTime: string;
-    granularity: Granularity;
-  }): Promise<ModelTrendRsp> {
-    const sp = new URLSearchParams(params);
-    return this.request<ModelTrendRsp>(`${API_PREFIX}/audit/stats/model/trend?${sp}`);
-  }
-
-  async fetchHarnessTrend(params: {
-    startTime: string;
-    endTime: string;
-    granularity: Granularity;
-  }): Promise<HarnessTrendRsp> {
-    const sp = new URLSearchParams(params);
-    return this.request<HarnessTrendRsp>(`${API_PREFIX}/audit/stats/harness/trend?${sp}`);
   }
 
   async listHarnessRules(): Promise<ListHarnessRulesRsp> {
@@ -817,51 +855,6 @@ class ApiClient {
       method: "POST",
       body: JSON.stringify({ ua }),
     });
-  }
-
-  async fetchRequestRate(params: {
-    startTime: string;
-    endTime: string;
-    granularity: Granularity;
-  }): Promise<RequestRateRsp> {
-    const sp = new URLSearchParams(params);
-    return this.request<RequestRateRsp>(`${API_PREFIX}/audit/stats/request/rate?${sp}`);
-  }
-
-  async fetchTokenThroughput(params: {
-    startTime: string;
-    endTime: string;
-    granularity: Granularity;
-  }): Promise<TokenThroughputRsp> {
-    const sp = new URLSearchParams(params);
-    return this.request<TokenThroughputRsp>(`${API_PREFIX}/audit/stats/token/throughput?${sp}`);
-  }
-
-  async fetchTokenRate(params: {
-    startTime: string;
-    endTime: string;
-    granularity: Granularity;
-  }): Promise<TokenRateRsp> {
-    const sp = new URLSearchParams(params);
-    return this.request<TokenRateRsp>(`${API_PREFIX}/audit/stats/token/rate?${sp}`);
-  }
-
-  async fetchModelUsage(params: {
-    startTime: string;
-    endTime: string;
-    granularity: Granularity;
-  }): Promise<ModelUsageRsp> {
-    const sp = new URLSearchParams(params);
-    return this.request<ModelUsageRsp>(`${API_PREFIX}/audit/stats/model/usage?${sp}`);
-  }
-
-  async fetchFirstTokenLatency(params: {
-    startTime: string;
-    endTime: string;
-    granularity: Granularity;
-  }): Promise<FirstTokenLatencyRsp> {
-    const sp = new URLSearchParams(params);
-    return this.request<FirstTokenLatencyRsp>(`${API_PREFIX}/audit/stats/token/latency?${sp}`);
   }
 
   // ─── Trigger Words ─────────────────────────────────────────────────────

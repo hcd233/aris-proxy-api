@@ -580,21 +580,6 @@ export interface ModelSpecPrefillRsp extends CommonRsp {
   pricing?: PricingDTO;
 }
 
-/** 模型成本排行行（展示单位；行 = 模型 × 币种） */
-export interface ModelCostItem {
-  modelId: string;
-  currency: string;
-  inputCost: number;
-  outputCost: number;
-  cacheCreationCost: number;
-  cacheReadCost: number;
-  totalCost: number;
-}
-
-export interface ModelCostRsp extends CommonRsp {
-  data?: ModelCostItem[];
-}
-
 export interface CreateModelReqBody {
   alias: string;
   modelId?: string;
@@ -718,20 +703,6 @@ export interface ListAuditLogsRsp extends CommonRsp {
 
 export type Granularity = "minute" | "hour" | "day" | "week";
 
-export interface TrendPoint {
-  time: string;
-  count: number;
-}
-
-export interface ModelTrendItem {
-  modelId: string;
-  points: TrendPoint[];
-}
-
-export interface ModelTrendRsp extends CommonRsp {
-  data?: ModelTrendItem[];
-}
-
 export interface HarnessRuleItem {
   id: number;
   pattern: string;
@@ -754,84 +725,6 @@ export interface HarnessRuleReqBody {
 export interface PreviewHarnessRsp extends CommonRsp {
   harness: string;
   rule?: HarnessRuleItem;
-}
-
-export interface HarnessTrendItem {
-  harness: string;
-  points: TrendPoint[];
-}
-
-export interface HarnessTrendRsp extends CommonRsp {
-  data?: HarnessTrendItem[];
-}
-
-export interface RatePoint {
-  time: string;
-  total: number;
-  success: number;
-  failed: number;
-  successRate: number;
-}
-
-export interface RequestRateItem {
-  modelId: string;
-  points: RatePoint[];
-}
-
-export interface RequestRateRsp extends CommonRsp {
-  data?: RequestRateItem[];
-}
-
-export interface TokenThroughputPoint {
-  time: string;
-  inputTokens: number;
-  outputTokens: number;
-  cacheCreationTokens: number;
-  cacheReadTokens: number;
-}
-
-export interface TokenThroughputRsp extends CommonRsp {
-  data?: TokenThroughputPoint[];
-}
-
-export interface TokenRatePoint {
-  time: string;
-  outputTokensPerSecond: number;
-}
-
-export interface TokenRateItem {
-  modelId: string;
-  points: TokenRatePoint[];
-}
-
-export interface TokenRateRsp extends CommonRsp {
-  data?: TokenRateItem[];
-}
-
-export interface ModelUsageItem {
-  modelId: string;
-  inputTokens: number;
-  outputTokens: number;
-  cacheReadTokens: number;
-  cacheCreationTokens: number;
-}
-
-export interface ModelUsageRsp extends CommonRsp {
-  data?: ModelUsageItem[];
-}
-
-export interface FirstTokenLatencyPoint {
-  time: string;
-  averageLatencyMs: number;
-}
-
-export interface FirstTokenLatencyItem {
-  modelId: string;
-  points: FirstTokenLatencyPoint[];
-}
-
-export interface FirstTokenLatencyRsp extends CommonRsp {
-  data?: FirstTokenLatencyItem[];
 }
 
 // ─── Audit Option List ───────────────────────────────────────────────────────
@@ -1037,4 +930,126 @@ export interface DemoAccessAuditOptionListReq {
 
 export interface DemoAccessAuditOptionListRsp extends CommonRsp {
   items: string[];
+}
+
+// ─── Dashboard（/audit/stats/dashboard/*，字段与 internal/dto/dashboard.go 逐字对齐） ───
+
+export type DashboardDimension = "model" | "user" | "apikey" | "harness";
+
+export interface DashboardFailures {
+  rateLimit: number;
+  server: number;
+  connection: number;
+  other: number;
+}
+
+export interface DashboardTokens {
+  input: number;
+  output: number;
+  cacheRead: number;
+  cacheWrite: number;
+}
+
+/** 首 token 延迟分位数（ms）；无成功样本时字段省略 */
+export interface DashboardLatency {
+  p50?: number;
+  p95?: number;
+  p99?: number;
+}
+
+export interface DashboardStats {
+  requests: number;
+  success: number;
+  failures: DashboardFailures;
+  tokens: DashboardTokens;
+  cost: number;
+  pricedSuccess: number;
+  latency: DashboardLatency;
+  outputTokensPerSecond?: number;
+  avgStreamDurationMs?: number;
+}
+
+export interface DashboardStatsPoint extends DashboardStats {
+  time: string;
+}
+
+export interface DashboardPeriod {
+  summary: DashboardStats;
+  series: DashboardStatsPoint[];
+}
+
+export interface DashboardOverview {
+  currency: string;
+  current: DashboardPeriod;
+  previous: DashboardPeriod;
+}
+
+export interface DashboardOverviewRsp extends CommonRsp {
+  data?: DashboardOverview;
+}
+
+export interface DashboardModelPoint {
+  modelId: string;
+  time: string;
+  requests: number;
+  tokens: number;
+  cost: number;
+}
+
+export interface DashboardModelSeriesRsp extends CommonRsp {
+  data?: DashboardModelPoint[];
+}
+
+export interface DashboardErrorItem {
+  statusCode: number;
+  message: string;
+  count: number;
+}
+
+export interface DashboardErrorListRsp extends CommonRsp {
+  data?: DashboardErrorItem[];
+}
+
+export interface DashboardEndpointItem {
+  endpoint: string;
+  requests: number;
+  errorRate: number;
+  p95LatencyMs?: number;
+  outputTokensPerSecond?: number;
+  cost: number;
+}
+
+export interface DashboardEndpointListRsp extends CommonRsp {
+  data?: DashboardEndpointItem[];
+}
+
+export interface DashboardTopItem {
+  key: string;
+  name: string;
+  requests: number;
+  tokens: number;
+  cacheHitRate?: number;
+  cost: number;
+  costShare: number;
+}
+
+export interface DashboardTop {
+  items: DashboardTopItem[];
+  otherRequests: number;
+  otherCost: number;
+}
+
+export interface DashboardTopListRsp extends CommonRsp {
+  data?: DashboardTop;
+}
+
+/** weekday: 0=周一 … 6=周日 */
+export interface DashboardHeatmapCell {
+  weekday: number;
+  hour: number;
+  count: number;
+}
+
+export interface DashboardHeatmapRsp extends CommonRsp {
+  data?: DashboardHeatmapCell[];
 }

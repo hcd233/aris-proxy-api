@@ -18,26 +18,26 @@ import (
 type AuditHandler interface {
 	HandleListAuditLogs(ctx context.Context, req *dto.ListAuditLogsReq) (*dto.HTTPResponse[*dto.ListAuditLogsRsp], error)
 	HandleListAuditOption(ctx context.Context, req *dto.AuditOptionListReq) (*dto.HTTPResponse[*dto.AuditOptionListRsp], error)
-	HandleModelTrend(ctx context.Context, req *dto.ModelTrendReq) (*dto.HTTPResponse[*dto.ModelTrendRsp], error)
-	HandleHarnessTrend(ctx context.Context, req *dto.HarnessTrendReq) (*dto.HTTPResponse[*dto.HarnessTrendRsp], error)
-	HandleRequestRate(ctx context.Context, req *dto.RequestRateReq) (*dto.HTTPResponse[*dto.RequestRateRsp], error)
-	HandleTokenThroughput(ctx context.Context, req *dto.TokenThroughputReq) (*dto.HTTPResponse[*dto.TokenThroughputRsp], error)
-	HandleTokenRate(ctx context.Context, req *dto.TokenRateReq) (*dto.HTTPResponse[*dto.TokenRateRsp], error)
-	HandleModelUsage(ctx context.Context, req *dto.ModelUsageReq) (*dto.HTTPResponse[*dto.ModelUsageRsp], error)
-	HandleFirstTokenLatency(ctx context.Context, req *dto.FirstTokenLatencyReq) (*dto.HTTPResponse[*dto.FirstTokenLatencyRsp], error)
-	HandleModelCost(ctx context.Context, req *dto.ModelCostReq) (*dto.HTTPResponse[*dto.ModelCostRsp], error)
+	HandleDashboardOverview(ctx context.Context, req *dto.DashboardRangeReq) (*dto.HTTPResponse[*dto.DashboardOverviewRsp], error)
+	HandleDashboardModelSeries(ctx context.Context, req *dto.DashboardRangeReq) (*dto.HTTPResponse[*dto.DashboardModelSeriesRsp], error)
+	HandleDashboardErrors(ctx context.Context, req *dto.DashboardWindowReq) (*dto.HTTPResponse[*dto.DashboardErrorListRsp], error)
+	HandleDashboardEndpoints(ctx context.Context, req *dto.DashboardWindowReq) (*dto.HTTPResponse[*dto.DashboardEndpointListRsp], error)
+	HandleDashboardTop(ctx context.Context, req *dto.DashboardTopReq) (*dto.HTTPResponse[*dto.DashboardTopListRsp], error)
+	HandleDashboardHeatmap(ctx context.Context, req *dto.DashboardHeatmapReq) (*dto.HTTPResponse[*dto.DashboardHeatmapRsp], error)
 }
 
 type AuditDependencies struct {
-	Service auditport.AuditService
+	Service   auditport.AuditService
+	Dashboard auditport.DashboardService
 }
 
 type auditHandler struct {
-	svc auditport.AuditService
+	svc       auditport.AuditService
+	dashboard auditport.DashboardService
 }
 
 func NewAuditHandler(deps AuditDependencies) AuditHandler {
-	return &auditHandler{svc: deps.Service}
+	return &auditHandler{svc: deps.Service, dashboard: deps.Dashboard}
 }
 
 func (h *auditHandler) HandleListAuditLogs(ctx context.Context, req *dto.ListAuditLogsReq) (*dto.HTTPResponse[*dto.ListAuditLogsRsp], error) {
@@ -113,136 +113,6 @@ func (h *auditHandler) HandleListAuditOption(ctx context.Context, req *dto.Audit
 	}
 
 	rsp.Items = items
-	return apiutil.WrapHTTPResponse(rsp, nil)
-}
-
-func (h *auditHandler) HandleModelTrend(ctx context.Context, req *dto.ModelTrendReq) (*dto.HTTPResponse[*dto.ModelTrendRsp], error) {
-	rsp := &dto.ModelTrendRsp{}
-	points, err := h.svc.ModelTrend(ctx,
-		util.CtxValuePermission(ctx),
-		util.CtxValueUint(ctx, constant.CtxKeyUserID),
-		req.StartTime, req.EndTime, req.Granularity,
-	)
-	if err != nil {
-		logger.WithCtx(ctx).Error("[AuditHandler] Model trend failed", zap.Error(err))
-		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
-	}
-	rsp.Data = auditport.FillTrendSeries(points, req.StartTime, req.EndTime, req.Granularity)
-	return apiutil.WrapHTTPResponse(rsp, nil)
-}
-
-// HandleHarnessTrend 按 agent harness 的调用量走势
-func (h *auditHandler) HandleHarnessTrend(ctx context.Context, req *dto.HarnessTrendReq) (*dto.HTTPResponse[*dto.HarnessTrendRsp], error) {
-	rsp := &dto.HarnessTrendRsp{}
-	items, err := h.svc.HarnessTrend(ctx,
-		util.CtxValuePermission(ctx),
-		util.CtxValueUint(ctx, constant.CtxKeyUserID),
-		req.StartTime, req.EndTime, req.Granularity,
-	)
-	if err != nil {
-		logger.WithCtx(ctx).Error("[AuditHandler] Harness trend failed", zap.Error(err))
-		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
-	}
-	rsp.Data = items
-	return apiutil.WrapHTTPResponse(rsp, nil)
-}
-
-func (h *auditHandler) HandleRequestRate(ctx context.Context, req *dto.RequestRateReq) (*dto.HTTPResponse[*dto.RequestRateRsp], error) {
-	rsp := &dto.RequestRateRsp{}
-	points, err := h.svc.RequestRate(ctx,
-		util.CtxValuePermission(ctx),
-		util.CtxValueUint(ctx, constant.CtxKeyUserID),
-		req.StartTime, req.EndTime, req.Granularity,
-	)
-	if err != nil {
-		logger.WithCtx(ctx).Error("[AuditHandler] Request rate failed", zap.Error(err))
-		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
-	}
-	rsp.Data = auditport.FillRateSeries(points, req.StartTime, req.EndTime, req.Granularity)
-	return apiutil.WrapHTTPResponse(rsp, nil)
-}
-
-func (h *auditHandler) HandleTokenThroughput(ctx context.Context, req *dto.TokenThroughputReq) (*dto.HTTPResponse[*dto.TokenThroughputRsp], error) {
-	rsp := &dto.TokenThroughputRsp{}
-	points, err := h.svc.TokenThroughput(ctx,
-		util.CtxValuePermission(ctx),
-		util.CtxValueUint(ctx, constant.CtxKeyUserID),
-		req.StartTime, req.EndTime, req.Granularity,
-	)
-	if err != nil {
-		logger.WithCtx(ctx).Error("[AuditHandler] Token throughput failed", zap.Error(err))
-		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
-	}
-	rsp.Data = auditport.FillTokenThroughputSeries(points, req.StartTime, req.EndTime, req.Granularity)
-	return apiutil.WrapHTTPResponse(rsp, nil)
-}
-
-func (h *auditHandler) HandleTokenRate(ctx context.Context, req *dto.TokenRateReq) (*dto.HTTPResponse[*dto.TokenRateRsp], error) {
-	rsp := &dto.TokenRateRsp{}
-	items, err := h.svc.TokenRate(ctx,
-		util.CtxValuePermission(ctx),
-		util.CtxValueUint(ctx, constant.CtxKeyUserID),
-		req.StartTime, req.EndTime, req.Granularity,
-	)
-	if err != nil {
-		logger.WithCtx(ctx).Error("[AuditHandler] Token rate failed", zap.Error(err))
-		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
-	}
-	rsp.Data = items
-	return apiutil.WrapHTTPResponse(rsp, nil)
-}
-
-func (h *auditHandler) HandleModelUsage(ctx context.Context, req *dto.ModelUsageReq) (*dto.HTTPResponse[*dto.ModelUsageRsp], error) {
-	rsp := &dto.ModelUsageRsp{}
-	items, err := h.svc.ModelUsage(ctx,
-		util.CtxValuePermission(ctx),
-		util.CtxValueUint(ctx, constant.CtxKeyUserID),
-		req.StartTime, req.EndTime, req.Granularity,
-	)
-	if err != nil {
-		logger.WithCtx(ctx).Error("[AuditHandler] Token usage failed", zap.Error(err))
-		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
-	}
-	rsp.Data = items
-	return apiutil.WrapHTTPResponse(rsp, nil)
-}
-
-func (h *auditHandler) HandleFirstTokenLatency(ctx context.Context, req *dto.FirstTokenLatencyReq) (*dto.HTTPResponse[*dto.FirstTokenLatencyRsp], error) {
-	rsp := &dto.FirstTokenLatencyRsp{}
-	items, err := h.svc.FirstTokenLatency(ctx,
-		util.CtxValuePermission(ctx),
-		util.CtxValueUint(ctx, constant.CtxKeyUserID),
-		req.StartTime, req.EndTime, req.Granularity,
-	)
-	if err != nil {
-		logger.WithCtx(ctx).Error("[AuditHandler] First token latency failed", zap.Error(err))
-		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
-	}
-	rsp.Data = items
-	return apiutil.WrapHTTPResponse(rsp, nil)
-}
-
-// HandleModelCost 模型成本排行（四维拆分 + 总费用，行 = 模型 × 币种）
-//
-//	@receiver h *auditHandler
-//	@param ctx context.Context
-//	@param req *dto.ModelCostReq
-//	@return *dto.HTTPResponse[*dto.ModelCostRsp]
-//	@return error
-//	@author centonhuang
-//	@update 2026-10-07 10:00:00
-func (h *auditHandler) HandleModelCost(ctx context.Context, req *dto.ModelCostReq) (*dto.HTTPResponse[*dto.ModelCostRsp], error) {
-	rsp := &dto.ModelCostRsp{}
-	items, err := h.svc.ModelCost(ctx,
-		util.CtxValuePermission(ctx),
-		util.CtxValueUint(ctx, constant.CtxKeyUserID),
-		req.StartTime, req.EndTime,
-	)
-	if err != nil {
-		logger.WithCtx(ctx).Error("[AuditHandler] Model cost failed", zap.Error(err))
-		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
-	}
-	rsp.Data = items
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }
 

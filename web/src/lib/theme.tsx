@@ -61,36 +61,23 @@ const CHART_SERIES_COLORS: Record<ThemeName, readonly string[]> = {
   ],
 };
 
-export interface TokenLayerColors {
-  cacheRead: string;
-  input: string;
-  cacheCreated: string;
-  output: string;
+export interface StatusColors {
+  positive: string;
+  warning: string;
+  negative: string;
+  muted: string;
 }
 
-/* Token four-dimensional palette, shared by the composition ratio bars and
- * the token throughput time-series. Input/output carry the theme's two deep
- * hues, and each cache layer is the pale tint of its counterpart
- * (cacheRead = light input, cacheWrite = light output), so the four segments
- * read as two dark/light families instead of four unrelated hues.
- *
- * Charts stack these by luminance (dark at the bottom, light on top), so the
- * four values must stay distinguishable both from each other and from the
- * card background. */
-const RATIO_SEGMENT_COLORS: Record<ThemeName, TokenLayerColors> = {
-  anthropic: { input: "#B8654A", output: "#5C4A3D", cacheRead: "#EFC5AC", cacheCreated: "#CDBBA6" },
-  /* Moonshot stays inside its own token set: moon-rock grey and moon-shadow
-   * slate as the two darks, their pale forms being the warm moonlight cream
-   * and the ice-blue haze already used by the theme's charts. */
-  moonshot: { input: "#737373", output: "#6E7B8C", cacheRead: "#FFEED9", cacheCreated: "#A8BDD8" },
+/* Status palette for recharts (mirrors --positive/--warning/--negative in
+ * globals.css; recharts needs raw strings). Used by the dashboard reliability
+ * bars and health dots. */
+const STATUS_COLORS: Record<ThemeName, StatusColors> = {
+  anthropic: { positive: "#4F7F6F", warning: "#B9852F", negative: "#B3564F", muted: "#8C7E72" },
+  moonshot: { positive: "#A8BDD8", warning: "#FFEED9", negative: "#E07A80", muted: "#595959" },
 };
 
 function chartSeriesColors(theme: ThemeName): readonly string[] {
   return CHART_SERIES_COLORS[theme];
-}
-
-function tokenLayerColors(theme: ThemeName): TokenLayerColors {
-  return RATIO_SEGMENT_COLORS[theme];
 }
 
 /* ============================================================
@@ -179,10 +166,6 @@ export function useChartSeriesColors(): readonly string[] {
   return chartSeriesColors(useTheme().theme);
 }
 
-export function useTokenLayerColors(): TokenLayerColors {
-  return tokenLayerColors(useTheme().theme);
-}
-
-export function useRatioSegmentColors(): TokenLayerColors {
-  return RATIO_SEGMENT_COLORS[useTheme().theme];
+export function useStatusColors(): StatusColors {
+  return STATUS_COLORS[useTheme().theme];
 }

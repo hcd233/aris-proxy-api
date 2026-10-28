@@ -35,92 +35,70 @@ func initAuditRouter(auditGroup huma.API, auditHandler handler.AuditHandler, cro
 	}, auditHandler.HandleListAuditOption)
 
 	huma.Register(auditGroup, huma.Operation{
-		OperationID: "queryModelTrend",
+		OperationID: "queryDashboardOverview",
 		Method:      http.MethodGet,
-		Path:        "/stats/model/trend",
-		Summary:     "QueryModelTrend",
-		Description: "Query model call count trend grouped by model and time bucket. Admin sees all; user sees only their own keys.",
+		Path:        "/stats/dashboard/overview",
+		Summary:     "QueryDashboardOverview",
+		Description: "Dashboard KPI summary and bucketed series for current and previous equal-length period. Admin/demo see all; user sees only their own keys.",
 		Tags:        []string{constant.TagAudit},
 		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
-		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("queryModelTrend", enum.PermissionUser, enum.DemoModuleAudit, demoAccessor, auditSubmitter)},
-	}, auditHandler.HandleModelTrend)
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("queryDashboardOverview", enum.PermissionUser, enum.DemoModuleAudit, demoAccessor, auditSubmitter)},
+	}, auditHandler.HandleDashboardOverview)
 
 	huma.Register(auditGroup, huma.Operation{
-		OperationID: "queryModelCost",
+		OperationID: "queryDashboardModelSeries",
 		Method:      http.MethodGet,
-		Path:        "/stats/model/cost",
-		Summary:     "QueryModelCost",
-		Description: "Query per-model estimated cost (input/output/cache write/cache read + total), row = model x currency. Admin sees all; user sees only their own keys.",
+		Path:        "/stats/dashboard/model/series",
+		Summary:     "QueryDashboardModelSeries",
+		Description: "Dashboard per-model usage (requests/tokens/cost) by time bucket.",
 		Tags:        []string{constant.TagAudit},
 		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
-		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("queryModelCost", enum.PermissionUser, enum.DemoModuleAudit, demoAccessor, auditSubmitter)},
-	}, auditHandler.HandleModelCost)
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("queryDashboardModelSeries", enum.PermissionUser, enum.DemoModuleAudit, demoAccessor, auditSubmitter)},
+	}, auditHandler.HandleDashboardModelSeries)
 
 	huma.Register(auditGroup, huma.Operation{
-		OperationID: "queryHarnessTrend",
+		OperationID: "listDashboardErrors",
 		Method:      http.MethodGet,
-		Path:        "/stats/harness/trend",
-		Summary:     "QueryHarnessTrend",
-		Description: "Query model call count trend grouped by agent harness and time bucket. Admin sees all; user sees only their own keys.",
+		Path:        "/stats/dashboard/error/list",
+		Summary:     "ListDashboardErrors",
+		Description: "Dashboard top failed-call errors grouped by status code and message.",
 		Tags:        []string{constant.TagAudit},
 		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
-		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("queryHarnessTrend", enum.PermissionUser, enum.DemoModuleAudit, demoAccessor, auditSubmitter)},
-	}, auditHandler.HandleHarnessTrend)
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("listDashboardErrors", enum.PermissionUser, enum.DemoModuleAudit, demoAccessor, auditSubmitter)},
+	}, auditHandler.HandleDashboardErrors)
 
 	huma.Register(auditGroup, huma.Operation{
-		OperationID: "queryRequestRate",
+		OperationID: "listDashboardEndpoints",
 		Method:      http.MethodGet,
-		Path:        "/stats/request/rate",
-		Summary:     "QueryRequestRate",
-		Description: "Query request success rate grouped by model and time bucket. Admin sees all; user sees only their own keys.",
+		Path:        "/stats/dashboard/endpoint/list",
+		Summary:     "ListDashboardEndpoints",
+		Description: "Dashboard endpoint health (requests, error rate, P95 latency, speed, cost). Endpoint names are masked for demo.",
 		Tags:        []string{constant.TagAudit},
 		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
-		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("queryRequestRate", enum.PermissionUser, enum.DemoModuleAudit, demoAccessor, auditSubmitter)},
-	}, auditHandler.HandleRequestRate)
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("listDashboardEndpoints", enum.PermissionUser, enum.DemoModuleAudit, demoAccessor, auditSubmitter)},
+	}, auditHandler.HandleDashboardEndpoints)
 
 	huma.Register(auditGroup, huma.Operation{
-		OperationID: "queryTokenThroughput",
+		OperationID: "listDashboardTop",
 		Method:      http.MethodGet,
-		Path:        "/stats/token/throughput",
-		Summary:     "QueryTokenThroughput",
-		Description: "Query token throughput (volume + output rate) grouped by model and time bucket. Admin sees all; user sees only their own keys.",
+		Path:        "/stats/dashboard/top/list",
+		Summary:     "ListDashboardTop",
+		Description: "Dashboard top ranking by model/user/apikey/harness. The user dimension is admin/demo only; demo names are masked.",
 		Tags:        []string{constant.TagAudit},
 		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
-		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("queryTokenThroughput", enum.PermissionUser, enum.DemoModuleAudit, demoAccessor, auditSubmitter)},
-	}, auditHandler.HandleTokenThroughput)
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("listDashboardTop", enum.PermissionUser, enum.DemoModuleAudit, demoAccessor, auditSubmitter)},
+	}, auditHandler.HandleDashboardTop)
 
 	huma.Register(auditGroup, huma.Operation{
-		OperationID: "queryTokenRate",
+		OperationID: "queryDashboardHeatmap",
 		Method:      http.MethodGet,
-		Path:        "/stats/token/rate",
-		Summary:     "QueryTokenRate",
-		Description: "Query output token rate grouped by model and time bucket. Admin sees all; user sees only their own keys.",
+		Path:        "/stats/dashboard/heatmap",
+		Summary:     "QueryDashboardHeatmap",
+		Description: "Dashboard weekday x hour request heatmap in the given IANA timezone.",
 		Tags:        []string{constant.TagAudit},
 		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
-		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("queryTokenRate", enum.PermissionUser, enum.DemoModuleAudit, demoAccessor, auditSubmitter)},
-	}, auditHandler.HandleTokenRate)
-
-	huma.Register(auditGroup, huma.Operation{
-		OperationID: "queryModelUsage",
-		Method:      http.MethodGet,
-		Path:        "/stats/model/usage",
-		Summary:     "QueryModelUsage",
-		Description: "Query aggregated model usage per model. Admin sees all; user sees only their own keys.",
-		Tags:        []string{constant.TagAudit},
-		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
-		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("queryModelUsage", enum.PermissionUser, enum.DemoModuleAudit, demoAccessor, auditSubmitter)},
-	}, auditHandler.HandleModelUsage)
-
-	huma.Register(auditGroup, huma.Operation{
-		OperationID: "queryFirstTokenLatency",
-		Method:      http.MethodGet,
-		Path:        "/stats/token/latency",
-		Summary:     "QueryFirstTokenLatency",
-		Description: "Query average first token latency grouped by model and time bucket. Admin sees all; user sees only their own keys.",
-		Tags:        []string{constant.TagAudit},
-		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
-		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("queryFirstTokenLatency", enum.PermissionUser, enum.DemoModuleAudit, demoAccessor, auditSubmitter)},
-	}, auditHandler.HandleFirstTokenLatency)
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("queryDashboardHeatmap", enum.PermissionUser, enum.DemoModuleAudit, demoAccessor, auditSubmitter)},
+	}, auditHandler.HandleDashboardHeatmap)
 
 	huma.Register(auditGroup, huma.Operation{
 		OperationID: "listCronCallAudits",

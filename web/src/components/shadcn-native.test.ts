@@ -97,14 +97,8 @@ describe("② 表单与列表", () => {
     expect(read(p)).toContain("<ScrollArea");
   });
 
-  it("代码 / JSON 预览与图表卡片表格用 ScrollArea", () => {
+  it("代码 / JSON 预览用 ScrollArea", () => {
     expect(read("app/(dashboard)/dataset/page.tsx")).not.toMatch(/overflow-auto/);
-    for (const p of [
-      "components/charts/model-cost-bar-chart.tsx",
-      "components/charts/model-token-bar-chart.tsx",
-    ]) {
-      expect(read(p)).toContain("<ScrollArea");
-    }
   });
 });
 
@@ -150,12 +144,6 @@ describe("③ 组合修正", () => {
     expect(read("app/(dashboard)/upstream/flat-view.tsx")).not.toMatch(/<button[\s>]/);
     expect(read("app/(dashboard)/upstream/grouped-view.tsx")).not.toMatch(/<button[\s>]/);
     expect(read("components/shared/reading-layout.tsx")).not.toMatch(/<button[\s>]/);
-  });
-
-  it("比例条浮层用 Tooltip", () => {
-    const src = read("components/charts/stacked-ratio-bar.tsx");
-    expect(src).not.toContain("createPortal");
-    expect(src).toContain("TooltipContent");
   });
 });
 
@@ -269,22 +257,26 @@ describe("agent harness 详情", () => {
   });
 });
 
-describe("agent harness 走势图", () => {
-  it("dashboard 使用堆叠柱状图展示各 harness 调用量", () => {
+describe("dashboard 一屏指挥台", () => {
+  it("页面由 KPI 行与六块面板组成，共用一个时间范围", () => {
     const page = read("app/(dashboard)/page.tsx");
-    expect(page).toContain("HarnessTrendChart");
-    const chart = read("components/charts/harness-trend-chart.tsx");
-    expect(chart).toContain('stackId="harness"');
-    expect(chart).toContain('chartType="bar"');
+    for (const panel of [
+      "<KpiRow",
+      "<UsageTrendPanel",
+      "<ReliabilityPanel",
+      "<LatencyPanel",
+      "<EndpointHealthPanel",
+      "<TopRankingPanel",
+      "<ActivityPanel",
+    ]) {
+      expect(page).toContain(panel);
+    }
+    expect(page.match(/<TimeRangePicker/g)).toHaveLength(1);
   });
-});
 
-describe("dashboard 图表布局", () => {
-  it("输出 token 速率与首 token 延迟同排各占一半", () => {
-    const page = read("app/(dashboard)/page.tsx");
-    expect(page).toContain("<TokenRateChart />");
-    expect(page).toContain("<FirstTokenLatencyChart />");
-    expect(page).not.toContain("lg:col-span-2");
+  it("客户端分布按 harness 维度聚合", () => {
+    const activity = read("components/dashboard/activity-panel.tsx");
+    expect(activity).toContain('dimension: "harness"');
   });
 });
 

@@ -102,7 +102,7 @@
 | Endpoint | `/api/web/v1/endpoint` | `POST /`、`PATCH /`、`DELETE /` |
 | Model | `/api/web/v1/model` | `GET /list`、`POST /`、`PATCH /`、`DELETE /` |
 | Upstream | `/api/web/v1/upstream` | `GET /list` |
-| Audit | `/api/web/v1/audit` | `GET /model/log/list`、`GET /model/option/list`、`GET /stats/model/trend`、`GET /stats/request/rate`、`GET /stats/token/throughput`、`GET /stats/token/rate`、`GET /stats/model/usage`、`GET /stats/token/latency` |
+| Audit | `/api/web/v1/audit` | `GET /model/log/list`、`GET /model/option/list`、`GET /stats/dashboard/overview`、`GET /stats/dashboard/model/series`、`GET /stats/dashboard/error/list`、`GET /stats/dashboard/endpoint/list`、`GET /stats/dashboard/top/list`、`GET /stats/dashboard/heatmap` |
 | CronAudit | `/api/web/v1/audit` | `GET /cron/log/list`、`GET /cron/option/list` |
 | DemoAudit | `/api/web/v1/audit` | `GET /demo/log/list`、`GET /demo/option/list` |
 | Cron | `/api/web/v1/cron` | `GET /list`、`PATCH /`、`POST /trigger` |
