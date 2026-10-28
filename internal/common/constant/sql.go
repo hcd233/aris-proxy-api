@@ -129,8 +129,10 @@ var (
 	SessionRepoFieldsDetail     = []string{FieldID, FieldAPIKeyName, FieldAPIKeyID, FieldCreatedAt, FieldUpdatedAt, FieldMessageIDs, FieldToolIDs, FieldMetadata, FieldScore, FieldScoredAt}
 	SessionRepoFieldsReadList   = []string{FieldID, FieldCreatedAt, FieldUpdatedAt, FieldScore, FieldClientUA}
 	SessionRepoFieldsReadDetail = []string{FieldID, FieldAPIKeyName, FieldAPIKeyID, FieldCreatedAt, FieldUpdatedAt, FieldMessageIDs, FieldToolIDs, FieldMetadata, FieldScore, FieldScoredAt, FieldClientUA}
-	SessionRepoFieldsDedup      = []string{FieldID, FieldMessageIDs, FieldToolIDs}
-	SessionRepoFieldsSummarize  = []string{FieldID, FieldMessageIDs}
+	// SessionRepoFieldsDedup 含 FieldAPIKeyID：FindSessionTarget 按归属二次校验，
+	// 漏列读出 0 会让续写永远找不到 keeper，旧行被当前缀删掉、会话 ID 每轮漂移。
+	SessionRepoFieldsDedup     = []string{FieldID, FieldAPIKeyID, FieldMessageIDs, FieldToolIDs}
+	SessionRepoFieldsSummarize = []string{FieldID, FieldMessageIDs}
 
 	// SessionRepoFieldsModelIDSync 模型 ID 历史同步的查询投影（只需定位与替换所需列，
 	// 不载入 questions/metadata 等大 JSON 列）。
@@ -381,6 +383,7 @@ var (
 
 	WhereCreatedAtGTE = "created_at >= ?"
 	WhereCreatedAtLTE = "created_at <= ?"
+	WhereUpdatedAtLT  = "updated_at < ?"
 
 	// ── Session distinct score query ──
 	SessionDistinctScoreSelect = "DISTINCT score"

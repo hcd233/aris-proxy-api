@@ -42,6 +42,10 @@ const (
 	CronLockDefaultTTL = 5 * time.Minute
 	// CronTerminalCleanupWindow 终态清理扫描窗口（最近 24 小时）
 	CronTerminalCleanupWindow = 24 * time.Hour
+	// CronTerminalCleanupIdleThreshold 终态清理的空闲阈值：updated_at 早于 now-阈值的会话才算「中断」。
+	// 续写把快照前滚到同一行并刷新 updated_at，agent 工具循环进行中末条消息常为 tool_call，
+	// 不设阈值会把进行中的会话整行删掉，下一轮只能新建会话 ID。
+	CronTerminalCleanupIdleThreshold = 30 * time.Minute
 	// CronLockDefaultRenewDivisor 当 RenewInterval<=0 时回退到 TTL/Divisor
 	CronLockDefaultRenewDivisor = 3
 	// CronLockMaxConsecutiveRenewFailures 续期连续失败最大次数

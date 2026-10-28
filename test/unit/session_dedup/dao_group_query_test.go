@@ -78,10 +78,10 @@ func TestCreatedSinceQuery_SQLShape(t *testing.T) {
 	dry := newSQLShapeDB(t)
 
 	var out []*dbmodel.Session
-	q := dao.GetSessionDAO().CreatedSinceQuery(dry, time.Unix(0, 0).UTC()).Find(&out)
+	q := dao.GetSessionDAO().CreatedSinceQuery(dry, time.Unix(0, 0).UTC(), time.Unix(0, 0).UTC()).Find(&out)
 
 	sqlText := q.Statement.SQL.String()
-	assertSQLContains(t, sqlText, []string{"created_at >=", "deleted_at = 0"})
+	assertSQLContains(t, sqlText, []string{"created_at >=", "updated_at <", "deleted_at = 0"})
 	if strings.Contains(sqlText, "tool_ids") {
 		t.Errorf("window scan must not select tool_ids\ngot: %s", sqlText)
 	}

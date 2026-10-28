@@ -103,28 +103,32 @@ func (dao *SessionDAO) FindGroupForUpdate(db *gorm.DB, firstMessageID, apiKeyID 
 //
 //	@param db *gorm.DB
 //	@param since time.Time 创建时间下界
+//	@param idleBefore time.Time 最近更新时间上界（排除仍在续写的会话）
 //	@return *gorm.DB
 //	@author centonhuang
-//	@update 2026-08-29 10:00:00
-func (dao *SessionDAO) CreatedSinceQuery(db *gorm.DB, since time.Time) *gorm.DB {
+//	@update 2026-10-28 10:00:00
+func (dao *SessionDAO) CreatedSinceQuery(db *gorm.DB, since, idleBefore time.Time) *gorm.DB {
 	return db.Select(constant.SessionRepoFieldsTerminalScan).
 		Where(constant.DBConditionDeletedAtZero).
-		Where(constant.WhereCreatedAtGTE, since)
+		Where(constant.WhereCreatedAtGTE, since).
+		Where(constant.WhereUpdatedAtLT, idleBefore)
 }
 
-// FindCreatedSince 查询指定时间之后创建的活跃会话（终态清理扫描窗口）
+// FindCreatedSince 查询指定时间之后创建、且已空闲的活跃会话（终态清理扫描窗口）
 //
 //	依赖 idx_sessions_created_at（Session 模型重声明 CreatedAt 挂 tag，AutoMigrate 自动建）。
+//	续写回写会刷新 updated_at，idleBefore 让进行中的会话不进扫描，避免误删后 ID 漂移。
 //
 //	@param db *gorm.DB
 //	@param since time.Time 创建时间下界
+//	@param idleBefore time.Time 最近更新时间上界
 //	@return []SessionTerminalScanView
 //	@return error
 //	@author centonhuang
-//	@update 2026-08-29 10:00:00
-func (dao *SessionDAO) FindCreatedSince(db *gorm.DB, since time.Time) ([]SessionTerminalScanView, error) {
+//	@update 2026-10-28 10:00:00
+func (dao *SessionDAO) FindCreatedSince(db *gorm.DB, since, idleBefore time.Time) ([]SessionTerminalScanView, error) {
 	var models []*dbmodel.Session
-	if err := dao.CreatedSinceQuery(db, since).Find(&models).Error; err != nil {
+	if err := dao.CreatedSinceQuery(db, since, idleBefore).Find(&models).Error; err != nil {
 		return nil, err
 	}
 	views := lo.Map(models, func(m *dbmodel.Session, _ int) SessionTerminalScanView {

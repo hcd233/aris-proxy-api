@@ -74,7 +74,7 @@ func TestFindCreatedSince_WindowAndActiveFilter(t *testing.T) {
 	seedTerminalSession(t, db, outWindow, now.Add(-constant.CronTerminalCleanupWindow-time.Hour))
 	seedTerminalSession(t, db, softDeleted, now.Add(-time.Hour))
 
-	views, err := dao.GetSessionDAO().FindCreatedSince(db, since)
+	views, err := dao.GetSessionDAO().FindCreatedSince(db, since, now.Add(-constant.CronTerminalCleanupIdleThreshold))
 	if err != nil {
 		t.Fatalf("FindCreatedSince() error = %v", err)
 	}
@@ -83,6 +83,38 @@ func TestFindCreatedSince_WindowAndActiveFilter(t *testing.T) {
 	}
 	if !slices.Equal(views[0].MessageIDs, []uint{1, 2}) {
 		t.Errorf("scan view MessageIDs = %v, want [1 2]", views[0].MessageIDs)
+	}
+}
+
+// TestFindCreatedSince_SkipsRecentlyUpdated 回归：终态清理误删进行中的会话导致 ID 漂移。
+//
+// 续写把每轮快照前滚到同一行上，agent 工具循环进行中该行末条消息大部分时间就是
+// assistant+tool_calls；若终态清理不看活跃度，会把正在进行的对话整行删掉，下一轮
+// 只能新建会话 ID。只有空闲超过阈值（updated_at 早于 idleBefore）的会话才进扫描。
+func TestFindCreatedSince_SkipsRecentlyUpdated(t *testing.T) {
+	t.Parallel()
+	db := newTerminalCleanupDB(t)
+	now := time.Now().UTC()
+
+	active := &dbmodel.Session{MessageIDs: []uint{1, 2}}
+	active.ID = 1
+	idle := &dbmodel.Session{MessageIDs: []uint{3, 4}}
+	idle.ID = 2
+	seedTerminalSession(t, db, active, now.Add(-time.Hour))
+	seedTerminalSession(t, db, idle, now.Add(-time.Hour))
+	// 模拟续写回写刷新 updated_at
+	if err := db.Model(&dbmodel.Session{}).Where("id = ?", active.ID).
+		Update(constant.FieldUpdatedAt, now.Add(-time.Minute)).Error; err != nil {
+		t.Fatalf("touch active session: %v", err)
+	}
+
+	views, err := dao.GetSessionDAO().FindCreatedSince(db,
+		now.Add(-constant.CronTerminalCleanupWindow), now.Add(-constant.CronTerminalCleanupIdleThreshold))
+	if err != nil {
+		t.Fatalf("FindCreatedSince() error = %v", err)
+	}
+	if len(views) != 1 || views[0].ID != idle.ID {
+		t.Fatalf("FindCreatedSince() = %+v, want only idle session %d（刚续写过的会话不得进终态扫描）", views, idle.ID)
 	}
 }
 
@@ -209,8 +241,10 @@ func TestTerminalCleanupChain_DeletesOnlyTerminalHits(t *testing.T) {
 		t.Fatalf("ApplyMergeResult() error = %v", err)
 	}
 
-	// 阶段二：终态清理链路（cleanup 的 FindCreatedSince -> Filter -> Pick -> BatchDelete）
-	views, err := dao.GetSessionDAO().FindCreatedSince(db, now.Add(-constant.CronTerminalCleanupWindow))
+	// 阶段二：终态清理链路（cleanup 的 FindCreatedSince -> Filter -> Pick -> BatchDelete）。
+	// 合并刚刷新过 21 的 updated_at，扫描时刻取空闲阈值之后，模拟对话已停止续写。
+	scanAt := time.Now().UTC().Add(constant.CronTerminalCleanupIdleThreshold + time.Minute)
+	views, err := dao.GetSessionDAO().FindCreatedSince(db, scanAt.Add(-constant.CronTerminalCleanupWindow), scanAt.Add(-constant.CronTerminalCleanupIdleThreshold))
 	if err != nil {
 		t.Fatalf("FindCreatedSince() error = %v", err)
 	}

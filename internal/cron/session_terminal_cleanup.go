@@ -125,7 +125,8 @@ func (c *SessionTerminalCleanupCron) cleanup(ctx context.Context) (*commonmodel.
 	log := logger.WithCtx(ctx)
 	db := c.db.WithContext(ctx)
 
-	sessions, err := c.sessionDAO.FindCreatedSince(db, time.Now().UTC().Add(-constant.CronTerminalCleanupWindow))
+	now := time.Now().UTC()
+	sessions, err := c.sessionDAO.FindCreatedSince(db, now.Add(-constant.CronTerminalCleanupWindow), now.Add(-constant.CronTerminalCleanupIdleThreshold))
 	if err != nil {
 		log.Error("[SessionTerminalCleanupCron] Failed to load recent sessions", zap.Error(err))
 		return nil, err
