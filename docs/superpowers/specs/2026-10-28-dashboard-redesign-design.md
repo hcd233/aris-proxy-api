@@ -82,7 +82,7 @@
   - 总输入 = input + cache_creation + cache_read；总 token = 总输入 + output。
   - 缓存命中率 = cache_read / 总输入（分母为 0 时返回 null，前端显示「—」）。
   - Token 类指标只统计成功请求，与现有 `QueryTokenThroughput` 口径一致。
-- 费用：只汇总 `cost_micro IS NOT NULL` 的记录，按 `pricing_currency` 分组返回；KPI 主值显示费用最高的币种，其他币种放在 tooltip 里。已计价调用占比 = 已计价成功调用数 / 成功调用数。
+- 费用：只汇总成功且 `cost_micro IS NOT NULL` 的记录（与现有 `QueryModelCost` 口径一致）。`enum.Currency` 目前只有 USD 一种，所以按单值返回，响应里带 `currency: "USD"` 字段。以后引入第二种币种时，再把相关字段升级为按币种的数组，本次不做。已计价调用占比 = 已计价成功调用数 / 成功调用数。
 - 延迟：只统计成功请求的 `first_token_latency_ms`，用 PostgreSQL `percentile_cont` 计算 P50 / P95 / P99。
 - 输出速度：sum(output_tokens) / sum(stream_duration_ms) × 1000，只统计 `stream_duration_ms > 0` 的成功请求。注意这和现有 `loadTokenThroughput` 不同：现有 SQL 没过滤非流式行，非流式请求的输出 token 进了分子但时长为 0，速度被高估。新接口采用更准确的口径；旧接口随本次删除，不存在两套口径并存。
 - 客户端：沿用 `constant.AuditHarnessGroupSQL`（UA → 最长前缀规则名，未命中归 Other），缓存键带规则指纹。
@@ -94,34 +94,38 @@
 沿用审计统计现有的三路分流（`auditService` 里的 `switch permission`），不新增权限模型：
 
 - Admin：全量数据（`apiKeyIDs = nil`）。Top 排行四个维度都可用。
-- Demo：全量聚合数据（与现有统计接口一致）。Top 排行的「用户」和「API Key」维度返回脱敏名称（`commonutil.MaskIdentity` / `MaskSecret`，与审计列表一致）；热门错误信息原样返回（审计列表对 demo 也不脱敏 error_message，实现时核对，若列表有脱敏则保持一致）。
-- User：只统计自己名下 API Key 的数据。名下没有 Key 时，handler 层短路返回空结果，仓储层保留 `apiKeyIDs != nil && len == 0` 守卫（「宁漏勿越」，见既有安全修复）。不支持「用户」维度：请求该维度时返回 422，前端对 user 角色隐藏该页签。
+- Demo：全量聚合数据（与现有统计接口一致）。Top 排行的「用户」「API Key」维度和 Endpoint 健康表的 endpoint 名都返回脱敏值，规则与审计列表 `buildAuditViews` 一致：用户名用 `MaskIdentity`，Key 名和 Endpoint 用 `MaskSecret`。热门错误信息原样返回，因为审计列表对 demo 也不脱敏 error_message。
+- User：只统计自己名下 API Key 的数据。名下没有 Key 时，应用层短路返回空结果；仓储层保留 `apiKeyIDs != nil && len == 0` 守卫（「宁漏勿越」，见既有安全修复）。不支持「用户」维度：请求该维度时返回 `ierr.ErrNoPermission`，前端对 user 角色隐藏该页签。
 - 路由挂在现有 `auditGroup` 下，使用 `LimitUserPermissionWithDemoMiddleware(..., enum.PermissionUser, enum.DemoModuleAudit, ...)`，与旧统计接口一致。
 - 前端 `PermissionGuard module="dashboard"` 保持不变。
 
 ## 6. 后端接口
 
-前缀 `/api/web/v1/audit/stats/dashboard`。所有接口都接收 `startTime`、`endTime`（RFC3339，必填），需要时间桶的再加 `granularity`（minute / hour / day / week）。每个面板一个接口，好处是面板可以各自加载、各自失败重试，也能各自缓存。
+前缀 `/api/web/v1/audit/stats/dashboard`，路径按项目路由规范使用单数小写段，不用连字符。所有接口都接收 `startTime`、`endTime`（RFC3339，必填），需要时间桶的再加 `granularity`（minute / hour / day / week）。
+
+KPI 行、可靠性面板和延迟面板共用一份「总量 + 时间桶」数据，因此合并为一个 `overview` 接口；其余面板各一个接口，可以各自加载、各自失败重试、各自缓存。
 
 | 接口 | 用途 | 关键返回字段 |
 |---|---|---|
-| `GET /summary` | KPI 主值、辅助值与环比 | `current`、`previous` 两个同构对象：requests、success、failures{rateLimit, server, connection, other}、tokens{input, output, cacheRead, cacheWrite}、cost[{currency, amount}]、pricedSuccess、latency{p50, p95, p99}、outputTokensPerSecond、avgStreamDurationMs、peakBucketRequests |
-| `GET /series` | KPI 迷你趋势线、可靠性柱图、延迟线 | `current`、`previous` 两组时间桶数组，每桶：time、requests、success、failures{4 类}、tokens（总）、cost（主币种）、cacheHitRate、latency{p50, p95, p99} |
-| `GET /model-series?metric=cost\|requests\|tokens` | 用量趋势堆叠图 | Top 5 模型 + `Other` 的时间序列，以及上一周期总量序列 |
-| `GET /errors?limit=5` | 可靠性面板里的热门错误 | [{statusCode, message, count}]；message 截断到 200 字符后再分组 |
-| `GET /endpoints?limit=5` | Endpoint 健康表 | [{endpoint, requests, errorRate, p95LatencyMs, outputTokensPerSecond, cost[]}] |
-| `GET /top?dimension=model\|user\|apikey\|harness&limit=5` | Top 排行和客户端分布条 | [{key, name, requests, tokens, cacheHitRate, cost[], costShare}]，以及 `otherShare` |
-| `GET /heatmap?tz=Asia/Shanghai` | 活跃时段热力图 | 7×24 计数矩阵（weekday 0=周一） |
+| `GET /overview` | KPI 卡片、迷你趋势线、可靠性柱图、延迟线、用量趋势里的上一周期虚线 | `current`、`previous` 两个同构对象，各含 `summary` 和 `series`（已补齐空桶）。每个统计块包含：requests、success、failures{rateLimit, server, connection, other}、tokens{input, output, cacheRead, cacheWrite}、cost、pricedSuccess、latency{p50, p95, p99}（无成功请求时为 null）、outputTokensPerSecond、avgStreamDurationMs。另有 `currency` 字段。峰值和日均由前端根据 series 和区间长度计算 |
+| `GET /model/series` | 用量趋势堆叠图 | 各模型 × 各时间桶的 requests / tokens / cost 原始行；Top 5 筛选和「其他」合并由前端按当前选中的指标完成，切换指标不需要重新请求 |
+| `GET /error/list?limit=5` | 可靠性面板里的热门错误 | [{statusCode, message, count}]；message 截断到 200 字符后再分组 |
+| `GET /endpoint/list?limit=5` | Endpoint 健康表 | [{endpoint, requests, errorRate, p95LatencyMs, outputTokensPerSecond, cost}] |
+| `GET /top/list?dimension=model\|user\|apikey\|harness&limit=5` | Top 排行和客户端分布条 | items[{key, name, requests, tokens, cacheHitRate, cost, costShare}]，以及 otherRequests、otherCost |
+| `GET /heatmap?tz=Asia/Shanghai` | 活跃时段热力图 | cells[{weekday(0=周一), hour, count}]，只返回有数据的格子 |
 
 实现约束：
 
-- 分层沿用现有结构：`handler/audit.go` → `application/audit/query`（按「admin/demo Handler + ByUser Handler」成对实现）→ `domain/modelcall.AuditRepository` 新方法 → `infrastructure/repository/audit_repository.go`。
+- 分层：
+  - 新增 `domain/modelcall.DashboardRepository`（独立接口，不扩展 `AuditRepository`，避免改动现有测试 fake），由 `infrastructure/repository/dashboard_repository.go` 实现。
+  - 应用层在 `application/audit/query/dashboard*.go` 实现 `port.DashboardService`。权限分流只做一次（`resolveDashboardScope`），不再为每个查询成对写 admin/user handler。
+  - handler 扩展现有的 `AuditHandler` 接口，router 挂在 `initAuditRouter` 里。
 - SQL 片段放在 `internal/common/constant/sql.go`（conv lint 禁止本地 const）；所有用户输入（tz、limit、dimension）都走参数绑定或白名单。
   - `tz` 先用 `time.LoadLocation` 校验，非法值返回 422，校验通过后以绑定参数传给 `AT TIME ZONE ?`。
-  - `dimension` 和 `metric` 用 enum 白名单。
+  - `dimension` 用 enum 白名单（huma `enum` 标签）。
   - `limit` 限制在 1–10。
 - 读路径沿用 `readCacheKey` + `cachedSlice` 读缓存，缓存键包含 scope、时间桶、粒度、维度；harness 相关的缓存键带规则指纹。
-- `summary` 和 `series` 的本期与上一周期在服务端并发查询，只发一次 HTTP 请求。
+- `overview` 的本期与上一周期（各含 summary 和 series，共 4 条 SQL）在服务端用 errgroup 并发查询。
 - `user` / `apikey` 维度的名称通过现有 `BatchGetRelations` 回填，不在 SQL 里 join 业务表。
 - DTO 遵守 `huma-dto-conventions` skill 与 `docs/agents/go-backend.md` 的约定（不允许 any，不导入 dbmodel，字段写全 doc 标签）。
 - 性能预算：生产 audit 表约 4 万行量级（见 2026-07-27 分页基线），单接口 30d 区间 P95 < 300ms。`percentile_cont` 和 harness 子查询是成本最高的两类查询，实现后要在生产量级数据上 EXPLAIN 验证。
@@ -137,19 +141,19 @@
 - 删除 8 个只被旧 dashboard 使用的图表组件（`model-cost-bar-chart` 等），`runtime-*` 和 `stacked-ratio-bar`（如果仍被复用）保留；同步更新 `shadcn-native.test.ts` 中对这些路径的引用。
 - `api-client.ts` 删除旧的 8 个 fetch 方法，新增对应方法；`lib/types.ts` 跟随修改。
 - 现有的 4 张资源计数卡片不再保留（用户确认其价值低）。
-- i18n：新增的文案中英双语都要补齐；含翻译文本的 `useMemo` 依赖 `locale`，不依赖 `t`。
+- i18n：新增文案在 `web/src/locales/{zh,en,ja}.json` 三份里都要补齐；含翻译文本的 `useMemo` 依赖 `locale`，不依赖 `t`。
 - 截断文案必须配 Tooltip（项目 lint 规则 `truncate-requires-tooltip`）。
 
 ## 8. 验证
 
 - 后端：
-  - 每个新 query handler 都要有单测，覆盖三路权限分流以及名下无 Key 时的短路。
-  - 仓储层的 PG 专属 SQL 沿用双向守卫测试法：`nil` 必须落到 SQL 执行，空切片必须短路。
+  - `DashboardService` 要有单测，覆盖三路权限分流、名下无 Key 时的短路、demo 脱敏，以及 user 请求「用户」维度被拒。
+  - 仓储层的 PG 专属 SQL 沿用 PG DryRun 捕获 SQL 文本断言（`test/unit/agent_harness/audit_trend_test.go` 的做法）和空切片短路断言；SQL 能否正确执行，用生产库只读 `EXPLAIN ANALYZE` 验证。
   - 在 e2e 中迁移并补齐越权与 demo 脱敏断言。
 - 前端：
   - `npm run lint`、`npm run format:check`、`npm run test`、`npm run build` 全部通过。
   - 用 chrome-headless-shell 在 1440×900 和 1920×1080 两档下分别加载 anthropic 和 moonshot 主题，程序化断言 `document.scrollingElement.scrollHeight <= innerHeight`，并检查无文本溢出。
-- 口径对账：同一时间区间内，summary 的请求数和成功率必须与审计列表页同条件筛选下的总数一致。
+- 口径对账：同一时间区间内，overview 的请求数和成功率必须与审计列表页同条件筛选下的总数一致。
 
 ## 9. 留给实现者的决定
 
@@ -160,9 +164,9 @@
 
 ## 10. 我替用户做的决定（请审阅时确认）
 
-1. 每个面板一个接口，而不是一个大的 bundle 接口（便于各自加载、各自失败）。
+1. 每个面板一个接口（便于各自加载、各自失败）；KPI、可靠性、延迟三个面板共用同一份数据，合并为 `overview` 接口。
 2. Token、延迟、输出速度只统计成功请求；请求数和客户端分布统计全部请求，与现有接口口径一致。
-3. 普通用户请求「用户」维度返回 422，前端隐藏该页签。
+3. 普通用户请求「用户」维度返回无权限错误，前端隐藏该页签。
 4. Demo 的「用户」和「API Key」维度显示脱敏名称，不隐藏这两个维度。
 5. 旧的 8 个统计接口和 8 个图表组件在同一 PR 中删除。
 6. 热力图按浏览器本地时区计算，由前端传 IANA 时区名。
