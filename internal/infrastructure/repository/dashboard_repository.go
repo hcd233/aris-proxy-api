@@ -88,22 +88,112 @@ func (r *dashboardRepository) QueryStatsSeries(ctx context.Context, apiKeyIDs []
 	})
 }
 
-func (r *dashboardRepository) QueryModelSeries(context.Context, []uint, time.Time, time.Time, enum.Granularity) ([]*modelcall.DashboardModelPoint, error) {
-	return nil, ierr.New(ierr.ErrInternal, "not implemented")
+func (r *dashboardRepository) QueryModelSeries(ctx context.Context, apiKeyIDs []uint, start, end time.Time, granularity enum.Granularity) ([]*modelcall.DashboardModelPoint, error) {
+	if isEmptyScope(apiKeyIDs) {
+		return []*modelcall.DashboardModelPoint{}, nil
+	}
+	key := readCacheKey(constant.ReadCachePurposeDashboardModel, cacheScopeIDs(apiKeyIDs), cacheTimeBucket(start), cacheTimeBucket(end), granularity)
+	return cachedSlice(ctx, r.cache, key, func(loadCtx context.Context) ([]*modelcall.DashboardModelPoint, error) {
+		var results []*modelcall.DashboardModelPoint
+		if err := r.windowQuery(loadCtx, apiKeyIDs, start, end).
+			Select(dateTruncSQL(granularity) + constant.DashboardModelSeriesSelect).
+			Group(constant.DashboardModelSeriesGroup).
+			Order(constant.DashboardModelSeriesGroup).
+			Find(&results).Error; err != nil {
+			return nil, ierr.Wrap(ierr.ErrDBQuery, err, "query dashboard model series")
+		}
+		return results, nil
+	})
 }
 
-func (r *dashboardRepository) QueryTopErrors(context.Context, []uint, time.Time, time.Time, int) ([]*modelcall.DashboardErrorRow, error) {
-	return nil, ierr.New(ierr.ErrInternal, "not implemented")
+func (r *dashboardRepository) QueryTopErrors(ctx context.Context, apiKeyIDs []uint, start, end time.Time, limit int) ([]*modelcall.DashboardErrorRow, error) {
+	if isEmptyScope(apiKeyIDs) {
+		return []*modelcall.DashboardErrorRow{}, nil
+	}
+	key := readCacheKey(constant.ReadCachePurposeDashboardErrors, cacheScopeIDs(apiKeyIDs), cacheTimeBucket(start), cacheTimeBucket(end), limit)
+	return cachedSlice(ctx, r.cache, key, func(loadCtx context.Context) ([]*modelcall.DashboardErrorRow, error) {
+		var results []*modelcall.DashboardErrorRow
+		if err := r.windowQuery(loadCtx, apiKeyIDs, start, end).
+			Where(constant.DashboardConditionFailure).
+			Select(constant.DashboardTopErrorsSelect).
+			Group(constant.DashboardTopErrorsGroup).
+			Order(constant.DashboardOrderCountDesc).
+			Limit(limit).
+			Find(&results).Error; err != nil {
+			return nil, ierr.Wrap(ierr.ErrDBQuery, err, "query dashboard top errors")
+		}
+		return results, nil
+	})
 }
 
-func (r *dashboardRepository) QueryEndpointHealth(context.Context, []uint, time.Time, time.Time, int) ([]*modelcall.DashboardEndpointRow, error) {
-	return nil, ierr.New(ierr.ErrInternal, "not implemented")
+func (r *dashboardRepository) QueryEndpointHealth(ctx context.Context, apiKeyIDs []uint, start, end time.Time, limit int) ([]*modelcall.DashboardEndpointRow, error) {
+	if isEmptyScope(apiKeyIDs) {
+		return []*modelcall.DashboardEndpointRow{}, nil
+	}
+	key := readCacheKey(constant.ReadCachePurposeDashboardEndpoint, cacheScopeIDs(apiKeyIDs), cacheTimeBucket(start), cacheTimeBucket(end), limit)
+	return cachedSlice(ctx, r.cache, key, func(loadCtx context.Context) ([]*modelcall.DashboardEndpointRow, error) {
+		var results []*modelcall.DashboardEndpointRow
+		if err := r.windowQuery(loadCtx, apiKeyIDs, start, end).
+			Select(constant.DashboardEndpointSelect).
+			Group(constant.DashboardEndpointGroup).
+			Order(constant.DashboardOrderRequestsDesc).
+			Limit(limit).
+			Find(&results).Error; err != nil {
+			return nil, ierr.Wrap(ierr.ErrDBQuery, err, "query dashboard endpoint health")
+		}
+		return results, nil
+	})
 }
 
-func (r *dashboardRepository) QueryGroupUsage(context.Context, []uint, time.Time, time.Time, enum.DashboardDimension, string) ([]*modelcall.DashboardGroupRow, error) {
-	return nil, ierr.New(ierr.ErrInternal, "not implemented")
+// groupKeyExpr 维度 → 分组键 SQL 表达式（白名单；user 维度由应用层按 apikey 聚合）
+func groupKeyExpr(dimension enum.DashboardDimension) (string, error) {
+	switch dimension {
+	case enum.DashboardDimensionModel:
+		return constant.DashboardGroupKeyModel, nil
+	case enum.DashboardDimensionAPIKey:
+		return constant.DashboardGroupKeyAPIKey, nil
+	case enum.DashboardDimensionHarness:
+		return constant.AuditHarnessGroupSQL, nil
+	default:
+		return "", ierr.New(ierr.ErrValidation, "unsupported dashboard dimension")
+	}
 }
 
-func (r *dashboardRepository) QueryHeatmap(context.Context, []uint, time.Time, time.Time, string) ([]*modelcall.DashboardHeatmapCell, error) {
-	return nil, ierr.New(ierr.ErrInternal, "not implemented")
+func (r *dashboardRepository) QueryGroupUsage(ctx context.Context, apiKeyIDs []uint, start, end time.Time, dimension enum.DashboardDimension, rulesFingerprint string) ([]*modelcall.DashboardGroupRow, error) {
+	keyExpr, err := groupKeyExpr(dimension)
+	if err != nil {
+		return nil, err
+	}
+	if isEmptyScope(apiKeyIDs) {
+		return []*modelcall.DashboardGroupRow{}, nil
+	}
+	key := readCacheKey(constant.ReadCachePurposeDashboardGroup, cacheScopeIDs(apiKeyIDs), cacheTimeBucket(start), cacheTimeBucket(end), dimension, rulesFingerprint)
+	return cachedSlice(ctx, r.cache, key, func(loadCtx context.Context) ([]*modelcall.DashboardGroupRow, error) {
+		var results []*modelcall.DashboardGroupRow
+		if err := r.windowQuery(loadCtx, apiKeyIDs, start, end).
+			Select(keyExpr + constant.DashboardGroupUsageSelect).
+			Group(constant.DashboardGroupUsageGroup).
+			Order(constant.DashboardGroupUsageOrder).
+			Find(&results).Error; err != nil {
+			return nil, ierr.Wrap(ierr.ErrDBQuery, err, "query dashboard group usage")
+		}
+		return results, nil
+	})
+}
+
+func (r *dashboardRepository) QueryHeatmap(ctx context.Context, apiKeyIDs []uint, start, end time.Time, location string) ([]*modelcall.DashboardHeatmapCell, error) {
+	if isEmptyScope(apiKeyIDs) {
+		return []*modelcall.DashboardHeatmapCell{}, nil
+	}
+	key := readCacheKey(constant.ReadCachePurposeDashboardHeatmap, cacheScopeIDs(apiKeyIDs), cacheTimeBucket(start), cacheTimeBucket(end), location)
+	return cachedSlice(ctx, r.cache, key, func(loadCtx context.Context) ([]*modelcall.DashboardHeatmapCell, error) {
+		var results []*modelcall.DashboardHeatmapCell
+		if err := r.windowQuery(loadCtx, apiKeyIDs, start, end).
+			Select(constant.DashboardHeatmapSelect, location, location).
+			Group(constant.DashboardHeatmapGroup).
+			Find(&results).Error; err != nil {
+			return nil, ierr.Wrap(ierr.ErrDBQuery, err, "query dashboard heatmap")
+		}
+		return results, nil
+	})
 }

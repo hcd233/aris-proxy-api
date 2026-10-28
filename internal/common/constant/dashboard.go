@@ -39,6 +39,56 @@ const (
 	DashboardOutputSpeedExpr = "SUM(output_tokens)" + dashboardStreamFilter + " * 1000.0 / " +
 		"NULLIF(SUM(stream_duration_ms)" + dashboardStreamFilter + ", 0)"
 
+	// DashboardModelSeriesSelect 模型 × 时间桶用量投影（前缀时间桶表达式）
+	DashboardModelSeriesSelect = " AS time, model_id, COUNT(*) AS requests, " +
+		"COALESCE(SUM(input_tokens + output_tokens + cache_read_input_tokens + cache_creation_input_tokens)" +
+		dashboardSuccessFilter + ", 0) AS tokens, " +
+		"COALESCE(SUM(cost_micro)" + dashboardPricedFilter + ", 0) AS cost_micro"
+	// DashboardModelSeriesGroup 模型序列分组/排序
+	DashboardModelSeriesGroup = "model_id, time"
+
+	// DashboardTopErrorsSelect 失败调用热门错误投影
+	DashboardTopErrorsSelect = "upstream_status_code AS status_code, LEFT(error_message, 200) AS message, COUNT(*) AS count"
+	// DashboardConditionFailure 失败调用条件
+	DashboardConditionFailure = "upstream_status_code <> 200"
+	// DashboardTopErrorsGroup 热门错误分组
+	DashboardTopErrorsGroup = "status_code, message"
+	// DashboardOrderCountDesc 按计数降序
+	DashboardOrderCountDesc = "count DESC"
+
+	// DashboardEndpointSelect Endpoint 健康度投影
+	DashboardEndpointSelect = "endpoint, COUNT(*) AS requests, " +
+		"COUNT(*) FILTER (WHERE upstream_status_code <> 200) AS failures, " +
+		"percentile_cont(0.95) WITHIN GROUP (ORDER BY first_token_latency_ms)" + dashboardSuccessFilter + " AS latency_p95_ms, " +
+		DashboardOutputSpeedExpr + " AS output_tokens_per_second, " +
+		"COALESCE(SUM(cost_micro)" + dashboardPricedFilter + ", 0) AS cost_micro"
+	// DashboardEndpointGroup Endpoint 分组
+	DashboardEndpointGroup = "endpoint"
+	// DashboardOrderRequestsDesc 按请求数降序
+	DashboardOrderRequestsDesc = "requests DESC"
+
+	// DashboardGroupKeyModel 模型维度分组键
+	DashboardGroupKeyModel = "model_id"
+	// DashboardGroupKeyAPIKey API Key 维度分组键（转文本，与其他维度统一为字符串键）
+	DashboardGroupKeyAPIKey = "CAST(api_key_id AS TEXT)"
+	// DashboardGroupUsageSelect 分组用量投影的后半段（前缀 "<分组键> AS group_key, "）
+	DashboardGroupUsageSelect = " AS group_key, COUNT(*) AS requests, " +
+		"COALESCE(SUM(input_tokens)" + dashboardSuccessFilter + ", 0) AS input_tokens, " +
+		"COALESCE(SUM(output_tokens)" + dashboardSuccessFilter + ", 0) AS output_tokens, " +
+		"COALESCE(SUM(cache_read_input_tokens)" + dashboardSuccessFilter + ", 0) AS cache_read_tokens, " +
+		"COALESCE(SUM(cache_creation_input_tokens)" + dashboardSuccessFilter + ", 0) AS cache_write_tokens, " +
+		"COALESCE(SUM(cost_micro)" + dashboardPricedFilter + ", 0) AS cost_micro"
+	// DashboardGroupUsageGroup 分组用量分组
+	DashboardGroupUsageGroup = "group_key"
+	// DashboardGroupUsageOrder 分组用量排序：费用优先、请求数次之
+	DashboardGroupUsageOrder = "cost_micro DESC, requests DESC"
+
+	// DashboardHeatmapSelect 星期 × 小时投影；两个 ? 均绑定已校验的 IANA 时区名
+	DashboardHeatmapSelect = "CAST(EXTRACT(ISODOW FROM created_at AT TIME ZONE ?) AS INTEGER) AS weekday, " +
+		"CAST(EXTRACT(HOUR FROM created_at AT TIME ZONE ?) AS INTEGER) AS hour, COUNT(*) AS count"
+	// DashboardHeatmapGroup 热力图分组
+	DashboardHeatmapGroup = "weekday, hour"
+
 	// DashboardTimeBucketAlias 时间桶列别名
 	DashboardTimeBucketAlias = " AS time, "
 	// DashboardGroupByTime 按时间桶分组/排序

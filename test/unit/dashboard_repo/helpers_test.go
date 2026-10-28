@@ -80,7 +80,8 @@ func newReadCache(t *testing.T) *cache.ReadCache {
 // assertSQLContains 断言 SQL（小写比较）包含全部片段
 func assertSQLContains(t *testing.T, sqlText string, fragments ...string) {
 	t.Helper()
-	lower := strings.ToLower(sqlText)
+	// GORM 会给单标识符的 GROUP BY 加引号（"endpoint"），比较前去引号
+	lower := strings.ToLower(strings.ReplaceAll(sqlText, `"`, ""))
 	for _, f := range fragments {
 		if !strings.Contains(lower, strings.ToLower(f)) {
 			t.Errorf("sql missing %q:\n%s", f, sqlText)
