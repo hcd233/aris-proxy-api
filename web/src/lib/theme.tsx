@@ -85,6 +85,21 @@ const RATIO_SEGMENT_COLORS: Record<ThemeName, TokenLayerColors> = {
   moonshot: { input: "#737373", output: "#6E7B8C", cacheRead: "#FFEED9", cacheCreated: "#A8BDD8" },
 };
 
+export interface StatusColors {
+  positive: string;
+  warning: string;
+  negative: string;
+  muted: string;
+}
+
+/* Status palette for recharts (mirrors --positive/--warning/--negative in
+ * globals.css; recharts needs raw strings). Used by the dashboard reliability
+ * bars and health dots. */
+const STATUS_COLORS: Record<ThemeName, StatusColors> = {
+  anthropic: { positive: "#4F7F6F", warning: "#B9852F", negative: "#B3564F", muted: "#8C7E72" },
+  moonshot: { positive: "#A8BDD8", warning: "#FFEED9", negative: "#E07A80", muted: "#595959" },
+};
+
 function chartSeriesColors(theme: ThemeName): readonly string[] {
   return CHART_SERIES_COLORS[theme];
 }
@@ -181,6 +196,10 @@ export function useChartSeriesColors(): readonly string[] {
 
 export function useTokenLayerColors(): TokenLayerColors {
   return tokenLayerColors(useTheme().theme);
+}
+
+export function useStatusColors(): StatusColors {
+  return STATUS_COLORS[useTheme().theme];
 }
 
 export function useRatioSegmentColors(): TokenLayerColors {

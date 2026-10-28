@@ -1,10 +1,11 @@
+import { formatDecimal, formatDurationMs } from "./utils";
 import type {
   DashboardHeatmapCell,
   DashboardModelPoint,
   DashboardStats,
   DashboardStatsPoint,
   DashboardTokens,
-} from "@/lib/types";
+} from "./types";
 
 /** 环比方向的好坏色调 */
 export type DeltaTone = "good" | "bad" | "neutral";
@@ -109,4 +110,34 @@ export function heatmapMatrix(cells: DashboardHeatmapCell[]): number[][] {
       m[c.weekday][c.hour] += c.count;
   }
   return m;
+}
+
+const DASH = "\u2014";
+
+/**
+ * 环比文案：用量类为相对百分比，比率类为百分点（pt），延迟为时长差；无环比渲染「—」。
+ * 箭头只表达涨跌方向，好坏由 deltaTone 着色。
+ */
+export function formatDelta(kind: KpiKind, delta: number | null): string {
+  if (delta == null || !Number.isFinite(delta)) return DASH;
+  const arrow = delta >= 0 ? "\u25B2" : "\u25BC";
+  const abs = Math.abs(delta);
+  if (kind === "latency") return `${arrow} ${formatDurationMs(abs)}`;
+  if (kind === "successRate" || kind === "cacheHitRate") {
+    return `${arrow} ${formatDecimal(abs * 100, 1)}pt`;
+  }
+  return `${arrow} ${formatDecimal(abs * 100, 1)}%`;
+}
+
+/** 0-1 比率 → 百分比文案（null 渲染「—」） */
+export function formatRate(rate: number | null | undefined, digits = 1): string {
+  if (rate == null || !Number.isFinite(rate)) return DASH;
+  return `${formatDecimal(rate * 100, digits)}%`;
+}
+
+/** KPI 用短金额：≥1 保留 2 位小数，<1 保留 4 位；带千分位 */
+export function formatCostShort(v: number | null | undefined, currency?: string): string {
+  if (v == null || !Number.isFinite(v)) return DASH;
+  const symbol = currency === "USD" ? "$" : "";
+  return `${symbol}${formatDecimal(v, Math.abs(v) >= 1 ? 2 : 4)}`;
 }

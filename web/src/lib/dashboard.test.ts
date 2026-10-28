@@ -4,6 +4,8 @@ import {
   deltaDiff,
   deltaPct,
   deltaTone,
+  formatCostShort,
+  formatDelta,
   foldTopModels,
   heatmapMatrix,
   OTHER_KEY,
@@ -136,5 +138,35 @@ describe("heatmapMatrix", () => {
   it("ignores out-of-range cells", () => {
     const m = heatmapMatrix([{ weekday: 9, hour: 30, count: 1 }]);
     expect(m.flat().reduce((a, b) => a + b, 0)).toBe(0);
+  });
+});
+
+describe("formatDelta", () => {
+  it("formats relative change with an arrow", () => {
+    expect(formatDelta("requests", 0.124)).toBe("▲ 12.4%");
+    expect(formatDelta("cost", -0.031)).toBe("▼ 3.1%");
+  });
+  it("formats rate changes as percentage points", () => {
+    expect(formatDelta("successRate", -0.003)).toBe("▼ 0.3pt");
+    expect(formatDelta("cacheHitRate", 0.042)).toBe("▲ 4.2pt");
+  });
+  it("formats latency changes as durations", () => {
+    expect(formatDelta("latency", -210)).toBe("▼ 210ms");
+    expect(formatDelta("latency", 1500)).toBe("▲ 1.5s");
+  });
+  it("renders a dash without a delta", () => {
+    expect(formatDelta("requests", null)).toBe("—");
+  });
+});
+
+describe("formatCostShort", () => {
+  it("keeps two decimals at or above one unit", () => {
+    expect(formatCostShort(184.318273, "USD")).toBe("$184.32");
+  });
+  it("keeps up to four significant decimals below one unit", () => {
+    expect(formatCostShort(0.012345, "USD")).toBe("$0.0123");
+  });
+  it("uses thousands separators", () => {
+    expect(formatCostShort(12345.6, "USD")).toBe("$12,345.6");
   });
 });
