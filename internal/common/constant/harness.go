@@ -27,16 +27,6 @@ const (
 	// AuditHarnessGroupSQL 审计侧 harness 分组表达式：「UA → 最长命中规则名」，未命中归 Other。
 	AuditHarnessGroupSQL = "COALESCE((SELECT r.name FROM agent_harness_rules r WHERE lower(user_agent) LIKE r.pattern || '%' ORDER BY length(r.pattern) DESC LIMIT 1), 'Other')"
 
-	// AuditHarnessTrendSelectPrefix 审计走势投影的前半段（分组键 + 别名），
-	// 与时间桶表达式、AuditHarnessTrendSelectSuffix 顺序拼接。
-	AuditHarnessTrendSelectPrefix = AuditHarnessGroupSQL + " AS harness, "
-
-	// AuditHarnessTrendSelectSuffix 审计走势投影的后半段（时间桶别名 + 计数）。
-	AuditHarnessTrendSelectSuffix = " AS time, COUNT(*) AS count"
-
-	// AuditHarnessTrendGroup 审计走势的分组与排序列。
-	AuditHarnessTrendGroup = "harness, time"
-
 	// SessionHarnessResolveSQL 会话侧「UA → 最长命中规则名」的标量子查询。
 	//
 	// 与 Go 侧 MatchRule 同语义（ORDER BY length(pattern) DESC LIMIT 1）；未命中时返回 NULL，

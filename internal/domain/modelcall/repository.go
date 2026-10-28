@@ -8,7 +8,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
 	"github.com/hcd233/aris-proxy-api/internal/common/filter"
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall/aggregate"
@@ -37,19 +36,6 @@ type AuditRepository interface {
 	// ListByAPIKeyIDs 按 api_key_id IN (...) 分页查询；apiKeyIDs 为空时返回空结果且不打 SQL
 	ListByAPIKeyIDs(ctx context.Context, apiKeyIDs []uint, param model.CommonParam, startTime, endTime time.Time, criteria *filter.FilterCriteria) ([]*aggregate.ModelCallAudit, *model.PageInfo, error)
 
-	// QueryModelCost 模型成本排行（group by model_id, pricing_currency；仅带四维拆分的行）（仅统计上游状态码 200 的记录）
-	//
-	//	@receiver r AuditRepository
-	//	@param ctx context.Context
-	//	@param apiKeyIDs []uint nil=不过滤（admin 路径）；空=无 Key（调用方已短路）
-	//	@param startTime time.Time
-	//	@param endTime time.Time
-	//	@return []*ModelCostPoint
-	//	@return error
-	//	@author centonhuang
-	//	@update 2026-10-07 10:00:00
-	QueryModelCost(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time) ([]*ModelCostPoint, error)
-
 	// BatchGetRelations 批量查询审计列表所需的 API Key/User 展示信息。
 	BatchGetRelations(ctx context.Context, apiKeyIDs []uint) (map[uint]*AuditRelation, error)
 
@@ -64,59 +50,4 @@ type AuditRepository interface {
 
 	// ListDistinctUserAgents 查询去重的 User-Agent 列表（排除空值）。apiKeyIDs 为 nil 时查全部（admin/demo），非 nil 时按 key 过滤（空列表返回空结果，名下无 Key 不得越权查全量）。
 	ListDistinctUserAgents(ctx context.Context, apiKeyIDs []uint, keyword string, startTime, endTime time.Time) ([]string, error)
-
-	// QueryModelTrend 按模型 + 时间桶统计调用次数（仅统计上游状态码 200 的记录）。apiKeyIDs 为 nil 时查全部（admin），非 nil 时按 key 过滤（空列表返回空结果，名下无 Key 不得越权查全量）。
-	QueryModelTrend(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*ModelTrendPoint, error)
-	// QueryHarnessTrend 按 agent harness 聚合调用量走势（统计全部调用，含失败）。
-	// rulesFingerprint 参与读缓存键：规则变更后键随之变化，历史数据立即按新规则分组。
-	QueryHarnessTrend(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity, rulesFingerprint string) ([]*HarnessTrendPoint, error)
-
-	// QueryRequestRate 按模型 + 时间桶统计请求成功率。apiKeyIDs 为 nil 时查全部（admin），非 nil 时按 key 过滤（空列表返回空结果，名下无 Key 不得越权查全量）。
-	QueryRequestRate(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*RequestRatePoint, error)
-
-	// QueryTokenThroughput 按模型 + 时间桶统计 Token 吞吐量（仅统计上游状态码 200 的记录）。apiKeyIDs 为 nil 时查全部（admin），非 nil 时按 key 过滤（空列表返回空结果，名下无 Key 不得越权查全量）。
-	QueryTokenThroughput(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*TokenThroughputPoint, error)
-
-	// QueryFirstTokenLatency 按模型 + 时间桶统计平均首 Token 延迟（仅统计上游状态码 200 的记录）。apiKeyIDs 为 nil 时查全部（admin），非 nil 时按 key 过滤（空列表返回空结果，名下无 Key 不得越权查全量）。
-	QueryFirstTokenLatency(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*FirstTokenLatencyPoint, error)
-}
-
-// HarnessTrendPoint agent harness 调用趋势的数据点
-type HarnessTrendPoint struct {
-	Harness string
-	Time    time.Time
-	Count   int
-}
-
-// ModelTrendPoint 模型调用趋势的数据点
-type ModelTrendPoint struct {
-	ModelID string    `gorm:"column:model_id"`
-	Time    time.Time `gorm:"column:time"`
-	Count   int       `gorm:"column:count"`
-}
-
-// RequestRatePoint 请求成功率的数据点
-type RequestRatePoint struct {
-	ModelID string    `gorm:"column:model_id"`
-	Time    time.Time `gorm:"column:time"`
-	Total   int       `gorm:"column:total"`
-	Success int       `gorm:"column:success"`
-}
-
-// TokenThroughputPoint Token 吞吐量的数据点
-type TokenThroughputPoint struct {
-	ModelID               string    `gorm:"column:model_id"`
-	Time                  time.Time `gorm:"column:time"`
-	InputTokens           int       `gorm:"column:input_tokens"`
-	OutputTokens          int       `gorm:"column:output_tokens"`
-	CacheCreationTokens   int       `gorm:"column:cache_creation_tokens"`
-	CacheReadTokens       int       `gorm:"column:cache_read_tokens"`
-	OutputTokensPerSecond float64   `gorm:"column:output_tokens_per_second"`
-}
-
-// FirstTokenLatencyPoint 首 Token 延迟的数据点
-type FirstTokenLatencyPoint struct {
-	ModelID          string    `gorm:"column:model_id"`
-	Time             time.Time `gorm:"column:time"`
-	AverageLatencyMs float64   `gorm:"column:average_latency_ms"`
 }

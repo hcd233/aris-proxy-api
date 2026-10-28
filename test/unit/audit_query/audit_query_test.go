@@ -16,16 +16,14 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/common/model"
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall"
 	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall/aggregate"
-	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/samber/lo"
 )
 
 // ─── fake repository ─────────────────────────────────────
 
 type fakeAuditRepo struct {
-	listAllFunc            func(ctx context.Context, param model.CommonParam, startTime, endTime time.Time, criteria *filter.FilterCriteria) ([]*aggregate.ModelCallAudit, *model.PageInfo, error)
-	listByAPIKeyIDsFn      func(ctx context.Context, apiKeyIDs []uint, param model.CommonParam, startTime, endTime time.Time, criteria *filter.FilterCriteria) ([]*aggregate.ModelCallAudit, *model.PageInfo, error)
-	queryTokenThroughputFn func(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.TokenThroughputPoint, error)
+	listAllFunc       func(ctx context.Context, param model.CommonParam, startTime, endTime time.Time, criteria *filter.FilterCriteria) ([]*aggregate.ModelCallAudit, *model.PageInfo, error)
+	listByAPIKeyIDsFn func(ctx context.Context, apiKeyIDs []uint, param model.CommonParam, startTime, endTime time.Time, criteria *filter.FilterCriteria) ([]*aggregate.ModelCallAudit, *model.PageInfo, error)
 
 	listDistinctUserNamesFn   func(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error)
 	listDistinctModelsFn      func(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error)
@@ -36,11 +34,6 @@ type fakeAuditRepo struct {
 	listAllCalls       int
 	listByAPIKeyIDsCnt int
 	lastAPIKeyIDs      []uint
-
-	queryModelTrendCnt        int
-	queryRequestRateCnt       int
-	queryTokenThroughputCnt   int
-	queryFirstTokenLatencyCnt int
 }
 
 func (f *fakeAuditRepo) Save(ctx context.Context, a *aggregate.ModelCallAudit) error { return nil }
@@ -67,37 +60,6 @@ func (f *fakeAuditRepo) BatchGetRelations(ctx context.Context, apiKeyIDs []uint)
 		return f.batchGetRelationsFn(ctx, apiKeyIDs)
 	}
 	return map[uint]*modelcall.AuditRelation{}, nil
-}
-
-func (f *fakeAuditRepo) QueryHarnessTrend(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity, rulesFingerprint string) ([]*modelcall.HarnessTrendPoint, error) {
-	return nil, nil
-}
-
-func (f *fakeAuditRepo) QueryModelTrend(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.ModelTrendPoint, error) {
-	f.queryModelTrendCnt++
-	return nil, nil
-}
-
-func (f *fakeAuditRepo) QueryRequestRate(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.RequestRatePoint, error) {
-	f.queryRequestRateCnt++
-	return nil, nil
-}
-
-func (f *fakeAuditRepo) QueryTokenThroughput(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.TokenThroughputPoint, error) {
-	f.queryTokenThroughputCnt++
-	if f.queryTokenThroughputFn != nil {
-		return f.queryTokenThroughputFn(ctx, apiKeyIDs, startTime, endTime, granularity)
-	}
-	return nil, nil
-}
-
-func (f *fakeAuditRepo) QueryFirstTokenLatency(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.FirstTokenLatencyPoint, error) {
-	f.queryFirstTokenLatencyCnt++
-	return nil, nil
-}
-
-func (f *fakeAuditRepo) QueryModelCost(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time) ([]*modelcall.ModelCostPoint, error) {
-	return nil, nil
 }
 
 func (f *fakeAuditRepo) ListDistinctUserNames(ctx context.Context, apiKeyIDs []uint, keyword string, startTime, endTime time.Time) ([]string, error) {
@@ -313,9 +275,8 @@ func TestListAuditOption_DispatchesByField(t *testing.T) {
 
 	userNamesCalled, modelsCalled, statusCodesCalled, userAgentsCalled := false, false, false, false
 	repo := &fakeAuditRepo{
-		listAllFunc:            nil,
-		listByAPIKeyIDsFn:      nil,
-		queryTokenThroughputFn: nil,
+		listAllFunc:       nil,
+		listByAPIKeyIDsFn: nil,
 		listDistinctUserNamesFn: func(ctx context.Context, keyword string, startTime, endTime time.Time) ([]string, error) {
 			userNamesCalled = true
 			return []string{"user1", "user2"}, nil
@@ -425,22 +386,6 @@ func TestAuditService_DemoOptionsUseFullQuery(t *testing.T) {
 		nil,
 		nil,
 		auditquery.NewListAuditOptionHandler(repo, &fakeAPIKeyIDLookup{}),
-		nil,
-		nil,
-		nil,
-		nil,
-		nil,
-		nil,
-		nil,
-		nil,
-		nil,
-		nil,
-		nil,
-		nil,
-		nil,
-		nil,
-		nil,
-		nil,
 	)
 
 	items, err := svc.ListAuditOption(context.Background(), enum.PermissionDemo, 0, constant.AuditFilterFieldUA, "", time.Time{}, time.Time{})
@@ -453,161 +398,6 @@ func TestAuditService_DemoOptionsUseFullQuery(t *testing.T) {
 }
 
 // ─── FillTrendSeries / FillRateSeries 测试 ────────────────────────
-
-func TestFillTrendSeries_FillsCompleteRequestedRange(t *testing.T) {
-	t.Parallel()
-	t1 := time.Date(2026, 5, 1, 10, 0, 0, 0, time.UTC)
-	t2 := t1.Add(time.Hour)
-	t3 := t1.Add(2 * time.Hour)
-	t4 := t1.Add(3 * time.Hour)
-	points := []*modelcall.ModelTrendPoint{
-		{ModelID: "gpt-4", Time: t1, Count: 3},
-		{ModelID: "gpt-4", Time: t3, Count: 5},
-		{ModelID: "claude", Time: t2, Count: 1},
-	}
-	items := auditport.FillTrendSeries(points, t1, t4, enum.GranularityHour)
-	if len(items) != 2 {
-		t.Fatalf("len(items) = %d, want 2", len(items))
-	}
-	for _, it := range items {
-		if len(it.Points) != 4 {
-			t.Errorf("model %s: points len = %d, want 4 (complete requested range)", it.ModelID, len(it.Points))
-		}
-	}
-	byModel := map[string]map[time.Time]int{}
-	for _, it := range items {
-		byModel[it.ModelID] = map[time.Time]int{}
-		for _, p := range it.Points {
-			byModel[it.ModelID][p.Time] = p.Count
-		}
-	}
-	if byModel["gpt-4"][t2] != 0 || byModel["gpt-4"][t4] != 0 {
-		t.Errorf("gpt-4 missing slots should be 0, got t2=%d t4=%d", byModel["gpt-4"][t2], byModel["gpt-4"][t4])
-	}
-	if byModel["claude"][t1] != 0 || byModel["claude"][t3] != 0 || byModel["claude"][t4] != 0 {
-		t.Errorf("claude missing slots should be 0, got t1=%d t3=%d t4=%d", byModel["claude"][t1], byModel["claude"][t3], byModel["claude"][t4])
-	}
-}
-
-func TestFillTrendSeries_Empty(t *testing.T) {
-	t.Parallel()
-	items := auditport.FillTrendSeries(nil, time.Time{}, time.Time{}, enum.GranularityHour)
-	if len(items) != 0 {
-		t.Errorf("empty input should return empty, got %d items", len(items))
-	}
-}
-
-func TestFillRateSeries_CalculatesSuccessRate(t *testing.T) {
-	t.Parallel()
-	t1 := time.Date(2026, 5, 1, 10, 0, 0, 0, time.UTC)
-	t2 := t1.Add(time.Hour)
-	points := []*modelcall.RequestRatePoint{
-		{ModelID: "gpt-4", Time: t1, Total: 10, Success: 8},
-		{ModelID: "gpt-4", Time: t2, Total: 5, Success: 5},
-	}
-	items := auditport.FillRateSeries(points, t1, t2, enum.GranularityHour)
-	if len(items) != 1 {
-		t.Fatalf("len(items) = %d, want 1", len(items))
-	}
-	pts := items[0].Points
-	if len(pts) != 2 {
-		t.Fatalf("pts len = %d, want 2", len(pts))
-	}
-	if pts[0].Total != 10 || pts[0].Success != 8 || pts[0].Failed != 2 || pts[0].SuccessRate != 0.8 {
-		t.Errorf("pts[0] mismatch: %+v", pts[0])
-	}
-	if pts[1].Total != 5 || pts[1].Success != 5 || pts[1].Failed != 0 || pts[1].SuccessRate != 1.0 {
-		t.Errorf("pts[1] mismatch: %+v", pts[1])
-	}
-}
-
-func TestFillRateSeries_RoundsRepeatingDecimal(t *testing.T) {
-	t.Parallel()
-	t1 := time.Date(2026, 5, 1, 10, 0, 0, 0, time.UTC)
-	// 1/3 是无限循环小数，旧实现直接把 0.3333333333333333 透传给前端，
-	// 前端 *100 后会得到 33.33333333333333 的浮点尾差；必须 round 到万分位。
-	points := []*modelcall.RequestRatePoint{
-		{ModelID: "gpt-4", Time: t1, Total: 3, Success: 1},
-	}
-	items := auditport.FillRateSeries(points, t1, t1, enum.GranularityHour)
-	if len(items) != 1 || len(items[0].Points) != 1 {
-		t.Fatalf("unexpected series: %+v", items)
-	}
-	if rate := items[0].Points[0].SuccessRate; rate != 0.3333 {
-		t.Errorf("expected successRate 0.3333 (rounded), got %.16f", rate)
-	}
-}
-
-func TestFillRateSeries_MatchesDBBucketAcrossTimeZones(t *testing.T) {
-	t.Parallel()
-	start := time.Date(2026, 6, 1, 9, 4, 59, 0, time.UTC)
-	end := time.Date(2026, 6, 1, 9, 59, 59, 0, time.UTC)
-	shanghai := time.FixedZone("Asia/Shanghai", 8*60*60)
-	points := []*modelcall.RequestRatePoint{
-		{ModelID: "gpt-4", Time: time.Date(2026, 6, 1, 17, 0, 0, 0, shanghai), Total: 10, Success: 8},
-	}
-
-	items := auditport.FillRateSeries(points, start, end, enum.GranularityHour)
-
-	if len(items) != 1 {
-		t.Fatalf("len(items) = %d, want 1", len(items))
-	}
-	if len(items[0].Points) != 1 {
-		t.Fatalf("points len = %d, want 1", len(items[0].Points))
-	}
-	pt := items[0].Points[0]
-	if pt.Total != 10 || pt.Success != 8 || pt.Failed != 2 || pt.SuccessRate != 0.8 {
-		t.Fatalf("timezone-equivalent bucket lost aggregate data: %+v", pt)
-	}
-}
-
-func TestFillTokenThroughputSeries_FillsCompleteRequestedRange(t *testing.T) {
-	t.Parallel()
-	t1 := time.Date(2026, 5, 1, 10, 0, 0, 0, time.UTC)
-	t2 := t1.Add(time.Hour)
-	t3 := t1.Add(2 * time.Hour)
-	points := []*modelcall.TokenThroughputPoint{
-		{ModelID: "gpt-4", Time: t1, OutputTokens: 20},
-	}
-	items := auditport.FillTokenThroughputSeries(points, t1, t3, enum.GranularityHour)
-	if len(items) != 3 {
-		t.Fatalf("len(items) = %d, want 3", len(items))
-	}
-	pts := items
-	if len(pts) != 3 {
-		t.Fatalf("pts len = %d, want 3", len(pts))
-	}
-	if !pts[1].Time.Equal(t2) || pts[1].OutputTokens != 0 {
-		t.Errorf("missing token bucket mismatch: %+v", pts[1])
-	}
-}
-
-func TestFillTokenThroughputSeries_MatchesDBBucketAcrossTimeZones(t *testing.T) {
-	t.Parallel()
-	start := time.Date(2026, 6, 1, 9, 4, 59, 0, time.UTC)
-	end := time.Date(2026, 6, 1, 9, 59, 59, 0, time.UTC)
-	shanghai := time.FixedZone("Asia/Shanghai", 8*60*60)
-	points := []*modelcall.TokenThroughputPoint{
-		{
-			ModelID:             "gpt-4",
-			Time:                time.Date(2026, 6, 1, 17, 0, 0, 0, shanghai),
-			InputTokens:         11,
-			OutputTokens:        22,
-			CacheCreationTokens: 33,
-			CacheReadTokens:     44,
-		},
-	}
-
-	items := auditport.FillTokenThroughputSeries(points, start, end, enum.GranularityHour)
-
-	if len(items) != 1 {
-		t.Fatalf("len(items) = %d, want 1", len(items))
-	}
-	pt := items[0]
-	if pt.InputTokens != 11 || pt.OutputTokens != 22 || pt.CacheCreationTokens != 33 || pt.CacheReadTokens != 44 {
-		t.Fatalf("timezone-equivalent bucket lost token aggregate data: %+v", pt)
-	}
-}
 
 // ─── AuditService 派发测试 ────────────────────────
 
@@ -625,22 +415,6 @@ func TestAuditService_DispatchesByPermission(t *testing.T) {
 		auditquery.NewListAllAuditLogsHandler(repo),
 		auditquery.NewListAuditLogsByUserHandler(repo, &fakeAPIKeyIDLookup{}),
 		auditquery.NewListAuditOptionHandler(repo, &fakeAPIKeyIDLookup{}),
-		auditquery.NewModelTrendHandler(repo),
-		auditquery.NewModelTrendByUserHandler(repo, &fakeAPIKeyIDLookup{}),
-		nil,
-		nil,
-		auditquery.NewRequestRateHandler(repo),
-		auditquery.NewRequestRateByUserHandler(repo, &fakeAPIKeyIDLookup{}),
-		auditquery.NewTokenThroughputHandler(repo),
-		auditquery.NewTokenThroughputByUserHandler(repo, &fakeAPIKeyIDLookup{}),
-		auditquery.NewTokenRateHandler(repo),
-		auditquery.NewTokenRateByUserHandler(repo, &fakeAPIKeyIDLookup{}),
-		auditquery.NewModelUsageHandler(repo),
-		auditquery.NewModelUsageByUserHandler(repo, &fakeAPIKeyIDLookup{}),
-		auditquery.NewFirstTokenLatencyHandler(repo),
-		auditquery.NewFirstTokenLatencyByUserHandler(repo, &fakeAPIKeyIDLookup{}),
-		nil,
-		nil,
 	)
 
 	if _, _, err := svc.ListLogs(context.Background(), enum.PermissionAdmin, 1, auditport.ListAuditLogsParams{Page: 1, PageSize: 20}); err != nil {
@@ -664,117 +438,7 @@ func TestAuditService_DispatchesByPermission(t *testing.T) {
 
 // ─── ModelUsage 聚合测试 ────────────────────────
 
-func TestAggregateModelUsage_SumsPerModel(t *testing.T) {
-	t.Parallel()
-	t1 := time.Date(2026, 5, 1, 10, 0, 0, 0, time.UTC)
-	t2 := t1.Add(time.Hour)
-	repo := &fakeAuditRepo{
-		queryTokenThroughputFn: func(ctx context.Context, apiKeyIDs []uint, startTime, endTime time.Time, granularity enum.Granularity) ([]*modelcall.TokenThroughputPoint, error) {
-			return []*modelcall.TokenThroughputPoint{
-				{ModelID: "gpt-4", Time: t1, InputTokens: 100, OutputTokens: 50, CacheReadTokens: 30, CacheCreationTokens: 10},
-				{ModelID: "gpt-4", Time: t2, InputTokens: 200, OutputTokens: 150, CacheReadTokens: 20, CacheCreationTokens: 5},
-				{ModelID: "claude", Time: t1, InputTokens: 300, OutputTokens: 250, CacheReadTokens: 50, CacheCreationTokens: 15},
-			}, nil
-		},
-	}
-	h := auditquery.NewModelUsageHandler(repo)
-	items, err := h.Handle(context.Background(), auditquery.ModelUsageQuery{
-		StartTime: t1, EndTime: t2, Granularity: enum.GranularityHour,
-	})
-	if err != nil {
-		t.Fatalf("unexpected err: %v", err)
-	}
-	if len(items) != 2 {
-		t.Fatalf("len(items) = %d, want 2", len(items))
-	}
-	byModel := make(map[string]*dto.ModelUsageItem, len(items))
-	for _, it := range items {
-		byModel[it.ModelID] = it
-	}
-	gpt, ok := byModel["gpt-4"]
-	if !ok {
-		t.Fatal("missing gpt-4 in aggregated items")
-	}
-	if gpt.InputTokens != 300 || gpt.OutputTokens != 200 || gpt.CacheReadTokens != 50 || gpt.CacheCreationTokens != 15 {
-		t.Errorf("gpt-4 totals mismatch: %+v", gpt)
-	}
-	claude, ok := byModel["claude"]
-	if !ok {
-		t.Fatal("missing claude in aggregated items")
-	}
-	if claude.InputTokens != 300 || claude.OutputTokens != 250 || claude.CacheReadTokens != 50 || claude.CacheCreationTokens != 15 {
-		t.Errorf("claude totals mismatch: %+v", claude)
-	}
-}
-
 // ─── ByUser 指标查询：无 API Key 用户不得越权 ───────────────────
-
-// TestByUserMetrics_EmptyAPIKeyIDsShortCircuit 回归测试（越权修复，2026-08-25）：
-// 用户名下无 API Key 时 LookupIDsByUserID 返回非 nil 空 slice（lo.Map 产物），
-// 6 个 ByUser 指标 handler 必须直接返回空结果且不触达 repository——
-// 修复前空 key 列表被 repository 当作"不过滤"，退化为全平台聚合查询。
-func TestByUserMetrics_EmptyAPIKeyIDsShortCircuit(t *testing.T) {
-	t.Parallel()
-
-	lookup := &fakeAPIKeyIDLookup{
-		lookupFunc: func(ctx context.Context, userID uint) ([]uint, error) {
-			return []uint{}, nil
-		},
-	}
-	repo := &fakeAuditRepo{}
-	ctx := context.Background()
-	now := time.Now()
-	start := now.Add(-24 * time.Hour)
-	end := now.Add(24 * time.Hour)
-
-	if points, err := auditquery.NewModelTrendByUserHandler(repo, lookup).
-		Handle(ctx, auditquery.ModelTrendByUserQuery{UserID: 1, StartTime: start, EndTime: end, Granularity: enum.GranularityHour}); err != nil || len(points) != 0 {
-		t.Errorf("ModelTrendByUser: got (%d points, err %v); want (0, nil)", len(points), err)
-	}
-	if repo.queryModelTrendCnt != 0 {
-		t.Errorf("ModelTrendByUser: repo queried %d times, want 0 (short-circuit)", repo.queryModelTrendCnt)
-	}
-
-	if points, err := auditquery.NewRequestRateByUserHandler(repo, lookup).
-		Handle(ctx, auditquery.RequestRateByUserQuery{UserID: 1, StartTime: start, EndTime: end, Granularity: enum.GranularityHour}); err != nil || len(points) != 0 {
-		t.Errorf("RequestRateByUser: got (%d points, err %v); want (0, nil)", len(points), err)
-	}
-	if repo.queryRequestRateCnt != 0 {
-		t.Errorf("RequestRateByUser: repo queried %d times, want 0 (short-circuit)", repo.queryRequestRateCnt)
-	}
-
-	if points, err := auditquery.NewTokenThroughputByUserHandler(repo, lookup).
-		Handle(ctx, auditquery.TokenThroughputByUserQuery{UserID: 1, StartTime: start, EndTime: end, Granularity: enum.GranularityHour}); err != nil || len(points) != 0 {
-		t.Errorf("TokenThroughputByUser: got (%d points, err %v); want (0, nil)", len(points), err)
-	}
-	if repo.queryTokenThroughputCnt != 0 {
-		t.Errorf("TokenThroughputByUser: repo queried %d times, want 0 (short-circuit)", repo.queryTokenThroughputCnt)
-	}
-
-	if items, err := auditquery.NewModelUsageByUserHandler(repo, lookup).
-		Handle(ctx, auditquery.ModelUsageByUserQuery{UserID: 1, StartTime: start, EndTime: end, Granularity: enum.GranularityHour}); err != nil || len(items) != 0 {
-		t.Errorf("ModelUsageByUser: got (%d items, err %v); want (0, nil)", len(items), err)
-	}
-	if repo.queryTokenThroughputCnt != 0 {
-		t.Errorf("ModelUsageByUser: repo queried %d times, want 0 (short-circuit)", repo.queryTokenThroughputCnt)
-	}
-
-	if items, err := auditquery.NewTokenRateByUserHandler(repo, lookup).
-		Handle(ctx, auditquery.TokenRateByUserQuery{UserID: 1, StartTime: start, EndTime: end, Granularity: enum.GranularityHour}); err != nil || len(items) != 0 {
-		t.Errorf("TokenRateByUser: got (%d items, err %v); want (0, nil)", len(items), err)
-	}
-	if repo.queryTokenThroughputCnt != 0 {
-		t.Errorf("TokenRateByUser: repo queried %d times, want 0 (short-circuit)", repo.queryTokenThroughputCnt)
-	}
-
-	if items, err := auditquery.NewFirstTokenLatencyByUserHandler(repo, lookup).
-		Handle(ctx, auditquery.FirstTokenLatencyByUserQuery{UserID: 1, StartTime: start, EndTime: end, Granularity: enum.GranularityHour}); err != nil || len(items) != 0 {
-		t.Errorf("FirstTokenLatencyByUser: got (%d items, err %v); want (0, nil)", len(items), err)
-	}
-	if repo.queryFirstTokenLatencyCnt != 0 {
-		t.Errorf("FirstTokenLatencyByUser: repo queried %d times, want 0 (short-circuit)", repo.queryFirstTokenLatencyCnt)
-	}
-}
 
 // TestListAuditOption_UserScopeRestricted user 视角的筛选选项必须限制在名下
 // key 范围内：UserID 非零时先 lookup 名下 key 并传递给仓储（2026-08-26 越权

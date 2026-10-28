@@ -97,14 +97,8 @@ describe("② 表单与列表", () => {
     expect(read(p)).toContain("<ScrollArea");
   });
 
-  it("代码 / JSON 预览与图表卡片表格用 ScrollArea", () => {
+  it("代码 / JSON 预览用 ScrollArea", () => {
     expect(read("app/(dashboard)/dataset/page.tsx")).not.toMatch(/overflow-auto/);
-    for (const p of [
-      "components/charts/model-cost-bar-chart.tsx",
-      "components/charts/model-token-bar-chart.tsx",
-    ]) {
-      expect(read(p)).toContain("<ScrollArea");
-    }
   });
 });
 
@@ -150,12 +144,6 @@ describe("③ 组合修正", () => {
     expect(read("app/(dashboard)/upstream/flat-view.tsx")).not.toMatch(/<button[\s>]/);
     expect(read("app/(dashboard)/upstream/grouped-view.tsx")).not.toMatch(/<button[\s>]/);
     expect(read("components/shared/reading-layout.tsx")).not.toMatch(/<button[\s>]/);
-  });
-
-  it("比例条浮层用 Tooltip", () => {
-    const src = read("components/charts/stacked-ratio-bar.tsx");
-    expect(src).not.toContain("createPortal");
-    expect(src).toContain("TooltipContent");
   });
 });
 

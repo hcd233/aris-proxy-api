@@ -113,25 +113,9 @@ var ApplicationModule = fx.Module(constant.DigNameApplicationModule,
 		NewHandleCallbackHandler,
 		auditquery.NewListAllAuditLogsHandler,
 		NewListAuditLogsByUserHandler,
-		auditquery.NewModelTrendHandler,
-		NewModelTrendByUserHandler,
-		auditquery.NewRequestRateHandler,
-		NewRequestRateByUserHandler,
-		auditquery.NewTokenThroughputHandler,
-		NewTokenThroughputByUserHandler,
-		auditquery.NewTokenRateHandler,
-		NewTokenRateByUserHandler,
-		auditquery.NewModelUsageHandler,
-		NewModelUsageByUserHandler,
-		auditquery.NewFirstTokenLatencyHandler,
-		NewModelCostHandler,
-		NewModelCostByUserHandler,
-		NewFirstTokenLatencyByUserHandler,
 		NewListAuditOptionHandler,
 		NewAuditService,
 		NewDashboardService,
-		NewHarnessTrendHandler,
-		NewHarnessTrendByUserHandler,
 		NewListCronJobsHandler,
 		NewUpdateCronJobHandler,
 		NewTriggerCronJobHandler,
@@ -374,75 +358,19 @@ func NewListAuditOptionHandler(repo modelcall.AuditRepository, apiKeyRepo apikey
 	return auditquery.NewListAuditOptionHandler(repo, apiKeyRepo)
 }
 
-func NewModelTrendByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apikey.APIKeyRepository) auditquery.ModelTrendByUserHandler {
-	return auditquery.NewModelTrendByUserHandler(repo, apiKeyRepo)
-}
-
-func NewRequestRateByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apikey.APIKeyRepository) auditquery.RequestRateByUserHandler {
-	return auditquery.NewRequestRateByUserHandler(repo, apiKeyRepo)
-}
-
-func NewTokenThroughputByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apikey.APIKeyRepository) auditquery.TokenThroughputByUserHandler {
-	return auditquery.NewTokenThroughputByUserHandler(repo, apiKeyRepo)
-}
-
-func NewTokenRateByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apikey.APIKeyRepository) auditquery.TokenRateByUserHandler {
-	return auditquery.NewTokenRateByUserHandler(repo, apiKeyRepo)
-}
-
-func NewModelUsageByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apikey.APIKeyRepository) auditquery.ModelUsageByUserHandler {
-	return auditquery.NewModelUsageByUserHandler(repo, apiKeyRepo)
-}
-
-func NewFirstTokenLatencyByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apikey.APIKeyRepository) auditquery.FirstTokenLatencyByUserHandler {
-	return auditquery.NewFirstTokenLatencyByUserHandler(repo, apiKeyRepo)
-}
-
+// NewModelCostHandler 构造模型成本排行处理器（admin/demo 全量视角）
+// NewAuditService 构造审计列表/选项的权限派发服务
 func NewAuditService(
 	listAll auditquery.ListAllAuditLogsHandler,
 	listByUser auditquery.ListAuditLogsByUserHandler,
 	listAuditOption auditquery.ListAuditOptionHandler,
-	modelTrend auditquery.ModelTrendHandler,
-	modelTrendByUser auditquery.ModelTrendByUserHandler,
-	harnessTrend auditquery.HarnessTrendHandler,
-	harnessTrendByUser auditquery.HarnessTrendByUserHandler,
-	requestRate auditquery.RequestRateHandler,
-	requestRateByUser auditquery.RequestRateByUserHandler,
-	tokenThroughput auditquery.TokenThroughputHandler,
-	tokenThroughputByUser auditquery.TokenThroughputByUserHandler,
-	tokenRate auditquery.TokenRateHandler,
-	tokenRateByUser auditquery.TokenRateByUserHandler,
-	modelUsage auditquery.ModelUsageHandler,
-	modelUsageByUser auditquery.ModelUsageByUserHandler,
-	firstTokenLatency auditquery.FirstTokenLatencyHandler,
-	firstTokenLatencyByUser auditquery.FirstTokenLatencyByUserHandler,
-	modelCost auditquery.ModelCostHandler,
-	modelCostByUser auditquery.ModelCostByUserHandler,
 ) auditport.AuditService {
-	return auditquery.NewAuditService(listAll, listByUser, listAuditOption, modelTrend, modelTrendByUser, harnessTrend, harnessTrendByUser, requestRate, requestRateByUser, tokenThroughput, tokenThroughputByUser, tokenRate, tokenRateByUser, modelUsage, modelUsageByUser, firstTokenLatency, firstTokenLatencyByUser, modelCost, modelCostByUser)
+	return auditquery.NewAuditService(listAll, listByUser, listAuditOption)
 }
 
-// NewModelCostHandler 构造模型成本排行处理器（admin/demo 全量视角）
 // NewDashboardService 构造 dashboard 查询服务（审计仓储提供 Key 归属，规则仓储提供 harness 指纹）
 func NewDashboardService(repo modelcall.DashboardRepository, apiKeyRepo apikey.APIKeyRepository, auditRepo modelcall.AuditRepository, rules agentharness.RuleRepository) auditport.DashboardService {
 	return auditquery.NewDashboardService(repo, apiKeyRepo, auditRepo, rules)
-}
-
-func NewHarnessTrendHandler(repo modelcall.AuditRepository, rules agentharness.RuleRepository) auditquery.HarnessTrendHandler {
-	return auditquery.NewHarnessTrendHandler(repo, rules)
-}
-
-func NewHarnessTrendByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apikey.APIKeyRepository, rules agentharness.RuleRepository) auditquery.HarnessTrendByUserHandler {
-	return auditquery.NewHarnessTrendByUserHandler(repo, apiKeyRepo, rules)
-}
-
-func NewModelCostHandler(repo modelcall.AuditRepository) auditquery.ModelCostHandler {
-	return auditquery.NewModelCostHandler(repo)
-}
-
-// NewModelCostByUserHandler 构造模型成本排行处理器（user 视角）
-func NewModelCostByUserHandler(repo modelcall.AuditRepository, apiKeyRepo apikey.APIKeyRepository) auditquery.ModelCostByUserHandler {
-	return auditquery.NewModelCostByUserHandler(repo, apiKeyRepo)
 }
 
 func NewListHarnessRulesHandler(rules agentharness.RuleRepository) harnessport.ListHarnessRulesHandler {

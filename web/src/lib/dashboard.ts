@@ -47,7 +47,7 @@ export function successRate(s: DashboardStats): number | null {
   return s.requests > 0 ? s.success / s.requests : null;
 }
 
-/** 总输入 = 净输入 + 缓存读 + 缓存写（input 已是净输入，见 lib/token-volume 的口径说明） */
+/** 总输入 = 净输入 + 缓存读 + 缓存写（后端四维 token 互斥：input 落库时已归一化为净输入，不得再做 input − cacheRead 二次扣减） */
 export function promptTokens(t: DashboardTokens): number {
   return t.input + t.cacheRead + t.cacheWrite;
 }

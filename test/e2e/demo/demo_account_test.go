@@ -342,7 +342,7 @@ func TestE2E_DemoAccountLifecycle(t *testing.T) {
 	}
 
 	// 8. 未开放模块（audit 图表）拒绝
-	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/web/v1/audit/stats/model/trend?startTime=2026-01-01T00:00:00Z&endTime=2026-12-31T23:59:59Z&granularity=day", demoToken)
+	status, body = doJSON(t, client, http.MethodGet, baseURL+"/api/web/v1/audit/stats/dashboard/overview?startTime=2026-01-01T00:00:00Z&endTime=2026-12-31T23:59:59Z&granularity=day", demoToken)
 	if status == http.StatusOK && bizErrorCode(body) == 0 {
 		t.Fatalf("demo closed-module audit expected error, got 200: %s", body)
 	}

@@ -1,7 +1,7 @@
 // Package empty_key_scope 端到端回归：名下无 API Key 的普通用户不得越权
 // 查看全平台数据（2026-08-25 越权修复）。
 //
-// 背景：audit 图表（6 个 stats 接口）、dataset 导出预览的仓储层
+// 背景：audit 图表（现为 dashboard 聚合接口）、dataset 导出预览的仓储层
 // 旧实现用 `if len(scope) > 0` 决定是否加范围过滤——无 Key 用户拿到的空列表
 // 使过滤被整体跳过，退化为全平台查询。
 //
@@ -75,6 +75,24 @@ func doGetJSON(t *testing.T, client *http.Client, target, token string) (status 
 	return resp.StatusCode, body
 }
 
+// overviewRequests 取 dashboard 总览本期请求数
+func overviewRequests(t *testing.T, body []byte) int64 {
+	t.Helper()
+	var rsp struct {
+		Data struct {
+			Current struct {
+				Summary struct {
+					Requests int64 `json:"requests"`
+				} `json:"summary"`
+			} `json:"current"`
+		} `json:"data"`
+	}
+	if err := sonic.Unmarshal(body, &rsp); err != nil {
+		t.Fatalf("unmarshal overview failed: %v", err)
+	}
+	return rsp.Data.Current.Summary.Requests
+}
+
 func bizErrorCode(body []byte) int {
 	var result struct {
 		Error *struct {
@@ -102,33 +120,33 @@ func TestEmptyKeyUser_SeesNoPlatformData(t *testing.T) {
 	adminToken := mustEnv(t, "ADMIN_TOKEN")
 	client := &http.Client{Timeout: e2eHTTPTimeout}
 
-	// 对照：admin 查近一年模型趋势，有数据才证明环境可验证隔离
-	status, body := doGetJSON(t, client,
-		baseURL+"/api/web/v1/audit/stats/model/trend?"+statsReqParams(), adminToken)
+	// 对照：admin 查近一年 dashboard 总览，有请求才证明环境可验证隔离
+	overviewPath := "/api/web/v1/audit/stats/dashboard/overview"
+	status, body := doGetJSON(t, client, baseURL+overviewPath+"?"+statsReqParams(), adminToken)
 	if status != http.StatusOK {
-		t.Fatalf("admin model trend expected 200, got %d: %s", status, body)
+		t.Fatalf("admin overview expected 200, got %d: %s", status, body)
 	}
-	var adminRsp struct {
-		Data []any `json:"data"`
-	}
-	if err := sonic.Unmarshal(body, &adminRsp); err != nil {
-		t.Fatalf("unmarshal admin trend failed: %v", err)
-	}
-	if len(adminRsp.Data) == 0 {
+	if overviewRequests(t, body) == 0 {
 		t.Skip("admin sees no data in range; environment cannot verify isolation")
 	}
 
-	// 1. audit 六个图表接口：无 Key 用户必须拿到空 data
-	statsPaths := []string{
-		"/api/web/v1/audit/stats/model/trend",
-		"/api/web/v1/audit/stats/request/rate",
-		"/api/web/v1/audit/stats/token/throughput",
-		"/api/web/v1/audit/stats/token/rate",
-		"/api/web/v1/audit/stats/model/usage",
-		"/api/web/v1/audit/stats/token/latency",
+	// 1. dashboard 聚合接口：无 Key 用户必须拿到零值 / 空列表
+	status, body = doGetJSON(t, client, baseURL+overviewPath+"?"+statsReqParams(), userToken)
+	if status != http.StatusOK || bizErrorCode(body) != 0 {
+		t.Errorf("user overview expected 200 without biz error, got %d: %s", status, body)
+	} else if n := overviewRequests(t, body); n != 0 {
+		t.Errorf("overview: no-key user sees %d platform requests, scope isolation broken", n)
 	}
-	for _, p := range statsPaths {
-		status, body := doGetJSON(t, client, baseURL+p+"?"+statsReqParams(), userToken)
+	start, end := timeWindow()
+	window := "startTime=" + url.QueryEscape(start) + "&endTime=" + url.QueryEscape(end)
+	listPaths := []string{
+		"/api/web/v1/audit/stats/dashboard/model/series?" + statsReqParams(),
+		"/api/web/v1/audit/stats/dashboard/error/list?" + window,
+		"/api/web/v1/audit/stats/dashboard/endpoint/list?" + window,
+		"/api/web/v1/audit/stats/dashboard/heatmap?tz=UTC&" + window,
+	}
+	for _, p := range listPaths {
+		status, body := doGetJSON(t, client, baseURL+p, userToken)
 		if status != http.StatusOK {
 			t.Errorf("%s expected 200, got %d: %s", p, status, body)
 			continue
@@ -148,9 +166,24 @@ func TestEmptyKeyUser_SeesNoPlatformData(t *testing.T) {
 			t.Errorf("%s: no-key user sees platform data (len=%d), scope isolation broken", p, len(rsp.Data))
 		}
 	}
+	topPath := "/api/web/v1/audit/stats/dashboard/top/list?dimension=model&" + window
+	status, body = doGetJSON(t, client, baseURL+topPath, userToken)
+	if status != http.StatusOK || bizErrorCode(body) != 0 {
+		t.Errorf("%s expected 200 without biz error, got %d: %s", topPath, status, body)
+	} else {
+		var rsp struct {
+			Data struct {
+				Items []any `json:"items"`
+			} `json:"data"`
+		}
+		if err := sonic.Unmarshal(body, &rsp); err != nil {
+			t.Errorf("%s unmarshal failed: %v", topPath, err)
+		} else if len(rsp.Data.Items) != 0 {
+			t.Errorf("%s: no-key user sees %d platform ranking rows, scope isolation broken", topPath, len(rsp.Data.Items))
+		}
+	}
 
 	// 2. dataset 导出统计预览：无 Key 用户必须拿到 0 会话
-	start, end := timeWindow()
 	previewQuery := url.Values{}
 	previewQuery.Set("startTime", start)
 	previewQuery.Set("endTime", end)

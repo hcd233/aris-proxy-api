@@ -580,21 +580,6 @@ export interface ModelSpecPrefillRsp extends CommonRsp {
   pricing?: PricingDTO;
 }
 
-/** 模型成本排行行（展示单位；行 = 模型 × 币种） */
-export interface ModelCostItem {
-  modelId: string;
-  currency: string;
-  inputCost: number;
-  outputCost: number;
-  cacheCreationCost: number;
-  cacheReadCost: number;
-  totalCost: number;
-}
-
-export interface ModelCostRsp extends CommonRsp {
-  data?: ModelCostItem[];
-}
-
 export interface CreateModelReqBody {
   alias: string;
   modelId?: string;
@@ -718,20 +703,6 @@ export interface ListAuditLogsRsp extends CommonRsp {
 
 export type Granularity = "minute" | "hour" | "day" | "week";
 
-export interface TrendPoint {
-  time: string;
-  count: number;
-}
-
-export interface ModelTrendItem {
-  modelId: string;
-  points: TrendPoint[];
-}
-
-export interface ModelTrendRsp extends CommonRsp {
-  data?: ModelTrendItem[];
-}
-
 export interface HarnessRuleItem {
   id: number;
   pattern: string;
@@ -754,84 +725,6 @@ export interface HarnessRuleReqBody {
 export interface PreviewHarnessRsp extends CommonRsp {
   harness: string;
   rule?: HarnessRuleItem;
-}
-
-export interface HarnessTrendItem {
-  harness: string;
-  points: TrendPoint[];
-}
-
-export interface HarnessTrendRsp extends CommonRsp {
-  data?: HarnessTrendItem[];
-}
-
-export interface RatePoint {
-  time: string;
-  total: number;
-  success: number;
-  failed: number;
-  successRate: number;
-}
-
-export interface RequestRateItem {
-  modelId: string;
-  points: RatePoint[];
-}
-
-export interface RequestRateRsp extends CommonRsp {
-  data?: RequestRateItem[];
-}
-
-export interface TokenThroughputPoint {
-  time: string;
-  inputTokens: number;
-  outputTokens: number;
-  cacheCreationTokens: number;
-  cacheReadTokens: number;
-}
-
-export interface TokenThroughputRsp extends CommonRsp {
-  data?: TokenThroughputPoint[];
-}
-
-export interface TokenRatePoint {
-  time: string;
-  outputTokensPerSecond: number;
-}
-
-export interface TokenRateItem {
-  modelId: string;
-  points: TokenRatePoint[];
-}
-
-export interface TokenRateRsp extends CommonRsp {
-  data?: TokenRateItem[];
-}
-
-export interface ModelUsageItem {
-  modelId: string;
-  inputTokens: number;
-  outputTokens: number;
-  cacheReadTokens: number;
-  cacheCreationTokens: number;
-}
-
-export interface ModelUsageRsp extends CommonRsp {
-  data?: ModelUsageItem[];
-}
-
-export interface FirstTokenLatencyPoint {
-  time: string;
-  averageLatencyMs: number;
-}
-
-export interface FirstTokenLatencyItem {
-  modelId: string;
-  points: FirstTokenLatencyPoint[];
-}
-
-export interface FirstTokenLatencyRsp extends CommonRsp {
-  data?: FirstTokenLatencyItem[];
 }
 
 // ─── Audit Option List ───────────────────────────────────────────────────────

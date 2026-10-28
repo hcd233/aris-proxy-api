@@ -178,10 +178,6 @@ const (
 	FieldModelCapabilities              = "capabilities"
 	FieldModelPricingRules              = "pricing_rules"
 	FieldCostMicro                      = "cost_micro"
-	FieldInputCostMicro                 = "input_cost_micro"
-	FieldOutputCostMicro                = "output_cost_micro"
-	FieldCacheCreationCostMicro         = "cache_creation_cost_micro"
-	FieldCacheReadCostMicro             = "cache_read_cost_micro"
 	FieldPricingCurrency                = "pricing_currency"
 
 	// Router tag names

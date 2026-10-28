@@ -193,8 +193,8 @@ func TestHarnessSessionFilterContract(t *testing.T) {
 	}
 }
 
-// TestHarnessTrendContract 走势图接口契约：返回 series，Other 恒在最后。
-func TestHarnessTrendContract(t *testing.T) {
+// TestHarnessTopContract dashboard 客户端排行契约：按 harness 分组，名称非空、占比在 [0,1]。
+func TestHarnessTopContract(t *testing.T) {
 	t.Parallel()
 
 	baseURL, jwt := mustEnv(t)
@@ -202,25 +202,29 @@ func TestHarnessTrendContract(t *testing.T) {
 
 	end := time.Now().UTC()
 	start := end.Add(-7 * 24 * time.Hour)
-	target := fmt.Sprintf("%s/api/web/v1/audit/stats/harness/trend?startTime=%s&endTime=%s&granularity=day",
+	target := fmt.Sprintf("%s/api/web/v1/audit/stats/dashboard/top/list?dimension=harness&limit=10&startTime=%s&endTime=%s",
 		baseURL, url.QueryEscape(start.Format(time.RFC3339)), url.QueryEscape(end.Format(time.RFC3339)))
 
 	var rsp struct {
 		Error *apiError `json:"error,omitempty"`
-		Data  []struct {
-			Harness string `json:"harness"`
-			Points  []struct {
-				Time  time.Time `json:"time"`
-				Count int       `json:"count"`
-			} `json:"points"`
-		} `json:"data,omitempty"`
+		Data  struct {
+			Items []struct {
+				Key       string  `json:"key"`
+				Name      string  `json:"name"`
+				Requests  int64   `json:"requests"`
+				CostShare float64 `json:"costShare"`
+			} `json:"items"`
+		} `json:"data"`
 	}
-	if status := doJSON(t, httpClient, http.MethodGet, target, jwt, "", &rsp); status != http.StatusOK {
-		t.Fatalf("harness trend: status=%d err=%+v", status, rsp.Error)
+	if status := doJSON(t, httpClient, http.MethodGet, target, jwt, "", &rsp); status != http.StatusOK || rsp.Error != nil {
+		t.Fatalf("harness top: status=%d err=%+v", status, rsp.Error)
 	}
-	for i := 1; i < len(rsp.Data); i++ {
-		if rsp.Data[i].Harness == "Other" && rsp.Data[i-1].Harness != "Other" {
-			t.Fatalf("Other must be the last series, got %v", rsp.Data)
+	for _, it := range rsp.Data.Items {
+		if it.Name == "" || it.Key == "" {
+			t.Fatalf("harness ranking row must have key and name, got %+v", it)
+		}
+		if it.CostShare < 0 || it.CostShare > 1 {
+			t.Fatalf("costShare out of range: %+v", it)
 		}
 	}
 }
