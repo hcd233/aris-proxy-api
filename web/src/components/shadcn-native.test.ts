@@ -269,22 +269,26 @@ describe("agent harness 详情", () => {
   });
 });
 
-describe("agent harness 走势图", () => {
-  it("dashboard 使用堆叠柱状图展示各 harness 调用量", () => {
+describe("dashboard 一屏指挥台", () => {
+  it("页面由 KPI 行与六块面板组成，共用一个时间范围", () => {
     const page = read("app/(dashboard)/page.tsx");
-    expect(page).toContain("HarnessTrendChart");
-    const chart = read("components/charts/harness-trend-chart.tsx");
-    expect(chart).toContain('stackId="harness"');
-    expect(chart).toContain('chartType="bar"');
+    for (const panel of [
+      "<KpiRow",
+      "<UsageTrendPanel",
+      "<ReliabilityPanel",
+      "<LatencyPanel",
+      "<EndpointHealthPanel",
+      "<TopRankingPanel",
+      "<ActivityPanel",
+    ]) {
+      expect(page).toContain(panel);
+    }
+    expect(page.match(/<TimeRangePicker/g)).toHaveLength(1);
   });
-});
 
-describe("dashboard 图表布局", () => {
-  it("输出 token 速率与首 token 延迟同排各占一半", () => {
-    const page = read("app/(dashboard)/page.tsx");
-    expect(page).toContain("<TokenRateChart />");
-    expect(page).toContain("<FirstTokenLatencyChart />");
-    expect(page).not.toContain("lg:col-span-2");
+  it("客户端分布按 harness 维度聚合", () => {
+    const activity = read("components/dashboard/activity-panel.tsx");
+    expect(activity).toContain('dimension: "harness"');
   });
 });
 

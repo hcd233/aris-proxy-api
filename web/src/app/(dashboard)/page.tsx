@@ -1,199 +1,85 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
-import { api } from "@/lib/api-client";
-import { useAuth } from "@/lib/auth-context";
+import { format } from "date-fns";
+import { RotateCw } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { PermissionGuard } from "@/components/permission-guard";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { AlertCircle, Key, MessageSquare, Server, Cpu } from "lucide-react";
-import { MetricNumber } from "@/components/motion/metric-number";
-import { ModelCostBarChart } from "@/components/charts/model-cost-bar-chart";
-import { ModelTrendChart } from "@/components/charts/model-trend-chart";
-import { HarnessTrendChart } from "@/components/charts/harness-trend-chart";
-import { RequestRateChart } from "@/components/charts/request-rate-chart";
-import { TokenVolumeChart } from "@/components/charts/token-volume-chart";
-import { TokenRateChart } from "@/components/charts/token-rate-chart";
-import { FirstTokenLatencyChart } from "@/components/charts/first-token-latency-chart";
-import { ModelTokenBarChart } from "@/components/charts/model-token-bar-chart";
+import { TimeRangePicker } from "@/components/ui/time-range-picker";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { ActivityPanel } from "@/components/dashboard/activity-panel";
+import { EndpointHealthPanel } from "@/components/dashboard/endpoint-health-panel";
+import { KpiRow } from "@/components/dashboard/kpi-row";
+import { LatencyPanel } from "@/components/dashboard/latency-panel";
+import { OverviewProvider } from "@/components/dashboard/overview-context";
+import { ReliabilityPanel } from "@/components/dashboard/reliability-panel";
+import { TopRankingPanel } from "@/components/dashboard/top-ranking-panel";
+import { UsageTrendPanel } from "@/components/dashboard/usage-trend-panel";
+import { useDashboardRange } from "@/components/dashboard/use-dashboard-range";
 
-interface DashboardStats {
-  apiKeys: number;
-  sessions: number;
-  endpoints: number;
-  models: number;
-}
-
-function StatCard({
-  title,
-  value,
-  icon,
-  loading,
-  href,
-}: {
-  title: string;
-  value: number;
-  icon: React.ReactNode;
-  loading: boolean;
-  href: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="block rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-    >
-      <Card data-interactive>
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <div className="flex items-center gap-2.5">
-            <span className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              {icon}
-            </span>
-            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              {title}
-            </span>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-0">
-          {loading ? (
-            <Skeleton className="h-10 w-20" />
-          ) : (
-            <div className="font-display text-3xl font-semibold tabular-nums text-foreground">
-              <MetricNumber value={value} />
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </Link>
-  );
-}
-
+/**
+ * 一屏指挥台（spec docs/superpowers/specs/2026-10-28-dashboard-redesign-design.md §3）：
+ * 页头 → 6 KPI → 用量/可靠性/延迟（5:3:3）→ Endpoint/Top/活跃时段（4:4:3）。
+ * xl 及以上锁定视口高度（layout 内边距 lg:p-10 = 5rem），面板内部自适应撑满；更窄时纵向堆叠滚动。
+ */
 export default function DashboardPage() {
   const t = useT();
-  const { isAdmin, isDemo, isModuleOpen } = useAuth();
-  const [stats, setStats] = useState<DashboardStats>({
-    apiKeys: 0,
-    sessions: 0,
-    endpoints: 0,
-    models: 0,
-  });
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
-
-  const fetchDashboard = useCallback(async () => {
-    setLoading(true);
-    setLoadError(false);
-    const demoUser = isDemo();
-    try {
-      // demo 未开放 apikeys 模块，跳过探测（避免 403）
-      const keysPromise = demoUser
-        ? Promise.resolve(null)
-        : api.listAPIKeys(1, 1).catch(() => null);
-      const [keysRsp, sessionsRsp] = await Promise.all([
-        keysPromise,
-        api.listSessions({ page: 1, pageSize: 1 }).catch(() => null),
-      ]);
-
-      const canListUpstream = isAdmin() || isModuleOpen("upstream");
-      const upstreamRsp = canListUpstream ? await api.listUpstream(1, 1).catch(() => null) : null; // 端点数取 pageInfo.total，模型数取 modelTotal，一次调用双统计
-
-      setStats({
-        apiKeys: keysRsp?.pageInfo?.total ?? 0,
-        sessions: sessionsRsp?.pageInfo?.total ?? 0,
-        endpoints: upstreamRsp?.pageInfo?.total ?? 0,
-        models: upstreamRsp?.modelTotal ?? 0,
-      });
-      // 0 和"加载失败"必须可区分：任一实际发起的请求失败都提示，而不是静默显示 0。
-      const results = [sessionsRsp !== null];
-      if (!demoUser) results.push(keysRsp !== null);
-      if (canListUpstream) results.push(upstreamRsp !== null);
-      setLoadError(results.some((ok) => !ok));
-    } catch {
-      setLoadError(true);
-    } finally {
-      setLoading(false);
-    }
-  }, [isAdmin, isDemo, isModuleOpen]);
-
-  /* eslint-disable react-hooks/set-state-in-effect -- Data fetching requires setting state from async effects on mount */
-  useEffect(() => {
-    fetchDashboard();
-  }, [fetchDashboard]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+  const range = useDashboardRange();
+  const rangeFormat = range.spanDays <= 1 ? "MM-dd HH:mm" : "MM-dd";
 
   return (
     <PermissionGuard module="dashboard">
-      <div className="space-y-8">
-        <div className="animate-rise">
-          <h1 className="motion-title font-display text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
-            {t("dashboard.title")}
-          </h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">{t("dashboard.overview")}</p>
-        </div>
+      <TooltipProvider>
+        <OverviewProvider range={range}>
+          <div
+            data-page-wide
+            className="flex flex-col gap-3 xl:h-[calc(100dvh-5rem)] xl:min-h-[680px]"
+          >
+            <header className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
+              <div className="min-w-0">
+                <h1 className="motion-title font-display text-2xl tracking-tight text-foreground">
+                  {t("dashboard.title")}
+                </h1>
+                <p className="mt-0.5 text-xs text-muted-foreground tabular-nums">
+                  {format(new Date(range.startTime), rangeFormat)} →{" "}
+                  {format(new Date(range.endTime), rangeFormat)} · {t("dashboard.compare_previous")}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <TimeRangePicker
+                  value={range.key}
+                  customStart={range.customStart}
+                  customEnd={range.customEnd}
+                  onChange={range.setRange}
+                />
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  onClick={range.refresh}
+                  aria-label={t("dashboard.refresh")}
+                >
+                  <RotateCw />
+                </Button>
+              </div>
+            </header>
 
-        {loadError && (
-          <Alert variant="destructive" className="items-center">
-            <AlertCircle />
-            <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
-              <span>{t("dashboard.load_error")}</span>
-              <Button variant="outline" size="sm" onClick={fetchDashboard}>
-                {t("common.retry")}
-              </Button>
-            </AlertDescription>
-          </Alert>
-        )}
+            <KpiRow range={range} />
 
-        <div className="stagger-rise grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-          {!isDemo() && (
-            <StatCard
-              title={t("apikeys.title")}
-              value={stats.apiKeys}
-              icon={<Key className="size-4" />}
-              loading={loading}
-              href="/apikeys/"
-            />
-          )}
-          <StatCard
-            title={t("sessions.title")}
-            value={stats.sessions}
-            icon={<MessageSquare className="size-4" />}
-            loading={loading}
-            href="/sessions/"
-          />
-          {(isAdmin() || isModuleOpen("upstream")) && (
-            <StatCard
-              title={t("endpoints.title")}
-              value={stats.endpoints}
-              icon={<Server className="size-4" />}
-              loading={loading}
-              href="/upstream/"
-            />
-          )}
-          {(isAdmin() || isModuleOpen("upstream")) && (
-            <StatCard
-              title={t("models.title")}
-              value={stats.models}
-              icon={<Cpu className="size-4" />}
-              loading={loading}
-              href="/upstream/"
-            />
-          )}
-        </div>
-
-        <div className="stagger-rise grid gap-4 lg:grid-cols-2 lg:gap-y-8">
-          <ModelCostBarChart />
-          <ModelTokenBarChart />
-          <ModelTrendChart />
-          <HarnessTrendChart />
-          <RequestRateChart />
-          <TokenVolumeChart />
-          <TokenRateChart />
-          <FirstTokenLatencyChart />
-        </div>
-      </div>
+            <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-3 max-xl:grid-rows-none">
+              <div className="stagger-rise grid min-h-0 gap-3 max-xl:auto-rows-[18rem] lg:grid-cols-2 xl:grid-cols-[5fr_3fr_3fr]">
+                <UsageTrendPanel range={range} />
+                <ReliabilityPanel range={range} />
+                <LatencyPanel range={range} />
+              </div>
+              <div className="stagger-rise grid min-h-0 gap-3 max-xl:auto-rows-[16rem] lg:grid-cols-2 xl:grid-cols-[4fr_4fr_3fr]">
+                <EndpointHealthPanel range={range} />
+                <TopRankingPanel range={range} />
+                <ActivityPanel range={range} />
+              </div>
+            </div>
+          </div>
+        </OverviewProvider>
+      </TooltipProvider>
     </PermissionGuard>
   );
 }
