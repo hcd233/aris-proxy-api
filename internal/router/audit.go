@@ -57,6 +57,72 @@ func initAuditRouter(auditGroup huma.API, auditHandler handler.AuditHandler, cro
 	}, auditHandler.HandleModelCost)
 
 	huma.Register(auditGroup, huma.Operation{
+		OperationID: "queryDashboardOverview",
+		Method:      http.MethodGet,
+		Path:        "/stats/dashboard/overview",
+		Summary:     "QueryDashboardOverview",
+		Description: "Dashboard KPI summary and bucketed series for current and previous equal-length period. Admin/demo see all; user sees only their own keys.",
+		Tags:        []string{constant.TagAudit},
+		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("queryDashboardOverview", enum.PermissionUser, enum.DemoModuleAudit, demoAccessor, auditSubmitter)},
+	}, auditHandler.HandleDashboardOverview)
+
+	huma.Register(auditGroup, huma.Operation{
+		OperationID: "queryDashboardModelSeries",
+		Method:      http.MethodGet,
+		Path:        "/stats/dashboard/model/series",
+		Summary:     "QueryDashboardModelSeries",
+		Description: "Dashboard per-model usage (requests/tokens/cost) by time bucket.",
+		Tags:        []string{constant.TagAudit},
+		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("queryDashboardModelSeries", enum.PermissionUser, enum.DemoModuleAudit, demoAccessor, auditSubmitter)},
+	}, auditHandler.HandleDashboardModelSeries)
+
+	huma.Register(auditGroup, huma.Operation{
+		OperationID: "listDashboardErrors",
+		Method:      http.MethodGet,
+		Path:        "/stats/dashboard/error/list",
+		Summary:     "ListDashboardErrors",
+		Description: "Dashboard top failed-call errors grouped by status code and message.",
+		Tags:        []string{constant.TagAudit},
+		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("listDashboardErrors", enum.PermissionUser, enum.DemoModuleAudit, demoAccessor, auditSubmitter)},
+	}, auditHandler.HandleDashboardErrors)
+
+	huma.Register(auditGroup, huma.Operation{
+		OperationID: "listDashboardEndpoints",
+		Method:      http.MethodGet,
+		Path:        "/stats/dashboard/endpoint/list",
+		Summary:     "ListDashboardEndpoints",
+		Description: "Dashboard endpoint health (requests, error rate, P95 latency, speed, cost). Endpoint names are masked for demo.",
+		Tags:        []string{constant.TagAudit},
+		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("listDashboardEndpoints", enum.PermissionUser, enum.DemoModuleAudit, demoAccessor, auditSubmitter)},
+	}, auditHandler.HandleDashboardEndpoints)
+
+	huma.Register(auditGroup, huma.Operation{
+		OperationID: "listDashboardTop",
+		Method:      http.MethodGet,
+		Path:        "/stats/dashboard/top/list",
+		Summary:     "ListDashboardTop",
+		Description: "Dashboard top ranking by model/user/apikey/harness. The user dimension is admin/demo only; demo names are masked.",
+		Tags:        []string{constant.TagAudit},
+		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("listDashboardTop", enum.PermissionUser, enum.DemoModuleAudit, demoAccessor, auditSubmitter)},
+	}, auditHandler.HandleDashboardTop)
+
+	huma.Register(auditGroup, huma.Operation{
+		OperationID: "queryDashboardHeatmap",
+		Method:      http.MethodGet,
+		Path:        "/stats/dashboard/heatmap",
+		Summary:     "QueryDashboardHeatmap",
+		Description: "Dashboard weekday x hour request heatmap in the given IANA timezone.",
+		Tags:        []string{constant.TagAudit},
+		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("queryDashboardHeatmap", enum.PermissionUser, enum.DemoModuleAudit, demoAccessor, auditSubmitter)},
+	}, auditHandler.HandleDashboardHeatmap)
+
+	huma.Register(auditGroup, huma.Operation{
 		OperationID: "queryHarnessTrend",
 		Method:      http.MethodGet,
 		Path:        "/stats/harness/trend",

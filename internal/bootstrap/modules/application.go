@@ -129,6 +129,7 @@ var ApplicationModule = fx.Module(constant.DigNameApplicationModule,
 		NewFirstTokenLatencyByUserHandler,
 		NewListAuditOptionHandler,
 		NewAuditService,
+		NewDashboardService,
 		NewHarnessTrendHandler,
 		NewHarnessTrendByUserHandler,
 		NewListCronJobsHandler,
@@ -422,6 +423,11 @@ func NewAuditService(
 }
 
 // NewModelCostHandler 构造模型成本排行处理器（admin/demo 全量视角）
+// NewDashboardService 构造 dashboard 查询服务（审计仓储提供 Key 归属，规则仓储提供 harness 指纹）
+func NewDashboardService(repo modelcall.DashboardRepository, apiKeyRepo apikey.APIKeyRepository, auditRepo modelcall.AuditRepository, rules agentharness.RuleRepository) auditport.DashboardService {
+	return auditquery.NewDashboardService(repo, apiKeyRepo, auditRepo, rules)
+}
+
 func NewHarnessTrendHandler(repo modelcall.AuditRepository, rules agentharness.RuleRepository) auditquery.HarnessTrendHandler {
 	return auditquery.NewHarnessTrendHandler(repo, rules)
 }

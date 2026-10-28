@@ -43,6 +43,7 @@ var RepositoryModule = fx.Module(constant.DigNameRepositoryModule,
 		NewSessionReadRepository,
 		NewSessionWriteRepository,
 		NewAuditRepository,
+		NewDashboardRepository,
 		NewDemoConfigRepository,
 		NewDemoSessionRepository,
 		NewEndpointRepository,
@@ -105,6 +106,11 @@ func NewSessionWriteRepository(db *gorm.DB) session.SessionRepository {
 
 func NewAuditRepository(db *gorm.DB, rc *cache.ReadCache) modelcall.AuditRepository {
 	return repository.NewAuditRepository(db, rc)
+}
+
+// NewDashboardRepository 构造 dashboard 聚合仓储
+func NewDashboardRepository(db *gorm.DB, rc *cache.ReadCache) modelcall.DashboardRepository {
+	return repository.NewDashboardRepository(db, rc)
 }
 
 func NewDemoConfigRepository(db *gorm.DB) demoport.DemoConfigRepository {

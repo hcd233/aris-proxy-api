@@ -167,8 +167,8 @@ func NewClientDependencies(list llmproxyport.ListClientModelsHandler) handler.Cl
 	return handler.ClientDependencies{List: list}
 }
 
-func NewAuditDependencies(svc auditport.AuditService) handler.AuditDependencies {
-	return handler.AuditDependencies{Service: svc}
+func NewAuditDependencies(svc auditport.AuditService, dashboard auditport.DashboardService) handler.AuditDependencies {
+	return handler.AuditDependencies{Service: svc, Dashboard: dashboard}
 }
 
 func NewCronDependencies(

@@ -26,18 +26,26 @@ type AuditHandler interface {
 	HandleModelUsage(ctx context.Context, req *dto.ModelUsageReq) (*dto.HTTPResponse[*dto.ModelUsageRsp], error)
 	HandleFirstTokenLatency(ctx context.Context, req *dto.FirstTokenLatencyReq) (*dto.HTTPResponse[*dto.FirstTokenLatencyRsp], error)
 	HandleModelCost(ctx context.Context, req *dto.ModelCostReq) (*dto.HTTPResponse[*dto.ModelCostRsp], error)
+	HandleDashboardOverview(ctx context.Context, req *dto.DashboardRangeReq) (*dto.HTTPResponse[*dto.DashboardOverviewRsp], error)
+	HandleDashboardModelSeries(ctx context.Context, req *dto.DashboardRangeReq) (*dto.HTTPResponse[*dto.DashboardModelSeriesRsp], error)
+	HandleDashboardErrors(ctx context.Context, req *dto.DashboardWindowReq) (*dto.HTTPResponse[*dto.DashboardErrorListRsp], error)
+	HandleDashboardEndpoints(ctx context.Context, req *dto.DashboardWindowReq) (*dto.HTTPResponse[*dto.DashboardEndpointListRsp], error)
+	HandleDashboardTop(ctx context.Context, req *dto.DashboardTopReq) (*dto.HTTPResponse[*dto.DashboardTopListRsp], error)
+	HandleDashboardHeatmap(ctx context.Context, req *dto.DashboardHeatmapReq) (*dto.HTTPResponse[*dto.DashboardHeatmapRsp], error)
 }
 
 type AuditDependencies struct {
-	Service auditport.AuditService
+	Service   auditport.AuditService
+	Dashboard auditport.DashboardService
 }
 
 type auditHandler struct {
-	svc auditport.AuditService
+	svc       auditport.AuditService
+	dashboard auditport.DashboardService
 }
 
 func NewAuditHandler(deps AuditDependencies) AuditHandler {
-	return &auditHandler{svc: deps.Service}
+	return &auditHandler{svc: deps.Service, dashboard: deps.Dashboard}
 }
 
 func (h *auditHandler) HandleListAuditLogs(ctx context.Context, req *dto.ListAuditLogsReq) (*dto.HTTPResponse[*dto.ListAuditLogsRsp], error) {
