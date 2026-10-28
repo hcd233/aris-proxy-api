@@ -7,6 +7,8 @@ package constant
 const (
 	// DashboardMaxBuckets 单次查询允许的最大时间桶数（防止 minute 粒度查长区间拖垮分位数聚合）
 	DashboardMaxBuckets = 1500
+	// TimezoneLocal Go 的进程本地时区名（LoadLocation 接受但 PostgreSQL 不认识）
+	TimezoneLocal = "Local"
 	// DashboardErrorMessageMaxLen 热门错误分组前对 error_message 的截断长度
 	DashboardErrorMessageMaxLen = 200
 
