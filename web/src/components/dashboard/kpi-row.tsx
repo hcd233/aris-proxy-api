@@ -11,6 +11,7 @@ import {
   formatCostShort,
   formatDelta,
   formatRate,
+  KPI_SPECS,
   peakBucket,
   promptTokens,
   rangeDays,
@@ -106,12 +107,11 @@ export function KpiRow({ range }: { range: DashboardRange }) {
     const currency = data?.currency;
     const days = rangeDays(range.startTime, range.endTime);
     if (!cur || !prev) {
-      return (
-        ["requests", "tokens", "cost", "successRate", "cacheHitRate", "latency"] as KpiKind[]
-      ).map((kind) => ({
+      // 加载失败或尚无数据：保留标题，数值显示「—」（重试入口在共享 overview 的面板上）
+      return KPI_SPECS.map(({ kind, labelKey }) => ({
         kind,
-        label: "",
-        value: "",
+        label: t(labelKey),
+        value: "\u2014",
         delta: null,
         sub: [],
         series: [],

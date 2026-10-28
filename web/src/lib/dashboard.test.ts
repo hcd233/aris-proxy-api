@@ -8,6 +8,7 @@ import {
   formatDelta,
   foldTopModels,
   heatmapMatrix,
+  KPI_SPECS,
   OTHER_KEY,
   peakBucket,
   rangeDays,
@@ -168,5 +169,24 @@ describe("formatCostShort", () => {
   });
   it("uses thousands separators", () => {
     expect(formatCostShort(12345.6, "USD")).toBe("$12,345.6");
+  });
+});
+
+describe("KPI_SPECS", () => {
+  it("covers all six KPIs with labels present in every locale", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    expect(KPI_SPECS.map((k) => k.kind)).toEqual([
+      "requests",
+      "tokens",
+      "cost",
+      "successRate",
+      "cacheHitRate",
+      "latency",
+    ]);
+    for (const loc of ["zh", "en", "ja"]) {
+      const dict = JSON.parse(readFileSync(join(__dirname, "../locales", `${loc}.json`), "utf8"));
+      for (const k of KPI_SPECS) expect(dict[k.labelKey], `${loc}:${k.labelKey}`).toBeTruthy();
+    }
   });
 });

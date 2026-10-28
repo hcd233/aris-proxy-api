@@ -71,8 +71,9 @@ export function EndpointHealthPanel({ range }: { range: DashboardRange }) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {(data ?? []).map((row) => (
-            <TableRow key={row.endpoint}>
+          {(data ?? []).map((row, i) => (
+            // demo 下 endpoint 名已脱敏，短名可能脱敏成同一占位符，key 加序号防冲突
+            <TableRow key={`${i}:${row.endpoint}`}>
               <TableCell className={DENSE_CELL}>
                 <div className="flex min-w-0 items-center gap-1.5">
                   <span

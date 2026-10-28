@@ -12,6 +12,16 @@ export type DeltaTone = "good" | "bad" | "neutral";
 
 export type KpiKind = "requests" | "tokens" | "cost" | "successRate" | "cacheHitRate" | "latency";
 
+/** 6 张 KPI 的固定顺序与文案 key（数据缺失时也用它渲染标题，避免空白卡片） */
+export const KPI_SPECS: ReadonlyArray<{ kind: KpiKind; labelKey: string }> = [
+  { kind: "requests", labelKey: "dashboard.kpi.requests" },
+  { kind: "tokens", labelKey: "dashboard.kpi.tokens" },
+  { kind: "cost", labelKey: "dashboard.kpi.cost" },
+  { kind: "successRate", labelKey: "dashboard.kpi.success_rate" },
+  { kind: "cacheHitRate", labelKey: "dashboard.kpi.cache_hit" },
+  { kind: "latency", labelKey: "dashboard.kpi.latency" },
+];
+
 /** 用量趋势可切换的指标 */
 export type ModelMetric = "cost" | "requests" | "tokens";
 
