@@ -61,6 +61,13 @@ import type {
   LoginRsp,
   ModelCapability,
   ModelCostRsp,
+  DashboardDimension,
+  DashboardEndpointListRsp,
+  DashboardErrorListRsp,
+  DashboardHeatmapRsp,
+  DashboardModelSeriesRsp,
+  DashboardOverviewRsp,
+  DashboardTopListRsp,
   ModelListSortField,
   ModelSpecPrefillRsp,
   ModelTrendRsp,
@@ -761,6 +768,69 @@ class ApiClient {
   async fetchModelCost(params: { startTime: string; endTime: string }): Promise<ModelCostRsp> {
     const sp = new URLSearchParams({ startTime: params.startTime, endTime: params.endTime });
     return this.request<ModelCostRsp>(`${API_PREFIX}/audit/stats/model/cost?${sp}`);
+  }
+
+  // ─── Dashboard（一屏指挥台聚合接口） ───────────────────────────────────
+
+  async fetchDashboardOverview(params: {
+    startTime: string;
+    endTime: string;
+    granularity: Granularity;
+  }): Promise<DashboardOverviewRsp> {
+    const sp = new URLSearchParams(params);
+    return this.request<DashboardOverviewRsp>(`${API_PREFIX}/audit/stats/dashboard/overview?${sp}`);
+  }
+
+  async fetchDashboardModelSeries(params: {
+    startTime: string;
+    endTime: string;
+    granularity: Granularity;
+  }): Promise<DashboardModelSeriesRsp> {
+    const sp = new URLSearchParams(params);
+    return this.request<DashboardModelSeriesRsp>(
+      `${API_PREFIX}/audit/stats/dashboard/model/series?${sp}`,
+    );
+  }
+
+  async fetchDashboardErrors(params: {
+    startTime: string;
+    endTime: string;
+    limit: number;
+  }): Promise<DashboardErrorListRsp> {
+    const sp = new URLSearchParams({ ...params, limit: String(params.limit) });
+    return this.request<DashboardErrorListRsp>(
+      `${API_PREFIX}/audit/stats/dashboard/error/list?${sp}`,
+    );
+  }
+
+  async fetchDashboardEndpoints(params: {
+    startTime: string;
+    endTime: string;
+    limit: number;
+  }): Promise<DashboardEndpointListRsp> {
+    const sp = new URLSearchParams({ ...params, limit: String(params.limit) });
+    return this.request<DashboardEndpointListRsp>(
+      `${API_PREFIX}/audit/stats/dashboard/endpoint/list?${sp}`,
+    );
+  }
+
+  async fetchDashboardTop(params: {
+    startTime: string;
+    endTime: string;
+    dimension: DashboardDimension;
+    limit: number;
+  }): Promise<DashboardTopListRsp> {
+    const sp = new URLSearchParams({ ...params, limit: String(params.limit) });
+    return this.request<DashboardTopListRsp>(`${API_PREFIX}/audit/stats/dashboard/top/list?${sp}`);
+  }
+
+  async fetchDashboardHeatmap(params: {
+    startTime: string;
+    endTime: string;
+    tz: string;
+  }): Promise<DashboardHeatmapRsp> {
+    const sp = new URLSearchParams(params);
+    return this.request<DashboardHeatmapRsp>(`${API_PREFIX}/audit/stats/dashboard/heatmap?${sp}`);
   }
 
   async listAuditOptions(params: AuditOptionListReq): Promise<AuditOptionListRsp> {

@@ -1038,3 +1038,125 @@ export interface DemoAccessAuditOptionListReq {
 export interface DemoAccessAuditOptionListRsp extends CommonRsp {
   items: string[];
 }
+
+// ─── Dashboard（/audit/stats/dashboard/*，字段与 internal/dto/dashboard.go 逐字对齐） ───
+
+export type DashboardDimension = "model" | "user" | "apikey" | "harness";
+
+export interface DashboardFailures {
+  rateLimit: number;
+  server: number;
+  connection: number;
+  other: number;
+}
+
+export interface DashboardTokens {
+  input: number;
+  output: number;
+  cacheRead: number;
+  cacheWrite: number;
+}
+
+/** 首 token 延迟分位数（ms）；无成功样本时字段省略 */
+export interface DashboardLatency {
+  p50?: number;
+  p95?: number;
+  p99?: number;
+}
+
+export interface DashboardStats {
+  requests: number;
+  success: number;
+  failures: DashboardFailures;
+  tokens: DashboardTokens;
+  cost: number;
+  pricedSuccess: number;
+  latency: DashboardLatency;
+  outputTokensPerSecond?: number;
+  avgStreamDurationMs?: number;
+}
+
+export interface DashboardStatsPoint extends DashboardStats {
+  time: string;
+}
+
+export interface DashboardPeriod {
+  summary: DashboardStats;
+  series: DashboardStatsPoint[];
+}
+
+export interface DashboardOverview {
+  currency: string;
+  current: DashboardPeriod;
+  previous: DashboardPeriod;
+}
+
+export interface DashboardOverviewRsp extends CommonRsp {
+  data?: DashboardOverview;
+}
+
+export interface DashboardModelPoint {
+  modelId: string;
+  time: string;
+  requests: number;
+  tokens: number;
+  cost: number;
+}
+
+export interface DashboardModelSeriesRsp extends CommonRsp {
+  data?: DashboardModelPoint[];
+}
+
+export interface DashboardErrorItem {
+  statusCode: number;
+  message: string;
+  count: number;
+}
+
+export interface DashboardErrorListRsp extends CommonRsp {
+  data?: DashboardErrorItem[];
+}
+
+export interface DashboardEndpointItem {
+  endpoint: string;
+  requests: number;
+  errorRate: number;
+  p95LatencyMs?: number;
+  outputTokensPerSecond?: number;
+  cost: number;
+}
+
+export interface DashboardEndpointListRsp extends CommonRsp {
+  data?: DashboardEndpointItem[];
+}
+
+export interface DashboardTopItem {
+  key: string;
+  name: string;
+  requests: number;
+  tokens: number;
+  cacheHitRate?: number;
+  cost: number;
+  costShare: number;
+}
+
+export interface DashboardTop {
+  items: DashboardTopItem[];
+  otherRequests: number;
+  otherCost: number;
+}
+
+export interface DashboardTopListRsp extends CommonRsp {
+  data?: DashboardTop;
+}
+
+/** weekday: 0=周一 … 6=周日 */
+export interface DashboardHeatmapCell {
+  weekday: number;
+  hour: number;
+  count: number;
+}
+
+export interface DashboardHeatmapRsp extends CommonRsp {
+  data?: DashboardHeatmapCell[];
+}
