@@ -74,6 +74,7 @@ func (h *auditHandler) HandleListAuditLogs(ctx context.Context, req *dto.ListAud
 			UserAgent:                log.UserAgent,
 			UpstreamStatusCode:       log.UpstreamStatusCode,
 			ErrorMessage:             log.ErrorMessage,
+			IsError:                  log.IsError,
 			TraceID:                  log.TraceID,
 			Cost:                     costDisplayFromMicro(log.CostMicro),
 			PricingCurrency:          log.PricingCurrency,

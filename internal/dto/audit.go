@@ -51,7 +51,8 @@ type AuditLogItem struct {
 	StreamDurationMs         int64         `json:"streamDurationMs" doc:"流式持续时间(ms)"`
 	UserAgent                string        `json:"userAgent" doc:"User-Agent"`
 	UpstreamStatusCode       int           `json:"upstreamStatusCode" doc:"上游状态码"`
-	ErrorMessage             string        `json:"errorMessage" doc:"错误信息"`
+	ErrorMessage             string        `json:"errorMessage" doc:"错误信息（也可能是触发词命中的标注）"`
+	IsError                  bool          `json:"isError" doc:"是否失败调用（触发词标注不计为失败）"`
 	TraceID                  string        `json:"traceId" doc:"Trace ID"`
 	Cost                     *float64      `json:"cost,omitempty" doc:"估算费用（展示单位，null=未计价）"`
 	PricingCurrency          enum.Currency `json:"pricingCurrency,omitempty" doc:"计价币种"`

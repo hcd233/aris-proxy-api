@@ -685,6 +685,8 @@ export interface AuditLogItem {
   userAgent: string;
   upstreamStatusCode: number;
   errorMessage: string;
+  /** 是否失败调用；触发词命中的标注不算失败 */
+  isError: boolean;
   traceId: string;
   apiKeyName: string;
   userName: string;

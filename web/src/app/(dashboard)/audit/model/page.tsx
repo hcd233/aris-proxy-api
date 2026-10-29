@@ -254,7 +254,7 @@ export default function AuditPage() {
               <ItemGroup className="gap-3">
                 {logs.map((log) => {
                   const ok = log.upstreamStatusCode === 200;
-                  const hasError = !!log.errorMessage;
+                  const hasError = log.isError;
                   const isExpanded = expandedId === log.id;
                   const cacheInfo = formatCacheTokens(
                     log.cacheCreationInputTokens,
@@ -313,12 +313,17 @@ export default function AuditPage() {
                             <Badge variant={ok ? "secondary" : "destructive"} className="text-xs">
                               {log.upstreamStatusCode}
                             </Badge>
-                            {hasError && (
+                            {log.errorMessage && (
                               <TooltipProvider>
                                 <TooltipRoot>
                                   <TooltipTrigger
                                     render={
-                                      <p className="mt-1 max-w-[200px] truncate text-xs text-destructive">
+                                      <p
+                                        className={cn(
+                                          "mt-1 max-w-[200px] truncate text-xs",
+                                          hasError ? "text-destructive" : "text-muted-foreground",
+                                        )}
+                                      >
                                         {log.errorMessage}
                                       </p>
                                     }
@@ -384,6 +389,11 @@ export default function AuditPage() {
                                   {log.errorMessage}
                                 </AlertDescription>
                               </Alert>
+                            )}
+                            {!hasError && log.errorMessage && (
+                              <p className="mb-3 break-words text-xs text-muted-foreground">
+                                {log.errorMessage}
+                              </p>
                             )}
 
                             <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
@@ -506,7 +516,7 @@ export default function AuditPage() {
                 <TableBody>
                   {logs.map((log) => {
                     const ok = log.upstreamStatusCode === 200;
-                    const hasError = !!log.errorMessage;
+                    const hasError = log.isError;
                     const cacheInfo = formatCacheTokens(
                       log.cacheCreationInputTokens,
                       log.cacheReadInputTokens,
@@ -623,13 +633,16 @@ export default function AuditPage() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          {!ok && hasError ? (
+                          {log.errorMessage ? (
                             <TooltipProvider>
                               <TooltipRoot>
                                 <TooltipTrigger
                                   render={
                                     <button type="button">
-                                      <Badge variant="destructive" className="text-xs">
+                                      <Badge
+                                        variant={hasError ? "destructive" : "secondary"}
+                                        className="text-xs"
+                                      >
                                         {log.upstreamStatusCode}
                                       </Badge>
                                     </button>

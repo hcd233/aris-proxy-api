@@ -65,6 +65,7 @@ type AuditLogView struct {
 	UserAgent                string
 	UpstreamStatusCode       int
 	ErrorMessage             string
+	IsError                  bool
 	TraceID                  string
 	APIKeyName               string
 	UserName                 string
@@ -255,6 +256,7 @@ func buildAuditViews(ctx context.Context, repo modelcall.AuditRepository, audits
 			UserAgent:                audit.UserAgent(),
 			UpstreamStatusCode:       audit.Status().UpstreamStatusCode(),
 			ErrorMessage:             audit.Status().ErrorMessage(),
+			IsError:                  audit.Status().IsError(),
 			TraceID:                  audit.TraceID(),
 			CostMicro:                audit.CostMicro(),
 			PricingCurrency:          audit.PricingCurrency(),
