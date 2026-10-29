@@ -60,6 +60,7 @@ describe("touch.css", () => {
       "select-item",
       "combobox-item",
       "sidebar-menu-button",
+      "sidebar-group-label",
       "filter-bar",
       "switch",
       "checkbox",
@@ -68,6 +69,13 @@ describe("touch.css", () => {
     ]) {
       expect(body, slot).toContain(`[data-slot="${slot}"]`);
     }
+  });
+
+  it("触屏下侧栏图标栏加宽到能容纳 44px 导航项", () => {
+    expect(body).toMatch(
+      /\[data-slot="sidebar-wrapper"\]\s*\{[^}]*--sidebar-width-icon:\s*3\.75rem\s*!important/,
+    );
+    expect(body).toMatch(/\[data-slot="sidebar-menu-button"\][^{]*\{[^}]*min-width:\s*44px/);
   });
 
   it("小控件只扩点击区域不放大外观", () => {
