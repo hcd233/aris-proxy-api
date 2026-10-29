@@ -921,7 +921,6 @@
   "harness.preview_placeholder": "粘贴一条 User-Agent，确认会命中哪条规则",
   "harness.preview_hit": "命中",
   "harness.preview_other": "未命中任何规则，归入 Other",
-  "dashboard.compare_previous": "对比上一等长周期",
   "dashboard.refresh": "刷新",
   "dashboard.no_data": "暂无数据",
   "dashboard.other": "其他",

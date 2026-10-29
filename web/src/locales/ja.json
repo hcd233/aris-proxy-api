@@ -921,7 +921,6 @@
   "harness.preview_placeholder": "User-Agent を貼り付けて一致する規則を確認",
   "harness.preview_hit": "一致",
   "harness.preview_other": "一致する規則がなく Other になります",
-  "dashboard.compare_previous": "前期間比",
   "dashboard.refresh": "更新",
   "dashboard.no_data": "データなし",
   "dashboard.other": "その他",

@@ -1,6 +1,5 @@
 "use client";
 
-import { format } from "date-fns";
 import { RotateCw } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { PermissionGuard } from "@/components/permission-guard";
@@ -25,7 +24,6 @@ import { useDashboardRange } from "@/components/dashboard/use-dashboard-range";
 export default function DashboardPage() {
   const t = useT();
   const range = useDashboardRange();
-  const rangeFormat = range.spanDays <= 1 ? "MM-dd HH:mm" : "MM-dd";
 
   return (
     <PermissionGuard module="dashboard">
@@ -40,10 +38,6 @@ export default function DashboardPage() {
                 <h1 className="motion-title font-display text-2xl tracking-tight text-foreground">
                   {t("dashboard.title")}
                 </h1>
-                <p className="mt-0.5 text-xs text-muted-foreground tabular-nums">
-                  {format(new Date(range.startTime), rangeFormat)} →{" "}
-                  {format(new Date(range.endTime), rangeFormat)} · {t("dashboard.compare_previous")}
-                </p>
               </div>
               <div className="flex items-center gap-2">
                 <TimeRangePicker

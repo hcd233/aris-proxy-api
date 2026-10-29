@@ -921,7 +921,6 @@
   "harness.preview_placeholder": "Paste a User-Agent to see which rule it hits",
   "harness.preview_hit": "Hit",
   "harness.preview_other": "No rule matched, resolved as Other",
-  "dashboard.compare_previous": "vs. previous period",
   "dashboard.refresh": "Refresh",
   "dashboard.no_data": "No data",
   "dashboard.other": "Other",
