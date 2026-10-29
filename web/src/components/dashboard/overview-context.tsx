@@ -8,7 +8,7 @@ import { useDashboardQuery, type DashboardQuery } from "@/components/dashboard/u
 
 const OverviewContext = createContext<DashboardQuery<DashboardOverview> | null>(null);
 
-/** 拉取一次 overview，供 KPI 行、可靠性、延迟、用量趋势（上一周期虚线）共享 */
+/** 拉取一次 overview，供 KPI 行、可用性、延迟、模型用量（时间轴）共享 */
 export function OverviewProvider({
   range,
   children,

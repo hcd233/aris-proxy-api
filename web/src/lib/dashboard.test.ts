@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  bucketUptime,
   cacheHitRate,
   deltaDiff,
   deltaPct,
@@ -13,6 +14,7 @@ import {
   peakBucket,
   rangeDays,
   successRate,
+  uptimeLevel,
 } from "./dashboard";
 import type { DashboardModelPoint, DashboardStats, DashboardStatsPoint } from "./types";
 
@@ -169,6 +171,59 @@ describe("formatCostShort", () => {
   });
   it("uses thousands separators", () => {
     expect(formatCostShort(12345.6, "USD")).toBe("$12,345.6");
+  });
+});
+
+function point(time: string, requests: number, success: number): DashboardStatsPoint {
+  return {
+    time,
+    ...stats({
+      requests,
+      success,
+      failures: { rateLimit: requests - success, server: 0, connection: 0, other: 0 },
+    }),
+  };
+}
+
+describe("bucketUptime", () => {
+  const hours = (n: number) =>
+    Array.from({ length: n }, (_, i) =>
+      point(new Date(Date.UTC(2026, 9, 1, i)).toISOString(), 10, 10 - (i % 2)),
+    );
+
+  it("keeps one bucket per segment when the series is short", () => {
+    const segs = bucketUptime(hours(24), "END", 30);
+    expect(segs).toHaveLength(24);
+    expect(segs[0].end).toBe(segs[1].start);
+    expect(segs[23].end).toBe("END");
+  });
+
+  it("merges long series into at most target segments and sums counts", () => {
+    const series = hours(168);
+    const segs = bucketUptime(series, "END", 30);
+    expect(segs.length).toBeLessThanOrEqual(30);
+    expect(segs).toHaveLength(28);
+    expect(segs[0].requests).toBe(60);
+    expect(segs[0].success).toBe(57);
+    expect(segs[0].failures.rateLimit).toBe(3);
+    expect(segs[1].start).toBe(series[6].time);
+    expect(segs.reduce((s, x) => s + x.requests, 0)).toBe(1680);
+  });
+
+  it("returns no segments for an empty series", () => {
+    expect(bucketUptime([], "END")).toEqual([]);
+  });
+});
+
+describe("uptimeLevel", () => {
+  it("is idle without requests", () => {
+    expect(uptimeLevel({ requests: 0, success: 0 })).toBe("idle");
+  });
+  it("grades by error rate thresholds", () => {
+    expect(uptimeLevel({ requests: 1000, success: 991 })).toBe("ok");
+    expect(uptimeLevel({ requests: 100, success: 99 })).toBe("warn");
+    expect(uptimeLevel({ requests: 100, success: 96 })).toBe("warn");
+    expect(uptimeLevel({ requests: 100, success: 95 })).toBe("bad");
   });
 });
 

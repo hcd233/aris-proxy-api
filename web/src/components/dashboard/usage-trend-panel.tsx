@@ -1,20 +1,14 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { Area, CartesianGrid, ComposedChart, Line, XAxis, YAxis } from "recharts";
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { api } from "@/lib/api-client";
 import { useI18n } from "@/lib/i18n";
 import { useChartSeriesColors } from "@/lib/theme";
 import { useChartMotion } from "@/lib/motion/chart-motion";
 import { formatChartTime } from "@/lib/time-range";
 import { formatInteger, formatTokenCount } from "@/lib/utils";
-import {
-  foldTopModels,
-  formatCostShort,
-  OTHER_KEY,
-  totalTokens,
-  type ModelMetric,
-} from "@/lib/dashboard";
+import { foldTopModels, formatCostShort, OTHER_KEY, type ModelMetric } from "@/lib/dashboard";
 import {
   ChartContainer,
   ChartTooltip,
@@ -28,9 +22,8 @@ import { useDashboardQuery } from "@/components/dashboard/use-dashboard-query";
 import type { DashboardRange } from "@/components/dashboard/use-dashboard-range";
 
 const METRICS: ModelMetric[] = ["cost", "requests", "tokens"];
-const PREV_KEY = "__previous__";
 
-/** 用量趋势：Top 5 模型堆叠 + 「其他」，叠加上一周期合计虚线；切换指标不重新请求 */
+/** 模型用量：Top 5 模型堆叠 + 「其他」；切换指标不重新请求 */
 export function UsageTrendPanel({ range }: { range: DashboardRange }) {
   const { t, locale } = useI18n();
   const colors = useChartSeriesColors();
@@ -64,18 +57,10 @@ export function UsageTrendPanel({ range }: { range: DashboardRange }) {
   const { keys, chartData, config } = useMemo(() => {
     const folded = foldTopModels(rows ?? [], metric, 5);
     const byTime = new Map(folded.data.map((d) => [new Date(d.time).getTime(), d]));
+    // 以 overview 已补齐空桶的时间轴为准，模型序列缺失的桶补 0
     const timeline = overview?.current.series ?? [];
-    const prevSeries = overview?.previous.series ?? [];
-    const prevValue = (i: number) => {
-      const p = prevSeries[i];
-      if (!p) return undefined;
-      return metric === "cost" ? p.cost : metric === "tokens" ? totalTokens(p.tokens) : p.requests;
-    };
-    const merged = timeline.map((p, i) => {
-      const row: Record<string, number | string | undefined> = {
-        time: p.time,
-        [PREV_KEY]: prevValue(i),
-      };
+    const merged = timeline.map((p) => {
+      const row: Record<string, number | string> = { time: p.time };
       const hit = byTime.get(new Date(p.time).getTime());
       for (const k of folded.keys) row[k] = hit?.[k] ?? 0;
       return row;
@@ -86,10 +71,6 @@ export function UsageTrendPanel({ range }: { range: DashboardRange }) {
         { label: k === OTHER_KEY ? t("dashboard.other") : k, color: colors[i % colors.length] },
       ]),
     );
-    cfg[PREV_KEY] = {
-      label: t("dashboard.panel.previous_total"),
-      color: colors[colors.length - 1],
-    };
     return { keys: folded.keys, chartData: merged, config: cfg };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows, overview, metric, colors, locale]);
@@ -120,7 +101,7 @@ export function UsageTrendPanel({ range }: { range: DashboardRange }) {
       }
     >
       <ChartContainer config={config} className="aspect-auto h-full min-h-40 w-full">
-        <ComposedChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+        <AreaChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
           <CartesianGrid vertical={false} strokeDasharray="3 3" />
           <XAxis
             dataKey="time"
@@ -174,18 +155,7 @@ export function UsageTrendPanel({ range }: { range: DashboardRange }) {
               {...motion}
             />
           ))}
-          <Line
-            dataKey={PREV_KEY}
-            type="monotone"
-            stroke="currentColor"
-            className="text-muted-foreground"
-            strokeDasharray="4 3"
-            strokeOpacity={0.6}
-            strokeWidth={1}
-            dot={false}
-            {...motion}
-          />
-        </ComposedChart>
+        </AreaChart>
       </ChartContainer>
     </Panel>
   );
