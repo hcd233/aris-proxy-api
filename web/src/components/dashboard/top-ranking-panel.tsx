@@ -15,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { SegmentedChoice } from "@/components/dashboard/segmented-choice";
 import { Panel } from "@/components/dashboard/panel";
 import { DENSE_CELL, DENSE_HEAD, TruncatedName } from "@/components/dashboard/dense-table";
 import { useOverview } from "@/components/dashboard/overview-context";
@@ -52,21 +52,12 @@ export function TopRankingPanel({ range }: { range: DashboardRange }) {
       onRetry={retry}
       bodyClassName="px-1.5"
       action={
-        <ToggleGroup
-          variant="segmented"
-          size="sm"
-          spacing={0.5}
-          value={[dimension]}
-          onValueChange={(next) => {
-            if (next[0]) setDimension(next[0] as DashboardDimension);
-          }}
-        >
-          {dims.map((d) => (
-            <ToggleGroupItem key={d} value={d} className="h-6 px-2 text-[11px]">
-              {t(`dashboard.dim.${d}`)}
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
+        <SegmentedChoice
+          value={dimension}
+          options={dims.map((d) => ({ value: d, label: t(`dashboard.dim.${d}`) }))}
+          onChange={setDimension}
+          aria-label={t("dashboard.panel.top")}
+        />
       }
     >
       <Table fit>

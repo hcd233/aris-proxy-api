@@ -15,6 +15,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
+import { useIsMobile } from "@/hooks/use-mobile";
 import type { TimeRangeKey } from "@/lib/time-range";
 
 export interface TimeRangePickerProps {
@@ -26,6 +36,8 @@ export interface TimeRangePickerProps {
 }
 
 const PRESET_KEYS: TimeRangeKey[] = ["1h", "24h", "7d", "30d"];
+/** 手机下拉里「自定义…」动作项的值，不是合法的 TimeRangeKey，只用来打开自定义面板 */
+const CUSTOM_EDIT = "__custom_edit";
 
 export function TimeRangePicker({
   value,
@@ -37,6 +49,7 @@ export function TimeRangePicker({
   // t 引用已稳定化（见 lib/i18n.tsx），依赖 t 的 useMemo 改依赖 locale 以响应语言切换
   const { t, locale } = useI18n();
   const dateLocale = locale === "zh" ? zhCN : locale === "ja" ? ja : enUS;
+  const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
     if (value === "custom" && customStart && customEnd) {
@@ -165,6 +178,93 @@ export function TimeRangePicker({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, customStart, customEnd, locale, dateLocale, t]);
 
+  // 自定义区间面板：桌面放进 Popover（两个月），手机放进底部 Drawer（一个月）
+  const renderCustomPanel = (months: 1 | 2) => (
+    <>
+      <div className="p-3">
+        <Calendar
+          mode="range"
+          selected={dateRange}
+          onSelect={handleDateRangeSelect}
+          numberOfMonths={months}
+          defaultMonth={dateRange?.from}
+          locale={dateLocale}
+          className="rounded-md border bg-background"
+        />
+      </div>
+
+      <div className="border-t border-border px-3 py-2">
+        <button
+          type="button"
+          className="text-xs text-muted-foreground hover:text-foreground transition-colors pointer-coarse:min-h-11"
+          onClick={() => setShowTimePicker(!showTimePicker)}
+        >
+          {showTimePicker ? t("time_range.hide_time") : t("time_range.add_time")}
+        </button>
+      </div>
+
+      {showTimePicker && (
+        <div className="border-t border-border px-3 py-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">
+                {t("time_range.start")}
+              </Label>
+              <Input
+                type="time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                className="h-8 text-xs"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">
+                {t("time_range.end")}
+              </Label>
+              <Input
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+                className="h-8 text-xs"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-center justify-between border-t border-border bg-muted/30 px-3 py-2.5">
+        <div className="min-w-0 text-xs text-muted-foreground">
+          <span className="font-medium text-foreground">{t("time_range.range")}</span>{" "}
+          <TooltipRoot>
+            <TooltipTrigger render={<span className="truncate">{draftLabel}</span>} />
+            <TooltipContent side="top" className="max-w-xs break-all">
+              {draftLabel}
+            </TooltipContent>
+          </TooltipRoot>
+          {customRangeError && <span className="ml-2 text-destructive">{customRangeError}</span>}
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2.5 text-xs"
+            onClick={() => setOpen(false)}
+          >
+            {t("time_range.cancel")}
+          </Button>
+          <Button
+            size="sm"
+            onClick={handleCustomApply}
+            disabled={!canApply}
+            className="h-7 px-3 text-xs"
+          >
+            {t("time_range.apply")}
+          </Button>
+        </div>
+      </div>
+    </>
+  );
+
   const timeLabels: Record<TimeRangeKey, string> = {
     "1h": t("time.last_1h"),
     "24h": t("time.last_24h"),
@@ -172,6 +272,53 @@ export function TimeRangePicker({
     "30d": t("time.last_30d"),
     custom: t("time.custom"),
   };
+
+  if (isMobile) {
+    // 手机：一排按钮放不下，改为下拉；「自定义…」是独立的动作项（值不变，只打开底部面板），
+    // 所以已是自定义区间时也能再次选它重新编辑。
+    const items = [
+      ...PRESET_KEYS.map((key) => ({ value: key, label: timeLabels[key] })),
+      { value: "custom", label: customDisplayLabel },
+      { value: CUSTOM_EDIT, label: `${t("time.custom")}…` },
+    ];
+    return (
+      <>
+        <Select
+          value={value}
+          items={items}
+          onValueChange={(next) => {
+            if (next === CUSTOM_EDIT) handleOpenChange(true);
+            else if (next && next !== "custom") handlePresetClick(next as TimeRangeKey);
+          }}
+        >
+          <SelectTrigger className={cn("w-full", className)} aria-label={t("time.custom")}>
+            <CalendarIcon />
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              {PRESET_KEYS.map((key) => (
+                <SelectItem key={key} value={key}>
+                  {timeLabels[key]}
+                </SelectItem>
+              ))}
+              <SelectItem value={CUSTOM_EDIT}>{`${t("time.custom")}…`}</SelectItem>
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+        <Drawer open={open} onOpenChange={handleOpenChange} showSwipeHandle>
+          <DrawerContent>
+            <DrawerHeader>
+              <DrawerTitle>{t("time_range.select_date_range")}</DrawerTitle>
+            </DrawerHeader>
+            <div className="min-h-0 overflow-y-auto pb-[env(safe-area-inset-bottom)]">
+              {renderCustomPanel(1)}
+            </div>
+          </DrawerContent>
+        </Drawer>
+      </>
+    );
+  }
 
   return (
     <ToggleGroup
@@ -203,89 +350,7 @@ export function TimeRangePicker({
           collisionPadding={12}
           collisionAvoidance={{ side: "flip", align: "shift" }}
         >
-          <div className="p-3">
-            <Calendar
-              mode="range"
-              selected={dateRange}
-              onSelect={handleDateRangeSelect}
-              numberOfMonths={2}
-              defaultMonth={dateRange?.from}
-              locale={dateLocale}
-              className="rounded-md border bg-background"
-            />
-          </div>
-
-          <div className="border-t border-border px-3 py-2">
-            <button
-              type="button"
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-              onClick={() => setShowTimePicker(!showTimePicker)}
-            >
-              {showTimePicker ? t("time_range.hide_time") : t("time_range.add_time")}
-            </button>
-          </div>
-
-          {showTimePicker && (
-            <div className="border-t border-border px-3 py-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">
-                    {t("time_range.start")}
-                  </Label>
-                  <Input
-                    type="time"
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
-                    className="h-8 text-xs"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">
-                    {t("time_range.end")}
-                  </Label>
-                  <Input
-                    type="time"
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
-                    className="h-8 text-xs"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="flex items-center justify-between border-t border-border bg-muted/30 px-3 py-2.5">
-            <div className="min-w-0 text-xs text-muted-foreground">
-              <span className="font-medium text-foreground">{t("time_range.range")}</span>{" "}
-              <TooltipRoot>
-                <TooltipTrigger render={<span className="truncate">{draftLabel}</span>} />
-                <TooltipContent side="top" className="max-w-xs break-all">
-                  {draftLabel}
-                </TooltipContent>
-              </TooltipRoot>
-              {customRangeError && (
-                <span className="ml-2 text-destructive">{customRangeError}</span>
-              )}
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 px-2.5 text-xs"
-                onClick={() => setOpen(false)}
-              >
-                {t("time_range.cancel")}
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleCustomApply}
-                disabled={!canApply}
-                className="h-7 px-3 text-xs"
-              >
-                {t("time_range.apply")}
-              </Button>
-            </div>
-          </div>
+          {renderCustomPanel(2)}
         </PopoverContent>
       </Popover>
     </ToggleGroup>
