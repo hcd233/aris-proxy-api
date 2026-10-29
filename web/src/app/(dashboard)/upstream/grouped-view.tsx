@@ -274,7 +274,7 @@ export function GroupedView({
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 space-y-1.5">
                   <CollapsibleTrigger
-                    className="flex items-center gap-1 text-muted-foreground hover:text-foreground"
+                    className="flex items-center gap-1 text-muted-foreground hover:text-foreground pointer-coarse:min-h-11"
                     aria-label={open ? t("upstream.collapse_group") : t("upstream.expand_group")}
                   >
                     <ChevronRight className="size-3.5 in-data-panel-open:rotate-90" />

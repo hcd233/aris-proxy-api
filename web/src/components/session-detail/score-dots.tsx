@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
 
@@ -35,7 +35,10 @@ export function ScoreDots({ score, scoring, onScore, onClear, size = 16 }: Score
       style={{ width: `${containerWidth}px` }}
       onMouseLeave={() => setHover(null)}
     >
-      <span className="inline-flex items-center" style={{ gap: `${gap}px` }}>
+      <span
+        className="inline-flex items-center"
+        style={{ gap: `${gap}px`, "--dot-gap": `${gap}px` } as CSSProperties}
+      >
         {[1, 2, 3, 4, 5].map((v) => (
           <button
             key={v}
@@ -50,6 +53,8 @@ export function ScoreDots({ score, scoring, onScore, onClear, size = 16 }: Score
             className={cn(
               "relative rounded-full transition-all duration-150 disabled:opacity-30 active:scale-90",
               "before:absolute before:-inset-1.5 before:content-['']",
+              // 触屏：纵向扩到 44px，横向只扩到与相邻圆点的中线，避免点击区重叠
+              "pointer-coarse:before:inset-x-[calc(var(--dot-gap)/-2)] pointer-coarse:before:inset-y-[calc((44px_-_100%)/-2)]",
               displayScore != null && v <= displayScore
                 ? "bg-primary ring-1 ring-primary"
                 : "bg-transparent ring-1 ring-muted-foreground/70 hover:bg-primary/15",

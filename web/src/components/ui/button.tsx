@@ -53,6 +53,8 @@ function Button({
       data-slot="button"
       // Motion Worlds target variants in CSS (magnetic primary, ghost light spot).
       data-variant={variant}
+      // styles/touch.css 按尺寸档区分图标按钮（触屏下补最小宽度）。
+      data-size={size}
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
     />

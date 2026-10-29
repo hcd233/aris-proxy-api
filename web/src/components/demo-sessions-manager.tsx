@@ -43,6 +43,8 @@ function SelectCheckbox({ checked, onToggle }: { checked: boolean; onToggle: () 
   return (
     <div
       role="checkbox"
+      // styles/touch.css 按 checkbox slot 在触屏下扩展点击区域
+      data-slot="checkbox"
       aria-checked={checked}
       tabIndex={0}
       onClick={onToggle}
@@ -50,7 +52,7 @@ function SelectCheckbox({ checked, onToggle }: { checked: boolean; onToggle: () 
         if (e.key === " " || e.key === "Enter") onToggle();
       }}
       className={cn(
-        "flex size-4 cursor-pointer items-center justify-center rounded border transition-colors",
+        "relative flex size-4 cursor-pointer items-center justify-center rounded border transition-colors",
         checked
           ? "border-primary bg-primary text-primary-foreground"
           : "border-muted-foreground/30 hover:border-muted-foreground",
