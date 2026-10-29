@@ -71,6 +71,10 @@ describe("touch.css", () => {
     }
   });
 
+  it("可点开行详情的表格行触屏下不低于 44px", () => {
+    expect(body).toMatch(/tr\[data-row-detail\]\s*\{[^}]*height:\s*44px/);
+  });
+
   it("触屏下侧栏图标栏加宽到能容纳 44px 导航项", () => {
     expect(body).toMatch(
       /\[data-slot="sidebar-wrapper"\]\s*\{[^}]*--sidebar-width-icon:\s*3\.75rem\s*!important/,

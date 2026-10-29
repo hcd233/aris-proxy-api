@@ -473,8 +473,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     const saved = localStorage.getItem("sidebar-collapsed");
     if (saved !== null) setCollapsed(saved === "true");
-    // 平板首次进入默认收成图标栏，给内容让出宽度；用户手动展开后照常记忆
-    else setCollapsed(window.matchMedia("(min-width: 768px) and (max-width: 1023px)").matches);
+    // 平板首次进入默认收成图标栏，给内容让出宽度；用户手动展开后照常记忆。
+    // 触屏横屏平板（如 iPad 1024–1279px）同样收起：展开的 256px 侧栏会让表格横向滚动。
+    else
+      setCollapsed(
+        window.matchMedia(
+          "(min-width: 768px) and (max-width: 1023px), (pointer: coarse) and (min-width: 768px) and (max-width: 1279px)",
+        ).matches,
+      );
 
     const savedGroups = localStorage.getItem(OPEN_GROUPS_STORAGE_KEY);
     if (savedGroups) {

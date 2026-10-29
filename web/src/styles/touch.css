@@ -57,6 +57,11 @@
     min-width: 44px;
   }
 
+  /* 可点开行详情的表格行（lib/row-detail.ts）：整行就是点击目标；表格行的 height 即最小高度 */
+  tr[data-row-detail] {
+    height: 44px;
+  }
+
   [data-slot="textarea"] {
     min-height: 5.5rem;
   }

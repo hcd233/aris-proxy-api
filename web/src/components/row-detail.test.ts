@@ -80,3 +80,38 @@ describe("文案", () => {
     expect(json["row_detail.view"]).toBeTruthy();
   });
 });
+
+describe("横滑表全部接入列分级与行详情", () => {
+  const read = (p: string) =>
+    readFileSync(fileURLToPath(new URL(`../${p}`, import.meta.url)), "utf8");
+  const TABLES = [
+    "app/(dashboard)/audit/cron/page.tsx",
+    "app/(dashboard)/audit/demo/page.tsx",
+    "app/(dashboard)/cron/page.tsx",
+    "app/(dashboard)/harness/page.tsx",
+    "app/(dashboard)/shares/page.tsx",
+    "components/demo-sessions-manager.tsx",
+    "components/dashboard/endpoint-health-panel.tsx",
+    "components/dashboard/top-ranking-panel.tsx",
+  ];
+  const WITH_ACTIONS = [
+    "app/(dashboard)/cron/page.tsx",
+    "app/(dashboard)/harness/page.tsx",
+    "app/(dashboard)/shares/page.tsx",
+  ];
+
+  it.each(TABLES)("%s 接入 RowDetailDrawer + rowDetailProps + priority", (p) => {
+    const src = read(p);
+    expect(src).toContain("RowDetailDrawer");
+    expect(src).toContain("rowDetailProps(");
+    expect(src).toMatch(/priority="(md|lg)"/);
+  });
+
+  it.each(WITH_ACTIONS)("%s 的操作列在窄屏隐藏并移入抽屉", (p) => {
+    const src = read(p);
+    expect(src).toMatch(
+      /<TableHead[^>]*priority="(md|lg)"[^>]*>\s*\{t\("(common|harness)\.actions"\)\}/,
+    );
+    expect(src).toMatch(/<RowDetailDrawer[\s\S]*?actions=/);
+  });
+});

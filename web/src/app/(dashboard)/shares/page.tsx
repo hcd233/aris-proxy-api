@@ -37,6 +37,9 @@ import {
 import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { useT } from "@/lib/i18n";
 import { copyTextToClipboard } from "@/lib/clipboard";
+import { RowDetailDrawer } from "@/components/row-detail-drawer";
+import { rowDetailProps } from "@/lib/row-detail";
+import { useIsCompact } from "@/hooks/use-mobile";
 
 export default function SharesPage() {
   const t = useT();
@@ -53,6 +56,9 @@ export default function SharesPage() {
   });
   const [loading, setLoading] = useState(true);
   const [copiedID, setCopiedID] = useState<string | null>(null);
+  // 窄屏（<1024px）表格只留关键列，点行看全部字段
+  const isCompact = useIsCompact();
+  const [detail, setDetail] = useState<ShareItem | null>(null);
   // Snapshot of "now" taken at fetch time so the expired-check during render
   // stays pure (react-hooks/purity forbids `Date.now()` inside render).
   const [refreshedAt, setRefreshedAt] = useState<number>(0);
@@ -109,6 +115,50 @@ export default function SharesPage() {
     [t],
   );
 
+  const isExpired = (share: ShareItem) =>
+    refreshedAt > 0 && new Date(share.expiresAt).getTime() < refreshedAt;
+
+  const sessionLink = (share: ShareItem) => (
+    <a
+      href={`/web/sessions/detail/?id=${share.sessionId}`}
+      className="inline-flex items-center gap-1 font-mono text-xs text-primary hover:underline"
+    >
+      #{share.sessionId}
+      <ExternalLink className="size-3" />
+    </a>
+  );
+
+  const statusBadge = (expired: boolean) => (
+    <Badge variant={expired ? "destructive" : "secondary"}>
+      {expired ? t("shares.expired") : t("shares.active")}
+    </Badge>
+  );
+
+  const detailFields = (share: ShareItem) => [
+    {
+      label: t("shares.share_id"),
+      value: isExpired(share) ? (
+        <span className="font-mono text-xs">{share.shareId}</span>
+      ) : (
+        <a
+          href={buildShareURL(share.shareId)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-mono text-xs text-primary hover:underline"
+        >
+          {share.shareId}
+        </a>
+      ),
+    },
+    { label: t("shares.session_id"), value: sessionLink(share) },
+    { label: t("common.created"), value: formatDateTime(share.createdAt) },
+    {
+      label: t("shares.expires_at"),
+      value: formatExpiry(share.expiresAt, t("shares.never_expires")),
+    },
+    { label: t("shares.status"), value: statusBadge(isExpired(share)) },
+  ];
+
   const deleteConfirm = useDeleteConfirm<ShareItem>({
     onConfirm: async (share) => {
       const rsp = await api.deleteShare(share.shareId);
@@ -145,12 +195,14 @@ export default function SharesPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>{t("shares.share_id")}</TableHead>
+                      <TableHead priority="lg">{t("shares.share_id")}</TableHead>
                       <TableHead>{t("shares.session_id")}</TableHead>
-                      <TableHead>{t("common.created")}</TableHead>
-                      <TableHead>{t("shares.expires_at")}</TableHead>
+                      <TableHead priority="md">{t("common.created")}</TableHead>
+                      <TableHead priority="md">{t("shares.expires_at")}</TableHead>
                       <TableHead>{t("shares.status")}</TableHead>
-                      <TableHead className="text-right">{t("common.actions")}</TableHead>
+                      <TableHead priority="md" className="text-right">
+                        {t("common.actions")}
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -161,8 +213,13 @@ export default function SharesPage() {
                         <TableRow
                           key={share.shareId}
                           className={expired ? "bg-muted/30 text-muted-foreground" : undefined}
+                          {...rowDetailProps(
+                            isCompact,
+                            () => setDetail(share),
+                            `${t("row_detail.view")}: #${share.sessionId}`,
+                          )}
                         >
-                          <TableCell className="max-w-[220px] font-mono text-xs">
+                          <TableCell priority="lg" className="max-w-[220px] font-mono text-xs">
                             <TooltipRoot>
                               <TooltipTrigger
                                 render={
@@ -188,19 +245,12 @@ export default function SharesPage() {
                               </TooltipContent>
                             </TooltipRoot>
                           </TableCell>
-                          <TableCell>
-                            <a
-                              href={`/web/sessions/detail/?id=${share.sessionId}`}
-                              className="inline-flex items-center gap-1 font-mono text-xs text-primary hover:underline"
-                            >
-                              #{share.sessionId}
-                              <ExternalLink className="size-3" />
-                            </a>
-                          </TableCell>
-                          <TableCell className="text-xs text-muted-foreground">
+                          <TableCell>{sessionLink(share)}</TableCell>
+                          <TableCell priority="md" className="text-xs text-muted-foreground">
                             {formatDateTime(share.createdAt)}
                           </TableCell>
                           <TableCell
+                            priority="md"
                             className={
                               expired
                                 ? "text-xs font-medium text-rose-500"
@@ -209,12 +259,8 @@ export default function SharesPage() {
                           >
                             {formatExpiry(share.expiresAt, t("shares.never_expires"))}
                           </TableCell>
-                          <TableCell>
-                            <Badge variant={expired ? "destructive" : "secondary"}>
-                              {expired ? t("shares.expired") : t("shares.active")}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell>{statusBadge(expired)}</TableCell>
+                          <TableCell priority="md" className="text-right">
                             <div className="flex items-center justify-end gap-1.5">
                               <Button
                                 variant="outline"
@@ -251,6 +297,37 @@ export default function SharesPage() {
                   pageInfo={pageInfo}
                   onChange={(page, pageSize) => fetchShares(page, pageSize)}
                   totalLabel={t("pagination.shares")}
+                />
+                <RowDetailDrawer
+                  open={detail !== null}
+                  onOpenChange={(open) => !open && setDetail(null)}
+                  title={detail ? `#${detail.sessionId}` : ""}
+                  fields={detail ? detailFields(detail) : []}
+                  actions={
+                    detail && (
+                      <>
+                        <Button
+                          variant="outline"
+                          onClick={() => handleCopy(detail)}
+                          disabled={isExpired(detail)}
+                        >
+                          {copiedID === detail.shareId ? (
+                            <Check data-icon="inline-start" />
+                          ) : (
+                            <Copy data-icon="inline-start" />
+                          )}
+                          {copiedID === detail.shareId ? t("common.copied") : t("common.copy")}
+                        </Button>
+                        <DeleteButton
+                          label={t("shares.revoke")}
+                          onClick={() => {
+                            setDetail(null);
+                            deleteConfirm.openDelete(detail);
+                          }}
+                        />
+                      </>
+                    )
+                  }
                 />
               </>
             )}
