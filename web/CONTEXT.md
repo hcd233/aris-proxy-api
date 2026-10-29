@@ -108,6 +108,10 @@ _Avoid_: spending card
 Dashboard Token 吞吐量图使用的审计口径：输入（净输入，已扣除缓存读取）、输出、缓存读取、缓存写入四个互斥维度；图面直接堆叠原值，禁止二次扣减，头部显示区间总量。
 _Avoid_: prompt tokens, total tokens
 
+**Uptime Strip（可用性状态条）**:
+Dashboard 可用性面板的色块条：把选中区间等分为固定数量的桶（由 `GET /stats/dashboard/overview` 的 `uptimeBuckets` 查询参数指定，前端固定 32），按失败率分档着色，悬停看单桶请求数、成功率与失败拆分。桶数不随图表时间序列粒度变化：后端用 `date_bin` 按区间等分并补齐无请求的桶，前端不再二次合并。
+_Avoid_: availability table, uptime heatmap
+
 **formatCost（金额格式化）**:
 金额展示统一入口：去尾零、小数位上限 6，规避浮点尾差直出（`0.30000000000000004`）；null/undefined 渲染 `—`。
 _Avoid_: money format

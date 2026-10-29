@@ -101,10 +101,13 @@ func fillStatsSeries(points []*modelcall.DashboardStatsPoint, buckets []time.Tim
 	})
 }
 
-func (s *dashboardService) Overview(ctx context.Context, scope port.DashboardScope, start, end time.Time, g enum.Granularity) (*port.DashboardOverview, error) {
+func (s *dashboardService) Overview(ctx context.Context, scope port.DashboardScope, start, end time.Time, g enum.Granularity, uptimeBuckets int) (*port.DashboardOverview, error) {
 	curBuckets, err := dashboardBuckets(start, end, g)
 	if err != nil {
 		return nil, err
+	}
+	if uptimeBuckets < 1 {
+		return nil, ierr.New(ierr.ErrValidation, "invalid uptime bucket count")
 	}
 	prevStart, prevEnd := previousWindow(start, end)
 	prevBuckets := port.BuildBuckets(prevStart.UTC(), prevEnd.UTC(), g, nil)
@@ -117,24 +120,31 @@ func (s *dashboardService) Overview(ctx context.Context, scope port.DashboardSco
 		return &port.DashboardOverview{
 			Current:  port.DashboardPeriod{Summary: &modelcall.DashboardStats{}, Series: fillStatsSeries(nil, curBuckets)},
 			Previous: port.DashboardPeriod{Summary: &modelcall.DashboardStats{}, Series: fillStatsSeries(nil, prevBuckets)},
+			Uptime:   modelcall.BuildUptimeBuckets(nil, start, end, uptimeBuckets),
 		}, nil
 	}
 
 	var (
 		curSummary, prevSummary *modelcall.DashboardStats
 		curSeries, prevSeries   []*modelcall.DashboardStatsPoint
+		uptime                  []*modelcall.DashboardUptimePoint
 	)
 	eg, egCtx := errgroup.WithContext(ctx)
 	eg.Go(func() (e error) { curSummary, e = s.repo.QueryStats(egCtx, ids, start, end); return e })
 	eg.Go(func() (e error) { prevSummary, e = s.repo.QueryStats(egCtx, ids, prevStart, prevEnd); return e })
 	eg.Go(func() (e error) { curSeries, e = s.repo.QueryStatsSeries(egCtx, ids, start, end, g); return e })
 	eg.Go(func() (e error) { prevSeries, e = s.repo.QueryStatsSeries(egCtx, ids, prevStart, prevEnd, g); return e })
+	eg.Go(func() (e error) {
+		uptime, e = s.repo.QueryUptimeBuckets(egCtx, ids, start, end, uptimeBuckets)
+		return e
+	})
 	if err := eg.Wait(); err != nil {
 		return nil, err
 	}
 	return &port.DashboardOverview{
 		Current:  port.DashboardPeriod{Summary: curSummary, Series: fillStatsSeries(curSeries, curBuckets)},
 		Previous: port.DashboardPeriod{Summary: prevSummary, Series: fillStatsSeries(prevSeries, prevBuckets)},
+		Uptime:   uptime,
 	}, nil
 }
 

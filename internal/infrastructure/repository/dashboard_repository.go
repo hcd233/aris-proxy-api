@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"gorm.io/gorm"
@@ -85,6 +86,33 @@ func (r *dashboardRepository) QueryStatsSeries(ctx context.Context, apiKeyIDs []
 			return nil, ierr.Wrap(ierr.ErrDBQuery, err, "query dashboard stats series")
 		}
 		return results, nil
+	})
+}
+
+// QueryUptimeBuckets 可用性状态条的定长桶（恰好 buckets 个，无请求的桶补零）。
+//
+// 桶边界以 start 为原点按桶宽等分；补桶在仓储内完成，因为读缓存按 cacheTimeBucket
+// 对齐的时间窗共享结果，桶边界必须随缓存内容一起固化，否则命中缓存时桶会错位。
+func (r *dashboardRepository) QueryUptimeBuckets(ctx context.Context, apiKeyIDs []uint, start, end time.Time, buckets int) ([]*modelcall.DashboardUptimePoint, error) {
+	if buckets <= 0 {
+		return []*modelcall.DashboardUptimePoint{}, nil
+	}
+	if isEmptyScope(apiKeyIDs) {
+		return modelcall.BuildUptimeBuckets(nil, start, end, buckets), nil
+	}
+	widthSeconds := int64(modelcall.UptimeBucketWidth(start, end, buckets) / time.Second)
+	key := readCacheKey(constant.ReadCachePurposeDashboardUptime, cacheScopeIDs(apiKeyIDs), cacheTimeBucket(start), cacheTimeBucket(end), buckets)
+	return cachedSlice(ctx, r.cache, key, func(loadCtx context.Context) ([]*modelcall.DashboardUptimePoint, error) {
+		var results []*modelcall.DashboardUptimePoint
+		bucketExpr := fmt.Sprintf(constant.DateBinUptimeTemplate, widthSeconds)
+		if err := r.windowQuery(loadCtx, apiKeyIDs, start, end).
+			Select(bucketExpr+constant.DashboardUptimeSelect, start).
+			Group(constant.DashboardGroupByTime).
+			Order(constant.DashboardGroupByTime).
+			Find(&results).Error; err != nil {
+			return nil, ierr.Wrap(ierr.ErrDBQuery, err, "query dashboard uptime buckets")
+		}
+		return modelcall.BuildUptimeBuckets(results, start, end, buckets), nil
 	})
 }
 

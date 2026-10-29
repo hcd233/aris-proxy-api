@@ -975,6 +975,15 @@ export interface DashboardStatsPoint extends DashboardStats {
   time: string;
 }
 
+/** 可用性状态条的一段：后端按请求桶数定长切好的时间桶（无请求的桶为零值） */
+export interface DashboardUptimeBucket {
+  start: string;
+  end: string;
+  requests: number;
+  success: number;
+  failures: DashboardFailures;
+}
+
 export interface DashboardPeriod {
   summary: DashboardStats;
   series: DashboardStatsPoint[];
@@ -984,6 +993,7 @@ export interface DashboardOverview {
   currency: string;
   current: DashboardPeriod;
   previous: DashboardPeriod;
+  uptime: DashboardUptimeBucket[];
 }
 
 export interface DashboardOverviewRsp extends CommonRsp {

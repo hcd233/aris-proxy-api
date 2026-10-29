@@ -25,6 +25,7 @@ type repoCall struct {
 	method     string
 	apiKeyIDs  []uint
 	start, end time.Time
+	buckets    int
 	dimension  string
 	location   string
 }
@@ -35,6 +36,7 @@ type fakeRepo struct {
 	calls     []repoCall
 	stats     *modelcall.DashboardStats
 	series    []*modelcall.DashboardStatsPoint
+	uptime    []*modelcall.DashboardUptimePoint
 	groups    []*modelcall.DashboardGroupRow
 	endpoints []*modelcall.DashboardEndpointRow
 }
@@ -79,6 +81,14 @@ func (f *fakeRepo) QueryStatsSeries(_ context.Context, ids []uint, s, e time.Tim
 func (f *fakeRepo) QueryModelSeries(_ context.Context, ids []uint, s, e time.Time, _ enum.Granularity) ([]*modelcall.DashboardModelPoint, error) {
 	f.record(repoCall{method: "model", apiKeyIDs: ids, start: s, end: e})
 	return []*modelcall.DashboardModelPoint{}, nil
+}
+
+func (f *fakeRepo) QueryUptimeBuckets(_ context.Context, ids []uint, s, e time.Time, buckets int) ([]*modelcall.DashboardUptimePoint, error) {
+	f.record(repoCall{method: "uptime", apiKeyIDs: ids, start: s, end: e, buckets: buckets})
+	if f.uptime == nil {
+		return modelcall.BuildUptimeBuckets(nil, s, e, buckets), nil
+	}
+	return f.uptime, nil
 }
 
 func (f *fakeRepo) QueryTopErrors(_ context.Context, ids []uint, s, e time.Time, _ int) ([]*modelcall.DashboardErrorRow, error) {
@@ -175,7 +185,7 @@ func TestDashboardScope_UserWithoutKeysShortCircuits(t *testing.T) {
 	svc := newService(repo, []uint{}, nil)
 	ctx := t.Context()
 
-	ov, err := svc.Overview(ctx, user, start, end, enum.GranularityDay)
+	ov, err := svc.Overview(ctx, user, start, end, enum.GranularityDay, 32)
 	if err != nil {
 		t.Fatalf("Overview: %v", err)
 	}
@@ -184,6 +194,9 @@ func TestDashboardScope_UserWithoutKeysShortCircuits(t *testing.T) {
 	}
 	if len(ov.Current.Series) != 8 || len(ov.Previous.Series) == 0 {
 		t.Errorf("series must still be bucket-filled, got %d/%d", len(ov.Current.Series), len(ov.Previous.Series))
+	}
+	if len(ov.Uptime) != 32 {
+		t.Errorf("uptime must still be bucket-filled, got %d", len(ov.Uptime))
 	}
 	if _, err := svc.ModelSeries(ctx, user, start, end, enum.GranularityDay); err != nil {
 		t.Fatal(err)
@@ -211,7 +224,7 @@ func TestDashboardOverview_PreviousPeriod(t *testing.T) {
 
 	repo := &fakeRepo{}
 	svc := newService(repo, nil, nil)
-	if _, err := svc.Overview(t.Context(), admin, start, end, enum.GranularityDay); err != nil {
+	if _, err := svc.Overview(t.Context(), admin, start, end, enum.GranularityDay, 32); err != nil {
 		t.Fatalf("Overview: %v", err)
 	}
 	wantPrevStart := time.Date(2026, 10, 14, 0, 0, 0, 0, time.UTC)
@@ -239,7 +252,7 @@ func TestDashboardOverview_FillsMissingBuckets(t *testing.T) {
 		DashboardStats: modelcall.DashboardStats{Requests: 7, LatencyP95Ms: &p95},
 	}}}
 	svc := newService(repo, nil, nil)
-	ov, err := svc.Overview(t.Context(), admin, start, end, enum.GranularityDay)
+	ov, err := svc.Overview(t.Context(), admin, start, end, enum.GranularityDay, 32)
 	if err != nil {
 		t.Fatalf("Overview: %v", err)
 	}
@@ -262,7 +275,7 @@ func TestDashboardOverview_EmptyRangeHasNilLatency(t *testing.T) {
 	t.Parallel()
 
 	svc := newService(&fakeRepo{stats: &modelcall.DashboardStats{}}, nil, nil)
-	ov, err := svc.Overview(t.Context(), admin, start, end, enum.GranularityDay)
+	ov, err := svc.Overview(t.Context(), admin, start, end, enum.GranularityDay, 32)
 	if err != nil {
 		t.Fatalf("Overview: %v", err)
 	}
@@ -276,7 +289,7 @@ func TestDashboardOverview_RejectsTooManyBuckets(t *testing.T) {
 
 	repo := &fakeRepo{}
 	svc := newService(repo, nil, nil)
-	_, err := svc.Overview(t.Context(), admin, end.AddDate(0, 0, -30), end, enum.GranularityMinute)
+	_, err := svc.Overview(t.Context(), admin, end.AddDate(0, 0, -30), end, enum.GranularityMinute, 32)
 	if !errors.Is(err, ierr.ErrValidation) {
 		t.Errorf("err = %v, want ErrValidation", err)
 	}
@@ -285,6 +298,61 @@ func TestDashboardOverview_RejectsTooManyBuckets(t *testing.T) {
 	}
 	if _, err := svc.ModelSeries(t.Context(), admin, end.AddDate(0, 0, -30), end, enum.GranularityMinute); !errors.Is(err, ierr.ErrValidation) {
 		t.Errorf("ModelSeries err = %v, want ErrValidation", err)
+	}
+	if _, err := svc.Overview(t.Context(), admin, start, end, enum.GranularityDay, 0); !errors.Is(err, ierr.ErrValidation) {
+		t.Errorf("uptimeBuckets=0 err = %v, want ErrValidation", err)
+	}
+}
+
+func TestDashboardOverview_FillsUptimeBuckets(t *testing.T) {
+	t.Parallel()
+
+	repo := &fakeRepo{}
+	svc := newService(repo, nil, nil)
+	ov, err := svc.Overview(t.Context(), admin, start, end, enum.GranularityDay, 32)
+	if err != nil {
+		t.Fatalf("Overview: %v", err)
+	}
+	if len(ov.Uptime) != 32 {
+		t.Fatalf("len(uptime) = %d, want 32", len(ov.Uptime))
+	}
+	calls := repo.callsOf("uptime")
+	if len(calls) != 1 || calls[0].buckets != 32 {
+		t.Fatalf("uptime calls = %+v, want exactly one call with buckets=32", calls)
+	}
+	if !ov.Uptime[0].Time.Equal(start) || !ov.Uptime[31].End.Equal(end) {
+		t.Errorf("uptime range = [%v,%v], want [%v,%v]", ov.Uptime[0].Time, ov.Uptime[31].End, start, end)
+	}
+}
+
+func TestBuildUptimeBuckets(t *testing.T) {
+	t.Parallel()
+
+	width := modelcall.UptimeBucketWidth(start, end, 32)
+	if width != 18901*time.Second {
+		t.Fatalf("width = %v, want 18901s", width)
+	}
+	seeded := &modelcall.DashboardUptimePoint{
+		Time:              start.Add(2 * width),
+		Requests:          10,
+		Success:           9,
+		RateLimitFailures: 1,
+	}
+	buckets := modelcall.BuildUptimeBuckets([]*modelcall.DashboardUptimePoint{seeded}, start, end, 32)
+	if len(buckets) != 32 {
+		t.Fatalf("len(buckets) = %d, want 32", len(buckets))
+	}
+	if got := buckets[2]; got.Requests != 10 || got.Success != 9 || got.RateLimitFailures != 1 {
+		t.Errorf("bucket 2 = %+v, want the seeded counts", got)
+	}
+	if got := buckets[2]; !got.Time.Equal(seeded.Time) || !got.End.Equal(seeded.Time.Add(width)) {
+		t.Errorf("bucket 2 boundaries = [%v,%v], want [%v,%v]", got.Time, got.End, seeded.Time, seeded.Time.Add(width))
+	}
+	if buckets[0].Requests != 0 {
+		t.Errorf("empty bucket = %+v, want zero", buckets[0])
+	}
+	if !buckets[31].End.Equal(end) {
+		t.Errorf("last bucket end = %v, want %v", buckets[31].End, end)
 	}
 }
 

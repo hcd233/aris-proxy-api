@@ -1,26 +1,18 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback } from "react";
 import { format } from "date-fns";
 import { api } from "@/lib/api-client";
 import { useT } from "@/lib/i18n";
 import { cn, formatInteger } from "@/lib/utils";
-import {
-  bucketUptime,
-  formatRate,
-  successRate,
-  uptimeLevel,
-  type UptimeLevel,
-  type UptimeSegment,
-} from "@/lib/dashboard";
-import type { DashboardFailures } from "@/lib/types";
+import { formatRate, successRate, uptimeLevel, type UptimeLevel } from "@/lib/dashboard";
+import type { DashboardFailures, DashboardUptimeBucket } from "@/lib/types";
 import { TooltipContent, TooltipRoot, TooltipTrigger } from "@/components/ui/tooltip";
 import { Panel } from "@/components/dashboard/panel";
 import { useOverview } from "@/components/dashboard/overview-context";
 import { useDashboardQuery } from "@/components/dashboard/use-dashboard-query";
 import type { DashboardRange } from "@/components/dashboard/use-dashboard-range";
 
-const SEGMENTS = 30;
 const DAY_MS = 86_400_000;
 
 const FAILURE_KEYS = ["rateLimit", "server", "connection", "other"] as const;
@@ -38,12 +30,14 @@ const LEVEL_FILL: Record<UptimeLevel, string> = {
   idle: "bg-muted",
 };
 
-/** 段时间文案：小时级段带时分，天级段只显示日期；单日段不重复写终点 */
-function segmentLabel(seg: UptimeSegment, spanDays: number): string {
+/** 段时间文案：小时级段带时分，天级段只显示日期；跨日时终点补日期，单日段不重复写终点 */
+function segmentLabel(seg: DashboardUptimeBucket, spanDays: number): string {
   const start = new Date(seg.start);
   const end = new Date(seg.end);
   if (end.getTime() - start.getTime() < DAY_MS) {
-    return `${format(start, spanDays <= 1 ? "HH:mm" : "MM-dd HH:mm")} – ${format(end, "HH:mm")}`;
+    const sameDay = start.toDateString() === end.toDateString();
+    const startText = format(start, spanDays <= 1 ? "HH:mm" : "MM-dd HH:mm");
+    return `${startText} – ${format(end, sameDay ? "HH:mm" : "MM-dd HH:mm")}`;
   }
   const from = format(start, "MM-dd");
   const to = format(new Date(end.getTime() - 1), "MM-dd");
@@ -64,7 +58,7 @@ function FailureCounts({ failures }: { failures: DashboardFailures }) {
   );
 }
 
-/** 可用性：约 30 段的状态条（按失败率分档上色），悬停看每段明细；底部为失败原因合计与 Top 错误 */
+/** 可用性：固定 32 段的状态条（按失败率分档上色），悬停看每段明细；底部为失败原因合计与 Top 错误 */
 export function ReliabilityPanel({ range }: { range: DashboardRange }) {
   const t = useT();
   const { data, loading, error, retry } = useOverview();
@@ -79,8 +73,8 @@ export function ReliabilityPanel({ range }: { range: DashboardRange }) {
     errFetcher,
   );
 
-  const series = data?.current.series;
-  const segments = useMemo(() => bucketUptime(series ?? [], endTime, SEGMENTS), [series, endTime]);
+  // 桶由后端按 overview 的 uptimeBuckets 参数定长切好（空桶为零值），前端不再合并
+  const segments = data?.uptime ?? [];
 
   const summary = data?.current.summary;
   const top = topErrors?.[0];

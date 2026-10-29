@@ -1,6 +1,5 @@
 import { formatDecimal, formatDurationMs } from "./utils";
 import type {
-  DashboardFailures,
   DashboardHeatmapCell,
   DashboardModelPoint,
   DashboardStats,
@@ -28,6 +27,9 @@ export type ModelMetric = "cost" | "requests" | "tokens";
 
 /** foldTopModels 合并「其他」用的保留键 */
 export const OTHER_KEY = "__other__";
+
+/** 可用性状态条的固定桶数：由前端经 overview 的 query 传给后端，后端决定桶宽 */
+export const UPTIME_BUCKETS = 32;
 
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
@@ -113,53 +115,8 @@ export function foldTopModels(
   return { keys, data };
 }
 
-/** 可用性状态条的一段：若干相邻时间桶合并后的计数 */
-export interface UptimeSegment {
-  /** 段起点（首个时间桶） */
-  start: string;
-  /** 段终点（下一段起点；末段为区间终点） */
-  end: string;
-  requests: number;
-  success: number;
-  failures: DashboardFailures;
-}
-
 /** 状态条分档：失败率 < 1% ok、1–5% warn、≥ 5% bad，无请求 idle（与 Endpoint 健康点同一阈值） */
 export type UptimeLevel = "ok" | "warn" | "bad" | "idle";
-
-/**
- * 把时间序列按顺序合并成不超过 target 段：每段 ceil(len / target) 个桶。
- * 序列本身不足 target 时一桶一段，不做拆分。
- */
-export function bucketUptime(
-  series: DashboardStatsPoint[],
-  endTime: string,
-  target = 30,
-): UptimeSegment[] {
-  if (series.length === 0 || target <= 0) return [];
-  const size = Math.ceil(series.length / target);
-  const segments: UptimeSegment[] = [];
-  for (let i = 0; i < series.length; i += size) {
-    const group = series.slice(i, i + size);
-    const seg: UptimeSegment = {
-      start: group[0].time,
-      end: series[i + size]?.time ?? endTime,
-      requests: 0,
-      success: 0,
-      failures: { rateLimit: 0, server: 0, connection: 0, other: 0 },
-    };
-    for (const p of group) {
-      seg.requests += p.requests;
-      seg.success += p.success;
-      seg.failures.rateLimit += p.failures.rateLimit;
-      seg.failures.server += p.failures.server;
-      seg.failures.connection += p.failures.connection;
-      seg.failures.other += p.failures.other;
-    }
-    segments.push(seg);
-  }
-  return segments;
-}
 
 export function uptimeLevel(seg: { requests: number; success: number }): UptimeLevel {
   if (seg.requests <= 0) return "idle";

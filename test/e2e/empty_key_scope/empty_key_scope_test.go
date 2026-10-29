@@ -36,7 +36,7 @@ func timeWindow() (start, end string) {
 // statsReqParams 覆盖近一年时间范围，保证环境有数据时越权必然可见
 func statsReqParams() string {
 	start, end := timeWindow()
-	return fmt.Sprintf("startTime=%s&endTime=%s&granularity=day", start, end)
+	return fmt.Sprintf("startTime=%s&endTime=%s&granularity=day&uptimeBuckets=32", start, end)
 }
 
 // optionReqParams 同窗口的时间过滤参数（option 接口不带 granularity）

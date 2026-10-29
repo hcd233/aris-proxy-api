@@ -20,10 +20,12 @@ type DashboardPeriod struct {
 	Series  []*modelcall.DashboardStatsPoint
 }
 
-// DashboardOverview 本期与上一等长周期
+// DashboardOverview 本期与上一等长周期，外加本期可用性状态条
 type DashboardOverview struct {
 	Current  DashboardPeriod
 	Previous DashboardPeriod
+	// Uptime 本期可用性状态条：恰好调用方请求桶数的定长桶（无请求的桶为零值）
+	Uptime []*modelcall.DashboardUptimePoint
 }
 
 // DashboardTopItem Top 排行的一行（Name 已按视角脱敏）
@@ -56,7 +58,7 @@ type HarnessFingerprinter interface {
 
 // DashboardService dashboard 聚合查询：统一权限分流、上一周期、补桶、Top 聚合与 demo 脱敏
 type DashboardService interface {
-	Overview(ctx context.Context, s DashboardScope, start, end time.Time, g enum.Granularity) (*DashboardOverview, error)
+	Overview(ctx context.Context, s DashboardScope, start, end time.Time, g enum.Granularity, uptimeBuckets int) (*DashboardOverview, error)
 	ModelSeries(ctx context.Context, s DashboardScope, start, end time.Time, g enum.Granularity) ([]*modelcall.DashboardModelPoint, error)
 	TopErrors(ctx context.Context, s DashboardScope, start, end time.Time, limit int) ([]*modelcall.DashboardErrorRow, error)
 	EndpointHealth(ctx context.Context, s DashboardScope, start, end time.Time, limit int) ([]*modelcall.DashboardEndpointRow, error)

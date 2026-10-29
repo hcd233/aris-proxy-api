@@ -36,6 +36,62 @@ type DashboardStatsPoint struct {
 	DashboardStats `gorm:"embedded"`
 }
 
+// DashboardUptimePoint 可用性状态条的一个时间桶（只统计请求数与失败拆分）
+type DashboardUptimePoint struct {
+	Time time.Time `gorm:"column:time"`
+	// End 桶终点（补桶时算出，不来自 SQL）
+	End                time.Time `gorm:"-"`
+	Requests           int64     `gorm:"column:requests"`
+	Success            int64     `gorm:"column:success"`
+	RateLimitFailures  int64     `gorm:"column:rate_limit_failures"`
+	ServerFailures     int64     `gorm:"column:server_failures"`
+	ConnectionFailures int64     `gorm:"column:connection_failures"`
+}
+
+// UptimeBucketWidth 可用性状态条的桶宽：区间秒数整除桶数后加 1 秒，保证 buckets 个桶能覆盖整个区间。
+func UptimeBucketWidth(start, end time.Time, buckets int) time.Duration {
+	if buckets <= 0 {
+		return 0
+	}
+	seconds := max(0, int64(end.Sub(start)/time.Second))
+	return time.Duration(seconds/int64(buckets)+1) * time.Second
+}
+
+// BuildUptimeBuckets 把稀疏查询结果补齐为恰好 buckets 个桶（无请求的桶为零值）。
+//
+// 桶边界以 start 为原点按桶宽等分、末桶在 end 处截断；GROUP BY 不会为没有调用的时间槽生成行。
+func BuildUptimeBuckets(points []*DashboardUptimePoint, start, end time.Time, buckets int) []*DashboardUptimePoint {
+	if buckets <= 0 {
+		return []*DashboardUptimePoint{}
+	}
+	width := UptimeBucketWidth(start, end, buckets)
+	byTime := make(map[int64]*DashboardUptimePoint, len(points))
+	for _, p := range points {
+		byTime[p.Time.Unix()] = p
+	}
+	result := make([]*DashboardUptimePoint, 0, buckets)
+	for i := range buckets {
+		bucketStart := start.Add(time.Duration(i) * width)
+		if bucketStart.After(end) {
+			bucketStart = end
+		}
+		bucketEnd := bucketStart.Add(width)
+		if bucketEnd.After(end) {
+			bucketEnd = end
+		}
+		bucket := &DashboardUptimePoint{Time: bucketStart, End: bucketEnd}
+		if p, ok := byTime[bucketStart.Unix()]; ok {
+			bucket.Requests = p.Requests
+			bucket.Success = p.Success
+			bucket.RateLimitFailures = p.RateLimitFailures
+			bucket.ServerFailures = p.ServerFailures
+			bucket.ConnectionFailures = p.ConnectionFailures
+		}
+		result = append(result, bucket)
+	}
+	return result
+}
+
 // DashboardModelPoint 模型 × 时间桶的用量（Tokens/Cost 仅成功调用）
 type DashboardModelPoint struct {
 	ModelID   string    `gorm:"column:model_id"`
@@ -92,6 +148,9 @@ type DashboardRepository interface {
 	QueryStats(ctx context.Context, apiKeyIDs []uint, start, end time.Time) (*DashboardStats, error)
 	// QueryStatsSeries 按时间桶统计（仅返回有数据的桶，补桶由应用层完成）
 	QueryStatsSeries(ctx context.Context, apiKeyIDs []uint, start, end time.Time, granularity enum.Granularity) ([]*DashboardStatsPoint, error)
+	// QueryUptimeBuckets 可用性状态条的定长桶（恰好 buckets 个，无请求的桶补零）。
+	// 补桶在仓储内完成：读缓存按分钟对齐窗口共享结果，桶边界必须随缓存内容一起固化。
+	QueryUptimeBuckets(ctx context.Context, apiKeyIDs []uint, start, end time.Time, buckets int) ([]*DashboardUptimePoint, error)
 	// QueryModelSeries 模型 × 时间桶用量
 	QueryModelSeries(ctx context.Context, apiKeyIDs []uint, start, end time.Time, granularity enum.Granularity) ([]*DashboardModelPoint, error)
 	// QueryTopErrors 失败调用热门错误

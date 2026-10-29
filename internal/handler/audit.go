@@ -18,7 +18,7 @@ import (
 type AuditHandler interface {
 	HandleListAuditLogs(ctx context.Context, req *dto.ListAuditLogsReq) (*dto.HTTPResponse[*dto.ListAuditLogsRsp], error)
 	HandleListAuditOption(ctx context.Context, req *dto.AuditOptionListReq) (*dto.HTTPResponse[*dto.AuditOptionListRsp], error)
-	HandleDashboardOverview(ctx context.Context, req *dto.DashboardRangeReq) (*dto.HTTPResponse[*dto.DashboardOverviewRsp], error)
+	HandleDashboardOverview(ctx context.Context, req *dto.DashboardOverviewReq) (*dto.HTTPResponse[*dto.DashboardOverviewRsp], error)
 	HandleDashboardModelSeries(ctx context.Context, req *dto.DashboardRangeReq) (*dto.HTTPResponse[*dto.DashboardModelSeriesRsp], error)
 	HandleDashboardErrors(ctx context.Context, req *dto.DashboardWindowReq) (*dto.HTTPResponse[*dto.DashboardErrorListRsp], error)
 	HandleDashboardEndpoints(ctx context.Context, req *dto.DashboardWindowReq) (*dto.HTTPResponse[*dto.DashboardEndpointListRsp], error)

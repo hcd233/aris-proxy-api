@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, type ReactNode } from "react";
 import { api } from "@/lib/api-client";
+import { UPTIME_BUCKETS } from "@/lib/dashboard";
 import type { DashboardOverview } from "@/lib/types";
 import type { DashboardRange } from "@/components/dashboard/use-dashboard-range";
 import { useDashboardQuery, type DashboardQuery } from "@/components/dashboard/use-dashboard-query";
@@ -18,7 +19,12 @@ export function OverviewProvider({
 }) {
   const { startTime, endTime, granularity, refreshToken } = range;
   const fetcher = useCallback(async () => {
-    const rsp = await api.fetchDashboardOverview({ startTime, endTime, granularity });
+    const rsp = await api.fetchDashboardOverview({
+      startTime,
+      endTime,
+      granularity,
+      uptimeBuckets: UPTIME_BUCKETS,
+    });
     if (!rsp.data) throw new Error("empty overview");
     return rsp.data;
   }, [startTime, endTime, granularity]);
