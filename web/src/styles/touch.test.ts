@@ -91,3 +91,37 @@ describe("touch.css", () => {
     expect(rule?.[1]).toContain("min-height: 44px");
   });
 });
+
+describe("手机弹窗贴底", () => {
+  const ui = (name: string) =>
+    readFileSync(fileURLToPath(new URL(`../components/ui/${name}.tsx`, import.meta.url)), "utf8");
+  const motion = (world: string) =>
+    readFileSync(fileURLToPath(new URL(`./motion-${world}.css`, import.meta.url)), "utf8");
+
+  it.each(["dialog", "alert-dialog"])("%s 内容区与底栏在手机上贴底全宽", (name) => {
+    const src = ui(name);
+    for (const cls of [
+      "max-md:top-auto",
+      "max-md:bottom-0",
+      "max-md:left-0",
+      "max-md:translate-x-0",
+      "max-md:translate-y-0",
+      "max-md:max-w-none",
+      "max-md:rounded-b-none",
+      "max-md:max-h-[90dvh]",
+      "max-md:flex-col",
+      "max-md:[&>*]:w-full",
+    ]) {
+      expect(src, cls).toContain(cls);
+    }
+  });
+
+  it.each(["anthropic", "moonshot"])("motion-%s 在手机上为弹窗提供贴底进出场", (world) => {
+    const src = motion(world);
+    const i = src.indexOf("@media (width < 48rem)");
+    expect(i).toBeGreaterThan(-1);
+    const tail = src.slice(i);
+    expect(tail).toMatch(/dialog-content[\s\S]*\[data-open\]/);
+    expect(tail).toMatch(/dialog-content[\s\S]*\[data-closed\]/);
+  });
+});
