@@ -95,7 +95,7 @@ func TestDashboardHandler_TopComputesShareAndHitRate(t *testing.T) {
 			{Key: "a", Name: "a", Requests: 3, PromptTokens: 100, CacheReadTokens: 40, CostMicro: 750_000},
 			{Key: "b", Name: "b", Requests: 1},
 		},
-		OtherRequests: 2, OtherCostMicro: 250_000, TotalCostMicro: 1_000_000,
+		OtherRequests: 2, TotalCostMicro: 1_000_000,
 	}}
 	req := &dto.DashboardTopReq{StartTime: start, EndTime: end, Limit: 2, Dimension: enum.DashboardDimensionModel}
 	rsp, err := newHandler(f).HandleDashboardTop(adminCtx(t), req)
@@ -109,8 +109,8 @@ func TestDashboardHandler_TopComputesShareAndHitRate(t *testing.T) {
 	if items[1].CacheHitRate != nil {
 		t.Errorf("zero prompt tokens must give nil hit rate, got %v", *items[1].CacheHitRate)
 	}
-	if rsp.Body.Data.OtherCost != 0.25 || rsp.Body.Data.OtherRequests != 2 {
-		t.Errorf("other = %v/%d", rsp.Body.Data.OtherCost, rsp.Body.Data.OtherRequests)
+	if rsp.Body.Data.OtherRequests != 2 {
+		t.Errorf("otherRequests = %d, want 2", rsp.Body.Data.OtherRequests)
 	}
 
 	f.top = &port.DashboardTop{Items: []*port.DashboardTopItem{{Key: "a", Requests: 1}}}

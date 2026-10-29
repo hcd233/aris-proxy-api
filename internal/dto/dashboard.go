@@ -155,7 +155,6 @@ type DashboardTopItem struct {
 type DashboardTop struct {
 	Items         []*DashboardTopItem `json:"items" doc:"前 N 名"`
 	OtherRequests int64               `json:"otherRequests" doc:"其余请求合计"`
-	OtherCost     float64             `json:"otherCost" doc:"其余费用合计"`
 }
 
 // DashboardTopListRsp Top 排行响应

@@ -1036,7 +1036,6 @@ export interface DashboardTopItem {
 export interface DashboardTop {
   items: DashboardTopItem[];
   otherRequests: number;
-  otherCost: number;
 }
 
 export interface DashboardTopListRsp extends CommonRsp {

@@ -111,7 +111,7 @@ KPI 行、可靠性面板和延迟面板共用一份「总量 + 时间桶」数�
 | `GET /model/series` | 用量趋势堆叠图 | 各模型 × 各时间桶的 requests / tokens / cost 原始行；Top 5 筛选和「其他」合并由前端按当前选中的指标完成，切换指标不需要重新请求 |
 | `GET /error/list?limit=5` | 可靠性面板里的热门错误 | [{statusCode, message, count}]；message 截断到 200 字符后再分组 |
 | `GET /endpoint/list?limit=5` | Endpoint 健康表 | [{endpoint, requests, errorRate, p95LatencyMs, outputTokensPerSecond, cost}] |
-| `GET /top/list?dimension=model\|user\|apikey\|harness&limit=5` | Top 排行和客户端分布条 | items[{key, name, requests, tokens, cacheHitRate, cost, costShare}]，以及 otherRequests、otherCost |
+| `GET /top/list?dimension=model\|user\|apikey\|harness&limit=5` | Top 排行和客户端分布条 | items[{key, name, requests, tokens, cacheHitRate, cost, costShare}]，以及 otherRequests |
 | `GET /heatmap?tz=Asia/Shanghai` | 活跃时段热力图 | cells[{weekday(0=周一), hour, count}]，只返回有数据的格子 |
 
 实现约束：

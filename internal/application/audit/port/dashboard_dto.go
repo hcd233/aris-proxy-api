@@ -116,7 +116,6 @@ func ToDashboardTopDTO(top *DashboardTop) *dto.DashboardTop {
 	return &dto.DashboardTop{
 		Items:         items,
 		OtherRequests: top.OtherRequests,
-		OtherCost:     dto.PriceDisplayFromMicro(top.OtherCostMicro),
 	}
 }
 

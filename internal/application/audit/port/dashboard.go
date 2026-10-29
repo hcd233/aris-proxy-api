@@ -37,11 +37,10 @@ type DashboardTopItem struct {
 	CostMicro       int64
 }
 
-// DashboardTop Top 排行结果：前 N 名 + 其余合计 + 全部费用合计（算占比用）
+// DashboardTop Top 排行结果：前 N 名 + 其余请求合计 + 全部费用合计（算占比用）
 type DashboardTop struct {
 	Items          []*DashboardTopItem
 	OtherRequests  int64
-	OtherCostMicro int64
 	TotalCostMicro int64
 }
 

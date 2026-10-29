@@ -300,7 +300,7 @@ func mergeByOwner(rows []*modelcall.DashboardGroupRow, relationOf func(string) *
 	return lo.Map(order, func(k string, _ int) *port.DashboardTopItem { return byOwner[k] })
 }
 
-// rankTop 按费用、请求数降序取前 limit，其余合计
+// rankTop 按费用、请求数降序取前 limit，其余请求合计
 func rankTop(items []*port.DashboardTopItem, limit int) *port.DashboardTop {
 	slices.SortStableFunc(items, func(a, b *port.DashboardTopItem) int {
 		return cmp.Or(cmp.Compare(b.CostMicro, a.CostMicro), cmp.Compare(b.Requests, a.Requests))
@@ -310,7 +310,6 @@ func rankTop(items []*port.DashboardTopItem, limit int) *port.DashboardTop {
 		top.TotalCostMicro += item.CostMicro
 		if i >= limit {
 			top.OtherRequests += item.Requests
-			top.OtherCostMicro += item.CostMicro
 		}
 	}
 	return top

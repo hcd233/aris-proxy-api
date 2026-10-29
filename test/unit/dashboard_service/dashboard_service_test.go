@@ -319,8 +319,8 @@ func TestDashboardTop_UserDimensionAggregatesByOwner(t *testing.T) {
 	if first.Tokens != 170 || first.PromptTokens != 150 || first.CacheReadTokens != 50 {
 		t.Errorf("token sums = %+v", first)
 	}
-	if top.OtherRequests != 30 || top.OtherCostMicro != 1000 || top.TotalCostMicro != 6000 {
-		t.Errorf("other/total = %d/%d/%d, want 30/1000/6000", top.OtherRequests, top.OtherCostMicro, top.TotalCostMicro)
+	if top.OtherRequests != 30 || top.TotalCostMicro != 6000 {
+		t.Errorf("other/total = %d/%d, want 30/6000", top.OtherRequests, top.TotalCostMicro)
 	}
 }
 
