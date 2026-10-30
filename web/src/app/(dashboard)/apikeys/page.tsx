@@ -50,7 +50,9 @@ import { useDeleteConfirm } from "@/hooks/use-delete-confirm";
 import { useRequestSeq } from "@/hooks/use-request-seq";
 import { FilterBar } from "@/components/filter-bar/filter-bar";
 import { useFilterBar } from "@/components/filter-bar/use-filter-bar";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useIsCompact, useIsMobile } from "@/hooks/use-mobile";
+import { RowDetailDrawer } from "@/components/row-detail-drawer";
+import { rowDetailProps } from "@/lib/row-detail";
 import { useT } from "@/lib/i18n";
 import { formatDate } from "@/lib/utils";
 import { copyTextToClipboard } from "@/lib/clipboard";
@@ -58,6 +60,9 @@ import { copyTextToClipboard } from "@/lib/clipboard";
 export default function APIKeysPage() {
   const t = useT();
   const isMobile = useIsMobile();
+  // 平板（768–1023px）走表格但隐藏次要列，点行看全部字段；手机是卡片列表
+  const isCompact = useIsCompact();
+  const [detail, setDetail] = useState<APIKeyItem | null>(null);
   const [keys, setKeys] = useState<APIKeyItem[]>([]);
   const [persistedPage, setPersistedPage] = usePersistentState("dashboard.apikeys.page", 1);
   const [persistedPageSize, setPersistedPageSize] = usePersistentState(
@@ -315,65 +320,96 @@ export default function APIKeysPage() {
                     ))}
                   </ItemGroup>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>{t("apikeys.name")}</TableHead>
-                        <TableHead>{t("apikeys.user")}</TableHead>
-                        <TableHead>{t("apikeys.key")}</TableHead>
-                        <TableHead>{t("apikeys.created")}</TableHead>
-                        <TableHead className="text-right">{t("common.actions")}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {keys.map((key) => (
-                        <TableRow key={key.id}>
-                          <TableCell className="font-medium">{key.name}</TableCell>
-                          <TableCell>
-                            {key.user ? (
-                              <span className="flex items-center gap-2">
-                                <Avatar size="sm">
-                                  {key.user.avatar && (
-                                    <AvatarImage src={key.user.avatar} alt={key.user.name} />
-                                  )}
-                                  <AvatarFallback className="text-xs">
-                                    {key.user.name.charAt(0).toUpperCase() || "?"}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <TooltipRoot>
-                                  <TooltipTrigger
-                                    render={
-                                      <span className="max-w-[14ch] truncate">{key.user.name}</span>
-                                    }
-                                  />
-                                  <TooltipContent className="max-w-xs break-all">
-                                    {key.user.name}
-                                  </TooltipContent>
-                                </TooltipRoot>
-                              </span>
-                            ) : (
-                              <span className="text-muted-foreground">—</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="font-mono text-xs text-muted-foreground">
-                            {key.key}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {formatDate(key.createdAt)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <DeleteButton
-                              label={t("common.delete")}
-                              disabled={
-                                deleteConfirm.loading && deleteConfirm.target?.id === key.id
-                              }
-                              onClick={() => deleteConfirm.openDelete(key)}
-                            />
-                          </TableCell>
+                  <>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>{t("apikeys.name")}</TableHead>
+                          <TableHead>{t("apikeys.user")}</TableHead>
+                          <TableHead>{t("apikeys.key")}</TableHead>
+                          <TableHead priority="lg">{t("apikeys.created")}</TableHead>
+                          <TableHead className="text-right">{t("common.actions")}</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {keys.map((key) => (
+                          <TableRow
+                            key={key.id}
+                            {...rowDetailProps(
+                              isCompact,
+                              () => setDetail(key),
+                              `${t("row_detail.view")}: ${key.name}`,
+                            )}
+                          >
+                            {/* 平板宽度有限：长名称换行，不把表格撑出横向滚动 */}
+                            <TableCell className="font-medium max-lg:break-words max-lg:whitespace-normal">
+                              {key.name}
+                            </TableCell>
+                            <TableCell>
+                              {key.user ? (
+                                <span className="flex items-center gap-2">
+                                  <Avatar size="sm">
+                                    {key.user.avatar && (
+                                      <AvatarImage src={key.user.avatar} alt={key.user.name} />
+                                    )}
+                                    <AvatarFallback className="text-xs">
+                                      {key.user.name.charAt(0).toUpperCase() || "?"}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <TooltipRoot>
+                                    <TooltipTrigger
+                                      render={
+                                        <span className="max-w-[14ch] truncate">
+                                          {key.user.name}
+                                        </span>
+                                      }
+                                    />
+                                    <TooltipContent className="max-w-xs break-all">
+                                      {key.user.name}
+                                    </TooltipContent>
+                                  </TooltipRoot>
+                                </span>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="font-mono text-xs text-muted-foreground">
+                              {key.key}
+                            </TableCell>
+                            <TableCell priority="lg" className="text-muted-foreground">
+                              {formatDate(key.createdAt)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <DeleteButton
+                                label={t("common.delete")}
+                                disabled={
+                                  deleteConfirm.loading && deleteConfirm.target?.id === key.id
+                                }
+                                onClick={() => deleteConfirm.openDelete(key)}
+                              />
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                    <RowDetailDrawer
+                      open={detail !== null}
+                      onOpenChange={(open) => !open && setDetail(null)}
+                      title={detail?.name ?? ""}
+                      fields={
+                        detail
+                          ? [
+                              { label: t("apikeys.user"), value: detail.user?.name ?? "—" },
+                              {
+                                label: t("apikeys.key"),
+                                value: <span className="font-mono text-xs">{detail.key}</span>,
+                              },
+                              { label: t("apikeys.created"), value: formatDate(detail.createdAt) },
+                            ]
+                          : []
+                      }
+                    />
+                  </>
                 )}
 
                 <PaginationBar

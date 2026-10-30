@@ -24,6 +24,11 @@ export function useIsMobile() {
   return useMediaQuery(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
 }
 
+/** 小于 1280px：触屏横屏平板与小屏笔记本；只给「布局本来就放不下」的表格降级用 */
+export function useIsNarrow() {
+  return useMediaQuery("(max-width: 1279px)");
+}
+
 export function useIsCompact() {
   return useMediaQuery(`(max-width: ${COMPACT_BREAKPOINT - 1}px)`);
 }

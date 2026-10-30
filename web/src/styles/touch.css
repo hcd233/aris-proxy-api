@@ -62,6 +62,12 @@
     height: 44px;
   }
 
+  /* 表格单元格里只用来显示提示的按钮（截断文本、错误状态）：外观放大到 44px，行高随之变高 */
+  [data-slot="table-cell"] button[data-slot="tooltip-trigger"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
   [data-slot="textarea"] {
     min-height: 5.5rem;
   }

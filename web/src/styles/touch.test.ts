@@ -71,6 +71,12 @@ describe("touch.css", () => {
     }
   });
 
+  it("表格单元格里的提示按钮触屏下不小于 44px", () => {
+    expect(body).toMatch(
+      /\[data-slot="table-cell"\] button\[data-slot="tooltip-trigger"\][^{]*\{[^}]*min-height:\s*44px[^}]*min-width:\s*44px/,
+    );
+  });
+
   it("可点开行详情的表格行触屏下不低于 44px", () => {
     expect(body).toMatch(/tr\[data-row-detail\]\s*\{[^}]*height:\s*44px/);
   });

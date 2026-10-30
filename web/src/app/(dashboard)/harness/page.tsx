@@ -11,7 +11,7 @@ import type { HarnessRuleItem } from "@/lib/types";
 import { PageHeader } from "@/components/page-header";
 import { RowDetailDrawer } from "@/components/row-detail-drawer";
 import { rowDetailProps } from "@/lib/row-detail";
-import { useIsCompact } from "@/hooks/use-mobile";
+import { useIsCompact, useIsNarrow } from "@/hooks/use-mobile";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -60,6 +60,8 @@ export default function HarnessPage() {
   const [deleting, setDeleting] = useState<HarnessRuleItem | null>(null);
   // 窄屏（<1024px）表格只留关键列，点行看全部字段
   const isCompact = useIsCompact();
+  // 正则可能极长：窄屏（含 1024 触屏横屏）改用固定列宽 + 换行，避免表格横向滚动
+  const isNarrow = useIsNarrow();
   const [detail, setDetail] = useState<HarnessRuleItem | null>(null);
   const [previewUA, setPreviewUA] = useState("");
   const [previewResult, setPreviewResult] = useState<{
@@ -178,7 +180,7 @@ export default function HarnessPage() {
       <Card>
         <CardContent className="pt-6">
           {/* 窄屏开启 fit：长正则不再把表格撑宽，单元格改为换行显示（不截断） */}
-          <Table fit={isCompact}>
+          <Table fit={isNarrow}>
             <TableHeader>
               <TableRow>
                 <TableHead priority="md">{t("harness.pattern")}</TableHead>
@@ -200,11 +202,11 @@ export default function HarnessPage() {
                 >
                   <TableCell
                     priority="md"
-                    className="font-mono text-xs max-lg:break-all max-lg:whitespace-normal"
+                    className="font-mono text-xs whitespace-normal break-all"
                   >
                     {rule.pattern}
                   </TableCell>
-                  <TableCell className="max-lg:break-words max-lg:whitespace-normal">
+                  <TableCell className="whitespace-normal max-xl:break-words">
                     {rule.name}
                     {/* 手机上模式列隐藏，作为名称下方的次行显示 */}
                     <span className="mt-0.5 block font-mono text-xs break-all text-muted-foreground md:hidden">

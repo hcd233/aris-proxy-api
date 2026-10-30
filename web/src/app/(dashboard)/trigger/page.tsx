@@ -48,7 +48,9 @@ import { usePersistentState } from "@/hooks/use-persistent-state";
 import { useOptimisticUpdate } from "@/hooks/use-optimistic-update";
 import { useDeleteConfirm } from "@/hooks/use-delete-confirm";
 import { useRequestSeq } from "@/hooks/use-request-seq";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useIsCompact, useIsMobile } from "@/hooks/use-mobile";
+import { RowDetailDrawer } from "@/components/row-detail-drawer";
+import { rowDetailProps } from "@/lib/row-detail";
 import { useT } from "@/lib/i18n";
 import { cn, formatDate, formatInteger } from "@/lib/utils";
 import { copyTextToClipboard } from "@/lib/clipboard";
@@ -116,6 +118,9 @@ export default function TriggerPage() {
   const t = useT();
   const { isDemo } = useAuth();
   const isMobile = useIsMobile();
+  // 平板（768–1023px）走表格但隐藏次要列，点行看全部字段；手机是卡片列表
+  const isCompact = useIsCompact();
+  const [detail, setDetail] = useState<(typeof items)[number] | null>(null);
 
   const filterBar = useFilterBar({
     persistKey: "dashboard.trigger",
@@ -363,85 +368,120 @@ export default function TriggerPage() {
                       })}
                     </ItemGroup>
                   ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-10">
-                            <Checkbox
-                              checked={items.length > 0 && selected.size === items.length}
-                              onCheckedChange={toggleSelectAll}
-                            />
-                          </TableHead>
-                          <TableHead className="w-16">{t("trigger.id")}</TableHead>
-                          <TableHead>{t("trigger.word")}</TableHead>
-                          <TableHead className="w-32">{t("trigger.action")}</TableHead>
-                          <TableHead className="w-24">{t("trigger.hit_count")}</TableHead>
-                          <TableHead className="w-32">{t("common.created")}</TableHead>
-                          <TableHead className="w-24">{t("common.actions")}</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {items.map((item) => {
-                          const isSelected = selected.has(item.id);
-                          return (
-                            <TableRow key={item.id}>
-                              <TableCell className="w-10">
-                                <Checkbox
-                                  checked={isSelected}
-                                  onCheckedChange={() => toggleSelect(item.id)}
-                                />
-                              </TableCell>
-                              <TableCell className="text-muted-foreground">{item.id}</TableCell>
-                              <TableCell className="font-medium">
-                                <TooltipRoot>
-                                  <TooltipTrigger
-                                    render={
-                                      <span
-                                        className="cursor-pointer underline-offset-2 hover:underline"
-                                        onClick={() => handleCopyWord(item.word)}
-                                      >
-                                        {item.word}
-                                      </span>
+                    <>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-10">
+                              <Checkbox
+                                checked={items.length > 0 && selected.size === items.length}
+                                onCheckedChange={toggleSelectAll}
+                              />
+                            </TableHead>
+                            <TableHead priority="lg" className="w-16">
+                              {t("trigger.id")}
+                            </TableHead>
+                            <TableHead>{t("trigger.word")}</TableHead>
+                            <TableHead className="w-32">{t("trigger.action")}</TableHead>
+                            <TableHead className="w-20">{t("trigger.hit_count")}</TableHead>
+                            <TableHead priority="lg" className="w-[7rem]">
+                              {t("common.created")}
+                            </TableHead>
+                            <TableHead className="w-24">{t("common.actions")}</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {items.map((item) => {
+                            const isSelected = selected.has(item.id);
+                            return (
+                              <TableRow
+                                key={item.id}
+                                {...rowDetailProps(
+                                  isCompact,
+                                  () => setDetail(item),
+                                  `${t("row_detail.view")}: ${item.word}`,
+                                )}
+                              >
+                                <TableCell className="w-10">
+                                  <Checkbox
+                                    checked={isSelected}
+                                    onCheckedChange={() => toggleSelect(item.id)}
+                                  />
+                                </TableCell>
+                                <TableCell priority="lg" className="text-muted-foreground">
+                                  {item.id}
+                                </TableCell>
+                                {/* 平板宽度有限：长触发词换行，不把表格撑出横向滚动 */}
+                                <TableCell className="font-medium whitespace-normal break-words">
+                                  <TooltipRoot>
+                                    <TooltipTrigger
+                                      render={
+                                        <span
+                                          data-row-detail-ignore=""
+                                          className="cursor-pointer underline-offset-2 hover:underline"
+                                          onClick={() => handleCopyWord(item.word)}
+                                        >
+                                          {item.word}
+                                        </span>
+                                      }
+                                    />
+                                    <TooltipContent side="top">
+                                      {t("trigger.copy_word_title")}
+                                    </TooltipContent>
+                                  </TooltipRoot>
+                                </TableCell>
+                                <TableCell>
+                                  <ActionBadge
+                                    action={item.action}
+                                    t={t}
+                                    disabled={toggleAction.updatingKey !== null}
+                                    onClick={() =>
+                                      toggleAction.apply(item, {
+                                        action:
+                                          item.action === "deny"
+                                            ? "omit"
+                                            : item.action === "omit"
+                                              ? "capture"
+                                              : "deny",
+                                      })
                                     }
                                   />
-                                  <TooltipContent side="top">
-                                    {t("trigger.copy_word_title")}
-                                  </TooltipContent>
-                                </TooltipRoot>
-                              </TableCell>
-                              <TableCell>
-                                <ActionBadge
-                                  action={item.action}
-                                  t={t}
-                                  disabled={toggleAction.updatingKey !== null}
-                                  onClick={() =>
-                                    toggleAction.apply(item, {
-                                      action:
-                                        item.action === "deny"
-                                          ? "omit"
-                                          : item.action === "omit"
-                                            ? "capture"
-                                            : "deny",
-                                    })
-                                  }
-                                />
-                              </TableCell>
-                              <TableCell>{formatInteger(item.hitCount)}</TableCell>
-                              <TableCell className="text-muted-foreground">
-                                {formatDate(item.createdAt)}
-                              </TableCell>
-                              <TableCell>
-                                <DeleteButton
-                                  label={t("common.delete")}
-                                  locked={isDemo()}
-                                  onClick={() => deleteConfirm.openDelete(item)}
-                                />
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
+                                </TableCell>
+                                <TableCell>{formatInteger(item.hitCount)}</TableCell>
+                                <TableCell priority="lg" className="text-muted-foreground">
+                                  {formatDate(item.createdAt)}
+                                </TableCell>
+                                <TableCell>
+                                  <DeleteButton
+                                    label={t("common.delete")}
+                                    locked={isDemo()}
+                                    onClick={() => deleteConfirm.openDelete(item)}
+                                  />
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                      <RowDetailDrawer
+                        open={detail !== null}
+                        onOpenChange={(open) => !open && setDetail(null)}
+                        title={detail?.word ?? ""}
+                        fields={
+                          detail
+                            ? [
+                                { label: t("trigger.id"), value: detail.id },
+                                { label: t("trigger.word"), value: detail.word },
+                                {
+                                  label: t("trigger.hit_count"),
+                                  value: formatInteger(detail.hitCount),
+                                },
+                                { label: t("common.created"), value: formatDate(detail.createdAt) },
+                              ]
+                            : []
+                        }
+                      />
+                    </>
                   )}
                   <PaginationBar
                     pageInfo={pageInfo}
