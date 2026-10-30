@@ -1,6 +1,11 @@
 package vo
 
-import "github.com/hcd233/aris-proxy-api/internal/common/enum"
+import (
+	"strings"
+
+	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+)
 
 // CallStatus 模型调用状态值对象
 //
@@ -48,12 +53,31 @@ func (s CallStatus) UpstreamStatusCode() int { return s.upstreamStatusCode }
 //	@update 2026-04-26 10:00:00
 func (s CallStatus) ErrorMessage() string { return s.errorMessage }
 
-// IsSuccess 判断是否成功（HTTP 200）
+// IsError 判断调用是否为失败调用。
+//
+// 非 200 一律算失败；200 时 errorMessage 也可能是非错误标注（capture 触发词命中
+// 写入的 "capture context by trigger word" 前缀），此类标注不算失败。
 //
 //	@receiver s CallStatus
 //	@return bool
 //	@author centonhuang
-//	@update 2026-04-26 10:00:00
+//	@update 2026-10-29 21:00:00
+func (s CallStatus) IsError() bool {
+	if s.upstreamStatusCode != enum.CallStatusSuccess {
+		return true
+	}
+	if s.errorMessage == "" {
+		return false
+	}
+	return !strings.HasPrefix(s.errorMessage, constant.TriggerCaptureAuditRemark)
+}
+
+// IsSuccess 判断是否成功（HTTP 200 且非错误，触发词标注不算错误）
+//
+//	@receiver s CallStatus
+//	@return bool
+//	@author centonhuang
+//	@update 2026-10-29 21:00:00
 func (s CallStatus) IsSuccess() bool {
-	return s.upstreamStatusCode == enum.CallStatusSuccess && s.errorMessage == ""
+	return !s.IsError()
 }

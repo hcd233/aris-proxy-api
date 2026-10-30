@@ -338,6 +338,9 @@ var (
 	DateTruncDay    = "date_trunc('day', created_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'"
 	DateTruncWeek   = "date_trunc('week', created_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'"
 
+	// DateBinUptimeTemplate 可用性状态条的时间桶表达式：%d 为桶宽秒数，? 绑定 date_bin 原点
+	DateBinUptimeTemplate = "date_bin(INTERVAL '%d seconds', created_at, ?) AS time, "
+
 	SQLConditionUpstreamSuccess = "upstream_status_code = 200"
 
 	// ── Audit filter field SQL column names ──

@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"slices"
 	"strings"
 
@@ -182,14 +183,18 @@ func captureReplyText(hasHist bool) string {
 }
 
 // submitCaptureAudit 提交 capture 短路的审计任务（tokens 全 0，无上游调用）。
+//
+// capture 命中是正常返回（固定回复或继续转发），状态码记 200；ErrorMessage 只承载
+// 命中触发词的标注，由 CallStatus.IsError 排除，不计为失败调用。
 func submitCaptureAudit(ctx context.Context, submitter TaskSubmitter, m *aggregate.Model, endpoint string, upstreamProtocol, apiProtocol enum.ProtocolType, words []string) {
 	auditTask := &dto.ModelCallAuditTask{
-		Ctx:              util.CopyContextValues(ctx),
-		ModelID:          m.ModelID(),
-		Endpoint:         endpoint,
-		UpstreamProtocol: upstreamProtocol,
-		APIProtocol:      apiProtocol,
-		ErrorMessage:     fmt.Sprintf(constant.TriggerCaptureAuditTemplate, formatTriggerWords(words)),
+		Ctx:                util.CopyContextValues(ctx),
+		ModelID:            m.ModelID(),
+		Endpoint:           endpoint,
+		UpstreamProtocol:   upstreamProtocol,
+		APIProtocol:        apiProtocol,
+		UpstreamStatusCode: http.StatusOK,
+		ErrorMessage:       fmt.Sprintf(constant.TriggerCaptureAuditTemplate, formatTriggerWords(words)),
 	}
 	_ = submitter.SubmitModelCallAuditTask(auditTask) //nolint:errcheck // best-effort audit
 }

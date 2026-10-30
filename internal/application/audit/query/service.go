@@ -90,6 +90,7 @@ func toPortAuditLogViews(views []*AuditLogView) []*port.AuditLogView {
 			UserAgent:                v.UserAgent,
 			UpstreamStatusCode:       v.UpstreamStatusCode,
 			ErrorMessage:             v.ErrorMessage,
+			IsError:                  v.IsError,
 			TraceID:                  v.TraceID,
 			CostMicro:                v.CostMicro,
 			PricingCurrency:          v.PricingCurrency,

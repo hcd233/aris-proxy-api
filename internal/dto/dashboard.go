@@ -13,6 +13,14 @@ type DashboardRangeReq struct {
 	Granularity enum.Granularity `query:"granularity" required:"true" enum:"minute,hour,day,week" doc:"时间桶粒度"`
 }
 
+// DashboardOverviewReq dashboard 总览请求：时间窗 + 图表时间桶粒度 + 可用性状态条桶数
+type DashboardOverviewReq struct {
+	StartTime     time.Time        `query:"startTime" required:"true" doc:"区间起点（RFC3339）"`
+	EndTime       time.Time        `query:"endTime" required:"true" doc:"区间终点（RFC3339）"`
+	Granularity   enum.Granularity `query:"granularity" required:"true" enum:"minute,hour,day,week" doc:"时间桶粒度"`
+	UptimeBuckets int              `query:"uptimeBuckets" required:"true" minimum:"1" maximum:"200" doc:"可用性状态条的时间桶数"`
+}
+
 // DashboardWindowReq dashboard 时间窗 + 条数请求
 type DashboardWindowReq struct {
 	StartTime time.Time `query:"startTime" required:"true" doc:"区间起点（RFC3339）"`
@@ -77,6 +85,15 @@ type DashboardStatsPointItem struct {
 	DashboardStatsItem
 }
 
+// DashboardUptimeBucketItem 可用性状态条的一个时间桶
+type DashboardUptimeBucketItem struct {
+	Start    time.Time          `json:"start" doc:"桶起点"`
+	End      time.Time          `json:"end" doc:"桶终点（末桶为区间终点）"`
+	Requests int64              `json:"requests" doc:"请求数"`
+	Success  int64              `json:"success" doc:"成功请求数（上游 200）"`
+	Failures *DashboardFailures `json:"failures" doc:"失败拆分"`
+}
+
 // DashboardPeriodItem 一个统计周期
 type DashboardPeriodItem struct {
 	Summary *DashboardStatsItem        `json:"summary" doc:"周期总量"`
@@ -85,9 +102,10 @@ type DashboardPeriodItem struct {
 
 // DashboardOverview 本期与上一等长周期
 type DashboardOverview struct {
-	Currency enum.Currency        `json:"currency" doc:"费用币种"`
-	Current  *DashboardPeriodItem `json:"current" doc:"本期"`
-	Previous *DashboardPeriodItem `json:"previous" doc:"上一等长周期"`
+	Currency enum.Currency                `json:"currency" doc:"费用币种"`
+	Current  *DashboardPeriodItem         `json:"current" doc:"本期"`
+	Previous *DashboardPeriodItem         `json:"previous" doc:"上一等长周期"`
+	Uptime   []*DashboardUptimeBucketItem `json:"uptime" doc:"可用性状态条的定长时间桶（无请求的桶为零值）"`
 }
 
 // DashboardOverviewRsp dashboard 总览响应

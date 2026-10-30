@@ -12,6 +12,7 @@ import (
 	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
 	"github.com/hcd233/aris-proxy-api/internal/common/constant"
 	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall/vo"
 	"github.com/hcd233/aris-proxy-api/internal/dto"
 	"github.com/hcd233/aris-proxy-api/internal/util"
 )
@@ -154,8 +155,18 @@ func TestAnthropicCreateMessage_CaptureWithHistory(t *testing.T) {
 	if msgs[0].Role != "user" || msgs[1].Role != "assistant" {
 		t.Fatalf("unexpected roles: %s, %s", msgs[0].Role, msgs[1].Role)
 	}
-	if len(submitter.auditTasks) != 1 || !strings.Contains(submitter.auditTasks[0].ErrorMessage, "capture") {
+	if len(submitter.auditTasks) != 1 {
 		t.Fatalf("expect capture audit task, got %+v", submitter.auditTasks)
+	}
+	audit := submitter.auditTasks[0]
+	if !strings.Contains(audit.ErrorMessage, "capture") {
+		t.Fatalf("capture remark should be kept, got %q", audit.ErrorMessage)
+	}
+	if audit.UpstreamStatusCode != 200 {
+		t.Fatalf("capture audit status = %d, want 200", audit.UpstreamStatusCode)
+	}
+	if vo.NewCallStatus(audit.UpstreamStatusCode, audit.ErrorMessage).IsError() {
+		t.Fatal("capture audit must not be treated as error")
 	}
 }
 

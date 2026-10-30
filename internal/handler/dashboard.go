@@ -22,9 +22,9 @@ func dashboardScope(ctx context.Context) auditport.DashboardScope {
 	}
 }
 
-// HandleDashboardOverview dashboard KPI 总览（本期 + 上一等长周期）
-func (h *auditHandler) HandleDashboardOverview(ctx context.Context, req *dto.DashboardRangeReq) (*dto.HTTPResponse[*dto.DashboardOverviewRsp], error) {
-	ov, err := h.dashboard.Overview(ctx, dashboardScope(ctx), req.StartTime, req.EndTime, req.Granularity)
+// HandleDashboardOverview dashboard KPI 总览（本期 + 上一等长周期 + 可用性状态条）
+func (h *auditHandler) HandleDashboardOverview(ctx context.Context, req *dto.DashboardOverviewReq) (*dto.HTTPResponse[*dto.DashboardOverviewRsp], error) {
+	ov, err := h.dashboard.Overview(ctx, dashboardScope(ctx), req.StartTime, req.EndTime, req.Granularity, req.UptimeBuckets)
 	if err != nil {
 		logger.WithCtx(ctx).Error("[AuditHandler] Dashboard overview failed", zap.Error(err))
 		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())

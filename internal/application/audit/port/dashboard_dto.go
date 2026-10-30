@@ -59,7 +59,26 @@ func ToDashboardOverviewDTO(ov *DashboardOverview) *dto.DashboardOverview {
 		Currency: enum.CurrencyUSD,
 		Current:  toDashboardPeriod(ov.Current),
 		Previous: toDashboardPeriod(ov.Previous),
+		Uptime:   toDashboardUptimeDTO(ov.Uptime),
 	}
+}
+
+// toDashboardUptimeDTO 可用性状态条 → DTO（Other 失败数 = 总数 − 成功 − 已归类失败，下限 0）
+func toDashboardUptimeDTO(points []*modelcall.DashboardUptimePoint) []*dto.DashboardUptimeBucketItem {
+	return lo.Map(points, func(p *modelcall.DashboardUptimePoint, _ int) *dto.DashboardUptimeBucketItem {
+		return &dto.DashboardUptimeBucketItem{
+			Start:    p.Time,
+			End:      p.End,
+			Requests: p.Requests,
+			Success:  p.Success,
+			Failures: &dto.DashboardFailures{
+				RateLimit:  p.RateLimitFailures,
+				Server:     p.ServerFailures,
+				Connection: p.ConnectionFailures,
+				Other:      max(0, p.Requests-p.Success-p.RateLimitFailures-p.ServerFailures-p.ConnectionFailures),
+			},
+		}
+	})
 }
 
 // ToDashboardModelSeriesDTO 模型序列 → DTO

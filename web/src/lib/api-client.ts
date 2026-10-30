@@ -762,8 +762,9 @@ class ApiClient {
     startTime: string;
     endTime: string;
     granularity: Granularity;
+    uptimeBuckets: number;
   }): Promise<DashboardOverviewRsp> {
-    const sp = new URLSearchParams(params);
+    const sp = new URLSearchParams({ ...params, uptimeBuckets: String(params.uptimeBuckets) });
     return this.request<DashboardOverviewRsp>(`${API_PREFIX}/audit/stats/dashboard/overview?${sp}`);
   }
 

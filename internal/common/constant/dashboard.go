@@ -108,6 +108,13 @@ const (
 	// DashboardHeatmapGroup 热力图分组
 	DashboardHeatmapGroup = "weekday, hour"
 
+	// DashboardUptimeSelect 可用性状态条投影（只统计请求数与失败拆分，避免分位数/费用聚合）
+	DashboardUptimeSelect = "COUNT(*) AS requests, " +
+		"COUNT(*)" + dashboardSuccessFilter + " AS success, " +
+		"COUNT(*) FILTER (WHERE upstream_status_code = 429) AS rate_limit_failures, " +
+		"COUNT(*) FILTER (WHERE upstream_status_code BETWEEN 500 AND 599) AS server_failures, " +
+		"COUNT(*) FILTER (WHERE upstream_status_code = -1) AS connection_failures"
+
 	// DashboardTimeBucketAlias 时间桶列别名
 	DashboardTimeBucketAlias = " AS time, "
 	// DashboardGroupByTime 按时间桶分组/排序
@@ -120,4 +127,5 @@ const (
 	ReadCachePurposeDashboardEndpoint = "dashboard:endpoint"
 	ReadCachePurposeDashboardGroup    = "dashboard:group"
 	ReadCachePurposeDashboardHeatmap  = "dashboard:heatmap"
+	ReadCachePurposeDashboardUptime   = "dashboard:uptime"
 )

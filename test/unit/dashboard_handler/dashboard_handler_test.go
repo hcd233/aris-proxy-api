@@ -28,7 +28,7 @@ type fakeDashboard struct {
 	scope    port.DashboardScope
 }
 
-func (f *fakeDashboard) Overview(_ context.Context, s port.DashboardScope, _, _ time.Time, _ enum.Granularity) (*port.DashboardOverview, error) {
+func (f *fakeDashboard) Overview(_ context.Context, s port.DashboardScope, _, _ time.Time, _ enum.Granularity, _ int) (*port.DashboardOverview, error) {
 	f.scope = s
 	return f.overview, nil
 }
@@ -60,14 +60,34 @@ func TestDashboardHandler_OverviewMapsCostAndFailures(t *testing.T) {
 	f := &fakeDashboard{overview: &port.DashboardOverview{
 		Current:  port.DashboardPeriod{Summary: stats, Series: []*modelcall.DashboardStatsPoint{{Time: start, DashboardStats: *stats}}},
 		Previous: port.DashboardPeriod{Summary: &modelcall.DashboardStats{}, Series: []*modelcall.DashboardStatsPoint{}},
+		Uptime: []*modelcall.DashboardUptimePoint{{
+			Time:              start,
+			End:               end,
+			Requests:          5,
+			Success:           3,
+			RateLimitFailures: 1,
+			ServerFailures:    1,
+		}},
 	}}
-	rsp, err := newHandler(f).HandleDashboardOverview(adminCtx(t), &dto.DashboardRangeReq{StartTime: start, EndTime: end, Granularity: enum.GranularityDay})
+	rsp, err := newHandler(f).HandleDashboardOverview(adminCtx(t), &dto.DashboardOverviewReq{
+		StartTime:     start,
+		EndTime:       end,
+		Granularity:   enum.GranularityDay,
+		UptimeBuckets: 32,
+	})
 	if err != nil {
 		t.Fatalf("HandleDashboardOverview: %v", err)
 	}
 	data := rsp.Body.Data
 	if data.Currency != enum.CurrencyUSD {
 		t.Errorf("currency = %q, want USD", data.Currency)
+	}
+	if len(data.Uptime) != 1 {
+		t.Fatalf("uptime = %+v, want 1 bucket", data.Uptime)
+	}
+	uptime := data.Uptime[0]
+	if uptime.Requests != 5 || uptime.Success != 3 || uptime.Failures.RateLimit != 1 || uptime.Failures.Server != 1 || uptime.Failures.Other != 0 {
+		t.Errorf("uptime bucket = %+v, want requests=5 success=3 rateLimit=1 server=1 other=0", uptime)
 	}
 	sum := data.Current.Summary
 	if sum.Cost != 1.5 {
