@@ -21,18 +21,21 @@
 ## 3. 目标、非目标、反目标
 
 **目标**
+
 - 手机（360–430px 宽）和平板（768–1024px，竖屏和横屏）上所有页面都没有整页横向滚动，主要信息无需横滑即可看到。
 - 触屏上可交互控件的可点区域 ≥44×44px。
 - 手机上正文 ≥14px，次要信息 ≥12px。
 - 桌面鼠标操作的观感和尺寸保持不变。
 
 **非目标**
+
 - 不做原生 App、PWA、离线能力或手势导航。
 - 不改后端接口与数据结构。
 - 不重新设计视觉风格、主题与动效世界；动效只补移动端弹层所需的规则。
 - 已是卡片列表的 6 个页面，在手机上不改回表格。
 
 **反目标**（即使功能上可用，出现下列情况也算失败）
+
 - 桌面端布局或控件尺寸因本次改动发生变化。
 - 切换语言时出现宽高跳变（违反 `docs/agents/web-frontend.md`「i18n 布局稳定性契约」）。
 - 截断文字没有 Tooltip 或其他方式查看全文（违反 `truncate-requires-tooltip` lint）。
@@ -40,11 +43,11 @@
 
 ## 4. 断点与设备判定
 
-| 名称 | 判定 | 用途 |
-|---|---|---|
-| 手机 | `<768px`（Tailwind `max-md`，既有 `useIsMobile`） | 卡片列表、精简表格、弹窗改为底部抽屉、筛选条改为下拉 |
-| 平板 | `768–1023px`（`md` 到 `lg` 之前） | 侧栏默认收成图标栏；表格隐藏低优先级列 |
-| 桌面 | `≥1024px`（`lg`） | 现状不变 |
+| 名称 | 判定                                                    | 用途                                                       |
+| ---- | ------------------------------------------------------- | ---------------------------------------------------------- |
+| 手机 | `<768px`（Tailwind `max-md`，既有 `useIsMobile`）       | 卡片列表、精简表格、弹窗改为底部抽屉、筛选条改为下拉       |
+| 平板 | `768–1023px`（`md` 到 `lg` 之前）                       | 侧栏默认收成图标栏；表格隐藏低优先级列                     |
+| 桌面 | `≥1024px`（`lg`）                                       | 现状不变                                                   |
 | 触屏 | `pointer: coarse`（Tailwind v4 `pointer-coarse:` 变体） | 只放大可点区域，**与宽度无关**（平板横屏 1180px 也算触屏） |
 
 决定（用户确认）：平板与手机都在本轮范围内。
@@ -55,20 +58,21 @@
 
 适用于手机上仍是"整表横滑"的 8 张表：
 
-| 表 | 文件 | 手机保留列 | 平板额外显示 |
-|---|---|---|---|
-| 任务审计 | `app/(dashboard)/audit/cron/page.tsx` | 时间、任务名称、状态 | 耗时、触发来源 |
-| Demo 访问审计 | `app/(dashboard)/audit/demo/page.tsx` | 时间、动作、模块 | 路径、IP |
-| 定时任务 | `app/(dashboard)/cron/page.tsx` | 名称、启用 | 类型、表达式、操作 |
-| Harness | `app/(dashboard)/harness/page.tsx` | 名称（模式作为下方次行文字） | 模式列、操作 |
-| 分享管理 | `app/(dashboard)/shares/page.tsx` | 会话 ID、状态 | 创建时间、过期时间、操作 |
-| Demo 会话 | `components/demo-sessions-manager.tsx` | 选择框、摘要、评分 | 时间、消息数 |
-| 端点健康 | `components/dashboard/endpoint-health-panel.tsx` | 名称 + 1 个主指标 | 其余指标视宽度 |
-| Top 排行 | `components/dashboard/top-ranking-panel.tsx` | 名称 + 1 个主指标 | 占比 |
+| 表            | 文件                                             | 手机保留列                   | 平板额外显示             |
+| ------------- | ------------------------------------------------ | ---------------------------- | ------------------------ |
+| 任务审计      | `app/(dashboard)/audit/cron/page.tsx`            | 时间、任务名称、状态         | 耗时、触发来源           |
+| Demo 访问审计 | `app/(dashboard)/audit/demo/page.tsx`            | 时间、动作、模块             | 路径、IP                 |
+| 定时任务      | `app/(dashboard)/cron/page.tsx`                  | 名称、启用                   | 类型、表达式、操作       |
+| Harness       | `app/(dashboard)/harness/page.tsx`               | 名称（模式作为下方次行文字） | 模式列、操作             |
+| 分享管理      | `app/(dashboard)/shares/page.tsx`                | 会话 ID、状态                | 创建时间、过期时间、操作 |
+| Demo 会话     | `components/demo-sessions-manager.tsx`           | 选择框、摘要、评分           | 时间、消息数             |
+| 端点健康      | `components/dashboard/endpoint-health-panel.tsx` | 名称 + 1 个主指标            | 其余指标视宽度           |
+| Top 排行      | `components/dashboard/top-ranking-panel.tsx`     | 名称 + 1 个主指标            | 占比                     |
 
 "保留列"是初稿（用户确认"没问题"），实施时如果某列在手机上明显更关键，可以替换，但要在 §10 偏差记录里写明。
 
 **机制**
+
 - **列分级用纯 CSS**：每列标注一档可见性——常驻 / `md` 起 / `lg` 起。隐藏通过 `TableHead`/`TableCell` 上的 `hidden md:table-cell`、`hidden lg:table-cell` 实现，不引入 JS 测宽。为避免 8 个文件各自拼类名，在 `table.tsx` 的 `TableHead`/`TableCell` 上加可选属性（如 `priority?: "md" | "lg"`）映射到这些类；不传时行为完全不变。
 - **点行看详情**：在 `<1024px` 且该表存在被隐藏的列时，点整行（或行内显式的"详情"热区，二选一由实现决定，但必须可用键盘操作，即 `role="button"` + `tabIndex` + Enter/Space）打开底部 `Drawer`，按"标签：值"列出该行全部字段，包括被隐藏列；行内操作（启用开关、删除、复制、编辑）在手机上移入抽屉底部，平板上若操作列可见则保留在行内。
 - 抽屉复用已有 `components/ui/drawer.tsx`，抽成一个共享组件（建议 `components/row-detail-drawer.tsx`），由各表传入字段列表和操作区。抽屉必须有 `DrawerTitle`。
@@ -148,6 +152,27 @@ login、callback、share、sessions/detail、playground、profile、dataset、mo
 - 交互：抽屉打开与关闭、键盘打开行详情、手机上时间范围 `Select` 切换后数据刷新，用 CDP 驱动点击和按键验证。
 - 真机触摸手感无法在本机验证，交付时请用户在手机和 iPad 上复验。
 
-## 10. 偏差记录
+## 10. 偏差记录（实施后回填）
 
-（实施过程中填写。）
+**与设计稿不同的决定**
+
+1. §5.3 原计划在 79 处写死的小字号上逐个补 `max-md:text-xs`，改为 `globals.css` 里一条 `[class~="text-[10px]"]` 类选择器统一提升到 12px，并由 `web/src/app/mobile-type.test.ts` 扫描源码防止今后新增漏网（`TINY_TEXT_CLASSES` 白名单，新增类必须同步进 CSS）。
+2. §5.2 的触控尺寸没有逐组件改 `components/ui/*`，改为一层独立 CSS（`web/src/styles/touch.css`，全部规则包在 `@media (pointer: coarse)` 内，按 `data-slot` 命中）。理由：`min-height` 天然胜过 Tailwind 的 `h-*`，不需要动 20 多个组件文件，`button.tsx` 等定制文件零改动。契约测试 `web/src/styles/touch.test.ts` 守护。
+3. §5.1 的行详情纯函数放在 `web/src/lib/row-detail.ts`（原计划与抽屉组件同文件）：vitest 未配置别名，测试无法从 `.tsx` 里加载 `@/` 依赖。
+4. 手机弹窗贴底时，`sm:flex-row` 底栏改为 `md:flex-row`，并给尺寸类加 `!`：Tailwind v4 中 `max-md:` 工具类排在 `sm:` 之前，调用方的 `sm:max-w-md/lg` 会在 640–767px 压过手机样式。
+5. 演示账户会话表（`components/demo-sessions-manager.tsx`）手机上本来就是卡片列表（设计稿误归为横滑表），只给平板加了列分级与行详情。
+6. 平板侧栏默认收起的判定扩展到「触屏且 768–1279px」：iPad 横屏 1024 时展开的 256px 侧栏会让表格横向滚动。
+7. Demo 访问审计手机只留「时间 + 动作」两列（时间戳 168px + 动作徽标 152px 已占满 390 宽度），模块列从平板起显示。
+
+**已知限制**
+
+- Harness 表在 ≥1024px 遇到超长正则仍会出现表格横向滚动（改动前桌面 1440 也存在，约 5px），本轮不动桌面布局。
+- 平板（768–1023px）的次要文字仍是 11px（中文缩放下 `text-xs`），设计稿只对手机提了 ≥12px 的要求。
+- 会话详情评分点的按钮框是 24×44；触控热区由 `pointer-coarse` 伪元素扩到 44px 高、横向只扩到相邻中线（避免与相邻点重叠），属有意设计。
+- 真机触摸手感未在本机验证。
+
+**巡检结果（chrome-headless-shell + CDP，`/tmp/mobile-audit/audit.mjs`）**
+
+- 360×740、390×844、844×390（手机横屏）、768×1024、1024×768（平板横屏）：全部路由无整页横向滚动、无表格横向滚动、触控目标达标（评分点除外，见上）。
+- 1440×900 鼠标模式：所有可交互控件尺寸与改动前逐个一致。
+- en / zh / ja 三语在 390 宽度下 `documentElement.scrollWidth` 完全一致（无切换跳变）。
