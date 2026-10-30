@@ -53,6 +53,8 @@ function DialogContent({
         data-slot="dialog-content"
         className={cn(
           "fixed top-1/2 left-1/2 z-50 grid max-h-[calc(100dvh-2rem)] w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 outline-none sm:max-w-sm",
+          // 手机：贴底全宽的底部面板（spec 2026-10-29-mobile-tablet-adapt §5.5）
+          "max-md:top-auto max-md:bottom-0 max-md:left-0 max-md:translate-x-0 max-md:translate-y-0 max-md:w-full max-md:max-w-none! max-md:max-h-[90dvh]! max-md:rounded-b-none max-md:pb-[calc(env(safe-area-inset-bottom)+1rem)]",
           className,
         )}
         {...props}
@@ -91,7 +93,7 @@ function DialogFooter({
     <div
       data-slot="dialog-footer"
       className={cn(
-        "-mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-xl border-t bg-muted/50 p-4 sm:flex-row sm:justify-end",
+        "-mx-4 -mb-4 flex gap-2 rounded-b-xl border-t bg-muted/50 p-4 max-md:flex-col max-md:rounded-b-none max-md:[&>*]:w-full md:flex-row md:justify-end",
         className,
       )}
       {...props}

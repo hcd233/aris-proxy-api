@@ -169,3 +169,12 @@ _Avoid_: animation css, theme animations
 **Signature Moment（签名时刻）**:
 为单个高光场景专门编排的动效序列（主题转场、登录页、Dashboard、侧栏指示器、Playground 流式输出）。
 _Avoid_: hero animation, special effect
+
+## Responsive & Touch（响应式与触控）
+
+- **手机 / 平板 / 桌面**：按视口宽度分档——手机 `<768px`（`useIsMobile`）、平板 `768–1023px`（`useIsCompact`）、桌面 `≥1024px`。宽屏触屏（1024–1279px）另用 `useIsNarrow`。
+- **触屏（Touch）**：`(pointer: coarse)` 媒体条件，与宽度无关。平板横屏、触屏笔记本都算触屏，所以控件尺寸按触屏判定而不是按宽度。
+- **触控层（Touch Layer）**：`src/styles/touch.css` 里唯一的 `@media (pointer: coarse)` 块，按 `data-slot` 把可点区域放大到 44px。业务代码不再单独写触屏尺寸补丁。
+- **列优先级（Column Priority）**：`TableHead`/`TableCell` 的 `priority` 属性——`md` 表示平板起显示、`lg` 表示桌面起显示，不传即常驻。窄屏靠纯 CSS 隐藏，不做宽度计算。
+- **行详情（Row Detail）**：窄屏下表格只留关键列，点整行从底部弹出的抽屉，列出该行全部字段与该行的操作。手机上的表格操作一律先进这个抽屉。
+- **小字号白名单（tiny text）**：源码里 `<12px` 的任意值字号类集中登记在 `src/styles/tiny-text.ts`，手机端由 `globals.css` 统一提升到 12px。

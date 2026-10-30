@@ -23,7 +23,9 @@ import { PaginationBar } from "@/components/pagination-bar";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { ProviderIcon } from "@/components/provider-icon";
 import { usePersistentState } from "@/hooks/use-persistent-state";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useIsCompact, useIsMobile } from "@/hooks/use-mobile";
+import { RowDetailDrawer } from "@/components/row-detail-drawer";
+import { rowDetailProps } from "@/lib/row-detail";
 import { toast } from "sonner";
 import { cn, formatDateTime } from "@/lib/utils";
 
@@ -43,6 +45,8 @@ function SelectCheckbox({ checked, onToggle }: { checked: boolean; onToggle: () 
   return (
     <div
       role="checkbox"
+      // styles/touch.css 按 checkbox slot 在触屏下扩展点击区域
+      data-slot="checkbox"
       aria-checked={checked}
       tabIndex={0}
       onClick={onToggle}
@@ -50,7 +54,7 @@ function SelectCheckbox({ checked, onToggle }: { checked: boolean; onToggle: () 
         if (e.key === " " || e.key === "Enter") onToggle();
       }}
       className={cn(
-        "flex size-4 cursor-pointer items-center justify-center rounded border transition-colors",
+        "relative flex size-4 cursor-pointer items-center justify-center rounded border transition-colors",
         checked
           ? "border-primary bg-primary text-primary-foreground"
           : "border-muted-foreground/30 hover:border-muted-foreground",
@@ -68,6 +72,7 @@ function SessionListTable({
   onToggleAll,
   emptyMessage,
   isMobile,
+  isCompact,
 }: {
   items: SessionRow[];
   selectedIds: Set<number>;
@@ -75,8 +80,11 @@ function SessionListTable({
   onToggleAll: () => void;
   emptyMessage: string;
   isMobile: boolean;
+  /** 平板（<1024px）：表格隐藏次要列，点行看全部字段；手机走上面的卡片列表 */
+  isCompact: boolean;
 }) {
   const t = useT();
+  const [detail, setDetail] = useState<SessionRow | null>(null);
 
   if (items.length === 0) {
     return <ListEmptyState icon={MessageSquare} message={emptyMessage} />;
@@ -139,79 +147,121 @@ function SessionListTable({
   }
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead className="w-10">
-            <SelectCheckbox checked={selectedIds.size === items.length} onToggle={onToggleAll} />
-          </TableHead>
-          <TableHead>{t("common.id")}</TableHead>
-          <TableHead className="w-[160px] whitespace-nowrap">{t("sessions.time")}</TableHead>
-          <TableHead>{t("sessions.summary")}</TableHead>
-          <TableHead className="w-[160px] text-center">{t("sessions.score")}</TableHead>
-          <TableHead className="w-24">{t("sessions.messages")}</TableHead>
-          <TableHead className="w-24">{t("sessions.tools")}</TableHead>
-          <TableHead className="w-[140px]">{t("sessions.models")}</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {items.map((item) => {
-          const isSelected = selectedIds.has(item.id);
-          return (
-            <TableRow key={item.id}>
-              <TableCell className="w-10">
-                <SelectCheckbox checked={isSelected} onToggle={() => onToggle(item.id)} />
-              </TableCell>
-              <TableCell className="font-mono text-xs">{item.id}</TableCell>
-              <TableCell className="whitespace-nowrap text-muted-foreground">
-                {item.createdAt ? formatDateTime(item.createdAt) : "—"}
-              </TableCell>
-              <TableCell className="max-w-[200px]">
-                <TooltipRoot>
-                  <TooltipTrigger
-                    render={<span className="block truncate text-left">{summary(item)}</span>}
-                  />
-                  <TooltipContent side="top" className="max-w-xs break-all">
-                    {summary(item)}
-                  </TooltipContent>
-                </TooltipRoot>
-              </TableCell>
-              <TableCell className="w-[160px]">
-                <div className="flex justify-center">
-                  {item.score != null ? (
-                    <span className="text-sm">
-                      {"★".repeat(item.score)}
-                      <span className="text-muted-foreground/30">{"★".repeat(5 - item.score)}</span>
-                    </span>
-                  ) : (
-                    <span className="text-muted-foreground">—</span>
-                  )}
-                </div>
-              </TableCell>
-              <TableCell>{item.messageCount}</TableCell>
-              <TableCell>{item.toolCount}</TableCell>
-              <TableCell>
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                  {item.modelIds && item.modelIds.length > 0 ? (
-                    item.modelIds.map((m) => (
-                      <span
-                        key={m}
-                        className="inline-flex items-center gap-1 text-xs text-muted-foreground"
-                      >
-                        <ProviderIcon protocol={m} size={14} />
-                        {m}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-muted-foreground">—</span>
-                  )}
-                </div>
-              </TableCell>
-            </TableRow>
-          );
-        })}
-      </TableBody>
-    </Table>
+    <>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-10">
+              <SelectCheckbox checked={selectedIds.size === items.length} onToggle={onToggleAll} />
+            </TableHead>
+            <TableHead priority="lg">{t("common.id")}</TableHead>
+            <TableHead priority="md" className="w-[160px] whitespace-nowrap">
+              {t("sessions.time")}
+            </TableHead>
+            <TableHead>{t("sessions.summary")}</TableHead>
+            <TableHead className="w-[160px] text-center">{t("sessions.score")}</TableHead>
+            <TableHead priority="md" className="w-24">
+              {t("sessions.messages")}
+            </TableHead>
+            <TableHead priority="lg" className="w-24">
+              {t("sessions.tools")}
+            </TableHead>
+            <TableHead priority="lg" className="w-[140px]">
+              {t("sessions.models")}
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {items.map((item) => {
+            const isSelected = selectedIds.has(item.id);
+            return (
+              <TableRow
+                key={item.id}
+                {...rowDetailProps(
+                  isCompact,
+                  () => setDetail(item),
+                  `${t("row_detail.view")}: ${summary(item)}`,
+                )}
+              >
+                <TableCell className="w-10">
+                  <SelectCheckbox checked={isSelected} onToggle={() => onToggle(item.id)} />
+                </TableCell>
+                <TableCell priority="lg" className="font-mono text-xs">
+                  {item.id}
+                </TableCell>
+                <TableCell priority="md" className="whitespace-nowrap text-muted-foreground">
+                  {item.createdAt ? formatDateTime(item.createdAt) : "—"}
+                </TableCell>
+                <TableCell className="max-w-[200px]">
+                  <TooltipRoot>
+                    <TooltipTrigger
+                      render={<span className="block truncate text-left">{summary(item)}</span>}
+                    />
+                    <TooltipContent side="top" className="max-w-xs break-all">
+                      {summary(item)}
+                    </TooltipContent>
+                  </TooltipRoot>
+                </TableCell>
+                <TableCell className="w-[160px]">
+                  <div className="flex justify-center">{stars(item)}</div>
+                </TableCell>
+                <TableCell priority="md">{item.messageCount}</TableCell>
+                <TableCell priority="lg">{item.toolCount}</TableCell>
+                <TableCell priority="lg">{models(item)}</TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+      <RowDetailDrawer
+        open={detail !== null}
+        onOpenChange={(open) => !open && setDetail(null)}
+        title={detail ? summary(detail) : ""}
+        fields={
+          detail
+            ? [
+                { label: t("common.id"), value: <span className="font-mono">{detail.id}</span> },
+                {
+                  label: t("sessions.time"),
+                  value: detail.createdAt ? formatDateTime(detail.createdAt) : "—",
+                },
+                { label: t("sessions.score"), value: stars(detail) },
+                { label: t("sessions.messages"), value: detail.messageCount },
+                { label: t("sessions.tools"), value: detail.toolCount },
+                { label: t("sessions.models"), value: models(detail) },
+              ]
+            : []
+        }
+      />
+    </>
+  );
+}
+
+function stars(item: SessionRow) {
+  return item.score != null ? (
+    <span className="text-sm">
+      {"★".repeat(item.score)}
+      <span className="text-muted-foreground/30">{"★".repeat(5 - item.score)}</span>
+    </span>
+  ) : (
+    <span className="text-muted-foreground">—</span>
+  );
+}
+
+function models(item: SessionRow) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+      {item.modelIds && item.modelIds.length > 0 ? (
+        item.modelIds.map((m) => (
+          <span key={m} className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+            <ProviderIcon protocol={m} size={14} />
+            {m}
+          </span>
+        ))
+      ) : (
+        <span className="text-muted-foreground">—</span>
+      )}
+    </div>
   );
 }
 
@@ -219,6 +269,7 @@ function SessionListTable({
 export function DemoSessionsManager() {
   const t = useT();
   const isMobile = useIsMobile();
+  const isCompact = useIsCompact();
 
   const [selectedSessions, setSelectedSessions] = useState<DemoSession[]>([]);
   const [selectedPage, setSelectedPage] = usePersistentState("dashboard.demo.selected.page", 1);
@@ -331,6 +382,7 @@ export function DemoSessionsManager() {
               onToggleAll={toggleSelectedAll}
               emptyMessage={t("demo.no_selected")}
               isMobile={isMobile}
+              isCompact={isCompact}
             />
           )}
 

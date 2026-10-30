@@ -44,6 +44,9 @@ import type { ApiError } from "@/lib/api-client";
 import { ScheduleEditorDialog } from "@/components/cron/schedule-editor";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { formatDateTime } from "@/lib/utils";
+import { RowDetailDrawer } from "@/components/row-detail-drawer";
+import { rowDetailProps } from "@/lib/row-detail";
+import { useIsCompact } from "@/hooks/use-mobile";
 
 function specToHuman(spec: string, locale: string): string {
   try {
@@ -71,6 +74,10 @@ export default function CronPage() {
   const [editingJob, setEditingJob] = useState<CronJobItem | null>(null);
   const [triggeringJob, setTriggeringJob] = useState<CronJobItem | null>(null);
   const [triggering, setTriggering] = useState(false);
+  // 窄屏（<1024px）表格只留关键列，点行看全部字段；按名称取当前行，开关切换后抽屉同步
+  const isCompact = useIsCompact();
+  const [detailName, setDetailName] = useState<string | null>(null);
+  const detail = jobs.find((j) => j.name === detailName) ?? null;
 
   const filterBar = useFilterBar({
     persistKey: "dashboard.cron",
@@ -172,6 +179,24 @@ export default function CronPage() {
   const refresh = (page: number, pageSize?: number) =>
     fetchJobs(page, pageSize ?? pageInfo.pageSize, queryParams.freeText);
 
+  const typeBadge = (job: CronJobItem) => (
+    <Badge variant={job.type === "core" ? "default" : "secondary"}>
+      {job.type === "core" ? t("cron.core") : t("cron.functional")}
+    </Badge>
+  );
+
+  const enabledSwitch = (job: CronJobItem) => (
+    <div className="flex items-center gap-1.5">
+      <Switch
+        checked={job.enabled}
+        disabled={toggleEnabled.updatingKey !== null || job.type === "core"}
+        onCheckedChange={() => handleToggle(job)}
+        aria-label={`${t("cron.enabled")}: ${cronJobLabel(job.name, t)}`}
+      />
+      {job.type === "core" && <Lock className="size-3.5 text-muted-foreground" />}
+    </div>
+  );
+
   return (
     <PermissionGuard adminOnly module="cron">
       <TooltipProvider>
@@ -208,17 +233,32 @@ export default function CronPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>{t("cron.name")}</TableHead>
-                      <TableHead className="w-[4.5rem]">{t("cron.type")}</TableHead>
-                      <TableHead className="w-[12rem]">{t("cron.spec")}</TableHead>
-                      <TableHead>{t("cron.description")}</TableHead>
+                      <TableHead priority="md" className="w-[4.5rem]">
+                        {t("cron.type")}
+                      </TableHead>
+                      <TableHead priority="md" className="w-[12rem]">
+                        {t("cron.spec")}
+                      </TableHead>
+                      <TableHead priority="lg">{t("cron.description")}</TableHead>
                       <TableHead className="w-[5rem]">{t("cron.enabled")}</TableHead>
-                      <TableHead className="w-[10.5rem]">{t("cron.updated_at")}</TableHead>
-                      <TableHead className="w-[6rem] text-right">{t("common.actions")}</TableHead>
+                      <TableHead priority="lg" className="w-[10.5rem]">
+                        {t("cron.updated_at")}
+                      </TableHead>
+                      <TableHead priority="md" className="w-[6rem] text-right">
+                        {t("common.actions")}
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {jobs.map((job) => (
-                      <TableRow key={job.name}>
+                      <TableRow
+                        key={job.name}
+                        {...rowDetailProps(
+                          isCompact,
+                          () => setDetailName(job.name),
+                          `${t("row_detail.view")}: ${cronJobLabel(job.name, t)}`,
+                        )}
+                      >
                         <TableCell className="font-medium">
                           <TooltipRoot>
                             <TooltipTrigger
@@ -234,12 +274,8 @@ export default function CronPage() {
                             </TooltipContent>
                           </TooltipRoot>
                         </TableCell>
-                        <TableCell>
-                          <Badge variant={job.type === "core" ? "default" : "secondary"}>
-                            {job.type === "core" ? t("cron.core") : t("cron.functional")}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
+                        <TableCell priority="md">{typeBadge(job)}</TableCell>
+                        <TableCell priority="md">
                           <div className="min-w-0">
                             <TooltipRoot>
                               <TooltipTrigger
@@ -275,7 +311,7 @@ export default function CronPage() {
                             </TooltipRoot>
                           </div>
                         </TableCell>
-                        <TableCell className="text-muted-foreground">
+                        <TableCell priority="lg" className="text-muted-foreground">
                           <TooltipRoot>
                             <TooltipTrigger
                               render={
@@ -289,22 +325,11 @@ export default function CronPage() {
                             </TooltipContent>
                           </TooltipRoot>
                         </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1.5">
-                            <Switch
-                              checked={job.enabled}
-                              disabled={toggleEnabled.updatingKey !== null || job.type === "core"}
-                              onCheckedChange={() => handleToggle(job)}
-                            />
-                            {job.type === "core" && (
-                              <Lock className="size-3.5 text-muted-foreground" />
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
+                        <TableCell>{enabledSwitch(job)}</TableCell>
+                        <TableCell priority="lg" className="text-muted-foreground">
                           {formatDateTime(job.updatedAt)}
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell priority="md" className="text-right">
                           <div className="flex items-center justify-end gap-1">
                             <Button
                               variant="ghost"
@@ -334,6 +359,62 @@ export default function CronPage() {
                 pageInfo={pageInfo}
                 onChange={(page, pageSize) => refresh(page, pageSize)}
                 totalLabel={t("pagination.jobs")}
+              />
+              <RowDetailDrawer
+                open={detail !== null}
+                onOpenChange={(open) => !open && setDetailName(null)}
+                title={detail ? cronJobLabel(detail.name, t) : ""}
+                fields={
+                  detail
+                    ? [
+                        {
+                          label: t("cron.name"),
+                          value: <span className="font-mono text-xs">{detail.name}</span>,
+                        },
+                        { label: t("cron.type"), value: typeBadge(detail) },
+                        {
+                          label: t("cron.spec"),
+                          value: (
+                            <div className="flex flex-col gap-0.5">
+                              <span>{specToHuman(detail.spec, locale)}</span>
+                              <span className="font-mono text-xs text-muted-foreground">
+                                {detail.spec}
+                              </span>
+                            </div>
+                          ),
+                        },
+                        { label: t("cron.description"), value: detail.description || "—" },
+                        { label: t("cron.enabled"), value: enabledSwitch(detail) },
+                        { label: t("cron.updated_at"), value: formatDateTime(detail.updatedAt) },
+                      ]
+                    : []
+                }
+                actions={
+                  detail && (
+                    <>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setDetailName(null);
+                          setEditingJob(detail);
+                        }}
+                      >
+                        <Pencil data-icon="inline-start" />
+                        {t("common.edit")}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setDetailName(null);
+                          setTriggeringJob(detail);
+                        }}
+                      >
+                        <Play data-icon="inline-start" />
+                        {t("cron.trigger")}
+                      </Button>
+                    </>
+                  )
+                }
               />
             </CardContent>
           </Card>

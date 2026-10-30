@@ -80,6 +80,7 @@ function SortableHead({
   sort,
   onSort,
   className,
+  priority,
 }: {
   label: string;
   field: ModelListSortField;
@@ -88,11 +89,13 @@ function SortableHead({
   onSort: (f: ModelListSortField) => void;
   /** 自适应列宽预算：与普通表头一样用 w-* 声明 */
   className?: string;
+  /** 窄屏隐藏该列（md = 平板起显示，lg = 桌面起显示） */
+  priority?: "md" | "lg";
 }) {
   const t = useT();
   const active = sortField === field;
   return (
-    <TableHead className={className}>
+    <TableHead className={className} priority={priority}>
       <Button
         type="button"
         variant="ghost"
@@ -261,10 +264,15 @@ export function FlatView({
             sortField={sortField}
             sort={sort}
             onSort={onSort}
+            priority="md"
             className="w-[10rem]"
           />
-          <TableHead className="w-[9rem]">{t("upstream.col_capabilities")}</TableHead>
-          <TableHead className="w-[7rem]">{t("upstream.col_pricing")}</TableHead>
+          <TableHead priority="lg" className="w-[9rem]">
+            {t("upstream.col_capabilities")}
+          </TableHead>
+          <TableHead priority="lg" className="w-[7rem]">
+            {t("upstream.col_pricing")}
+          </TableHead>
           <SortableHead
             label={t("upstream.col_status")}
             field="enabled"
@@ -279,6 +287,7 @@ export function FlatView({
             sortField={sortField}
             sort={sort}
             onSort={onSort}
+            priority="lg"
             className="w-[6.5rem]"
           />
           {/* 同分组视图：操作列按最宽语言实测给足，否则 fixed 布局会裁掉最左侧的「编辑」按钮 */}
@@ -297,13 +306,13 @@ export function FlatView({
               enabled={m.enabled}
               onCopyAlias={onCopyAlias}
             />
-            <TableCell className={cn(!m.enabled && "opacity-45")}>
+            <TableCell priority="md" className={cn(!m.enabled && "opacity-45")}>
               <SpecBadges contextLength={m.contextLength} maxOutputTokens={m.maxOutputTokens} />
             </TableCell>
-            <TableCell className={cn(!m.enabled && "opacity-45")}>
+            <TableCell priority="lg" className={cn(!m.enabled && "opacity-45")}>
               <CapabilityBadges capabilities={m.capabilities} />
             </TableCell>
-            <TableCell className={cn(!m.enabled && "opacity-45")}>
+            <TableCell priority="lg" className={cn(!m.enabled && "opacity-45")}>
               {/* 与兄弟列同形裹一层 flex：价格与徽标才能同行且有固定间距 */}
               <div className="flex items-center gap-1.5">
                 <PricingInline pricing={m.pricing} />
@@ -319,7 +328,9 @@ export function FlatView({
                 aria-label={m.enabled ? t("models.enabled") : t("models.disabled")}
               />
             </TableCell>
-            <TableCell className="text-muted-foreground">{formatDate(m.createdAt)}</TableCell>
+            <TableCell priority="lg" className="text-muted-foreground">
+              {formatDate(m.createdAt)}
+            </TableCell>
             <ModelActionsCell
               isDemo={isDemo}
               readOnly={!isAdmin && m.endpoint?.visibility === "public"}

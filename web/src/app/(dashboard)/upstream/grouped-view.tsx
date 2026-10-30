@@ -274,7 +274,7 @@ export function GroupedView({
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 space-y-1.5">
                   <CollapsibleTrigger
-                    className="flex items-center gap-1 text-muted-foreground hover:text-foreground"
+                    className="flex items-center gap-1 text-muted-foreground hover:text-foreground pointer-coarse:min-h-11"
                     aria-label={open ? t("upstream.collapse_group") : t("upstream.expand_group")}
                   >
                     <ChevronRight className="size-3.5 in-data-panel-open:rotate-90" />
@@ -471,11 +471,19 @@ export function GroupedView({
         <TableRow>
           {/* 主列不声明宽度：fixed 布局把它余下的空间全给这一列，模型名/上游名才有地方显示 */}
           <TableHead>{t("upstream.col_model")}</TableHead>
-          <TableHead className="w-[10rem]">{t("upstream.col_spec")}</TableHead>
-          <TableHead className="w-[9rem]">{t("upstream.col_capabilities")}</TableHead>
-          <TableHead className="w-[7rem]">{t("upstream.col_pricing")}</TableHead>
+          <TableHead priority="md" className="w-[10rem]">
+            {t("upstream.col_spec")}
+          </TableHead>
+          <TableHead priority="lg" className="w-[9rem]">
+            {t("upstream.col_capabilities")}
+          </TableHead>
+          <TableHead priority="lg" className="w-[7rem]">
+            {t("upstream.col_pricing")}
+          </TableHead>
           <TableHead className="w-[3.5rem]">{t("upstream.col_status")}</TableHead>
-          <TableHead className="w-[6.5rem]">{t("upstream.col_created")}</TableHead>
+          <TableHead priority="lg" className="w-[6.5rem]">
+            {t("upstream.col_created")}
+          </TableHead>
           {/* 操作列宽按最宽语言（en「Delete」）实测 ≈168px 给足：7.5rem 时 fixed 布局
               加上 justify-end 会把最左侧的「编辑」按钮裁到不可见（裁剪发生在左侧，无省略号） */}
           <TableHead className="w-[11rem] text-right">{t("upstream.col_actions")}</TableHead>
@@ -620,16 +628,16 @@ export function GroupedView({
                       onCopyAlias={onCopyAlias}
                       className="border-l border-dashed border-border pl-8"
                     />
-                    <TableCell className={cn(!m.enabled && "opacity-45")}>
+                    <TableCell priority="md" className={cn(!m.enabled && "opacity-45")}>
                       <SpecBadges
                         contextLength={m.contextLength}
                         maxOutputTokens={m.maxOutputTokens}
                       />
                     </TableCell>
-                    <TableCell className={cn(!m.enabled && "opacity-45")}>
+                    <TableCell priority="lg" className={cn(!m.enabled && "opacity-45")}>
                       <CapabilityBadges capabilities={m.capabilities} />
                     </TableCell>
-                    <TableCell className={cn(!m.enabled && "opacity-45")}>
+                    <TableCell priority="lg" className={cn(!m.enabled && "opacity-45")}>
                       {/* 与兄弟列同形裹一层 flex：价格与徽标才能同行且有固定间距 */}
                       <div className="flex items-center gap-1.5">
                         <PricingInline pricing={m.pricing} />
@@ -645,7 +653,7 @@ export function GroupedView({
                         aria-label={m.enabled ? t("models.enabled") : t("models.disabled")}
                       />
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell priority="lg" className="text-muted-foreground">
                       {formatDate(m.createdAt)}
                     </TableCell>
                     <ModelActionsCell

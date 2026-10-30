@@ -1,0 +1,105 @@
+/* 触屏尺寸层（spec docs/superpowers/specs/2026-10-29-mobile-tablet-adapt-design.md §5.2）
+ *
+ * 只在 `pointer: coarse`（手指操作）下生效，与屏幕宽度无关：平板横屏、触屏笔记本同样放大，
+ * 鼠标操作的桌面零变化。按 shadcn 自带的 data-slot 命中，业务代码不需要逐处补触屏类。
+ *
+ * 写成 unlayered CSS：优先级高于 Tailwind 的 utilities 层，且 min-height 本就压过 height，
+ * 组件上的 h-7 / h-8 / size-8 等无需改动。
+ *
+ * 两类处理：
+ * 1. 外观放大：按钮、切换、输入、选择、菜单项、导航项，直接把最小高度抬到 44px。
+ * 2. 点击区扩展：开关、复选、单选保持视觉尺寸，用组件已有的 ::after（absolute）扩到 44×44；
+ *    徽标里的小按钮（如筛选条 token 的移除按钮）同理，避免把徽标撑高。
+ */
+@media (pointer: coarse) {
+  /* Button 被 render 进 TooltipTrigger 等触发器后 data-slot 会被触发器覆盖，
+   * 所以按钮另按其稳定的 .group/button 类命中；ToggleGroupItem 同理按 data-spacing。 */
+  :is(
+    [data-slot="button"],
+    .group\/button,
+    [data-slot="toggle-group-item"],
+    [data-spacing][data-variant][data-size]:not([data-slot="toggle-group"]),
+    [data-slot="toggle"],
+    [data-slot="input"],
+    [data-slot="input-group"],
+    [data-slot="select-trigger"],
+    [data-slot="combobox-trigger"],
+    [data-slot="dropdown-menu-item"],
+    [data-slot="select-item"],
+    [data-slot="combobox-item"],
+    [data-slot="sidebar-menu-button"],
+    [data-slot="sidebar-group-label"],
+    [data-slot="filter-bar"],
+    [data-nav-item]
+  ):not([data-slot="badge"] *) {
+    min-height: 44px;
+  }
+
+  :is(
+    .group\/button[data-size^="icon"],
+    [data-slot="toggle-group-item"],
+    [data-spacing][data-variant][data-size]:not([data-slot="toggle-group"])
+  ):not([data-slot="badge"] *) {
+    min-width: 44px;
+  }
+
+  /* 滑块的拖动区域是整条 Control（Root 的唯一子元素），触屏下抬到 44px 高 */
+  [data-slot="slider"] > * {
+    min-height: 44px;
+  }
+
+  /* 平板默认收起的图标栏：3rem 只放得下 32px 的导航项，触屏下加宽到 3.75rem（减去 p-2 后正好 44px）。
+   * 宽度变量由 SidebarProvider 内联写入，需要 !important 才能覆盖。 */
+  [data-slot="sidebar-wrapper"] {
+    --sidebar-width-icon: 3.75rem !important;
+  }
+  [data-slot="sidebar-menu-button"] {
+    min-width: 44px;
+  }
+
+  /* 可点开行详情的表格行（lib/row-detail.ts）：整行就是点击目标；表格行的 height 即最小高度 */
+  tr[data-row-detail] {
+    height: 44px;
+  }
+
+  /* 表格单元格里只用来显示提示的按钮（截断文本、错误状态）：外观放大到 44px，行高随之变高 */
+  [data-slot="table-cell"] button[data-slot="tooltip-trigger"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  [data-slot="textarea"] {
+    min-height: 5.5rem;
+  }
+
+  /* 可点的徽标（如触发词动作切换）与徽标里的小按钮：徽标自带 overflow-hidden，
+   * 会把扩展出去的点击区域一并裁掉，这里放开。 */
+  :is(button, a).group\/badge,
+  [data-slot="badge"]:has(button) {
+    overflow: visible;
+  }
+  :is(button, a).group\/badge,
+  [data-slot="badge"] .group\/button {
+    position: relative;
+  }
+
+  /* 伪元素不能放进 :is()，只能写成选择器列表 */
+  [data-slot="switch"]::after,
+  [data-slot="checkbox"]::after,
+  [data-slot="radio-group-item"]::after,
+  [data-slot="slider-thumb"]::after,
+  button.group\/badge::after,
+  a.group\/badge::after,
+  [data-slot="badge"] .group\/button::after {
+    content: "";
+    position: absolute;
+    inset: auto;
+    left: 50%;
+    top: 50%;
+    translate: -50% -50%;
+    width: 100%;
+    height: 100%;
+    min-width: 44px;
+    min-height: 44px;
+  }
+}

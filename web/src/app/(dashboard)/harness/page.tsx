@@ -9,6 +9,9 @@ import { showErrorToast } from "@/lib/api-error-handler";
 import { useT } from "@/lib/i18n";
 import type { HarnessRuleItem } from "@/lib/types";
 import { PageHeader } from "@/components/page-header";
+import { RowDetailDrawer } from "@/components/row-detail-drawer";
+import { rowDetailProps } from "@/lib/row-detail";
+import { useIsCompact, useIsNarrow } from "@/hooks/use-mobile";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,6 +58,11 @@ export default function HarnessPage() {
   const [saving, setSaving] = useState(false);
   const [draft, setDraft] = useState<RuleDraft | null>(null);
   const [deleting, setDeleting] = useState<HarnessRuleItem | null>(null);
+  // 窄屏（<1024px）表格只留关键列，点行看全部字段
+  const isCompact = useIsCompact();
+  // 正则可能极长：窄屏（含 1024 触屏横屏）改用固定列宽 + 换行，避免表格横向滚动
+  const isNarrow = useIsNarrow();
+  const [detail, setDetail] = useState<HarnessRuleItem | null>(null);
   const [previewUA, setPreviewUA] = useState("");
   const [previewResult, setPreviewResult] = useState<{
     harness: string;
@@ -171,20 +179,41 @@ export default function HarnessPage() {
 
       <Card>
         <CardContent className="pt-6">
-          <Table>
+          {/* 窄屏开启 fit：长正则不再把表格撑宽，单元格改为换行显示（不截断） */}
+          <Table fit={isNarrow}>
             <TableHeader>
               <TableRow>
-                <TableHead>{t("harness.pattern")}</TableHead>
+                <TableHead priority="md">{t("harness.pattern")}</TableHead>
                 <TableHead>{t("harness.name")}</TableHead>
-                <TableHead className="w-[104px] sr-only">{t("harness.actions")}</TableHead>
+                <TableHead priority="md" className="w-[104px] sr-only">
+                  {t("harness.actions")}
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {rules.map((rule) => (
-                <TableRow key={rule.id}>
-                  <TableCell className="font-mono text-xs">{rule.pattern}</TableCell>
-                  <TableCell>{rule.name}</TableCell>
-                  <TableCell>
+                <TableRow
+                  key={rule.id}
+                  {...rowDetailProps(
+                    isCompact,
+                    () => setDetail(rule),
+                    `${t("row_detail.view")}: ${rule.name}`,
+                  )}
+                >
+                  <TableCell
+                    priority="md"
+                    className="font-mono text-xs whitespace-normal break-all"
+                  >
+                    {rule.pattern}
+                  </TableCell>
+                  <TableCell className="whitespace-normal max-xl:break-words">
+                    {rule.name}
+                    {/* 手机上模式列隐藏，作为名称下方的次行显示 */}
+                    <span className="mt-0.5 block font-mono text-xs break-all text-muted-foreground md:hidden">
+                      {rule.pattern}
+                    </span>
+                  </TableCell>
+                  <TableCell priority="md">
                     <div className="flex items-center gap-1">
                       <Button
                         size="icon"
@@ -214,13 +243,58 @@ export default function HarnessPage() {
               ))}
               {!loading && rules.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={3} className="text-center text-sm text-muted-foreground">
+                  <TableCell
+                    colSpan={3}
+                    className="text-center text-sm whitespace-normal text-muted-foreground"
+                  >
                     {t("harness.empty")}
                   </TableCell>
                 </TableRow>
               )}
             </TableBody>
           </Table>
+          <RowDetailDrawer
+            open={detail !== null}
+            onOpenChange={(open) => !open && setDetail(null)}
+            title={detail?.name ?? ""}
+            fields={
+              detail
+                ? [
+                    { label: t("harness.name"), value: detail.name },
+                    {
+                      label: t("harness.pattern"),
+                      value: <span className="font-mono text-xs">{detail.pattern}</span>,
+                    },
+                  ]
+                : []
+            }
+            actions={
+              detail && (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setDetail(null);
+                      setDraft({ id: detail.id, pattern: detail.pattern, name: detail.name });
+                    }}
+                  >
+                    <Pencil data-icon="inline-start" />
+                    {t("harness.edit")}
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      setDetail(null);
+                      setDeleting(detail);
+                    }}
+                  >
+                    <Trash2 data-icon="inline-start" />
+                    {t("harness.delete")}
+                  </Button>
+                </>
+              )
+            }
+          />
         </CardContent>
       </Card>
 
