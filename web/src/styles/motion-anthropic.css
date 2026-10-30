@@ -499,27 +499,3 @@
     outline-offset: 2px;
   }
 }
-
-/* ---- 手机弹窗：贴底面板从屏幕下沿推入（spec 2026-10-29-mobile-tablet-adapt §5.5） ----
- * 手机上 dialog / alert-dialog 由 Tailwind 改成贴底全宽，纸张下落的位移太小，看不出来源；
- * 这里改为整块从底部推入。只动画 transform（居中用的 translate 属性在手机上已归零）。 */
-@media (width < 48rem) {
-  [data-theme="anthropic"]
-    :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"])[data-open] {
-    animation: atelier-sheet-up 380ms var(--ease-settle) backwards;
-  }
-  [data-theme="anthropic"]
-    :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"])[data-closed] {
-    animation: atelier-sheet-down 220ms var(--ease-lift) both;
-  }
-}
-@keyframes atelier-sheet-up {
-  from {
-    transform: translateY(100%);
-  }
-}
-@keyframes atelier-sheet-down {
-  to {
-    transform: translateY(100%);
-  }
-}

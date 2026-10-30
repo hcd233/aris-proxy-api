@@ -18,13 +18,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PaginationBar } from "@/components/pagination-bar";
-import { Copy, ScrollText } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ScrollText } from "lucide-react";
 import { ProviderIcon } from "@/components/provider-icon";
 import { toast } from "sonner";
-import { useIsCompact, useIsMobile } from "@/hooks/use-mobile";
-import { RowDetailDrawer } from "@/components/row-detail-drawer";
-import { rowDetailProps } from "@/lib/row-detail";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useRequestSeq } from "@/hooks/use-request-seq";
 import { useI18n } from "@/lib/i18n";
 import { PermissionGuard } from "@/components/permission-guard";
@@ -84,9 +81,6 @@ function formatStatusCode(code: string, t: (key: string, fallback?: string) => s
 
 export default function AuditPage() {
   const isMobile = useIsMobile();
-  // 平板（768–1023px）走表格但隐藏次要列，点行看全部字段；手机是可展开的列表
-  const isCompact = useIsCompact();
-  const [detail, setDetail] = useState<(typeof logs)[number] | null>(null);
   const { t, locale } = useI18n();
   const [logs, setLogs] = useState<AuditLogItem[]>([]);
   const [pageInfo, setPageInfo] = useState<PageInfo>({ page: 1, pageSize: 20, total: 0 });
@@ -509,22 +503,14 @@ export default function AuditPage() {
                     <TableHead className="w-[10.5rem]">{t("audit.time")}</TableHead>
                     {/* 主列不声明宽度：fixed 布局把剩余空间全给模型列（端点/协议并入次行） */}
                     <TableHead>{t("audit.filter_model")}</TableHead>
-                    <TableHead priority="lg" className="w-[4rem]">
-                      {t("audit.user_name")}
-                    </TableHead>
+                    <TableHead className="w-[4rem]">{t("audit.user_name")}</TableHead>
                     <TableHead className="w-[4rem]">{t("audit.filter_status")}</TableHead>
                     {/* 8.5rem 是 token 列的下限：cache 行 "ca: 4.1K / 113.5K" 再窄就被裁掉 */}
                     <TableHead className="w-[8.5rem]">{t("audit.tokens")}</TableHead>
-                    <TableHead priority="lg" className="w-[5rem]">
-                      {t("audit.latency")}
-                    </TableHead>
+                    <TableHead className="w-[5rem]">{t("audit.latency")}</TableHead>
                     <TableHead className="w-[5rem]">{t("audit.cost.column")}</TableHead>
-                    <TableHead priority="lg" className="w-[5rem]">
-                      {t("audit.useragent")}
-                    </TableHead>
-                    <TableHead priority="lg" className="w-[4.5rem]">
-                      {t("audit.copy_traceid")}
-                    </TableHead>
+                    <TableHead className="w-[5rem]">{t("audit.useragent")}</TableHead>
+                    <TableHead className="w-[4.5rem]">{t("audit.copy_traceid")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -549,15 +535,7 @@ export default function AuditPage() {
                       .filter((v) => v && v !== "—")
                       .join(" · ");
                     return (
-                      <TableRow
-                        key={log.id}
-                        className={ok ? "" : "bg-destructive/5"}
-                        {...rowDetailProps(
-                          isCompact,
-                          () => setDetail(log),
-                          `${t("row_detail.view")}: ${log.modelId || "—"}`,
-                        )}
-                      >
+                      <TableRow key={log.id} className={ok ? "" : "bg-destructive/5"}>
                         <TableCell className="whitespace-nowrap text-xs tabular-nums text-muted-foreground">
                           {formatDateTime(log.createdAt)}
                         </TableCell>
@@ -568,32 +546,17 @@ export default function AuditPage() {
                               <TooltipRoot>
                                 <TooltipTrigger
                                   render={
-                                    isCompact ? (
-                                      <span className="flex min-w-0 items-center gap-1.5">
-                                        <ProviderIcon
-                                          protocol={log.modelId}
-                                          size={14}
-                                          className="shrink-0"
-                                        />
-                                        <span className="min-w-0 truncate">
-                                          {log.modelId || "—"}
-                                        </span>
-                                      </span>
-                                    ) : (
-                                      <button
-                                        type="button"
-                                        className="flex min-w-0 cursor-default items-center gap-1.5"
-                                      >
-                                        <ProviderIcon
-                                          protocol={log.modelId}
-                                          size={14}
-                                          className="shrink-0"
-                                        />
-                                        <span className="min-w-0 truncate">
-                                          {log.modelId || "—"}
-                                        </span>
-                                      </button>
-                                    )
+                                    <button
+                                      type="button"
+                                      className="flex min-w-0 cursor-default items-center gap-1.5"
+                                    >
+                                      <ProviderIcon
+                                        protocol={log.modelId}
+                                        size={14}
+                                        className="shrink-0"
+                                      />
+                                      <span className="min-w-0 truncate">{log.modelId || "—"}</span>
+                                    </button>
                                   }
                                 />
                                 <TooltipContent side="top" className="max-w-xs">
@@ -619,7 +582,7 @@ export default function AuditPage() {
                             )}
                           </div>
                         </TableCell>
-                        <TableCell priority="lg">
+                        <TableCell>
                           <div className="text-sm">
                             {log.userName ? (
                               <TooltipProvider>
@@ -670,8 +633,7 @@ export default function AuditPage() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          {/* 窄屏错误详情放在行详情里，不再用需要悬停的提示按钮 */}
-                          {!isCompact && log.errorMessage ? (
+                          {log.errorMessage ? (
                             <TooltipProvider>
                               <TooltipRoot>
                                 <TooltipTrigger
@@ -705,10 +667,7 @@ export default function AuditPage() {
                             <div className="text-xs text-muted-foreground/70">{cacheInfo}</div>
                           )}
                         </TableCell>
-                        <TableCell
-                          priority="lg"
-                          className="whitespace-nowrap text-muted-foreground"
-                        >
+                        <TableCell className="whitespace-nowrap text-muted-foreground">
                           <div className="text-xs">
                             I: {formatDurationMs(log.firstTokenLatencyMs)}
                           </div>
@@ -721,7 +680,7 @@ export default function AuditPage() {
                         <TableCell className="whitespace-nowrap text-xs tabular-nums">
                           {formatCost(log.cost, log.pricingCurrency)}
                         </TableCell>
-                        <TableCell priority="lg">
+                        <TableCell>
                           {log.userAgent ? (
                             <TooltipProvider>
                               <TooltipRoot>
@@ -745,8 +704,6 @@ export default function AuditPage() {
                           )}
                         </TableCell>
                         <TableCell
-                          priority="lg"
-                          data-row-detail-ignore=""
                           className="cursor-pointer font-mono text-xs underline-offset-2 hover:underline"
                           onClick={() => handleCopyTrace(log.traceId)}
                         >
@@ -772,79 +729,6 @@ export default function AuditPage() {
               pageInfo={pageInfo}
               onChange={(page, pageSize) => refresh(page, pageSize)}
               totalLabel={t("pagination.logs")}
-            />
-            <RowDetailDrawer
-              open={detail !== null}
-              onOpenChange={(open) => !open && setDetail(null)}
-              title={detail?.modelId || "—"}
-              fields={
-                detail
-                  ? [
-                      { label: t("audit.time"), value: formatDateTime(detail.createdAt) },
-                      { label: t("audit.filter_model"), value: detail.modelId || "—" },
-                      { label: t("audit.user_name"), value: detail.userName || "—" },
-                      { label: t("audit.api_key_name"), value: detail.apiKeyName || "—" },
-                      {
-                        label: t("audit.filter_status"),
-                        value: (
-                          <div className="flex flex-col items-start gap-1">
-                            <Badge
-                              variant={
-                                detail.upstreamStatusCode === 200 ? "secondary" : "destructive"
-                              }
-                              className="text-xs"
-                            >
-                              {detail.upstreamStatusCode}
-                            </Badge>
-                            {detail.errorMessage && (
-                              <span className="text-destructive">{detail.errorMessage}</span>
-                            )}
-                          </div>
-                        ),
-                      },
-                      {
-                        label: t("audit.tokens"),
-                        value: [
-                          formatTokenPair(detail.inputTokens, detail.outputTokens),
-                          formatCacheTokens(
-                            detail.cacheCreationInputTokens,
-                            detail.cacheReadInputTokens,
-                          ),
-                        ]
-                          .filter(Boolean)
-                          .join(" · "),
-                      },
-                      {
-                        label: t("audit.latency"),
-                        value: [
-                          `I: ${formatDurationMs(detail.firstTokenLatencyMs)}`,
-                          detail.streamDurationMs > 0
-                            ? `O: ${formatDurationMs(detail.streamDurationMs)}`
-                            : "",
-                        ]
-                          .filter(Boolean)
-                          .join(" · "),
-                      },
-                      {
-                        label: t("audit.cost.column"),
-                        value: formatCost(detail.cost, detail.pricingCurrency),
-                      },
-                      { label: t("audit.useragent"), value: detail.userAgent || "—" },
-                      {
-                        label: "TraceID",
-                        value: <span className="font-mono text-xs">{detail.traceId || "—"}</span>,
-                      },
-                    ]
-                  : []
-              }
-              actions={
-                detail?.traceId ? (
-                  <Button variant="outline" onClick={() => handleCopyTrace(detail.traceId)}>
-                    <Copy data-icon="inline-start" />
-                    {`${t("common.copy")} ${t("audit.copy_traceid")}`}
-                  </Button>
-                ) : undefined
-              }
             />
           </CardContent>
         </Card>

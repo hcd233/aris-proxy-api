@@ -15,10 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { SegmentedChoice } from "@/components/dashboard/segmented-choice";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { RowDetailDrawer } from "@/components/row-detail-drawer";
-import { rowDetailProps } from "@/lib/row-detail";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Panel } from "@/components/dashboard/panel";
 import { DENSE_CELL, DENSE_HEAD, TruncatedName } from "@/components/dashboard/dense-table";
 import { useOverview } from "@/components/dashboard/overview-context";
@@ -45,9 +42,6 @@ export function TopRankingPanel({ range }: { range: DashboardRange }) {
     fetcher,
   );
   const currency = overview?.currency;
-  // 手机只留名称 + 占比，点行看全部指标；平板及以上宽度够，全列显示
-  const isMobile = useIsMobile();
-  const [detail, setDetail] = useState<NonNullable<typeof data>["items"][number] | null>(null);
 
   return (
     <Panel
@@ -58,28 +52,37 @@ export function TopRankingPanel({ range }: { range: DashboardRange }) {
       onRetry={retry}
       bodyClassName="px-1.5"
       action={
-        <SegmentedChoice
-          value={dimension}
-          options={dims.map((d) => ({ value: d, label: t(`dashboard.dim.${d}`) }))}
-          onChange={setDimension}
-          aria-label={t("dashboard.panel.top")}
-        />
+        <ToggleGroup
+          variant="segmented"
+          size="sm"
+          spacing={0.5}
+          value={[dimension]}
+          onValueChange={(next) => {
+            if (next[0]) setDimension(next[0] as DashboardDimension);
+          }}
+        >
+          {dims.map((d) => (
+            <ToggleGroupItem key={d} value={d} className="h-6 px-2 text-[11px]">
+              {t(`dashboard.dim.${d}`)}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
       }
     >
       <Table fit>
         <TableHeader className="bg-transparent">
           <TableRow className="hover:bg-transparent">
             <TableHead className={DENSE_HEAD}>{t(`dashboard.dim.${dimension}`)}</TableHead>
-            <TableHead priority="md" className={cn(DENSE_HEAD, "w-14 text-right")}>
+            <TableHead className={cn(DENSE_HEAD, "w-14 text-right")}>
               {t("dashboard.col.requests")}
             </TableHead>
-            <TableHead priority="md" className={cn(DENSE_HEAD, "w-14 text-right")}>
+            <TableHead className={cn(DENSE_HEAD, "w-14 text-right")}>
               {t("dashboard.col.tokens")}
             </TableHead>
-            <TableHead priority="md" className={cn(DENSE_HEAD, "w-12 text-right")}>
+            <TableHead className={cn(DENSE_HEAD, "w-12 text-right")}>
               {t("dashboard.col.cache")}
             </TableHead>
-            <TableHead priority="md" className={cn(DENSE_HEAD, "w-16 text-right")}>
+            <TableHead className={cn(DENSE_HEAD, "w-16 text-right")}>
               {t("dashboard.col.cost")}
             </TableHead>
             <TableHead className={cn(DENSE_HEAD, "w-20")}>{t("dashboard.col.share")}</TableHead>
@@ -87,27 +90,20 @@ export function TopRankingPanel({ range }: { range: DashboardRange }) {
         </TableHeader>
         <TableBody>
           {(data?.items ?? []).map((item) => (
-            <TableRow
-              key={item.key}
-              {...rowDetailProps(
-                isMobile,
-                () => setDetail(item),
-                `${t("row_detail.view")}: ${item.name || item.key}`,
-              )}
-            >
+            <TableRow key={item.key}>
               <TableCell className={DENSE_CELL}>
                 <TruncatedName text={item.name || item.key} className="font-medium" />
               </TableCell>
-              <TableCell priority="md" className={cn(DENSE_CELL, "text-right")}>
+              <TableCell className={cn(DENSE_CELL, "text-right")}>
                 {formatInteger(item.requests)}
               </TableCell>
-              <TableCell priority="md" className={cn(DENSE_CELL, "text-right")}>
+              <TableCell className={cn(DENSE_CELL, "text-right")}>
                 {formatTokenCount(item.tokens)}
               </TableCell>
-              <TableCell priority="md" className={cn(DENSE_CELL, "text-right")}>
+              <TableCell className={cn(DENSE_CELL, "text-right")}>
                 {formatRate(item.cacheHitRate, 0)}
               </TableCell>
-              <TableCell priority="md" className={cn(DENSE_CELL, "text-right")}>
+              <TableCell className={cn(DENSE_CELL, "text-right")}>
                 {formatCostShort(item.cost, currency)}
               </TableCell>
               <TableCell className={DENSE_CELL}>
@@ -127,22 +123,6 @@ export function TopRankingPanel({ range }: { range: DashboardRange }) {
           ))}
         </TableBody>
       </Table>
-      <RowDetailDrawer
-        open={detail !== null}
-        onOpenChange={(open) => !open && setDetail(null)}
-        title={detail ? detail.name || detail.key : ""}
-        fields={
-          detail
-            ? [
-                { label: t("dashboard.col.requests"), value: formatInteger(detail.requests) },
-                { label: t("dashboard.col.tokens"), value: formatTokenCount(detail.tokens) },
-                { label: t("dashboard.col.cache"), value: formatRate(detail.cacheHitRate, 0) },
-                { label: t("dashboard.col.cost"), value: formatCostShort(detail.cost, currency) },
-                { label: t("dashboard.col.share"), value: formatRate(detail.costShare, 0) },
-              ]
-            : []
-        }
-      />
     </Panel>
   );
 }

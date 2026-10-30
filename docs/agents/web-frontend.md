@@ -58,27 +58,6 @@
 - **指标数字用 `MetricNumber`**：直接写 DOM 做里程表 / 解码动画，只动变化的位；不要再新增 `CountUp` 一类逐帧 setState 的计数器。
 - **内联脚本不要拼接**：根布局是 server component，从 `"use client"` 模块（如 `lib/theme.tsx`）导入的常量在这里是客户端引用，只能原样作为 prop 传入；与其他字符串拼接会把引用代理 stringify 成 `function(){throw …}`。每段首帧脚本单独一个 `<script>`。
 
-## 移动端与平板契约
-
-> 设计见 `docs/superpowers/specs/2026-10-29-mobile-tablet-adapt-design.md`，术语见 [web/CONTEXT.md](../../web/CONTEXT.md)。
-
-**断点**（`use-mobile.ts`）
-
-- 手机：`<768px`（`useIsMobile`，Tailwind `max-md`）。
-- 平板：`768–1023px`（`useIsCompact`，Tailwind `md:` 到 `lg` 之前）。
-- 触屏：`(pointer: coarse)`（Tailwind `pointer-coarse:`），与宽度无关——平板横屏、触屏笔记本都算。
-- 宽屏触屏 1024–1279px 的表格降级用 `useIsNarrow`。
-
-**触控尺寸**：全部写在 `web/src/styles/touch.css`，一个 `@media (pointer: coarse)` 块，按 `data-slot` 命中（按钮、输入框、下拉框、菜单项、开关、复选框、表格行等）。新增交互组件要么复用已有 `data-slot`，要么在该文件里补规则；**不要**在业务页面写 `pointer-coarse:min-h-11` 一类补丁。`web/src/styles/touch.test.ts` 守护「所有规则都在媒体查询内」「覆盖清单齐全」「小控件只扩点击区不放大外观」。
-
-**字号**：手机（`<768px`）下取消中文/日文对 `text-xs`/`text-sm` 的缩放（12px / 14px）；源码里 `<12px` 的任意值字号统一在 `globals.css` 提升到 12px，清单在 `src/styles/tiny-text.ts`，`src/app/mobile-type.test.ts` 会扫描源码——新增写死的小字号必须同步该清单与 CSS。
-
-**表格列分级**：窄屏要隐藏的列，用 `<TableHead priority="md|lg">` / `<TableCell priority="md|lg">`（`md` = 平板起显示，`lg` = 桌面起显示；纯 CSS `hidden md:table-cell`，不测宽度）。可截断内容一律 `truncate` + Tooltip；不可截断的长文本（正则、邮箱、名称）用 `whitespace-normal break-all` 让列内换行。
-
-**行详情抽屉**：手机上表格只留 2–3 个关键列时，点整行从底部弹出 `components/row-detail-drawer.tsx` 列出全部字段。行用 `{...rowDetailProps(isCompact, () => setDetail(row), label)}`，样式由 `TableRow` 按 `data-row-detail` 提供；行内交互元素（按钮、开关、链接、可复制的单元格）会被 `shouldOpenRowDetail` 自动排除，非交互但有点击的单元格加 `data-row-detail-ignore`。抽屉必须有 `DrawerTitle`，行内操作（编辑/删除/复制）在手机上移进抽屉的 `actions`。
-
-**框架**：手机内容区 `px-5 py-4` 并留 `env(safe-area-inset-bottom)`；跟随布局负边距的页面（`reading-layout.tsx`）必须同步成 `-mx-5`。手机弹窗（Dialog / AlertDialog）贴底全宽、底栏纵向排列，动效在两份 `styles/motion-*.css` 的 `@media (width < 48rem)` 块里。手机上的时间范围与面板维度切换用 `Select`（不要用一排按钮），自定义日期放进 `Drawer`。
-
 ## i18n 布局稳定性契约
 
 > 详见 [web/CONTEXT.md](../../web/CONTEXT.md)。切换语言（en/zh/ja）时组件不得发生宽高跳变。

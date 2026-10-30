@@ -609,28 +609,3 @@ html[data-theme="moonshot"][data-motion-tier="lite"] {
     filter: drop-shadow(0 0 8px rgb(255 255 255 / 0.6));
   }
 }
-
-/* ---- 手机弹窗：贴底面板从屏幕下沿升起（spec 2026-10-29-mobile-tablet-adapt §5.5） ----
- * 手机上弹窗贴底全宽，缩放浮现会让底边离开屏幕下沿；改为整块升起，blur 仍留在弹窗自身。 */
-@media (width < 48rem) {
-  [data-theme="moonshot"]
-    :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"])[data-open] {
-    animation: lunar-sheet-up 460ms var(--ease-orbit) backwards;
-  }
-  [data-theme="moonshot"]
-    :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"])[data-closed] {
-    animation: lunar-sheet-down 240ms var(--ease-fall) both;
-  }
-}
-@keyframes lunar-sheet-up {
-  from {
-    transform: translateY(100%);
-    filter: blur(var(--lunar-blur));
-  }
-}
-@keyframes lunar-sheet-down {
-  to {
-    transform: translateY(100%);
-    filter: blur(var(--lunar-blur));
-  }
-}

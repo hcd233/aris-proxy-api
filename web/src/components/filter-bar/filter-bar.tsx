@@ -204,7 +204,6 @@ export function FilterBar({
     >
       <div
         ref={anchorRef}
-        data-slot="filter-bar"
         className={cn(
           "flex min-h-10 min-w-0 flex-1 cursor-text flex-wrap items-center gap-1.5 rounded-lg border border-input bg-background px-2.5 py-1.5 transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/30",
           className,

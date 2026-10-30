@@ -1,4 +1,4 @@
-import type { Metadata, Viewport } from "next";
+import type { Metadata } from "next";
 import { Source_Serif_4 } from "next/font/google";
 // Maple Mono CN (monospace, CJK + Latin, unicode-range subset, loaded on demand).
 // Only the two weights reachable through the "Maple Mono CN" family name are
@@ -27,13 +27,6 @@ const sourceSerif = Source_Serif_4({
 export const metadata: Metadata = {
   title: "Aris Proxy API",
   description: "Management interface for Aris Proxy API",
-};
-
-// viewportFit=cover 让页面铺到刘海/圆角区域，顶栏与底部再用 env(safe-area-inset-*) 让出安全区。
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  viewportFit: "cover",
 };
 
 export default function RootLayout({

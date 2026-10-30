@@ -67,7 +67,7 @@ export function ThemeSwitcher({ variant = "fab" }: { variant?: "fab" | "inline" 
               type="button"
               onClick={(e) => setTheme(next, centerOf(e.currentTarget))}
               aria-label={label}
-              className="fixed bottom-6 left-6 z-50 flex size-9 items-center justify-center rounded-full border border-border bg-popover/70 text-foreground/70 opacity-60 backdrop-blur-md transition-opacity hover:text-foreground hover:opacity-100 pointer-coarse:size-11"
+              className="fixed bottom-6 left-6 z-50 flex h-9 w-9 items-center justify-center rounded-full border border-border bg-popover/70 text-foreground/70 opacity-60 backdrop-blur-md transition-opacity hover:text-foreground hover:opacity-100"
             >
               {icon}
             </button>

@@ -5,7 +5,6 @@
 @import "../styles/motion-anthropic.css";
 @import "../styles/motion-moonshot.css";
 @import "../styles/motion-signature.css";
-@import "../styles/touch.css";
 
 @custom-variant dark (&:is(.dark *));
 @custom-variant moonshot (&:is([data-theme="moonshot"] *));
@@ -214,17 +213,6 @@
     --text-4xl--line-height: 1.2626;
     --text-5xl: 2.64rem;
     --text-5xl--line-height: 1;
-  }
-  /* 手机上 CJK 缩放会把 text-xs / text-sm 压到约 11px / 13px，低于可读下限
-   * （spec 2026-10-29-mobile-tablet-adapt §5.3）：<768px 恢复 Tailwind 默认值，其余档位仍按语言缩放。 */
-  @media (width < 48rem) {
-    :lang(zh),
-    :lang(ja) {
-      --text-xs: 0.75rem;
-      --text-xs--line-height: calc(1 / 0.75);
-      --text-sm: 0.875rem;
-      --text-sm--line-height: calc(1.25 / 0.875);
-    }
   }
   body {
     @apply bg-background text-foreground;
@@ -487,22 +475,5 @@ html.theme-transition *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
-  }
-}
-
-/* 手机上写死的 <12px 任意值字号统一提升到 12px（spec 2026-10-29-mobile-tablet-adapt §5.3）。
- * 清单与 styles/tiny-text.ts 的 TINY_TEXT_CLASSES 一一对应（app/mobile-type.test.ts 守护）。
- * [class~=…] 只匹配完整类名，不会命中 md:text-[10px] 一类带变体的类；
- * 规则不进 @layer，优先级高于 utilities 层里的同名工具类。 */
-@media (width < 48rem) {
-  :is(
-    [class~="text-[8px]"],
-    [class~="text-[9px]"],
-    [class~="text-[10px]"],
-    [class~="text-[11px]"],
-    [class~="text-[11.5px]"],
-    [class~="text-[0.65rem]"]
-  ) {
-    font-size: 0.75rem;
   }
 }

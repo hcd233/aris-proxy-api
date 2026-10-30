@@ -15,7 +15,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
-import { SegmentedChoice } from "@/components/dashboard/segmented-choice";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Panel } from "@/components/dashboard/panel";
 import { useOverview } from "@/components/dashboard/overview-context";
 import { useDashboardQuery } from "@/components/dashboard/use-dashboard-query";
@@ -83,12 +83,21 @@ export function UsageTrendPanel({ range }: { range: DashboardRange }) {
       empty={!rows}
       onRetry={retry}
       action={
-        <SegmentedChoice
-          value={metric}
-          options={METRICS.map((m) => ({ value: m, label: t(`dashboard.metric.${m}`) }))}
-          onChange={setMetric}
-          aria-label={t("dashboard.panel.usage")}
-        />
+        <ToggleGroup
+          variant="segmented"
+          size="sm"
+          spacing={0.5}
+          value={[metric]}
+          onValueChange={(next) => {
+            if (next[0]) setMetric(next[0] as ModelMetric);
+          }}
+        >
+          {METRICS.map((m) => (
+            <ToggleGroupItem key={m} value={m} className="h-6 px-2 text-[11px]">
+              {t(`dashboard.metric.${m}`)}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
       }
     >
       <ChartContainer config={config} className="aspect-auto h-full min-h-40 w-full">

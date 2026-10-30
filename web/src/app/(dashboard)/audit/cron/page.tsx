@@ -17,11 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Copy, ScrollText } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { RowDetailDrawer } from "@/components/row-detail-drawer";
-import { rowDetailProps } from "@/lib/row-detail";
-import { useIsCompact } from "@/hooks/use-mobile";
+import { ScrollText } from "lucide-react";
 import { PaginationBar } from "@/components/pagination-bar";
 import { toast } from "sonner";
 import { useI18n } from "@/lib/i18n";
@@ -70,9 +66,6 @@ export default function CronAuditPage() {
     20,
   );
   const [logs, setLogs] = useState<CronCallAuditItem[]>([]);
-  // 窄屏（<1024px）表格只留关键列，点行看全部字段
-  const isCompact = useIsCompact();
-  const [detail, setDetail] = useState<CronCallAuditItem | null>(null);
   const [pageInfo, setPageInfo] = useState<PageInfo>({
     page: persistedPage,
     pageSize: persistedPageSize,
@@ -206,20 +199,6 @@ export default function CronAuditPage() {
     }
   };
 
-  const statusBadge = (log: CronCallAuditItem) => (
-    <Badge variant={statusBadgeVariant(log.status)} className="text-xs">
-      {statusLabelMap[log.status] ?? log.status}
-    </Badge>
-  );
-
-  const triggerBadge = (log: CronCallAuditItem) => (
-    <Badge variant={log.triggerSource === "manual" ? "default" : "secondary"} className="text-xs">
-      {log.triggerSource === "manual"
-        ? t("cron_audit.trigger_manual")
-        : t("cron_audit.trigger_scheduled")}
-    </Badge>
-  );
-
   return (
     <PermissionGuard adminOnly module="cron_audit">
       <div className="space-y-8">
@@ -284,11 +263,11 @@ export default function CronAuditPage() {
                   <TableRow>
                     <TableHead>{t("cron_audit.time")}</TableHead>
                     <TableHead>{t("cron_audit.cron_name")}</TableHead>
-                    <TableHead priority="md">{t("cron_audit.trigger_source")}</TableHead>
-                    <TableHead priority="lg">{t("cron_audit.trace_id")}</TableHead>
+                    <TableHead>{t("cron_audit.trigger_source")}</TableHead>
+                    <TableHead>{t("cron_audit.trace_id")}</TableHead>
                     <TableHead>{t("cron_audit.filter_status")}</TableHead>
-                    <TableHead priority="md">{t("cron_audit.duration")}</TableHead>
-                    <TableHead priority="lg">{t("cron_audit.metadata")}</TableHead>
+                    <TableHead>{t("cron_audit.duration")}</TableHead>
+                    <TableHead>{t("cron_audit.metadata")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -296,23 +275,22 @@ export default function CronAuditPage() {
                     <TableRow
                       key={log.id}
                       className={log.status === "success" ? "" : "bg-destructive/5"}
-                      {...rowDetailProps(
-                        isCompact,
-                        () => setDetail(log),
-                        `${t("row_detail.view")}: ${cronJobLabel(log.cronName, t)}`,
-                      )}
                     >
-                      {/* 手机只剩三列：时间与任务名允许换行，避免把表格撑出横向滚动 */}
-                      <TableCell className="whitespace-nowrap text-muted-foreground max-md:whitespace-normal">
+                      <TableCell className="whitespace-nowrap text-muted-foreground">
                         {formatDateTime(log.createdAt)}
                       </TableCell>
-                      <TableCell className="font-medium max-md:whitespace-normal">
-                        {cronJobLabel(log.cronName, t)}
+                      <TableCell className="font-medium">{cronJobLabel(log.cronName, t)}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={log.triggerSource === "manual" ? "default" : "secondary"}
+                          className="text-xs"
+                        >
+                          {log.triggerSource === "manual"
+                            ? t("cron_audit.trigger_manual")
+                            : t("cron_audit.trigger_scheduled")}
+                        </Badge>
                       </TableCell>
-                      <TableCell priority="md">{triggerBadge(log)}</TableCell>
                       <TableCell
-                        priority="lg"
-                        data-row-detail-ignore=""
                         className="cursor-pointer font-mono text-xs underline-offset-2 hover:underline"
                         onClick={() => handleCopyTrace(log.traceId)}
                       >
@@ -326,8 +304,7 @@ export default function CronAuditPage() {
                         </TooltipProvider>
                       </TableCell>
                       <TableCell>
-                        {/* 窄屏失败原因放在行详情里，这里不再用需要悬停的 tooltip 按钮 */}
-                        {!isCompact && log.status !== "success" && log.message ? (
+                        {log.status !== "success" && log.message ? (
                           <TooltipProvider>
                             <TooltipRoot>
                               <TooltipTrigger
@@ -353,13 +330,10 @@ export default function CronAuditPage() {
                           </Badge>
                         )}
                       </TableCell>
-                      <TableCell priority="md" className="text-muted-foreground">
+                      <TableCell className="text-muted-foreground">
                         {formatDurationMs(log.durationMs)}
                       </TableCell>
-                      <TableCell
-                        priority="lg"
-                        className="max-w-[250px] text-xs text-muted-foreground"
-                      >
+                      <TableCell className="max-w-[250px] text-xs text-muted-foreground">
                         <TooltipProvider>
                           <TooltipRoot>
                             <TooltipTrigger
@@ -385,54 +359,6 @@ export default function CronAuditPage() {
               pageInfo={pageInfo}
               onChange={(page, pageSize) => refresh(page, pageSize)}
               totalLabel={t("pagination.logs")}
-            />
-            <RowDetailDrawer
-              open={detail !== null}
-              onOpenChange={(open) => !open && setDetail(null)}
-              title={detail ? cronJobLabel(detail.cronName, t) : ""}
-              fields={
-                detail
-                  ? [
-                      { label: t("cron_audit.time"), value: formatDateTime(detail.createdAt) },
-                      {
-                        label: t("cron_audit.filter_status"),
-                        value: (
-                          <div className="flex flex-col items-start gap-1">
-                            {statusBadge(detail)}
-                            {detail.status !== "success" && detail.message && (
-                              <span className="text-destructive">{detail.message}</span>
-                            )}
-                          </div>
-                        ),
-                      },
-                      { label: t("cron_audit.trigger_source"), value: triggerBadge(detail) },
-                      {
-                        label: t("cron_audit.duration"),
-                        value: formatDurationMs(detail.durationMs),
-                      },
-                      {
-                        label: t("cron_audit.trace_id"),
-                        value: <span className="font-mono text-xs">{detail.traceId || "—"}</span>,
-                      },
-                      {
-                        label: t("cron_audit.metadata"),
-                        value: (
-                          <span className="font-mono text-xs">
-                            {formatMetadata(detail.metadata)}
-                          </span>
-                        ),
-                      },
-                    ]
-                  : []
-              }
-              actions={
-                detail?.traceId ? (
-                  <Button variant="outline" onClick={() => handleCopyTrace(detail.traceId)}>
-                    <Copy data-icon="inline-start" />
-                    {`${t("common.copy")} ${t("cron_audit.trace_id")}`}
-                  </Button>
-                ) : undefined
-              }
             />
           </CardContent>
         </Card>

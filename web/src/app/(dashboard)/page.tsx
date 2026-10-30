@@ -39,9 +39,8 @@ export default function DashboardPage() {
                   {t("dashboard.title")}
                 </h1>
               </div>
-              <div className="flex items-center gap-2 max-md:w-full">
+              <div className="flex items-center gap-2">
                 <TimeRangePicker
-                  className="max-md:flex-1"
                   value={range.key}
                   customStart={range.customStart}
                   customEnd={range.customEnd}

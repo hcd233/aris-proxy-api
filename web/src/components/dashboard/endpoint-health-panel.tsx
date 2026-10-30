@@ -1,9 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { RowDetailDrawer } from "@/components/row-detail-drawer";
-import { rowDetailProps } from "@/lib/row-detail";
+import { useCallback } from "react";
 import { api } from "@/lib/api-client";
 import { useT } from "@/lib/i18n";
 import { cn, formatDecimal, formatDurationMs, formatInteger } from "@/lib/utils";
@@ -42,15 +39,6 @@ export function EndpointHealthPanel({ range }: { range: DashboardRange }) {
     `${startTime}|${endTime}|${refreshToken}`,
     fetcher,
   );
-  // 手机只留名称 + 请求数，点行看全部指标；平板及以上宽度够，全列显示
-  const isMobile = useIsMobile();
-  const [detail, setDetail] = useState<NonNullable<typeof data>[number] | null>(null);
-  const rate = (r: number) => (
-    <span className={r >= 0.05 ? "text-negative" : r >= 0.01 ? "text-warning" : ""}>
-      {formatRate(r)}
-    </span>
-  );
-  const speed = (v: number | null | undefined) => (v != null ? formatDecimal(v, 0) : "\u2014");
 
   return (
     <Panel
@@ -68,16 +56,16 @@ export function EndpointHealthPanel({ range }: { range: DashboardRange }) {
             <TableHead className={cn(DENSE_HEAD, "w-14 text-right")}>
               {t("dashboard.col.requests")}
             </TableHead>
-            <TableHead priority="md" className={cn(DENSE_HEAD, "w-14 text-right")}>
+            <TableHead className={cn(DENSE_HEAD, "w-14 text-right")}>
               {t("dashboard.col.error_rate")}
             </TableHead>
-            <TableHead priority="md" className={cn(DENSE_HEAD, "w-14 text-right")}>
+            <TableHead className={cn(DENSE_HEAD, "w-14 text-right")}>
               {t("dashboard.col.p95")}
             </TableHead>
-            <TableHead priority="md" className={cn(DENSE_HEAD, "w-12 text-right")}>
+            <TableHead className={cn(DENSE_HEAD, "w-12 text-right")}>
               {t("dashboard.col.speed")}
             </TableHead>
-            <TableHead priority="md" className={cn(DENSE_HEAD, "w-16 text-right")}>
+            <TableHead className={cn(DENSE_HEAD, "w-16 text-right")}>
               {t("dashboard.col.cost")}
             </TableHead>
           </TableRow>
@@ -85,14 +73,7 @@ export function EndpointHealthPanel({ range }: { range: DashboardRange }) {
         <TableBody>
           {(data ?? []).map((row, i) => (
             // demo 下 endpoint 名已脱敏，短名可能脱敏成同一占位符，key 加序号防冲突
-            <TableRow
-              key={`${i}:${row.endpoint}`}
-              {...rowDetailProps(
-                isMobile,
-                () => setDetail(row),
-                `${t("row_detail.view")}: ${row.endpoint}`,
-              )}
-            >
+            <TableRow key={`${i}:${row.endpoint}`}>
               <TableCell className={DENSE_CELL}>
                 <div className="flex min-w-0 items-center gap-1.5">
                   <span
@@ -104,41 +85,34 @@ export function EndpointHealthPanel({ range }: { range: DashboardRange }) {
               <TableCell className={cn(DENSE_CELL, "text-right")}>
                 {formatInteger(row.requests)}
               </TableCell>
-              <TableCell priority="md" className={cn(DENSE_CELL, "text-right")}>
-                {rate(row.errorRate)}
+              <TableCell
+                className={cn(
+                  DENSE_CELL,
+                  "text-right",
+                  row.errorRate >= 0.05
+                    ? "text-negative"
+                    : row.errorRate >= 0.01
+                      ? "text-warning"
+                      : "",
+                )}
+              >
+                {formatRate(row.errorRate)}
               </TableCell>
-              <TableCell priority="md" className={cn(DENSE_CELL, "text-right")}>
+              <TableCell className={cn(DENSE_CELL, "text-right")}>
                 {formatDurationMs(row.p95LatencyMs)}
               </TableCell>
-              <TableCell priority="md" className={cn(DENSE_CELL, "text-right")}>
-                {speed(row.outputTokensPerSecond)}
+              <TableCell className={cn(DENSE_CELL, "text-right")}>
+                {row.outputTokensPerSecond != null
+                  ? formatDecimal(row.outputTokensPerSecond, 0)
+                  : "\u2014"}
               </TableCell>
-              <TableCell priority="md" className={cn(DENSE_CELL, "text-right")}>
+              <TableCell className={cn(DENSE_CELL, "text-right")}>
                 {formatCostShort(row.cost, overview?.currency)}
               </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
-      <RowDetailDrawer
-        open={detail !== null}
-        onOpenChange={(open) => !open && setDetail(null)}
-        title={detail?.endpoint ?? ""}
-        fields={
-          detail
-            ? [
-                { label: t("dashboard.col.requests"), value: formatInteger(detail.requests) },
-                { label: t("dashboard.col.error_rate"), value: rate(detail.errorRate) },
-                { label: t("dashboard.col.p95"), value: formatDurationMs(detail.p95LatencyMs) },
-                { label: t("dashboard.col.speed"), value: speed(detail.outputTokensPerSecond) },
-                {
-                  label: t("dashboard.col.cost"),
-                  value: formatCostShort(detail.cost, overview?.currency),
-                },
-              ]
-            : []
-        }
-      />
     </Panel>
   );
 }

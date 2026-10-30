@@ -29,9 +29,6 @@ import { FilterBar } from "@/components/filter-bar/filter-bar";
 import { useFilterBar } from "@/components/filter-bar/use-filter-bar";
 import type { FacetDef, FilterBarQueryParams } from "@/components/filter-bar/types";
 import { formatDateTime } from "@/lib/utils";
-import { RowDetailDrawer } from "@/components/row-detail-drawer";
-import { rowDetailProps } from "@/lib/row-detail";
-import { useIsCompact } from "@/hooks/use-mobile";
 
 export default function DemoAccessAuditPage() {
   const { t, locale } = useI18n();
@@ -56,9 +53,6 @@ export default function DemoAccessAuditPage() {
     20,
   );
   const [logs, setLogs] = useState<DemoAccessAuditItem[]>([]);
-  // 窄屏（<1024px）表格只留关键列，点行看全部字段
-  const isCompact = useIsCompact();
-  const [detail, setDetail] = useState<DemoAccessAuditItem | null>(null);
   const [pageInfo, setPageInfo] = useState<PageInfo>({
     page: persistedPage,
     pageSize: persistedPageSize,
@@ -185,15 +179,6 @@ export default function DemoAccessAuditPage() {
     }
   };
 
-  const actionBadge = (log: DemoAccessAuditItem) => (
-    <Badge variant={actionBadgeVariant(log.action)} className="text-xs">
-      {actionLabelMap[log.action] ?? log.action}
-    </Badge>
-  );
-
-  const reasonText = (log: DemoAccessAuditItem) =>
-    log.reason ? (reasonLabelMap[log.reason] ?? log.reason) : "—";
-
   return (
     <PermissionGuard adminOnly>
       <div className="space-y-8">
@@ -254,24 +239,13 @@ export default function DemoAccessAuditPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-[10.5rem]">{t("demo_access_audit.time")}</TableHead>
-                    {/* 手机只剩时间 + 动作两列：路径被隐藏，动作改为不声明宽度吃掉剩余空间 */}
-                    <TableHead className="w-[9.5rem] max-md:w-auto">
-                      {t("demo_access_audit.action")}
-                    </TableHead>
-                    <TableHead priority="md" className="w-[6rem]">
-                      {t("demo_access_audit.module")}
-                    </TableHead>
+                    <TableHead className="w-[9.5rem]">{t("demo_access_audit.action")}</TableHead>
+                    <TableHead className="w-[6rem]">{t("demo_access_audit.module")}</TableHead>
                     {/* 路径不声明宽度：fixed 布局把剩余空间全给它（最长的值在这一列） */}
-                    <TableHead priority="md">{t("demo_access_audit.path")}</TableHead>
-                    <TableHead priority="lg" className="w-[6rem]">
-                      {t("demo_access_audit.ip")}
-                    </TableHead>
-                    <TableHead priority="lg" className="w-[8rem]">
-                      {t("demo_access_audit.user_agent")}
-                    </TableHead>
-                    <TableHead priority="lg" className="w-[6rem]">
-                      {t("demo_access_audit.reason")}
-                    </TableHead>
+                    <TableHead>{t("demo_access_audit.path")}</TableHead>
+                    <TableHead className="w-[6rem]">{t("demo_access_audit.ip")}</TableHead>
+                    <TableHead className="w-[8rem]">{t("demo_access_audit.user_agent")}</TableHead>
+                    <TableHead className="w-[6rem]">{t("demo_access_audit.reason")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -283,20 +257,19 @@ export default function DemoAccessAuditPage() {
                           ? "bg-destructive/5"
                           : ""
                       }
-                      {...rowDetailProps(
-                        isCompact,
-                        () => setDetail(log),
-                        `${t("row_detail.view")}: ${actionLabelMap[log.action] ?? log.action}`,
-                      )}
                     >
                       <TableCell className="whitespace-nowrap text-muted-foreground">
                         {formatDateTime(log.createdAt)}
                       </TableCell>
-                      <TableCell>{actionBadge(log)}</TableCell>
-                      <TableCell priority="md" className="text-muted-foreground">
+                      <TableCell>
+                        <Badge variant={actionBadgeVariant(log.action)} className="text-xs">
+                          {actionLabelMap[log.action] ?? log.action}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
                         {moduleLabel(log.module)}
                       </TableCell>
-                      <TableCell priority="md" className="max-w-[220px] font-mono text-xs">
+                      <TableCell className="max-w-[220px] font-mono text-xs">
                         <TooltipRoot>
                           <TooltipTrigger
                             render={
@@ -308,13 +281,10 @@ export default function DemoAccessAuditPage() {
                           </TooltipContent>
                         </TooltipRoot>
                       </TableCell>
-                      <TableCell priority="lg" className="font-mono text-xs text-muted-foreground">
+                      <TableCell className="font-mono text-xs text-muted-foreground">
                         {log.ip || "—"}
                       </TableCell>
-                      <TableCell
-                        priority="lg"
-                        className="max-w-[180px] text-xs text-muted-foreground"
-                      >
+                      <TableCell className="max-w-[180px] text-xs text-muted-foreground">
                         <TooltipRoot>
                           <TooltipTrigger
                             render={
@@ -328,8 +298,8 @@ export default function DemoAccessAuditPage() {
                           </TooltipContent>
                         </TooltipRoot>
                       </TableCell>
-                      <TableCell priority="lg" className="text-xs text-muted-foreground">
-                        {reasonText(log)}
+                      <TableCell className="text-xs text-muted-foreground">
+                        {log.reason ? (reasonLabelMap[log.reason] ?? log.reason) : "—"}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -341,33 +311,6 @@ export default function DemoAccessAuditPage() {
               pageInfo={pageInfo}
               onChange={(page, pageSize) => refresh(page, pageSize)}
               totalLabel={t("pagination.logs")}
-            />
-            <RowDetailDrawer
-              open={detail !== null}
-              onOpenChange={(open) => !open && setDetail(null)}
-              title={detail ? (actionLabelMap[detail.action] ?? detail.action) : ""}
-              fields={
-                detail
-                  ? [
-                      {
-                        label: t("demo_access_audit.time"),
-                        value: formatDateTime(detail.createdAt),
-                      },
-                      { label: t("demo_access_audit.action"), value: actionBadge(detail) },
-                      { label: t("demo_access_audit.module"), value: moduleLabel(detail.module) },
-                      {
-                        label: t("demo_access_audit.path"),
-                        value: <span className="font-mono text-xs">{detail.path || "—"}</span>,
-                      },
-                      {
-                        label: t("demo_access_audit.ip"),
-                        value: <span className="font-mono text-xs">{detail.ip || "—"}</span>,
-                      },
-                      { label: t("demo_access_audit.user_agent"), value: detail.userAgent || "—" },
-                      { label: t("demo_access_audit.reason"), value: reasonText(detail) },
-                    ]
-                  : []
-              }
             />
           </CardContent>
         </Card>

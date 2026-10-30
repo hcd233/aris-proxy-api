@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/tooltip";
 import { ChatMessage, buildToolResultsByID } from "@/components/chat/chat-message";
 import { ShareDialog } from "@/components/share/share-dialog";
-import { useIsCompact, useIsMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useInfiniteList } from "@/hooks/use-infinite-list";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { DeleteIconButton } from "@/components/delete-button";
@@ -35,8 +35,6 @@ import { toast } from "sonner";
 export default function SessionDetailClient({ sessionId }: { sessionId: number }) {
   const router = useRouter();
   const isMobile = useIsMobile();
-  // 平板（<1024px）侧栏不常驻历史列表，历史同样走底部抽屉
-  const isCompact = useIsCompact();
   const t = useT();
   const { isDemo } = useAuth();
   const { loginEnabled, pending, isInDemo, toggle } = useDemoWhitelist();
@@ -265,7 +263,7 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
         <ArrowLeft className="size-5" />
       </Button>
 
-      {isCompact && (
+      {isMobile && (
         <Sheet>
           <SheetTrigger
             render={

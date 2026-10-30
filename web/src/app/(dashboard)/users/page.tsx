@@ -8,7 +8,6 @@ import { useAuth } from "@/lib/auth-context";
 import { PermissionGuard } from "@/components/permission-guard";
 import type { PageInfo, UserItem } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Item,
@@ -41,9 +40,7 @@ import { toast } from "sonner";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { useOptimisticUpdate } from "@/hooks/use-optimistic-update";
 import { useRequestSeq } from "@/hooks/use-request-seq";
-import { useIsCompact, useIsMobile } from "@/hooks/use-mobile";
-import { RowDetailDrawer } from "@/components/row-detail-drawer";
-import { rowDetailProps } from "@/lib/row-detail";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useI18n } from "@/lib/i18n";
 import { formatDate } from "@/lib/utils";
 import { FilterBar } from "@/components/filter-bar/filter-bar";
@@ -133,9 +130,6 @@ export default function UsersPage() {
   const [confirmUser, setConfirmUser] = useState<UserItem | null>(null);
   const { t, locale } = useI18n();
   const isMobile = useIsMobile();
-  // 平板（768–1023px）走表格但隐藏次要列，点行看全部字段；手机是卡片列表
-  const isCompact = useIsCompact();
-  const [detail, setDetail] = useState<UserItem | null>(null);
 
   const facets = useMemo<FacetDef[]>(
     () => [
@@ -336,108 +330,42 @@ export default function UsersPage() {
                     ))}
                   </ItemGroup>
                 ) : (
-                  <>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>{t("users.name")}</TableHead>
-                          <TableHead>{t("users.email")}</TableHead>
-                          <TableHead>{t("users.permission")}</TableHead>
-                          <TableHead priority="lg">{t("users.created_at")}</TableHead>
-                          <TableHead priority="lg">{t("users.last_login")}</TableHead>
-                          <TableHead className="w-14 text-right">{t("common.actions")}</TableHead>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{t("users.name")}</TableHead>
+                        <TableHead>{t("users.email")}</TableHead>
+                        <TableHead>{t("users.permission")}</TableHead>
+                        <TableHead>{t("users.created_at")}</TableHead>
+                        <TableHead>{t("users.last_login")}</TableHead>
+                        <TableHead className="w-14 text-right">{t("common.actions")}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {items.map((user) => (
+                        <TableRow key={user.id}>
+                          <TableCell className="font-medium">{user.name}</TableCell>
+                          <TableCell className="text-muted-foreground">{user.email}</TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {t(`permission.${user.permission}`)}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {user.createdAt ? formatDate(user.createdAt) : "—"}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {user.lastLogin ? formatDate(user.lastLogin) : "—"}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <UserRowActions
+                              user={user}
+                              currentUserId={currentUser?.id ?? null}
+                              onAction={handleAction}
+                            />
+                          </TableCell>
                         </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {items.map((user) => (
-                          <TableRow
-                            key={user.id}
-                            {...rowDetailProps(
-                              isCompact,
-                              () => setDetail(user),
-                              `${t("row_detail.view")}: ${user.name}`,
-                            )}
-                          >
-                            {/* 昵称/邮箱可能很长：截断 + 悬停看全文（truncate-requires-tooltip 约定） */}
-                            <TableCell className="font-medium">
-                              <TooltipRoot>
-                                <TooltipTrigger
-                                  render={
-                                    <span className="block max-w-[16ch] truncate">{user.name}</span>
-                                  }
-                                />
-                                <TooltipContent
-                                  side="top"
-                                  align="start"
-                                  className="max-w-xs break-all"
-                                >
-                                  {user.name}
-                                </TooltipContent>
-                              </TooltipRoot>
-                            </TableCell>
-                            <TableCell className="text-muted-foreground">
-                              <TooltipRoot>
-                                <TooltipTrigger
-                                  render={
-                                    <span className="block max-w-[22ch] truncate">
-                                      {user.email}
-                                    </span>
-                                  }
-                                />
-                                <TooltipContent
-                                  side="top"
-                                  align="start"
-                                  className="max-w-xs break-all"
-                                >
-                                  {user.email}
-                                </TooltipContent>
-                              </TooltipRoot>
-                            </TableCell>
-                            <TableCell className="text-muted-foreground">
-                              {t(`permission.${user.permission}`)}
-                            </TableCell>
-                            <TableCell priority="lg" className="text-muted-foreground">
-                              {user.createdAt ? formatDate(user.createdAt) : "—"}
-                            </TableCell>
-                            <TableCell priority="lg" className="text-muted-foreground">
-                              {user.lastLogin ? formatDate(user.lastLogin) : "—"}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <UserRowActions
-                                user={user}
-                                currentUserId={currentUser?.id ?? null}
-                                onAction={handleAction}
-                              />
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                    <RowDetailDrawer
-                      open={detail !== null}
-                      onOpenChange={(open) => !open && setDetail(null)}
-                      title={detail?.name ?? ""}
-                      fields={
-                        detail
-                          ? [
-                              { label: t("users.email"), value: detail.email },
-                              {
-                                label: t("users.permission"),
-                                value: t(`permission.${detail.permission}`),
-                              },
-                              {
-                                label: t("users.created_at"),
-                                value: detail.createdAt ? formatDate(detail.createdAt) : "—",
-                              },
-                              {
-                                label: t("users.last_login"),
-                                value: detail.lastLogin ? formatDate(detail.lastLogin) : "—",
-                              },
-                            ]
-                          : []
-                      }
-                    />
-                  </>
+                      ))}
+                    </TableBody>
+                  </Table>
                 )}
                 <PaginationBar
                   pageInfo={pageInfo}

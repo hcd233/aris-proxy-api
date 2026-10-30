@@ -3,7 +3,6 @@
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
-import { priorityClass, type ColumnPriority } from "@/lib/row-detail";
 
 /**
  * 表格容器。
@@ -76,8 +75,6 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
       data-slot="table-row"
       className={cn(
         "border-b transition-colors hover:bg-muted/60 has-aria-expanded:bg-muted/60 data-[state=selected]:bg-muted",
-        // 可点开行详情的行（lib/row-detail.ts 的 rowDetailProps）
-        "data-row-detail:cursor-pointer data-row-detail:outline-none data-row-detail:focus-visible:bg-muted data-row-detail:focus-visible:ring-2 data-row-detail:focus-visible:ring-ring/40 data-row-detail:focus-visible:ring-inset",
         className,
       )}
       {...props}
@@ -85,18 +82,12 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
   );
 }
 
-/** `priority`：窄屏隐藏该列（md = 平板起显示，lg = 桌面起显示），被隐藏的字段放进行详情抽屉 */
-function TableHead({
-  className,
-  priority,
-  ...props
-}: React.ComponentProps<"th"> & { priority?: ColumnPriority }) {
+function TableHead({ className, ...props }: React.ComponentProps<"th">) {
   return (
     <th
       data-slot="table-head"
       className={cn(
         "h-11 px-3 text-left align-middle text-xs font-semibold uppercase tracking-[0.08em] whitespace-nowrap text-muted-foreground [&:has([role=checkbox])]:pr-0",
-        priorityClass(priority),
         className,
       )}
       {...props}
@@ -104,19 +95,11 @@ function TableHead({
   );
 }
 
-function TableCell({
-  className,
-  priority,
-  ...props
-}: React.ComponentProps<"td"> & { priority?: ColumnPriority }) {
+function TableCell({ className, ...props }: React.ComponentProps<"td">) {
   return (
     <td
       data-slot="table-cell"
-      className={cn(
-        "p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0",
-        priorityClass(priority),
-        className,
-      )}
+      className={cn("p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0", className)}
       {...props}
     />
   );

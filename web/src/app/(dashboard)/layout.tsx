@@ -37,7 +37,7 @@ import { ThemeSwitcher } from "@/components/theme/theme-switcher";
 import { LocaleFade } from "@/components/locale-fade";
 import { NavIndicator } from "@/components/motion/nav-indicator";
 import { SessionHistorySidebar } from "@/components/session-detail/session-history-sidebar";
-import { useIsCompact, useIsMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   LayoutDashboard,
   MessageSquare,
@@ -428,7 +428,7 @@ function MobileTopBar() {
   const t = useT();
 
   return (
-    <header className="flex h-[calc(3.5rem+env(safe-area-inset-top))] items-center gap-3 border-b border-border/70 bg-background/80 px-4 pt-[env(safe-area-inset-top)] backdrop-blur-md md:hidden">
+    <header className="flex h-14 items-center gap-3 border-b border-border/70 bg-background/80 px-4 backdrop-blur-md md:hidden">
       <Button
         variant="ghost"
         size="icon-sm"
@@ -454,11 +454,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const isMobile = useIsMobile();
-  const isCompact = useIsCompact();
 
   const isSessionDetail = pathname.startsWith("/sessions/detail");
-  // 会话详情需要历史侧栏常驻：只在桌面（≥1024px）锁定展开；平板历史改走页内抽屉
-  const lockExpanded = isSessionDetail && !isCompact;
 
   const t = useT();
 
@@ -473,14 +470,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     const saved = localStorage.getItem("sidebar-collapsed");
     if (saved !== null) setCollapsed(saved === "true");
-    // 平板首次进入默认收成图标栏，给内容让出宽度；用户手动展开后照常记忆。
-    // 触屏横屏平板（如 iPad 1024–1279px）同样收起：展开的 256px 侧栏会让表格横向滚动。
-    else
-      setCollapsed(
-        window.matchMedia(
-          "(min-width: 768px) and (max-width: 1023px), (pointer: coarse) and (min-width: 768px) and (max-width: 1279px)",
-        ).matches,
-      );
 
     const savedGroups = localStorage.getItem(OPEN_GROUPS_STORAGE_KEY);
     if (savedGroups) {
@@ -494,12 +483,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    // 直接读 matchMedia：hydration 首帧 useIsCompact 还是服务端快照 false，
-    // 用 lockExpanded 判断会在平板上误把侧栏展开
-    if (isSessionDetail && !window.matchMedia("(max-width: 1023px)").matches) {
+    if (isSessionDetail) {
       setCollapsed(false);
     }
-  }, [isSessionDetail, isCompact]);
+  }, [isSessionDetail]);
 
   // 导航到收起组内的页面时自动展开该组
   useEffect(() => {
@@ -513,11 +500,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   // SidebarProvider 受控：桌面折叠态走 localStorage；session-detail 需要历史侧栏常驻，锁定展开。
   const handleOpenChange = useCallback(
     (open: boolean) => {
-      if (lockExpanded) return;
+      if (isSessionDetail) return;
       setCollapsed(!open);
       localStorage.setItem("sidebar-collapsed", String(!open));
     },
-    [lockExpanded],
+    [isSessionDetail],
   );
 
   const toggleCollapsed = useCallback(
@@ -562,7 +549,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               variant="ghost"
               size="icon-sm"
               onClick={toggleCollapsed}
-              disabled={lockExpanded}
+              disabled={isSessionDetail}
               aria-label={t("layout.sidebar_toggle")}
               className={
                 collapsed
@@ -575,7 +562,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           </SidebarHeader>
           <SidebarContent className="overflow-y-auto! py-3">
             <SidebarNav groups={NAV_GROUPS} openGroups={openGroups} onToggleGroup={toggleGroup} />
-            {!collapsed && lockExpanded && (
+            {!collapsed && !isMobile && isSessionDetail && (
               <Suspense fallback={null}>
                 <SessionHistorySidebar />
               </Suspense>
@@ -590,7 +577,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         {/* Main content */}
         <SidebarInset className="overflow-hidden">
           <MobileTopBar />
-          <div className="flex-1 overflow-y-auto px-5 pt-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] md:p-8 lg:p-10">
+          <div className="flex-1 overflow-y-auto p-4 md:p-8 lg:p-10">
             <LocaleFade>
               {/* data-page-wide：信息密度高的页面（dashboard）放宽到 1600px，其余页面保持 6xl 阅读宽度 */}
               <div className="mx-auto max-w-6xl has-[[data-page-wide]]:max-w-[1600px]">
