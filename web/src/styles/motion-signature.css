@@ -213,9 +213,6 @@ html[data-login-seen] .login-stage {
   --login-ease: var(--ease-settle);
   --login-enter: atelier-rise;
   --login-enter-ms: 520ms;
-  --login-card: atelier-settle;
-  --login-card-ms: 520ms;
-  --login-card-at: 0ms;
   --login-mark: atelier-stamp;
   --login-mark-at: 200ms;
   --login-char: atelier-typeset;
@@ -232,9 +229,6 @@ html[data-login-seen] .login-stage {
   --login-ease: var(--ease-drift);
   --login-enter: lunar-focus-in;
   --login-enter-ms: 760ms;
-  --login-card: lunar-emerge;
-  --login-card-ms: 900ms;
-  --login-card-at: 250ms;
   --login-mark: lunar-focus-in;
   --login-mark-at: 600ms;
   --login-char: lunar-char;
@@ -248,10 +242,6 @@ html[data-login-seen] .login-stage {
   --login-actions-step: 70ms;
 }
 
-.login-stage .login-card {
-  animation: var(--login-card) calc(var(--login-card-ms) * var(--login-pace)) var(--login-ease)
-    calc(var(--login-card-at) * var(--login-pace)) backwards;
-}
 .login-stage .login-mark {
   animation: var(--login-mark) calc(var(--login-enter-ms) * var(--login-pace)) var(--login-ease)
     calc(var(--login-mark-at) * var(--login-pace)) backwards;
@@ -313,32 +303,6 @@ html[data-login-seen] .login-stage {
     transform: scale(1.15);
     filter: blur(calc(var(--lunar-blur) * 1.25));
   }
-}
-
-/* moonshot: one light sweep around the card once it has emerged. */
-[data-theme="moonshot"] .login-card::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1px;
-  pointer-events: none;
-  -webkit-mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask:
-    linear-gradient(#000 0 0) content-box exclude,
-    linear-gradient(#000 0 0);
-  background: conic-gradient(
-    from var(--angle),
-    transparent 0deg,
-    rgb(255 255 255 / 0.6) 30deg,
-    transparent 80deg
-  );
-  opacity: 0;
-  animation: lunar-sweep calc(1400ms * var(--login-pace)) var(--ease-drift)
-    calc(900ms * var(--login-pace)) forwards;
 }
 
 /* Waiting for the OAuth provider: an ink stroke redraws under the label /
