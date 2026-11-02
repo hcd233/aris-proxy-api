@@ -99,7 +99,7 @@ export function PortalHeader({ cta }: { cta: Cta }) {
           nativeButton={false}
           render={<a href={GITHUB_REPO_URL} target="_blank" rel="noopener noreferrer" />}
         >
-          <ProviderIcon protocol="github" size={16} />
+          <ProviderIcon decorative protocol="github" size={16} />
         </Button>
         <Button
           size="sm"
@@ -150,7 +150,7 @@ export function PortalHero({ cta }: { cta: Cta }) {
             nativeButton={false}
             render={<a href={GITHUB_REPO_URL} target="_blank" rel="noopener noreferrer" />}
           >
-            <ProviderIcon protocol="github" size={16} />
+            <ProviderIcon decorative protocol="github" size={16} />
             {t("portal.cta.github")}
             <ArrowUpRight data-icon="inline-end" />
           </Button>

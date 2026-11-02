@@ -12,6 +12,12 @@ export function curvePath(x1: number, y1: number, x2: number, y2: number): strin
   return `M${x1} ${y1}C${mx} ${y1} ${mx} ${y2} ${x2} ${y2}`;
 }
 
+/** 两端切线竖直的三次贝塞尔，用于窄屏纵向堆叠的链路。 */
+export function curvePathVertical(x1: number, y1: number, x2: number, y2: number): string {
+  const my = (y1 + y2) / 2;
+  return `M${x1} ${y1}C${x1} ${my} ${x2} ${my} ${x2} ${y2}`;
+}
+
 export type BreakerCell = "idle" | "ok" | "err" | "rejected" | "probe";
 
 export type BreakerFrame = {

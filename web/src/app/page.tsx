@@ -2,6 +2,7 @@
 
 import { PortalEcosystem } from "@/components/portal/portal-ecosystem";
 import { PortalFeatureMarquee } from "@/components/portal/portal-feature-marquee";
+import { PortalFlow } from "@/components/portal/portal-flow";
 import { PortalHeader, PortalHero } from "@/components/portal/portal-hero";
 import { useAuth } from "@/lib/auth-context";
 import { portalPrimaryCta } from "@/lib/portal";
@@ -19,6 +20,7 @@ export default function PortalPage() {
         <PortalHero cta={cta} />
         <PortalFeatureMarquee />
         <PortalEcosystem />
+        <PortalFlow />
       </main>
     </div>
   );

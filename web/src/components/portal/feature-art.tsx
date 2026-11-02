@@ -70,7 +70,7 @@ function SingleEndpointArt() {
             className="portal-bob flex size-9 items-center justify-center rounded-xl bg-card text-foreground shadow-sm ring-1 ring-border/60"
             style={{ "--delay": `${i * 300}ms` } as CSSProperties}
           >
-            <ProviderIcon protocol={v.icon} size={18} />
+            <ProviderIcon decorative protocol={v.icon} size={18} />
           </span>
         ))}
       </div>
@@ -115,7 +115,7 @@ function ExportCliArt() {
       <div className="flex flex-wrap justify-center gap-1.5">
         {PORTAL_CLIENTS.slice(0, 3).map((c) => (
           <Badge key={c.id} variant="outline">
-            <ProviderIcon protocol={c.icon} size={12} />
+            <ProviderIcon decorative protocol={c.icon} size={12} />
             {c.label}
           </Badge>
         ))}
@@ -195,7 +195,7 @@ function SelfHealArt() {
       {rows.map((r) => (
         <Chip key={r.label}>
           <StatusDot tone={r.tone} />
-          <ProviderIcon protocol={r.icon} size={15} />
+          <ProviderIcon decorative protocol={r.icon} size={15} />
           <span className="flex-1">{r.label}</span>
           <span className={r.tone === "negative" ? "text-negative" : "text-muted-foreground"}>
             {r.note}

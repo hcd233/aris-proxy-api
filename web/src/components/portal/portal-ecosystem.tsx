@@ -42,7 +42,7 @@ function LogoRow({
                 aria-hidden={(copy === 0 && i >= items.length) || undefined}
                 className="flex h-14 items-center gap-3 rounded-2xl bg-card pr-6 pl-4 text-base font-medium tracking-tight whitespace-nowrap text-foreground shadow-sm ring-1 ring-border/60"
               >
-                <ProviderIcon protocol={e.icon} size={22} />
+                <ProviderIcon decorative protocol={e.icon} size={22} />
                 {e.labelKey ? t(e.labelKey) : e.label}
               </li>
             ))}

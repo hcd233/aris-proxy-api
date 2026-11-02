@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { breakerFrames, curvePath, shouldRunLoop } from "./portal-motion";
+import { breakerFrames, curvePath, curvePathVertical, shouldRunLoop } from "./portal-motion";
 
 describe("shouldRunLoop", () => {
   it("stops loops in still tier or when hidden", () => {
@@ -13,6 +13,8 @@ describe("shouldRunLoop", () => {
 describe("curvePath", () => {
   it("builds a horizontal-tangent cubic", () =>
     expect(curvePath(0, 10, 100, 50)).toBe("M0 10C50 10 50 50 100 50"));
+  it("builds a vertical-tangent cubic for stacked layouts", () =>
+    expect(curvePathVertical(10, 0, 50, 100)).toBe("M10 0C10 50 50 50 50 100"));
 });
 
 describe("breakerFrames", () => {

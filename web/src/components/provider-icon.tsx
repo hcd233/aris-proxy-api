@@ -53,6 +53,7 @@ type IconComponent = React.ComponentType<{
   size?: number | string;
   className?: string;
   style?: React.CSSProperties;
+  "aria-hidden"?: boolean;
 }>;
 
 const providerMap: Record<ProviderKey, IconComponent> = {
@@ -122,14 +123,17 @@ export function ProviderIcon({
   protocol,
   size = 14,
   className,
+  decorative,
 }: {
   protocol: string;
   size?: number;
   className?: string;
+  /** 旁边已有可见文字时传入：对读屏器隐藏图标内置的 <title>，避免重复朗读。 */
+  decorative?: boolean;
 }) {
   const providerKey = findProviderKey(protocol);
-  if (!providerKey) return <HuggingFace size={size} className={cn("shrink-0", className)} />;
-
-  const Icon = providerMap[providerKey];
-  return <Icon size={size} className={cn("shrink-0", className)} />;
+  const Icon = providerKey ? providerMap[providerKey] : HuggingFace;
+  return (
+    <Icon size={size} className={cn("shrink-0", className)} aria-hidden={decorative || undefined} />
+  );
 }
