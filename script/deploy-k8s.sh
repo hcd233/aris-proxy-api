@@ -57,7 +57,10 @@ retire_legacy_workload() {
   fi
 
   log "Retiring legacy workload in ${LEGACY_NAMESPACE} to free port ${SERVICE_PORT}"
-  kubectl -n "${LEGACY_NAMESPACE}" scale deployment "${LEGACY_APP_NAME}" --replicas=0 --ignore-not-found
+  # kubectl scale 不支持 --ignore-not-found（与 delete 不同），必须先确认 Deployment 存在
+  if kubectl get deployment "${LEGACY_APP_NAME}" -n "${LEGACY_NAMESPACE}" >/dev/null 2>&1; then
+    kubectl -n "${LEGACY_NAMESPACE}" scale deployment "${LEGACY_APP_NAME}" --replicas=0
+  fi
   kubectl -n "${LEGACY_NAMESPACE}" delete service "${LEGACY_APP_NAME}" --ignore-not-found --wait=true
 
   local i
