@@ -40,6 +40,18 @@ const (
 	ReadCacheWindowTTL = 60 * time.Second
 	// ReadCacheWindowTTLJitter 时间窗查询 TTL 随机抖动上限
 	ReadCacheWindowTTLJitter = 10 * time.Second
+
+	// ReadCacheDashboardTTL dashboard 聚合查询（KPI / 趋势 / 排行 / 热力图）的读缓存基准 TTL
+	//
+	// dashboard 是贴近实时的看板：前端可选 5s 刷新档，缓存必须短于刷新间隔才有意义，
+	// 但保留缓存仍能合并同一瞬间多个面板、多个查看者触发的并发回源。其余时间窗查询
+	// （审计筛选、会话选项）继续使用 ReadCacheWindowTTL，不受影响。
+	ReadCacheDashboardTTL = 5 * time.Second
+	// ReadCacheDashboardTTLJitter dashboard 读缓存 TTL 随机抖动上限
+	//
+	// 抖动控制在基准 TTL 的 20% 以内：条目最迟 6s 过期，开 5s 刷新的看板不会读到
+	// 明显落后当前时刻的聚合结果。
+	ReadCacheDashboardTTLJitter = 1 * time.Second
 	// 读缓存-时间窗查询的用途标识（readCacheKey 的 purpose，参与键摘要）。
 	// 必须全局唯一：两个不同查询共用同一 purpose + 相同其余参数会互相串数据。
 	ReadCachePurposeAuditOptionUser     = "audit:option:user"

@@ -19,7 +19,8 @@ describe("refresh intervals", () => {
   it("accepts off or a listed interval and falls back otherwise", () => {
     expect(normalizeRefreshInterval(REFRESH_OFF, MONITOR_REFRESH_INTERVALS, 5_000)).toBe(0);
     expect(normalizeRefreshInterval(30_000, MONITOR_REFRESH_INTERVALS, 5_000)).toBe(30_000);
-    expect(normalizeRefreshInterval(5_000, DASHBOARD_REFRESH_INTERVALS, 0)).toBe(0);
+    expect(normalizeRefreshInterval(5_000, DASHBOARD_REFRESH_INTERVALS, 0)).toBe(5_000);
+    expect(normalizeRefreshInterval(3_000, DASHBOARD_REFRESH_INTERVALS, 0)).toBe(0);
     expect(normalizeRefreshInterval("30000", DASHBOARD_REFRESH_INTERVALS, 0)).toBe(0);
     expect(normalizeRefreshInterval(null, MONITOR_REFRESH_INTERVALS, 5_000)).toBe(5_000);
   });

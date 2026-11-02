@@ -99,7 +99,31 @@ func cacheTimeBucket(t time.Time) time.Time {
 //	@return []T
 //	@return error
 func cachedSlice[T any](ctx context.Context, rc *cache.ReadCache, key string, loader func(context.Context) ([]T, error)) ([]T, error) {
-	opt, err := cache.GetOrLoadWithTTL(ctx, rc, key, constant.ReadCacheWindowTTL, constant.ReadCacheWindowTTLJitter,
+	return cachedSliceWithTTL(ctx, rc, key, constant.ReadCacheWindowTTL, constant.ReadCacheWindowTTLJitter, loader)
+}
+
+// cachedSliceWithTTL 同 cachedSlice，但条目 TTL 由调用方指定
+//
+// 仅用于新鲜度要求更高的时间窗查询（如 dashboard 秒级看板）。空结果标记仍由
+// GetOrLoad 按固定短 TTL 写入，不受 ttl 参数影响。
+//
+//	@param ctx context.Context
+//	@param rc *cache.ReadCache 为 nil 时退化为直接回源
+//	@param key 缓存键（readCacheKey 产出）
+//	@param ttl time.Duration 条目基准 TTL
+//	@param jitter time.Duration TTL 随机抖动上限（<=0 表示不抖动）
+//	@param loader 回源加载器
+//	@return []T
+//	@return error
+func cachedSliceWithTTL[T any](
+	ctx context.Context,
+	rc *cache.ReadCache,
+	key string,
+	ttl time.Duration,
+	jitter time.Duration,
+	loader func(context.Context) ([]T, error),
+) ([]T, error) {
+	opt, err := cache.GetOrLoadWithTTL(ctx, rc, key, ttl, jitter,
 		func(loadCtx context.Context) (mo.Option[[]T], error) {
 			values, loadErr := loader(loadCtx)
 			if loadErr != nil {

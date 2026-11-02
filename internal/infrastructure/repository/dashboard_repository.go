@@ -37,6 +37,19 @@ func isEmptyScope(apiKeyIDs []uint) bool {
 	return apiKeyIDs != nil && len(apiKeyIDs) == 0
 }
 
+// cachedDashboardSlice dashboard 聚合查询的 cache-aside：条目按秒级 TTL 过期
+//
+// 与 cachedSlice 的唯一差别是 TTL（constant.ReadCacheDashboardTTL），让开 5s 刷新的
+// 看板拿到秒级数据；空结果标记仍走 GetOrLoad 的固定短 TTL。
+func cachedDashboardSlice[T any](
+	ctx context.Context,
+	rc *cache.ReadCache,
+	key string,
+	loader func(context.Context) ([]T, error),
+) ([]T, error) {
+	return cachedSliceWithTTL(ctx, rc, key, constant.ReadCacheDashboardTTL, constant.ReadCacheDashboardTTLJitter, loader)
+}
+
 // windowQuery 时间窗 + 软删 + 范围过滤的基础查询
 func (r *dashboardRepository) windowQuery(ctx context.Context, apiKeyIDs []uint, start, end time.Time) *gorm.DB {
 	db := r.db.WithContext(ctx).Model(&dbmodel.ModelCallAudit{}).
@@ -53,7 +66,7 @@ func (r *dashboardRepository) QueryStats(ctx context.Context, apiKeyIDs []uint, 
 		return &modelcall.DashboardStats{}, nil
 	}
 	key := readCacheKey(constant.ReadCachePurposeDashboardStats, cacheScopeIDs(apiKeyIDs), cacheTimeBucket(start), cacheTimeBucket(end))
-	rows, err := cachedSlice(ctx, r.cache, key, func(loadCtx context.Context) ([]*modelcall.DashboardStats, error) {
+	load := func(loadCtx context.Context) ([]*modelcall.DashboardStats, error) {
 		var results []*modelcall.DashboardStats
 		if err := r.windowQuery(loadCtx, apiKeyIDs, start, end).
 			Select(constant.DashboardStatsSelect).
@@ -74,7 +87,8 @@ func (r *dashboardRepository) QueryStats(ctx context.Context, apiKeyIDs []uint, 
 		}
 		results[0].Failures = failures
 		return results, nil
-	})
+	}
+	rows, err := cachedDashboardSlice(ctx, r.cache, key, load)
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +103,7 @@ func (r *dashboardRepository) QueryStatsSeries(ctx context.Context, apiKeyIDs []
 		return []*modelcall.DashboardStatsPoint{}, nil
 	}
 	key := readCacheKey(constant.ReadCachePurposeDashboardSeries, cacheScopeIDs(apiKeyIDs), cacheTimeBucket(start), cacheTimeBucket(end), granularity)
-	return cachedSlice(ctx, r.cache, key, func(loadCtx context.Context) ([]*modelcall.DashboardStatsPoint, error) {
+	load := func(loadCtx context.Context) ([]*modelcall.DashboardStatsPoint, error) {
 		var results []*modelcall.DashboardStatsPoint
 		if err := r.windowQuery(loadCtx, apiKeyIDs, start, end).
 			Select(dateTruncSQL(granularity) + constant.DashboardTimeBucketAlias + constant.DashboardStatsSelect).
@@ -99,7 +113,8 @@ func (r *dashboardRepository) QueryStatsSeries(ctx context.Context, apiKeyIDs []
 			return nil, ierr.Wrap(ierr.ErrDBQuery, err, "query dashboard stats series")
 		}
 		return results, nil
-	})
+	}
+	return cachedDashboardSlice(ctx, r.cache, key, load)
 }
 
 // QueryUptimeBuckets 可用性状态条的定长桶（恰好 buckets 个，无请求的桶补零）。
@@ -115,7 +130,7 @@ func (r *dashboardRepository) QueryUptimeBuckets(ctx context.Context, apiKeyIDs 
 	}
 	widthSeconds := int64(modelcall.UptimeBucketWidth(start, end, buckets) / time.Second)
 	key := readCacheKey(constant.ReadCachePurposeDashboardUptime, cacheScopeIDs(apiKeyIDs), cacheTimeBucket(start), cacheTimeBucket(end), buckets)
-	return cachedSlice(ctx, r.cache, key, func(loadCtx context.Context) ([]*modelcall.DashboardUptimePoint, error) {
+	load := func(loadCtx context.Context) ([]*modelcall.DashboardUptimePoint, error) {
 		var results []*modelcall.DashboardUptimePoint
 		bucketExpr := fmt.Sprintf(constant.DateBinUptimeTemplate, widthSeconds)
 		if err := r.windowQuery(loadCtx, apiKeyIDs, start, end).
@@ -136,7 +151,8 @@ func (r *dashboardRepository) QueryUptimeBuckets(ctx context.Context, apiKeyIDs 
 		}
 		modelcall.AttachUptimeFailures(results, failures)
 		return modelcall.BuildUptimeBuckets(results, start, end, buckets), nil
-	})
+	}
+	return cachedDashboardSlice(ctx, r.cache, key, load)
 }
 
 func (r *dashboardRepository) QueryModelSeries(ctx context.Context, apiKeyIDs []uint, start, end time.Time, granularity enum.Granularity) ([]*modelcall.DashboardModelPoint, error) {
@@ -144,7 +160,7 @@ func (r *dashboardRepository) QueryModelSeries(ctx context.Context, apiKeyIDs []
 		return []*modelcall.DashboardModelPoint{}, nil
 	}
 	key := readCacheKey(constant.ReadCachePurposeDashboardModel, cacheScopeIDs(apiKeyIDs), cacheTimeBucket(start), cacheTimeBucket(end), granularity)
-	return cachedSlice(ctx, r.cache, key, func(loadCtx context.Context) ([]*modelcall.DashboardModelPoint, error) {
+	load := func(loadCtx context.Context) ([]*modelcall.DashboardModelPoint, error) {
 		var results []*modelcall.DashboardModelPoint
 		if err := r.windowQuery(loadCtx, apiKeyIDs, start, end).
 			Select(dateTruncSQL(granularity) + constant.DashboardModelSeriesSelect).
@@ -154,7 +170,8 @@ func (r *dashboardRepository) QueryModelSeries(ctx context.Context, apiKeyIDs []
 			return nil, ierr.Wrap(ierr.ErrDBQuery, err, "query dashboard model series")
 		}
 		return results, nil
-	})
+	}
+	return cachedDashboardSlice(ctx, r.cache, key, load)
 }
 
 func (r *dashboardRepository) QueryTopErrors(ctx context.Context, apiKeyIDs []uint, start, end time.Time, limit int) ([]*modelcall.DashboardErrorRow, error) {
@@ -162,7 +179,7 @@ func (r *dashboardRepository) QueryTopErrors(ctx context.Context, apiKeyIDs []ui
 		return []*modelcall.DashboardErrorRow{}, nil
 	}
 	key := readCacheKey(constant.ReadCachePurposeDashboardErrors, cacheScopeIDs(apiKeyIDs), cacheTimeBucket(start), cacheTimeBucket(end), limit)
-	return cachedSlice(ctx, r.cache, key, func(loadCtx context.Context) ([]*modelcall.DashboardErrorRow, error) {
+	load := func(loadCtx context.Context) ([]*modelcall.DashboardErrorRow, error) {
 		var results []*modelcall.DashboardErrorRow
 		if err := r.windowQuery(loadCtx, apiKeyIDs, start, end).
 			Where(constant.DashboardConditionFailure).
@@ -174,7 +191,8 @@ func (r *dashboardRepository) QueryTopErrors(ctx context.Context, apiKeyIDs []ui
 			return nil, ierr.Wrap(ierr.ErrDBQuery, err, "query dashboard top errors")
 		}
 		return results, nil
-	})
+	}
+	return cachedDashboardSlice(ctx, r.cache, key, load)
 }
 
 func (r *dashboardRepository) QueryEndpointHealth(ctx context.Context, apiKeyIDs []uint, start, end time.Time, limit int) ([]*modelcall.DashboardEndpointRow, error) {
@@ -182,7 +200,7 @@ func (r *dashboardRepository) QueryEndpointHealth(ctx context.Context, apiKeyIDs
 		return []*modelcall.DashboardEndpointRow{}, nil
 	}
 	key := readCacheKey(constant.ReadCachePurposeDashboardEndpoint, cacheScopeIDs(apiKeyIDs), cacheTimeBucket(start), cacheTimeBucket(end), limit)
-	return cachedSlice(ctx, r.cache, key, func(loadCtx context.Context) ([]*modelcall.DashboardEndpointRow, error) {
+	load := func(loadCtx context.Context) ([]*modelcall.DashboardEndpointRow, error) {
 		var results []*modelcall.DashboardEndpointRow
 		if err := r.windowQuery(loadCtx, apiKeyIDs, start, end).
 			Select(constant.DashboardEndpointSelect).
@@ -193,7 +211,8 @@ func (r *dashboardRepository) QueryEndpointHealth(ctx context.Context, apiKeyIDs
 			return nil, ierr.Wrap(ierr.ErrDBQuery, err, "query dashboard endpoint health")
 		}
 		return results, nil
-	})
+	}
+	return cachedDashboardSlice(ctx, r.cache, key, load)
 }
 
 // groupKeyExpr 维度 → 分组键 SQL 表达式（白名单；user 维度由应用层按 apikey 聚合）
@@ -219,7 +238,7 @@ func (r *dashboardRepository) QueryGroupUsage(ctx context.Context, apiKeyIDs []u
 		return []*modelcall.DashboardGroupRow{}, nil
 	}
 	key := readCacheKey(constant.ReadCachePurposeDashboardGroup, cacheScopeIDs(apiKeyIDs), cacheTimeBucket(start), cacheTimeBucket(end), dimension, rulesFingerprint)
-	return cachedSlice(ctx, r.cache, key, func(loadCtx context.Context) ([]*modelcall.DashboardGroupRow, error) {
+	load := func(loadCtx context.Context) ([]*modelcall.DashboardGroupRow, error) {
 		var results []*modelcall.DashboardGroupRow
 		query := r.windowQuery(loadCtx, apiKeyIDs, start, end).Select(keyExpr + constant.DashboardGroupUsageSelect)
 		if dimension == enum.DashboardDimensionHarness {
@@ -237,7 +256,8 @@ func (r *dashboardRepository) QueryGroupUsage(ctx context.Context, apiKeyIDs []u
 			return nil, ierr.Wrap(ierr.ErrDBQuery, err, "query dashboard group usage")
 		}
 		return results, nil
-	})
+	}
+	return cachedDashboardSlice(ctx, r.cache, key, load)
 }
 
 func (r *dashboardRepository) QueryHeatmap(ctx context.Context, apiKeyIDs []uint, start, end time.Time, location string) ([]*modelcall.DashboardHeatmapCell, error) {
@@ -245,7 +265,7 @@ func (r *dashboardRepository) QueryHeatmap(ctx context.Context, apiKeyIDs []uint
 		return []*modelcall.DashboardHeatmapCell{}, nil
 	}
 	key := readCacheKey(constant.ReadCachePurposeDashboardHeatmap, cacheScopeIDs(apiKeyIDs), cacheTimeBucket(start), cacheTimeBucket(end), location)
-	return cachedSlice(ctx, r.cache, key, func(loadCtx context.Context) ([]*modelcall.DashboardHeatmapCell, error) {
+	load := func(loadCtx context.Context) ([]*modelcall.DashboardHeatmapCell, error) {
 		var results []*modelcall.DashboardHeatmapCell
 		if err := r.windowQuery(loadCtx, apiKeyIDs, start, end).
 			Select(constant.DashboardHeatmapSelect, location, location).
@@ -254,5 +274,6 @@ func (r *dashboardRepository) QueryHeatmap(ctx context.Context, apiKeyIDs []uint
 			return nil, ierr.Wrap(ierr.ErrDBQuery, err, "query dashboard heatmap")
 		}
 		return results, nil
-	})
+	}
+	return cachedDashboardSlice(ctx, r.cache, key, load)
 }
