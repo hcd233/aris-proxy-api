@@ -6,6 +6,10 @@ import {
   Google,
   Anthropic,
   Claude,
+  ClaudeCode,
+  Codex,
+  OpenCode,
+  Pi,
   Azure,
   Aws,
   Bedrock,
@@ -42,18 +46,24 @@ import {
   XiaomiMiMo,
   Nvidia,
 } from "@lobehub/icons";
+import { findProviderKey, type ProviderKey } from "@/lib/provider-key";
 import { cn } from "@/lib/utils";
 
 type IconComponent = React.ComponentType<{
   size?: number | string;
   className?: string;
   style?: React.CSSProperties;
+  "aria-hidden"?: boolean;
 }>;
 
-const providerMap: Record<string, IconComponent> = {
+const providerMap: Record<ProviderKey, IconComponent> = {
   openai: OpenAI,
   anthropic: Anthropic,
+  claudecode: ClaudeCode,
   claude: Claude,
+  codex: Codex,
+  opencode: OpenCode,
+  pi: Pi,
   deepseek: DeepSeek,
   google: Google,
   gemini: Google,
@@ -62,6 +72,7 @@ const providerMap: Record<string, IconComponent> = {
   bedrock: Bedrock,
   zhipu: Zhipu,
   chatglm: ZAI,
+  zai: ZAI,
   glm: ZAI,
   minimax: Minimax,
   moonshot: Moonshot,
@@ -108,32 +119,21 @@ const providerMap: Record<string, IconComponent> = {
   command: Cohere,
 };
 
-function findProviderKey(protocol: string): string | undefined {
-  const normalized = protocol.toLowerCase();
-  return Object.keys(providerMap).find((key) => {
-    if (normalized === key) return true;
-    if (normalized.startsWith(key + "-") || normalized.startsWith(key + "_")) return true;
-    // 兼容无分隔符的短前缀（如 hy3）：前缀后紧跟非小写字母（数字/结尾/分隔符）
-    if (normalized.startsWith(key)) {
-      const next = normalized[key.length];
-      if (next === undefined || !/[a-z]/.test(next)) return true;
-    }
-    return false;
-  });
-}
-
 export function ProviderIcon({
   protocol,
   size = 14,
   className,
+  decorative,
 }: {
   protocol: string;
   size?: number;
   className?: string;
+  /** 旁边已有可见文字时传入：对读屏器隐藏图标内置的 <title>，避免重复朗读。 */
+  decorative?: boolean;
 }) {
   const providerKey = findProviderKey(protocol);
-  if (!providerKey) return <HuggingFace size={size} className={cn("shrink-0", className)} />;
-
-  const Icon = providerMap[providerKey];
-  return <Icon size={size} className={cn("shrink-0", className)} />;
+  const Icon = providerKey ? providerMap[providerKey] : HuggingFace;
+  return (
+    <Icon size={size} className={cn("shrink-0", className)} aria-hidden={decorative || undefined} />
+  );
 }

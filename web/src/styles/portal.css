@@ -1,0 +1,312 @@
+/* === Portal long page (spec 2026-11-02-portal-longpage-design.md) ===
+ * Everything here is scoped under .portal-root so the console never sees it.
+ * Tiers: immersive = full motion, lite = no blur / no ambient drift details,
+ * still = final states only. Entrance animations use fill-mode backwards. */
+
+/* ---------- Starfield (moonshot only, user-authorized exception, spec §10) ---------- */
+.portal-stars {
+  display: none;
+}
+html[data-theme="moonshot"] .portal-root .portal-stars {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(1px 1px at 12% 18%, rgb(255 255 255 / 0.55), transparent),
+    radial-gradient(1px 1px at 72% 8%, rgb(255 255 255 / 0.45), transparent),
+    radial-gradient(1px 1px at 40% 62%, rgb(255 255 255 / 0.35), transparent),
+    radial-gradient(1px 1px at 88% 44%, rgb(255 255 255 / 0.5), transparent),
+    radial-gradient(1px 1px at 22% 82%, rgb(255 255 255 / 0.35), transparent),
+    radial-gradient(1.5px 1.5px at 58% 30%, rgb(255 255 255 / 0.6), transparent);
+  background-size: 600px 600px;
+}
+@keyframes portal-star-drift {
+  to {
+    background-position: 600px 300px;
+  }
+}
+html[data-theme="moonshot"][data-motion-tier="immersive"] .portal-root .portal-stars {
+  animation: portal-star-drift 240s linear infinite;
+}
+/* lift content above the fixed starfield; the sticky header keeps its own position */
+.portal-root > main,
+.portal-root > footer {
+  position: relative;
+  z-index: 1;
+}
+
+/* ---------- Hero glow ---------- */
+.portal-glow {
+  position: absolute;
+  left: 50%;
+  top: 11rem;
+  z-index: -1;
+  width: min(1100px, 120vw);
+  height: 38rem;
+  transform: translateX(-50%);
+  pointer-events: none;
+  opacity: 0.8;
+  background:
+    radial-gradient(
+      closest-side,
+      color-mix(in oklab, var(--chart-3) 55%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      closest-side at 70% 40%,
+      color-mix(in oklab, var(--primary) 18%, transparent),
+      transparent 70%
+    );
+}
+html[data-theme="moonshot"] .portal-glow {
+  background:
+    radial-gradient(
+      closest-side,
+      color-mix(in oklab, var(--chart-4) 30%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      closest-side at 70% 40%,
+      color-mix(in oklab, var(--chart-3) 14%, transparent),
+      transparent 70%
+    );
+}
+@keyframes portal-glow-drift {
+  to {
+    transform: translate(-46%, -3%) scale(1.06);
+  }
+}
+html:not([data-motion-tier="still"]) .portal-glow {
+  animation: portal-glow-drift 12s ease-in-out infinite alternate;
+}
+
+/* ---------- Eyebrow with breathing dot ---------- */
+.portal-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-size: 0.8125rem;
+  color: var(--chart-2);
+}
+html[data-theme="moonshot"] .portal-eyebrow {
+  color: var(--chart-4);
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.portal-eyebrow::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+@keyframes portal-ping {
+  0% {
+    box-shadow: 0 0 0 0 currentColor;
+  }
+  80%,
+  100% {
+    box-shadow: 0 0 0 8px transparent;
+  }
+}
+html:not([data-motion-tier="still"]) .portal-eyebrow::before {
+  animation: portal-ping 2.4s ease-out infinite;
+}
+
+/* ---------- Hero title: per-glyph rise (SplitText) ---------- */
+@keyframes portal-glyph-rise {
+  from {
+    transform: translateY(0.6em) rotate(3deg);
+    opacity: 0;
+  }
+}
+.portal-hero-title .split-char {
+  display: inline-block;
+  white-space: pre;
+}
+html:not([data-motion-tier="still"]) .portal-hero-title .split-char {
+  animation: portal-glyph-rise 0.9s var(--ease-silk, cubic-bezier(0.2, 0.8, 0.2, 1))
+    calc(120ms + var(--i) * 40ms) backwards;
+}
+/* SplitText nests glyphs under an aria-hidden span, so the gradient cannot be
+ * inherited: each glyph carries its own text-clipped gradient. */
+html[data-theme="moonshot"] .portal-hero-title .split-char {
+  background: linear-gradient(180deg, var(--foreground) 30%, var(--muted-foreground));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Hero copy / CTA stagger */
+@keyframes portal-rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+html:not([data-motion-tier="still"]) .portal-rise {
+  animation: portal-rise 0.8s var(--ease-silk, cubic-bezier(0.2, 0.8, 0.2, 1)) var(--delay, 0ms)
+    backwards;
+}
+
+/* ---------- Scroll reveal ---------- */
+.portal-root [data-reveal] {
+  transition:
+    opacity 0.8s var(--ease-silk, cubic-bezier(0.2, 0.8, 0.2, 1)),
+    transform 0.8s var(--ease-silk, cubic-bezier(0.2, 0.8, 0.2, 1));
+}
+.portal-root [data-reveal]:not([data-revealed]) {
+  opacity: 0;
+  transform: translateY(28px);
+}
+html[data-motion-tier="still"] .portal-root [data-reveal] {
+  opacity: 1;
+  transform: none;
+  transition: none;
+}
+/* immersive blur sits on children, never on the root (moonshot backdrop root). */
+html[data-motion-tier="immersive"] .portal-root [data-reveal] > * {
+  transition: filter 0.8s var(--ease-silk, cubic-bezier(0.2, 0.8, 0.2, 1));
+}
+html[data-motion-tier="immersive"]:not([data-theme="moonshot"])
+  .portal-root
+  [data-reveal]:not([data-revealed])
+  > * {
+  filter: blur(4px);
+}
+
+/* ---------- Marquee ---------- */
+.portal-marquee {
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, black 8%, black 92%, transparent);
+  mask-image: linear-gradient(90deg, transparent, black 8%, black 92%, transparent);
+}
+@keyframes portal-marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+.portal-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: portal-marquee var(--marquee-duration, 60s) linear infinite;
+}
+.portal-marquee-track[data-reverse] {
+  animation-direction: reverse;
+}
+.portal-marquee:hover .portal-marquee-track,
+.portal-marquee:focus-within .portal-marquee-track {
+  animation-play-state: paused;
+}
+html[data-motion-tier="still"] .portal-marquee {
+  overflow-x: auto;
+}
+html[data-motion-tier="still"] .portal-marquee-track {
+  animation: none;
+}
+
+/* ---------- Flow dashes ---------- */
+@keyframes portal-dash {
+  to {
+    stroke-dashoffset: -20;
+  }
+}
+.portal-dash {
+  fill: none;
+  stroke: var(--muted-foreground);
+  stroke-width: 1.3;
+  stroke-dasharray: 4 6;
+  opacity: 0.6;
+  transition:
+    stroke 0.3s,
+    opacity 0.3s,
+    stroke-width 0.3s;
+}
+.portal-dash[data-hot] {
+  stroke: var(--primary);
+  stroke-width: 1.9;
+  opacity: 1;
+}
+html:not([data-motion-tier="still"]) .portal-dash {
+  animation: portal-dash 1.1s linear infinite;
+}
+
+/* ---------- Small motion helpers used inside demos ---------- */
+@keyframes portal-bob {
+  50% {
+    transform: translateY(-5px);
+  }
+}
+html:not([data-motion-tier="still"]) .portal-bob {
+  animation: portal-bob 3.6s ease-in-out infinite;
+  animation-delay: var(--delay, 0ms);
+}
+@keyframes portal-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+html:not([data-motion-tier="still"]) .portal-slide-in {
+  animation: portal-slide-in 0.5s var(--ease-silk, cubic-bezier(0.2, 0.8, 0.2, 1)) backwards;
+}
+html:not([data-motion-tier="still"]) .portal-pulse {
+  animation: portal-ping 1.6s ease-out infinite;
+}
+@keyframes portal-blink {
+  50% {
+    opacity: 0;
+  }
+}
+html:not([data-motion-tier="still"]) .portal-caret {
+  animation: portal-blink 1s steps(1) infinite;
+}
+@keyframes portal-fill {
+  from {
+    transform: scaleX(0);
+  }
+}
+.portal-step-bar {
+  transform-origin: left;
+}
+html:not([data-motion-tier="still"]) .portal-step-bar {
+  animation: portal-fill var(--step-ms, 7000ms) linear backwards;
+}
+html[data-motion-tier="still"] .portal-step-bar {
+  display: none;
+}
+
+/* ---------- Closing CTA surface ---------- */
+.portal-cta-surface {
+  background: linear-gradient(
+    120deg,
+    color-mix(in oklab, var(--chart-5) 80%, var(--chart-3)),
+    color-mix(in oklab, var(--chart-3) 70%, var(--background)) 50%,
+    color-mix(in oklab, var(--chart-3) 30%, var(--chart-5))
+  );
+}
+html[data-theme="moonshot"] .portal-cta-surface {
+  background:
+    radial-gradient(
+      120% 140% at 80% 0%,
+      color-mix(in oklab, var(--chart-4) 28%, transparent),
+      transparent 55%
+    ),
+    var(--card);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+/* Footer wordmark */
+.portal-wordmark {
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--foreground) 16%, transparent),
+    transparent 90%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}

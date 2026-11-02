@@ -13,7 +13,11 @@
 ## 目录结构
 
 - `src/app/layout.tsx`：全局布局，挂载 `AuthProvider` 和 `Toaster`。
-- `src/app/page.tsx`：公开门户页（`/web/`），组件在 `src/components/portal/`，常量与按钮逻辑在 `src/lib/portal.ts`；不挂 `PermissionGuard`，已登录不自动跳转。
+- `src/app/page.tsx`：公开门户页（`/web/`），是一张长页，依次为悬浮导航、Hero、功能卡跑马灯、兼容生态、请求链路、四大能力、接入步骤、收尾 CTA、页脚。
+  - 组件在 `src/components/portal/`，按区块拆分；动效守卫用 `use-portal-loop.ts`（档位为 `still` 或页面隐藏时暂停），滚动揭示用 `reveal.tsx`。
+  - 演示数据与文案 key 集中在 `src/lib/portal.ts`，模型名一律小写；纯动效逻辑放在 `src/lib/portal-motion.ts`；样式写在 `src/styles/portal.css`。
+  - 不挂 `PermissionGuard`，已登录也不自动跳转。
+  - 厂商与客户端图标都走 `ProviderIcon`；旁边已有文字时传 `decorative`，对读屏器隐藏图标自带的 `<title>`。
 - `src/app/login/`、`src/app/callback/`：OAuth2 登录入口与回调，登录成功落到 `DASHBOARD_HOME_URL`（`/web/dashboard/`，见 `src/lib/nav.ts`）。
 - `src/app/(dashboard)/`：登录后的管理后台路由组，仪表盘首页在 `dashboard/page.tsx`（`/web/dashboard/`），其余子页面（`sessions/`、`apikeys/`、`upstream/` 等）路径不带 `dashboard` 前缀；导航高亮统一用 `isNavItemActive`。
 - 主题/语言切换：唯一实现是 `src/components/preference-controls.tsx`（`tone="page" | "sidebar"`），门户、登录、回调、分享、仪表盘侧栏（含折叠态）都挂它，不要再单独拼 `LanguageSwitcher` + `ThemeSwitcher`。
@@ -48,6 +52,7 @@
 
 - **档位唯一来源**：`<html data-motion-tier>`（`immersive | lite | still`）。JS 读 `useMotionTier()`（`@/lib/motion/tier-store`），CSS 用 `html[data-motion-tier="…"]`；新代码不要再自行 `matchMedia("(prefers-reduced-motion)")`。全局 reduced-motion 守卫保留作底线；系统运行时开启「减弱动态」时切换到 `still`。
 - **页面背景保持纯色**：body 的 `bg-background` 使用 `globals.css` 中主题 token（Anthropic `#faf8f5`、Moonshot `#000`）；整页 `.page-surface` 透明以透出该底色。不要为全页背景加纹理、渐变、粒子或 canvas，除非用户明确重新要求。
+  - **唯一的用户授权例外（2026-11-02）**：门户页（`/web/`）moonshot 主题的星空。实现是 `.portal-root .portal-stars`，一层纯 CSS 的静态 `radial-gradient` 点阵，位于 `src/styles/portal.css`；只有 `immersive` 档会极慢地平移。它只挂在门户根容器上，控制台、登录、分享页一律不加。门户的其余样式也都限定在 `.portal-root` 作用域内。设计见 `docs/superpowers/specs/2026-11-02-portal-longpage-design.md` §10。
 - **没有环境背景运行时**：不要添加 WebGL / Canvas 背景、帧率 governor 或背景脉冲总线。页面需要局部指针反馈时使用 `InteractionLayer` 和 CSS 变量。
 
 - **组件动效写在语法层**：通用组件的进出场、按压、悬停动效只写在 `src/styles/motion-{anthropic,moonshot}.css`，按 `data-slot`（shadcn 自带）、`data-variant`（`Button` 输出）、`data-interactive`（可倾斜/可抬起的卡片，按需在业务处标记）命中。`components/ui/` 的弹层组件不再使用 tw-animate 的 `data-open:animate-in` 一类类名，新增弹层时同样不要加，而是在两份语法层里各补一组规则。例外：`Drawer` 的 popup 位移与过渡由下滑手势驱动（`--drawer-swipe-movement-*` 等变量），语法层只给 `drawer-overlay` 补底色，不要覆盖 `drawer-popup` 的 transform / transition。
