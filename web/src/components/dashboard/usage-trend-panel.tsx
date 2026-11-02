@@ -29,8 +29,8 @@ export function UsageTrendPanel({ range }: { range: DashboardRange }) {
   const colors = useChartSeriesColors();
   const motion = useChartMotion();
   const [metric, setMetric] = useState<ModelMetric>("cost");
-  const { data: overview } = useOverview();
-  const { startTime, endTime, granularity, refreshToken } = range;
+  const { data: overview, scope: overviewScope } = useOverview();
+  const { startTime, endTime, granularity, refreshToken, scope } = range;
 
   const fetcher = useCallback(async () => {
     const rsp = await api.fetchDashboardModelSeries({ startTime, endTime, granularity });
@@ -41,7 +41,7 @@ export function UsageTrendPanel({ range }: { range: DashboardRange }) {
     loading,
     error,
     retry,
-  } = useDashboardQuery(`${startTime}|${endTime}|${granularity}|${refreshToken}`, fetcher);
+  } = useDashboardQuery(`${startTime}|${endTime}|${granularity}|${refreshToken}`, fetcher, scope);
 
   const currency = overview?.currency;
   const format = useCallback(
@@ -54,12 +54,18 @@ export function UsageTrendPanel({ range }: { range: DashboardRange }) {
     [metric, currency],
   );
 
+  // 坐标轴回调保持引用稳定：内联函数每次渲染都会让 recharts 重算坐标并重放曲线动画
+  const { key: rangeKey, customStart, customEnd } = range;
+  const xTickFormatter = useCallback(
+    (v: string) => formatChartTime(v, rangeKey, customStart, customEnd),
+    [rangeKey, customStart, customEnd],
+  );
+  const timeline = overview?.current.series;
   const { keys, chartData, config } = useMemo(() => {
     const folded = foldTopModels(rows ?? [], metric, 5);
     const byTime = new Map(folded.data.map((d) => [new Date(d.time).getTime(), d]));
     // 以 overview 已补齐空桶的时间轴为准，模型序列缺失的桶补 0
-    const timeline = overview?.current.series ?? [];
-    const merged = timeline.map((p) => {
+    const merged = (timeline ?? []).map((p) => {
       const row: Record<string, number | string> = { time: p.time };
       const hit = byTime.get(new Date(p.time).getTime());
       for (const k of folded.keys) row[k] = hit?.[k] ?? 0;
@@ -73,7 +79,7 @@ export function UsageTrendPanel({ range }: { range: DashboardRange }) {
     );
     return { keys: folded.keys, chartData: merged, config: cfg };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, overview, metric, colors, locale]);
+  }, [rows, timeline, metric, colors, locale]);
 
   return (
     <Panel
@@ -100,7 +106,12 @@ export function UsageTrendPanel({ range }: { range: DashboardRange }) {
         </ToggleGroup>
       }
     >
-      <ChartContainer config={config} className="aspect-auto h-full min-h-40 w-full">
+      {/* 时间轴（overview）换视图时整图重新入场；同视图刷新只做点位补间 */}
+      <ChartContainer
+        key={overviewScope}
+        config={config}
+        className="aspect-auto h-full min-h-40 w-full"
+      >
         <AreaChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
           <CartesianGrid vertical={false} strokeDasharray="3 3" />
           <XAxis
@@ -108,16 +119,9 @@ export function UsageTrendPanel({ range }: { range: DashboardRange }) {
             tickLine={false}
             axisLine={false}
             minTickGap={32}
-            tickFormatter={(v: string) =>
-              formatChartTime(v, range.key, range.customStart, range.customEnd)
-            }
+            tickFormatter={xTickFormatter}
           />
-          <YAxis
-            tickLine={false}
-            axisLine={false}
-            width={44}
-            tickFormatter={(v: number) => format(v)}
-          />
+          <YAxis tickLine={false} axisLine={false} width={44} tickFormatter={format} />
           <ChartTooltip
             content={
               <ChartTooltipContent

@@ -130,11 +130,12 @@ function runDecode(
  * Dashboard metric (spec §7.3), replacing CountUp: odometer roll in atelier,
  * decode-and-lock in lunar; only the digits that changed move. DOM is
  * written directly (no re-renders); screen readers read the sr-only value.
+ * `value` may be a number or already-formatted text ("1.2K", "99.50%").
  * `still` tier shows the final value at once.
  */
-export function MetricNumber({ value, className }: { value: number; className?: string }) {
+export function MetricNumber({ value, className }: { value: number | string; className?: string }) {
   const ref = useRef<HTMLSpanElement>(null);
-  const shown = useRef<number | null>(null);
+  const shown = useRef<number | string | null>(null);
 
   useEffect(() => {
     const el = ref.current;

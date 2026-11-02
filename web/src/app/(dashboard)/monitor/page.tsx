@@ -1,20 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Activity, MemoryStick, Radio } from "lucide-react";
 
 import { api } from "@/lib/api-client";
 import { useT } from "@/lib/i18n";
 import { PermissionGuard } from "@/components/permission-guard";
 import { usePersistentState } from "@/hooks/use-persistent-state";
+import { useAutoRefresh } from "@/hooks/use-auto-refresh";
+import { MONITOR_REFRESH_INTERVALS, normalizeRefreshInterval } from "@/lib/refresh-interval";
+import { replaceEqualDeep } from "@/lib/structural-share";
 import type { RuntimeInstanceSeries, RuntimePoint } from "@/lib/types";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { AutoRefreshButton } from "@/components/shared/auto-refresh-button";
 import { RuntimeGaugeCard } from "@/components/charts/runtime-gauge-card";
 import { RuntimeChart } from "@/components/charts/runtime-chart";
 import { useChartSeriesColors } from "@/lib/theme";
-import { formatDecimal, formatInteger } from "@/lib/utils";
+import { cn, formatDecimal, formatInteger } from "@/lib/utils";
 
-const POLL_INTERVAL_MS = 5000;
+const DEFAULT_REFRESH_MS = 5_000;
 
 const RANGE_KEYS = ["15m", "1h", "6h", "24h"] as const;
 type RangeKey = (typeof RANGE_KEYS)[number];
@@ -213,28 +217,42 @@ function tpsChartData(input: Pt[], output: Pt[]): Array<Record<string, number>> 
 export default function MonitorPage() {
   const t = useT();
   const [range, setRange] = usePersistentState<RangeKey>("monitor.range", "1h");
+  const [storedRefreshMs, setRefreshMs] = usePersistentState<number>(
+    "monitor.autoRefreshMs",
+    DEFAULT_REFRESH_MS,
+  );
+  const refreshMs = normalizeRefreshInterval(
+    storedRefreshMs,
+    MONITOR_REFRESH_INTERVALS,
+    DEFAULT_REFRESH_MS,
+  );
   const [state, setState] = useState<SeriesState>(EMPTY_STATE);
   const [loading, setLoading] = useState(true);
+  const [fetching, setFetching] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string>("--:--:--");
   const sinceRef = useRef(0);
 
   const poll = useCallback(async (rangeKey: RangeKey) => {
+    setFetching(true);
     try {
       const rsp = await api.getRuntimeMetrics({ range: rangeKey, since: sinceRef.current });
       const s = rsp.series ?? {};
       const now = Math.floor(Date.now() / 1000);
       const cutoff = now - RANGE_WINDOW_SEC[rangeKey];
 
-      setState((prev) => ({
-        qps: mergePoints(prev.qps, s.qps ?? [], cutoff),
-        p95Ms: mergePoints(prev.p95Ms, s.p95Ms ?? [], cutoff),
-        sseActive: mergeKeyedSeries(prev.sseActive, s.sseActive ?? {}, cutoff),
-        tokenInput: mergePoints(prev.tokenInput, s.tokenInput ?? [], cutoff),
-        tokenOutput: mergePoints(prev.tokenOutput, s.tokenOutput ?? [], cutoff),
-        statusCodes: mergeKeyedSeries(prev.statusCodes, s.statusCodes ?? {}, cutoff),
-        instances: mergeInstances(prev.instances, s.instances ?? {}, cutoff),
-        latestTime: rsp.latestTime,
-      }));
+      // 结构共享：没变的曲线保持原引用，对应图表这一轮完全不动
+      setState((prev) =>
+        replaceEqualDeep(prev, {
+          qps: mergePoints(prev.qps, s.qps ?? [], cutoff),
+          p95Ms: mergePoints(prev.p95Ms, s.p95Ms ?? [], cutoff),
+          sseActive: mergeKeyedSeries(prev.sseActive, s.sseActive ?? {}, cutoff),
+          tokenInput: mergePoints(prev.tokenInput, s.tokenInput ?? [], cutoff),
+          tokenOutput: mergePoints(prev.tokenOutput, s.tokenOutput ?? [], cutoff),
+          statusCodes: mergeKeyedSeries(prev.statusCodes, s.statusCodes ?? {}, cutoff),
+          instances: mergeInstances(prev.instances, s.instances ?? {}, cutoff),
+          latestTime: rsp.latestTime,
+        }),
+      );
 
       if (rsp.latestTime > 0) sinceRef.current = rsp.latestTime;
       setLastUpdated(new Date().toLocaleTimeString([], { hour12: false }));
@@ -242,19 +260,34 @@ export default function MonitorPage() {
       // silently ignore polling errors
     } finally {
       setLoading(false);
+      setFetching(false);
     }
   }, []);
+
+  const pollRange = useCallback(() => void poll(range), [poll, range]);
+  const { cycle, refreshNow } = useAutoRefresh(refreshMs, pollRange);
 
   /* eslint-disable react-hooks/set-state-in-effect -- range 切换需重置时序状态并立即触发首次拉取 */
   useEffect(() => {
     sinceRef.current = 0;
     setState(EMPTY_STATE);
     setLoading(true);
-    poll(range);
-    const interval = setInterval(() => poll(range), POLL_INTERVAL_MS);
-    return () => clearInterval(interval);
+    void poll(range);
   }, [range, poll]);
   /* eslint-enable react-hooks/set-state-in-effect */
+
+  // 每张图的数据只随它自己的曲线变化而重建：引用不变，recharts 就不会重放动画
+  const qpsData = useMemo(() => toChartData(state.qps), [state.qps]);
+  const p95Data = useMemo(() => toChartData(state.p95Ms), [state.p95Ms]);
+  const tpsData = useMemo(
+    () => tpsChartData(state.tokenInput, state.tokenOutput),
+    [state.tokenInput, state.tokenOutput],
+  );
+  const sseData = useMemo(() => seriesMapChartData(state.sseActive), [state.sseActive]);
+  const statusCodeData = useMemo(() => seriesMapChartData(state.statusCodes), [state.statusCodes]);
+  const cpuData = useMemo(() => podChartData(state.instances, "cpuPercent"), [state.instances]);
+  const heapData = useMemo(() => podChartData(state.instances, "heapMB"), [state.instances]);
+  const gmData = useMemo(() => gmChartData(state.instances), [state.instances]);
 
   const sseProviders = Object.keys(state.sseActive).sort();
   const seriesColors = useChartSeriesColors();
@@ -289,7 +322,6 @@ export default function MonitorPage() {
   const heapTotal = round2(
     podSumLatest(state.instances, "heapMB", state.latestTime, RANGE_BUCKET_SEC[range]),
   );
-  const tpsData = tpsChartData(state.tokenInput, state.tokenOutput);
   const tpsSeries = [
     { key: "input", label: t("monitor.request_tps_input"), color: seriesColors[0] },
     { key: "output", label: t("monitor.request_tps_output"), color: seriesColors[1] },
@@ -312,14 +344,31 @@ export default function MonitorPage() {
             </h1>
             <p className="mt-1.5 text-sm text-muted-foreground">{t("monitor.subtitle")}</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span className="relative flex size-2">
-                <span className="absolute inline-flex size-full animate-ping rounded-full opacity-60 bg-[#4A9E7D]" />
-                <span className="relative inline-flex size-2 rounded-full bg-[#4A9E7D]" />
+                {refreshMs > 0 && (
+                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-positive opacity-60" />
+                )}
+                <span
+                  className={cn(
+                    "relative inline-flex size-2 rounded-full",
+                    refreshMs > 0 ? "bg-positive" : "bg-muted-foreground/40",
+                  )}
+                />
               </span>
-              <span className="font-mono tabular-nums">5s · {lastUpdated}</span>
+              <span className="font-mono tabular-nums">
+                {t("monitor.updated")} {lastUpdated}
+              </span>
             </div>
+            <AutoRefreshButton
+              intervalMs={refreshMs}
+              options={MONITOR_REFRESH_INTERVALS}
+              onIntervalChange={setRefreshMs}
+              cycle={cycle}
+              onRefresh={refreshNow}
+              fetching={fetching}
+            />
             <ToggleGroup
               variant="segmented"
               spacing={0.5}
@@ -365,7 +414,7 @@ export default function MonitorPage() {
         <div className="grid gap-4 lg:grid-cols-3">
           <RuntimeChart
             title={t("monitor.request_qps")}
-            data={toChartData(state.qps)}
+            data={qpsData}
             series={[{ key: "value", label: t("monitor.request_qps"), color: seriesColors[3] }]}
             unit=" req/s"
             rangeKey={range}
@@ -381,14 +430,14 @@ export default function MonitorPage() {
           />
           <RuntimeChart
             title={t("monitor.sse_active")}
-            data={seriesMapChartData(state.sseActive)}
+            data={sseData}
             series={sseSeries}
             rangeKey={range}
             emptyLabel={t("monitor.collecting")}
           />
           <RuntimeChart
             title={t("monitor.cpu_usage")}
-            data={podChartData(state.instances, "cpuPercent")}
+            data={cpuData}
             series={podSeries}
             unit="%"
             rangeKey={range}
@@ -396,7 +445,7 @@ export default function MonitorPage() {
           />
           <RuntimeChart
             title={t("monitor.heap_memory")}
-            data={podChartData(state.instances, "heapMB")}
+            data={heapData}
             series={podSeries}
             unit=" MB"
             rangeKey={range}
@@ -404,21 +453,21 @@ export default function MonitorPage() {
           />
           <RuntimeChart
             title={t("monitor.goroutines_chart")}
-            data={gmChartData(state.instances)}
+            data={gmData}
             series={gmSeries}
             rangeKey={range}
             emptyLabel={t("monitor.collecting")}
           />
           <RuntimeChart
             title={t("monitor.status_code")}
-            data={seriesMapChartData(state.statusCodes)}
+            data={statusCodeData}
             series={statusCodeSeries}
             rangeKey={range}
             emptyLabel={t("monitor.collecting")}
           />
           <RuntimeChart
             title={t("monitor.latency_p95")}
-            data={toChartData(state.p95Ms)}
+            data={p95Data}
             series={[{ key: "value", label: t("monitor.latency_p95"), color: seriesColors[2] }]}
             unit=" ms"
             rangeKey={range}

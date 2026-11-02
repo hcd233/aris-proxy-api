@@ -1,20 +1,35 @@
 "use client";
 
-import { RotateCw } from "lucide-react";
 import { useT } from "@/lib/i18n";
+import { DASHBOARD_REFRESH_INTERVALS } from "@/lib/refresh-interval";
 import { PermissionGuard } from "@/components/permission-guard";
-import { Button } from "@/components/ui/button";
+import { AutoRefreshButton } from "@/components/shared/auto-refresh-button";
 import { TimeRangePicker } from "@/components/ui/time-range-picker";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ActivityPanel } from "@/components/dashboard/activity-panel";
 import { EndpointHealthPanel } from "@/components/dashboard/endpoint-health-panel";
 import { KpiRow } from "@/components/dashboard/kpi-row";
 import { LatencyPanel } from "@/components/dashboard/latency-panel";
-import { OverviewProvider } from "@/components/dashboard/overview-context";
+import { OverviewProvider, useOverview } from "@/components/dashboard/overview-context";
 import { ReliabilityPanel } from "@/components/dashboard/reliability-panel";
 import { TopRankingPanel } from "@/components/dashboard/top-ranking-panel";
 import { UsageTrendPanel } from "@/components/dashboard/usage-trend-panel";
-import { useDashboardRange } from "@/components/dashboard/use-dashboard-range";
+import { useDashboardRange, type DashboardRange } from "@/components/dashboard/use-dashboard-range";
+
+/** 刷新按钮：拉取中的状态取共享 overview（KPI 与多数面板都依赖它） */
+function RefreshControl({ range }: { range: DashboardRange }) {
+  const { loading } = useOverview();
+  return (
+    <AutoRefreshButton
+      intervalMs={range.refreshIntervalMs}
+      options={DASHBOARD_REFRESH_INTERVALS}
+      onIntervalChange={range.setRefreshIntervalMs}
+      cycle={range.refreshCycle}
+      onRefresh={range.refresh}
+      fetching={loading}
+    />
+  );
+}
 
 /**
  * 一屏指挥台（spec docs/superpowers/specs/2026-10-28-dashboard-redesign-design.md §3）：
@@ -46,14 +61,7 @@ export default function DashboardPage() {
                   customEnd={range.customEnd}
                   onChange={range.setRange}
                 />
-                <Button
-                  variant="outline"
-                  size="icon-sm"
-                  onClick={range.refresh}
-                  aria-label={t("dashboard.refresh")}
-                >
-                  <RotateCw />
-                </Button>
+                <RefreshControl range={range} />
               </div>
             </header>
 

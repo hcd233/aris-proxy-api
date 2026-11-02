@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { MetricNumber } from "@/components/motion/metric-number";
 import { cn } from "@/lib/utils";
 
 interface RuntimeGaugeCardProps {
@@ -44,9 +45,10 @@ export function RuntimeGaugeCard({
           <Skeleton className="h-9 w-20" />
         ) : (
           <div className="flex items-baseline gap-1.5">
-            <span className="font-display text-3xl font-semibold text-foreground tabular-nums">
-              {value}
-            </span>
+            <MetricNumber
+              value={value}
+              className="font-display text-3xl font-semibold text-foreground"
+            />
             {unit && (
               <span className="font-mono text-xs font-medium text-muted-foreground">{unit}</span>
             )}

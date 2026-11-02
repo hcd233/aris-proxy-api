@@ -17,7 +17,7 @@ export function OverviewProvider({
   range: DashboardRange;
   children: ReactNode;
 }) {
-  const { startTime, endTime, granularity, refreshToken } = range;
+  const { startTime, endTime, granularity, refreshToken, scope } = range;
   const fetcher = useCallback(async () => {
     const rsp = await api.fetchDashboardOverview({
       startTime,
@@ -31,6 +31,7 @@ export function OverviewProvider({
   const query = useDashboardQuery(
     `${startTime}|${endTime}|${granularity}|${refreshToken}`,
     fetcher,
+    scope,
   );
   return <OverviewContext.Provider value={query}>{children}</OverviewContext.Provider>;
 }

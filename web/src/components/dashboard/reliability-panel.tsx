@@ -140,18 +140,19 @@ export function ReliabilityPanel({ range }: { range: DashboardRange }) {
         {/* 状态条固定高度，面板被网格拉高时多余空间均分到上下，避免竖条被拉成细长柱 */}
         <div className="flex min-h-0 flex-1 flex-col justify-center gap-1">
           <div className="flex h-10 gap-[2px]">
-            {segments.map((seg) => {
+            {segments.map((seg, i) => {
               const level = uptimeLevel(seg);
               const label = segmentLabel(seg, spanDays);
+              // 段数固定，按位置复用节点：刷新时时间窗右移，各段颜色原地过渡而非整条重建
               return (
-                <TooltipRoot key={seg.start}>
+                <TooltipRoot key={i}>
                   <TooltipTrigger
                     render={
                       <div
                         role="img"
                         aria-label={`${label} ${formatRate(successRate(seg), 2)}`}
                         className={cn(
-                          "min-w-0 flex-1 rounded-[2px] transition-opacity hover:opacity-70",
+                          "min-w-0 flex-1 rounded-[2px] transition-[opacity,background-color] duration-500 hover:opacity-70",
                           LEVEL_FILL[level],
                         )}
                       />
