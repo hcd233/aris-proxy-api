@@ -5,6 +5,7 @@ import {
   deltaPct,
   deltaTone,
   failureCodeLabel,
+  fitFailureTopK,
   formatCostShort,
   formatDelta,
   foldTopModels,
@@ -55,6 +56,22 @@ describe("topFailures", () => {
   it("returns null rest when everything fits", () => {
     expect(topFailures(failures.slice(0, 2), 4).rest).toBeNull();
     expect(topFailures([], 4)).toEqual({ top: [], rest: null });
+  });
+});
+
+describe("fitFailureTopK", () => {
+  it("shows every code when they fit", () => {
+    expect(fitFailureTopK(3, 10)).toBe(3);
+    expect(fitFailureTopK(5, 5)).toBe(5);
+  });
+  it("reserves one row for the rest when codes overflow", () => {
+    expect(fitFailureTopK(8, 3)).toBe(2);
+    expect(fitFailureTopK(8, 1)).toBe(0);
+    expect(fitFailureTopK(8, 0)).toBe(0);
+  });
+  it("caps rows at FAILURE_TOP_K + 1 even on tall panels", () => {
+    expect(fitFailureTopK(8, 20)).toBe(4);
+    expect(fitFailureTopK(5, 20)).toBe(5);
   });
 });
 

@@ -71,6 +71,15 @@ export function failureCodeLabel(statusCode: number, t: (key: string) => string)
   return String(statusCode);
 }
 
+/**
+ * 按可容纳行数决定展示几个状态码：全部放得下就全展示，否则留一行给「其余」。
+ * 行数上限为 FAILURE_TOP_K + 1（大屏也不铺满长尾）；至少返回 0（只剩「其余」一行）。
+ */
+export function fitFailureTopK(codes: number, capacityRows: number, cap = FAILURE_TOP_K): number {
+  const maxRows = Math.max(1, Math.min(capacityRows, cap + 1));
+  return codes <= maxRows ? codes : maxRows - 1;
+}
+
 /** 取前 k 个失败状态码（后端已按 count 降序），其余合并为 rest（保留明细供浮层展示）；rest 为 null 表示无剩余 */
 export function topFailures(
   failures: DashboardFailure[],

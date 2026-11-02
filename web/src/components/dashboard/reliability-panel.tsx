@@ -1,12 +1,14 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { format } from "date-fns";
 import { api } from "@/lib/api-client";
 import { useT } from "@/lib/i18n";
 import { cn, formatInteger } from "@/lib/utils";
 import {
   failureCodeLabel,
+  fitFailureTopK,
+  FAILURE_TOP_K,
   formatRate,
   successRate,
   topFailures,
@@ -81,40 +83,67 @@ function FailureRow({ label, count, total }: { label: string; count: number; tot
   );
 }
 
-/** 失败分布（后端已降序）：前 k 个状态码各占一行，其余合并为一行并以浮层展示明细；各行合计恒等于失败数 */
+/** 失败分布单行高度与行距（px），与下方 grid 的 auto-rows-[20px] gap-y-1 保持一致 */
+const FAILURE_ROW_PX = 20;
+const FAILURE_ROW_GAP_PX = 4;
+
+/** 量出容器当前能放下几行失败分布（ResizeObserver 跟随面板尺寸变化；首帧未量到前为 null） */
+function useRowCapacity() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [rows, setRows] = useState<number | null>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => {
+      const h = entry.contentRect.height;
+      setRows(Math.floor((h + FAILURE_ROW_GAP_PX) / (FAILURE_ROW_PX + FAILURE_ROW_GAP_PX)));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return { ref, rows };
+}
+
+/**
+ * 失败分布（后端已降序）：按容器实际高度自适应 Top-K——放得下就全展示，
+ * 否则前 k 个各占一行、其余合并为一行并以浮层展示明细；各行合计恒等于失败数。
+ */
 function FailureBreakdown({ failures }: { failures: DashboardFailure[] }) {
   const t = useT();
-  if (failures.length === 0) return null;
+  const { ref, rows } = useRowCapacity();
   const total = failures.reduce((s, f) => s + f.count, 0);
-  const { top, rest } = topFailures(failures);
+  const k = fitFailureTopK(failures.length, rows ?? FAILURE_TOP_K + 1);
+  const { top, rest } = topFailures(failures, k);
   return (
-    <div className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-x-3 gap-y-1">
-      {top.map((f) => (
-        <FailureRow
-          key={f.statusCode}
-          label={failureCodeLabel(f.statusCode, t)}
-          count={f.count}
-          total={total}
-        />
-      ))}
-      {rest && (
-        <TooltipRoot>
-          <TooltipTrigger
-            render={
-              <div className="col-span-4 grid cursor-default grid-cols-subgrid items-center rounded-sm transition-colors hover:bg-muted/60">
-                <FailureRow
-                  label={`${t("dashboard.failure.rest")} (${rest.items.length})`}
-                  count={rest.count}
-                  total={total}
-                />
-              </div>
-            }
+    <div ref={ref} className="min-h-0 flex-1 overflow-hidden">
+      <div className="grid auto-rows-[20px] grid-cols-[auto_1fr_auto_auto] items-center gap-x-3 gap-y-1">
+        {top.map((f) => (
+          <FailureRow
+            key={f.statusCode}
+            label={failureCodeLabel(f.statusCode, t)}
+            count={f.count}
+            total={total}
           />
-          <TooltipContent className="min-w-36 text-xs">
-            <FailureList failures={rest.items} />
-          </TooltipContent>
-        </TooltipRoot>
-      )}
+        ))}
+        {rest && (
+          <TooltipRoot>
+            <TooltipTrigger
+              render={
+                <div className="col-span-4 grid cursor-default grid-cols-subgrid items-center rounded-sm transition-colors hover:bg-muted/60">
+                  <FailureRow
+                    label={`${t("dashboard.failure.rest")} (${rest.items.length})`}
+                    count={rest.count}
+                    total={total}
+                  />
+                </div>
+              }
+            />
+            <TooltipContent className="min-w-36 text-xs">
+              <FailureList failures={rest.items} />
+            </TooltipContent>
+          </TooltipRoot>
+        )}
+      </div>
     </div>
   );
 }
@@ -178,16 +207,17 @@ export function ReliabilityPanel({ range }: { range: DashboardRange }) {
         )
       }
     >
-      <div className="flex h-full flex-col gap-3 text-[11px]">
-        <div className="flex items-baseline justify-end gap-1.5">
+      <div className="flex h-full min-h-0 flex-col gap-2.5 overflow-hidden text-[11px]">
+        <div className="flex shrink-0 items-baseline justify-end gap-1.5">
           <span className="font-display text-base text-foreground tabular-nums">
             {summary ? formatRate(successRate(summary), 2) : "\u2014"}
           </span>
           <span className="text-muted-foreground">{t("dashboard.kpi.success_rate")}</span>
         </div>
 
-        {/* 状态条随面板高度伸缩但封顶，避免大屏被拉成细长柱；内容整体顶对齐，余量留在底部 */}
-        <div className="flex max-h-28 min-h-14 flex-1 flex-col gap-1">
+        {/* 状态条与失败分布按 1:2 分配剩余高度：状态条夹在 56~112px 之间（大屏不拉成细长柱、小屏不压扁），
+            失败分布按实际可用行数自适应 Top-K，矮面板也不会溢出压到页脚 */}
+        <div className="flex max-h-28 min-h-14 flex-[1_1_0] flex-col gap-1">
           <div className="flex min-h-0 flex-1 gap-[2px]">
             {segments.map((seg, i) => {
               const level = uptimeLevel(seg);
@@ -250,8 +280,8 @@ export function ReliabilityPanel({ range }: { range: DashboardRange }) {
         </div>
 
         {summary && summary.failures.length > 0 && (
-          <div className="flex flex-col gap-1.5 border-t border-border/60 pt-2.5">
-            <span className="text-[10px] tracking-wide text-muted-foreground">
+          <div className="flex min-h-0 flex-[2_1_0] flex-col gap-1.5 border-t border-border/60 pt-2">
+            <span className="shrink-0 text-[10px] tracking-wide text-muted-foreground">
               {t("dashboard.failure.title")}
             </span>
             <FailureBreakdown failures={summary.failures} />
