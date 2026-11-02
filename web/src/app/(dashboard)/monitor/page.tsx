@@ -16,7 +16,7 @@ import { AutoRefreshButton } from "@/components/shared/auto-refresh-button";
 import { RuntimeGaugeCard } from "@/components/charts/runtime-gauge-card";
 import { RuntimeChart } from "@/components/charts/runtime-chart";
 import { useChartSeriesColors } from "@/lib/theme";
-import { cn, formatDecimal, formatInteger } from "@/lib/utils";
+import { formatDecimal, formatInteger } from "@/lib/utils";
 
 const DEFAULT_REFRESH_MS = 5_000;
 
@@ -237,7 +237,6 @@ export default function MonitorPage() {
   const [state, setState] = useState<SeriesState>(EMPTY_STATE);
   const [loading, setLoading] = useState(true);
   const [fetching, setFetching] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState<string>("--:--:--");
   const sinceRef = useRef(0);
 
   const poll = useCallback(async (rangeKey: RangeKey) => {
@@ -263,7 +262,6 @@ export default function MonitorPage() {
       );
 
       if (rsp.latestTime > 0) sinceRef.current = rsp.latestTime;
-      setLastUpdated(new Date().toLocaleTimeString([], { hour12: false }));
     } catch {
       // silently ignore polling errors
     } finally {
@@ -352,31 +350,7 @@ export default function MonitorPage() {
             </h1>
             <p className="mt-1.5 text-sm text-muted-foreground">{t("monitor.subtitle")}</p>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span className="relative flex size-2">
-                {refreshMs > 0 && (
-                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-positive opacity-60" />
-                )}
-                <span
-                  className={cn(
-                    "relative inline-flex size-2 rounded-full",
-                    refreshMs > 0 ? "bg-positive" : "bg-muted-foreground/40",
-                  )}
-                />
-              </span>
-              <span className="font-mono tabular-nums">
-                {t("monitor.updated")} {lastUpdated}
-              </span>
-            </div>
-            <AutoRefreshButton
-              intervalMs={refreshMs}
-              options={MONITOR_REFRESH_INTERVALS}
-              onIntervalChange={setRefreshMs}
-              cycle={cycle}
-              onRefresh={refreshNow}
-              fetching={fetching}
-            />
+          <div className="flex flex-wrap items-center gap-2">
             <ToggleGroup
               variant="segmented"
               spacing={0.5}
@@ -392,6 +366,14 @@ export default function MonitorPage() {
                 </ToggleGroupItem>
               ))}
             </ToggleGroup>
+            <AutoRefreshButton
+              intervalMs={refreshMs}
+              options={MONITOR_REFRESH_INTERVALS}
+              onIntervalChange={setRefreshMs}
+              cycle={cycle}
+              onRefresh={refreshNow}
+              fetching={fetching}
+            />
           </div>
         </div>
 

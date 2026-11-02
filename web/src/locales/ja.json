@@ -338,7 +338,6 @@
   "monitor.subtitle": "リアルタイムのランタイムおよびビジネスメトリクス",
   "monitor.telemetry": "ランタイムテレメトリー",
   "monitor.refresh": "更新",
-  "monitor.updated": "更新済み",
   "monitor.samples": "最新 {count} サンプル",
   "monitor.goroutines": "Goroutines",
   "monitor.heap": "ヒープ",
