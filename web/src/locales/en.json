@@ -1033,8 +1033,6 @@
   "portal.caps.eyebrow": "Capabilities",
   "portal.caps.heading": "Connect, keep, govern, withstand",
   "portal.caps.subtitle": "One gateway sits in front of every upstream, and every conversation becomes a data asset.",
-  "portal.cap.example": "Example",
-  "portal.cap.diagram": "Diagram",
   "portal.cap.access.eyebrow": "Connect",
   "portal.cap.access.title": "One alias, a set of upstreams behind it",
   "portal.cap.access.desc": "Clients just ask for sonnet. Your priorities and weights decide which upstream serves it.",

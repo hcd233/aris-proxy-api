@@ -1033,8 +1033,6 @@
   "portal.caps.eyebrow": "能力",
   "portal.caps.heading": "接入、沉淀、治理、容错",
   "portal.caps.subtitle": "一个网关挡在所有上游之前，每一次对话都沉淀为数据资产。",
-  "portal.cap.example": "示例",
-  "portal.cap.diagram": "图解",
   "portal.cap.access.eyebrow": "接入",
   "portal.cap.access.title": "一个别名，背后是一组上游",
   "portal.cap.access.desc": "客户端只写 sonnet，请求走哪个上游由你配置的优先级和权重决定。",

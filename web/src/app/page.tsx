@@ -1,6 +1,7 @@
 "use client";
 
 import { PortalCapabilities } from "@/components/portal/portal-capabilities";
+import { PortalCta, PortalFooter } from "@/components/portal/portal-closing";
 import { PortalEcosystem } from "@/components/portal/portal-ecosystem";
 import { PortalFeatureMarquee } from "@/components/portal/portal-feature-marquee";
 import { PortalFlow } from "@/components/portal/portal-flow";
@@ -25,7 +26,9 @@ export default function PortalPage() {
         <PortalFlow />
         <PortalCapabilities />
         <PortalGetStarted />
+        <PortalCta cta={cta} />
       </main>
+      <PortalFooter cta={cta} />
     </div>
   );
 }

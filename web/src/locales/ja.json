@@ -1033,8 +1033,6 @@
   "portal.caps.eyebrow": "機能",
   "portal.caps.heading": "つなぐ、残す、管理する、耐える",
   "portal.caps.subtitle": "すべての上流の前にひとつのゲートウェイ。すべての会話がデータ資産になります。",
-  "portal.cap.example": "例",
-  "portal.cap.diagram": "図解",
   "portal.cap.access.eyebrow": "つなぐ",
   "portal.cap.access.title": "ひとつの別名の裏に、複数の上流",
   "portal.cap.access.desc": "クライアントは sonnet と書くだけ。どの上流に流すかは、設定した優先度と重みで決まります。",
