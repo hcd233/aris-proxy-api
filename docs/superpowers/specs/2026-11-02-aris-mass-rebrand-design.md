@@ -41,7 +41,10 @@
 - 域名 `api.lvlvko.top`、Web 路径 `/web/`、API 路由前缀（`/api/web/v1`、`/api/cli/v1`、`/api/openai/v1`、`/api/anthropic/v1`）。
 - CLI 品牌 `aris`、`~/.aris`、`ARIS_*` 环境变量、`~/.dsh` 中的 `ARIS_API_KEY` 引用。
 - `docs/superpowers/` 下 104 篇带日期的历史设计/计划文档（保持当时的决策记录）。
-- `ClientModelProviderID = "aris-proxy"`：它是写进用户 `opencode.json` / `models.json` / Codex TOML 的 provider key，改名会让存量配置多出一份孤儿 provider、破坏幂等 patch；保留为客户端配置兼容键，只改展示名 `Aris Proxy` → `Aris Mass`。
+
+兼容迁移：
+
+- `ClientModelProviderID` 已改为 `aris-mass`，旧值 `aris-proxy` 保留为 `ClientModelLegacyProviderID`：导出时把旧 provider 整体迁移到新键（两侧并存时按 id 合并用户自加模型），Codex 导出时清理旧 `[model_providers."aris-proxy"]` 段。用户需要升级到新的 `aris` release 才会拿到迁移后的写入行为。
 
 ## 3. 改动清单
 
@@ -53,7 +56,8 @@
 - `internal/common/constant/log.go`：三个日志文件名。
 - `internal/common/constant/convcheck.go`：lintconv 的 module 路径常量。
 - `internal/common/constant/clientupdate.go`：`ArisClientReleaseBaseURL`。
-- `internal/common/constant/clientmodel.go`：`ClientModelLabelArisProxy` → `ClientModelLabelArisMass`，值改 `Aris Mass`；引用点 `internal/client/model/text_targets.go`。`ClientModelProviderID = "aris-proxy"` 保持不变（见 §2 兼容例外）。
+- `internal/common/constant/clientmodel.go`：`ClientModelLabelArisProxy` → `ClientModelLabelArisMass`，值改 `Aris Mass`；`ClientModelProviderID` 改 `aris-mass`，新增 `ClientModelLegacyProviderID = "aris-proxy"`。
+- `internal/client/model/targets.go` / `text_targets.go`：OpenCode / Pi / Codex 导出时迁移旧 provider 配置并保留用户自加模型。
 - `internal/handler/install_aris_client.sh.tmpl`：`gh_base` 与文件头注释。
 - `internal/common/constant/string.go`：`APITitle` / `APIDescription`。
 - `cmd/server/main.go`、`cmd/lint/main.go`：包注释。
@@ -76,7 +80,7 @@
 ### 3.3 Web 前端
 
 - `web/src/app/layout.tsx`：metadata title/description。
-- `web/src/app/login/page.tsx`、`web/src/app/share/page.tsx`：展示名 / aria-label。
+- `web/src/app/login/page.tsx`、`web/src/app/share/page.tsx`：展示名 / aria-label。登录页大标题用两个 `SplitText` 拆成 `Aris` / `Proxy` 两行，`Aris Proxy` 不是连续字符串，批量替换会漏掉，必须单独改为 `Aris` / `Mass`。
 - `web/src/components/portal/portal-closing.tsx`：品牌名与 GitHub 地址。
 - `web/src/lib/portal.ts`、`web/src/lib/portal.test.ts`：`GITHUB_REPO_URL`。
 - `web/src/locales/{zh,en,ja}.json`：`auth.login_title`、`layout.aris_proxy` → `layout.aris_mass`，同步 `web/src/app/(dashboard)/layout.tsx` 的 key。
@@ -141,7 +145,7 @@ GitHub 仓库改名后，CI 的 `IMAGE_NAME` 自动变为 `ghcr.io/hcd233/aris-m
 | 静态 | `git grep -n "aris-proxy-api"` 仅剩 `docs/superpowers/**`；`git grep -n "aris-proxy"` 仅剩 `ClientModelProviderID` 及其测试；`make lint`（如工具可用） |
 | CI | PR 的 lint workflow 通过；merge 后 build-and-publish 成功 |
 | 生产 | `kubectl -n aris-mass get deploy,pod,svc` 全部 Ready；`GET /health`、`GET /ready` 200；`https://api.lvlvko.top/web/` 登录页显示 `Aris Mass`；`kubectl -n aris-proxy-api` 不再有运行中的 workload |
-| 客户端 | `GET /install.sh` 返回的 `gh_base` 指向新仓库；`aris update` 的 HEAD 探测可解析新 release 地址 |
+| 客户端 | `GET /install.sh` 返回的 `gh_base` 指向新仓库；`aris update` 的 HEAD 探测可解析新 release 地址；provider key 迁移进入新的客户端 release 后才对用户生效 |
 
 ## 6. 非目标
 
