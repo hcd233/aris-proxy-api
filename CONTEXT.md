@@ -342,15 +342,15 @@ _Avoid_: success rate, error rate
 ## Agent Runtime（Agent 运行时）
 
 **AgentRuntime（Agent 运行时）**:
-独立微服务，负责 Agent 的执行引擎。基于 eino v0.9 的 ChatModelAgent + TurnLoop 实现 ReAct 循环（LLM 推理 → 工具调用 → 执行结果 → 循环），通过 Docker 沙箱容器执行命令与文件操作。与 proxy-api 通过 gRPC stream 通信（proxy-api 下发控制指令 + 接收事件流），以 API Key 客户端方式通过 proxy-api 调用 LLM。共享 proxy-api 的 Postgres 实例，维护独立的 AgentSession 表。
+独立微服务，负责 Agent 的执行引擎。基于 eino v0.9 的 ChatModelAgent + TurnLoop 实现 ReAct 循环（LLM 推理 → 工具调用 → 执行结果 → 循环），通过 Docker 沙箱容器执行命令与文件操作。与 aris-mass 通过 gRPC stream 通信（aris-mass 下发控制指令 + 接收事件流），以 API Key 客户端方式通过 aris-mass 调用 LLM。共享 aris-mass 的 Postgres 实例，维护独立的 AgentSession 表。
 _Avoid_: agent engine, agent executor, agent worker
 
 **AgentSession（Agent 对话会话）**:
-一次 Agent 对话窗口的生命周期聚合。与 proxy-api 的 model-layer Session（一次 LLM API 调用）是包含关系：一个 AgentSession 包含多次 LLM 调用（对应多个 model-layer Session）。AgentSession 记录用户意图、LLM 调用序列、沙箱命令执行记录、文件变更、执行结果。由 agent-runtime 独立管理，存储在其 AgentSession 表中。
+一次 Agent 对话窗口的生命周期聚合。与 aris-mass 的 model-layer Session（一次 LLM API 调用）是包含关系：一个 AgentSession 包含多次 LLM 调用（对应多个 model-layer Session）。AgentSession 记录用户意图、LLM 调用序列、沙箱命令执行记录、文件变更、执行结果。由 agent-runtime 独立管理，存储在其 AgentSession 表中。
 _Avoid_: agent conversation, agent chat, agent thread
 
 **Channel（通道）**:
-用户与 Agent 交互的通信界面。第一期唯一 channel 为 Web 对话窗口。统一接入 proxy-api 控制平面，由 proxy-api 负责认证、会话路由和事件转发，agent-runtime 不直接暴露给外部。后续可扩展为更多 channel（企微、飞书等）。
+用户与 Agent 交互的通信界面。第一期唯一 channel 为 Web 对话窗口。统一接入 aris-mass 控制平面，由 aris-mass 负责认证、会话路由和事件转发，agent-runtime 不直接暴露给外部。后续可扩展为更多 channel（企微、飞书等）。
 _Avoid_: platform, interface, adapter
 
 **Sandbox（沙箱）**:
@@ -362,17 +362,17 @@ eino v0.9 提供的持续运行、外部驱动的多轮 Agent 运行时。通过
 _Avoid_: conversation loop, agent loop, event loop
 
 **ChatModelAgent（对话模型 Agent）**:
-eino ADK 的 Agent 实现，封装 ChatModel + Tools + ReAct 循环。通过 proxy-api 调用 LLM（以 API Key 客户端方式，复用 proxy-api 的 EndpointResolver、跨协议转换、限流与审计），工具调用在沙箱中执行。agent-runtime 中每个 Agent 定义对应一个 ChatModelAgent 实例。
+eino ADK 的 Agent 实现，封装 ChatModel + Tools + ReAct 循环。通过 aris-mass 调用 LLM（以 API Key 客户端方式，复用 aris-mass 的 EndpointResolver、跨协议转换、限流与审计），工具调用在沙箱中执行。agent-runtime 中每个 Agent 定义对应一个 ChatModelAgent 实例。
 _Avoid_: ai agent, llm agent, model agent
 
 **SessionState（会话状态）**:
-AgentSession 的运行状态机，由 proxy-api 维护（消费 gRPC event stream 时更新）：`idle`（等待用户消息）、`running`（Agent 执行中）、`interrupted`（被中断/出错）。用户断线重连时 proxy-api 根据该状态决定续订事件流（ResumeStream）还是等待新消息。
+AgentSession 的运行状态机，由 aris-mass 维护（消费 gRPC event stream 时更新）：`idle`（等待用户消息）、`running`（Agent 执行中）、`interrupted`（被中断/出错）。用户断线重连时 aris-mass 根据该状态决定续订事件流（ResumeStream）还是等待新消息。
 _Avoid_: session status, run state, execution state
 
 **CheckpointStore（检查点存储）**:
-eino TurnLoop 的状态持久化存储，基于 Redis。在每次 turn 完成后保存 checkpoint。agent-runtime 进程崩溃后可从 checkpoint 恢复，重放未完成的 turn。为 agent-runtime 专属的 Redis namespace，与 proxy-api 共享 Redis 实例。
+eino TurnLoop 的状态持久化存储，基于 Redis。在每次 turn 完成后保存 checkpoint。agent-runtime 进程崩溃后可从 checkpoint 恢复，重放未完成的 turn。为 agent-runtime 专属的 Redis namespace，与 aris-mass 共享 Redis 实例。
 _Avoid_: state store, snapshot store, resume store
 
 **AgentEvent（Agent 事件）**:
-agent-runtime 通过 gRPC stream 返回给 proxy-api 的实时事件。包含：assistant 文本消息（流式分块）、reasoning/thinking 内容、工具调用开始、工具调用结果、interrupt（如询问用户）、turn 完成通知、错误、状态变更。proxy-api 接收到后通过 WebSocket 推送到 Web 前端 channel。
+agent-runtime 通过 gRPC stream 返回给 aris-mass 的实时事件。包含：assistant 文本消息（流式分块）、reasoning/thinking 内容、工具调用开始、工具调用结果、interrupt（如询问用户）、turn 完成通知、错误、状态变更。aris-mass 接收到后通过 WebSocket 推送到 Web 前端 channel。
 _Avoid_: agent message, execution event, agent update
