@@ -5,12 +5,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/identity/port"
-	"github.com/hcd233/aris-proxy-api/internal/application/identity/query"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
-	"github.com/hcd233/aris-proxy-api/internal/domain/identity/aggregate"
-	"github.com/hcd233/aris-proxy-api/internal/domain/identity/vo"
+	"github.com/hcd233/aris-mass/internal/application/identity/port"
+	"github.com/hcd233/aris-mass/internal/application/identity/query"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/model"
+	"github.com/hcd233/aris-mass/internal/domain/identity/aggregate"
+	"github.com/hcd233/aris-mass/internal/domain/identity/vo"
 )
 
 func newUser(t *testing.T, name, email string, perm enum.Permission) *aggregate.User {

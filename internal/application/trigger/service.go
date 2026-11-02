@@ -10,13 +10,13 @@ import (
 	"github.com/samber/lo"
 	"go.uber.org/zap"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	domain "github.com/hcd233/aris-proxy-api/internal/domain/trigger"
-	"github.com/hcd233/aris-proxy-api/internal/domain/trigger/aggregate"
-	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	domain "github.com/hcd233/aris-mass/internal/domain/trigger"
+	"github.com/hcd233/aris-mass/internal/domain/trigger/aggregate"
+	"github.com/hcd233/aris-mass/internal/logger"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/trigger/port"
+	"github.com/hcd233/aris-mass/internal/application/trigger/port"
 )
 
 type TriggerService struct {

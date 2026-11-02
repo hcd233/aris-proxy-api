@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	clientapi "github.com/hcd233/aris-proxy-api/internal/client/api"
+	clientapi "github.com/hcd233/aris-mass/internal/client/api"
 )
 
 func TestCheckHealthReturnsLatency(t *testing.T) {

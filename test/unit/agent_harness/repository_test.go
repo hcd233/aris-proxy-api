@@ -10,10 +10,10 @@ import (
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/domain/agentharness"
-	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/domain/agentharness"
+	dbmodel "github.com/hcd233/aris-mass/internal/infrastructure/database/model"
+	"github.com/hcd233/aris-mass/internal/infrastructure/repository"
 )
 
 // newRuleDryRunDB 打开 postgres DryRun 会话：只构建 SQL 不执行（不建连接）。

@@ -4,9 +4,9 @@ package aggregate
 import (
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/domain/apikey/vo"
-	"github.com/hcd233/aris-proxy-api/internal/domain/common/aggregate"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/domain/apikey/vo"
+	"github.com/hcd233/aris-mass/internal/domain/common/aggregate"
 )
 
 // ProxyAPIKey API Key 聚合根

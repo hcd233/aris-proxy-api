@@ -24,8 +24,8 @@ const sourceSerif = Source_Serif_4({
 });
 
 export const metadata: Metadata = {
-  title: "Aris Proxy API",
-  description: "Management interface for Aris Proxy API",
+  title: "Aris Mass",
+  description: "Management interface for Aris Mass",
 };
 
 export default function RootLayout({

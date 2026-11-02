@@ -3,8 +3,8 @@ package update
 import (
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/client/update"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/client/update"
+	"github.com/hcd233/aris-mass/internal/common/constant"
 )
 
 func TestIsNewer(t *testing.T) {

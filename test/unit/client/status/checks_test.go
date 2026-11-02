@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	clientconfig "github.com/hcd233/aris-proxy-api/internal/client/config"
-	"github.com/hcd233/aris-proxy-api/internal/client/status"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	clientconfig "github.com/hcd233/aris-mass/internal/client/config"
+	"github.com/hcd233/aris-mass/internal/client/status"
+	"github.com/hcd233/aris-mass/internal/common/constant"
 )
 
 func testPaths(t *testing.T) clientconfig.Paths {

@@ -3,7 +3,7 @@ package install_origin
 import (
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/util"
+	"github.com/hcd233/aris-mass/internal/util"
 )
 
 // TestIsSafeInstallHost_Allow 验证合法 host（域名、端口、IPv6、带端口域名）全部通过。

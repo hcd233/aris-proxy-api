@@ -9,13 +9,13 @@ import (
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/config"
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
-	llmvo "github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
-	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/config"
+	"github.com/hcd233/aris-mass/internal/domain/llmproxy/aggregate"
+	llmvo "github.com/hcd233/aris-mass/internal/domain/llmproxy/vo"
+	dbmodel "github.com/hcd233/aris-mass/internal/infrastructure/database/model"
+	"github.com/hcd233/aris-mass/internal/infrastructure/repository"
 )
 
 // TestUpdateQuotaKeepsTokens 额度/错误窄列更新不得触碰 token 列。

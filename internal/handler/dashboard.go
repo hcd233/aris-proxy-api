@@ -5,13 +5,13 @@ import (
 
 	"go.uber.org/zap"
 
-	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
-	auditport "github.com/hcd233/aris-proxy-api/internal/application/audit/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/logger"
-	"github.com/hcd233/aris-proxy-api/internal/util"
+	apiutil "github.com/hcd233/aris-mass/internal/api/util"
+	auditport "github.com/hcd233/aris-mass/internal/application/audit/port"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/dto"
+	"github.com/hcd233/aris-mass/internal/logger"
+	"github.com/hcd233/aris-mass/internal/util"
 )
 
 // dashboardScope 从 JWT 上下文取调用者视角

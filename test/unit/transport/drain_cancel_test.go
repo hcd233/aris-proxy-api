@@ -14,11 +14,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/inflight"
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
-	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/httpclient"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/transport"
+	"github.com/hcd233/aris-mass/internal/common/inflight"
+	"github.com/hcd233/aris-mass/internal/domain/llmproxy/vo"
+	"github.com/hcd233/aris-mass/internal/dto"
+	"github.com/hcd233/aris-mass/internal/infrastructure/httpclient"
+	"github.com/hcd233/aris-mass/internal/infrastructure/transport"
 )
 
 // TestMain 初始化全局 HTTP 客户端（transport 的 doUpstreamRequest 依赖该单例）。

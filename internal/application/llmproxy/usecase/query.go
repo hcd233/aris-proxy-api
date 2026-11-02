@@ -7,14 +7,14 @@ import (
 	"github.com/samber/lo"
 	"go.uber.org/zap"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/service"
-	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/domain/llmproxy"
+	"github.com/hcd233/aris-mass/internal/domain/llmproxy/service"
+	"github.com/hcd233/aris-mass/internal/dto"
 
-	proxyutil "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
-	"github.com/hcd233/aris-proxy-api/internal/logger"
-	"github.com/hcd233/aris-proxy-api/internal/util"
+	proxyutil "github.com/hcd233/aris-mass/internal/application/llmproxy/util"
+	"github.com/hcd233/aris-mass/internal/logger"
+	"github.com/hcd233/aris-mass/internal/util"
 )
 
 // ListOpenAIModels 列出 OpenAI 兼容模型

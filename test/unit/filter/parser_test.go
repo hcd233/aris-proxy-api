@@ -4,8 +4,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/common/filter"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/filter"
 )
 
 func strPtr(s string) *string { return &s }

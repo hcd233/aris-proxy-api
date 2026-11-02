@@ -16,7 +16,7 @@ import (
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
 
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
+	"github.com/hcd233/aris-mass/internal/infrastructure/cache"
 )
 
 var (

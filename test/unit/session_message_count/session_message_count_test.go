@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/session/query"
+	"github.com/hcd233/aris-mass/internal/application/session/query"
 )
 
 func TestBuildMessageCountBuckets(t *testing.T) {

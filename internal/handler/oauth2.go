@@ -6,11 +6,11 @@ import (
 
 	"go.uber.org/zap"
 
-	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
-	"github.com/hcd233/aris-proxy-api/internal/application/oauth2/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/logger"
+	apiutil "github.com/hcd233/aris-mass/internal/api/util"
+	"github.com/hcd233/aris-mass/internal/application/oauth2/port"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/dto"
+	"github.com/hcd233/aris-mass/internal/logger"
 )
 
 // Oauth2Handler OAuth2处理器接口

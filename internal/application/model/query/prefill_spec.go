@@ -6,10 +6,10 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/model/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/hcd233/aris-mass/internal/application/model/port"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/dto"
+	"github.com/hcd233/aris-mass/internal/logger"
 )
 
 // prefillSpecHandler 从公开规格源导入表单初值（仅填充，永不自动改价）

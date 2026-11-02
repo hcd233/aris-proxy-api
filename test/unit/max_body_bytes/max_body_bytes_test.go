@@ -21,7 +21,7 @@ import (
 	"github.com/danielgtaylor/huma/v2/adapters/humafiber"
 	"github.com/gofiber/fiber/v3"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/constant"
 )
 
 // bigBodyTimeout 大请求体走内存连接读写，全量并行负载下会超过 fiber app.Test 默认 1s 超时（i/o timeout 抖动）

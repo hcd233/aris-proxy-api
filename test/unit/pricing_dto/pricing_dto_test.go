@@ -4,9 +4,9 @@ package pricing_dto
 import (
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/model/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-mass/internal/application/model/port"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/dto"
 )
 
 func TestPriceMicroRoundTrip(t *testing.T) {

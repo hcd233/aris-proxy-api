@@ -3,7 +3,7 @@ package secret
 import (
 	"testing"
 
-	commonutil "github.com/hcd233/aris-proxy-api/internal/common/util"
+	commonutil "github.com/hcd233/aris-mass/internal/common/util"
 )
 
 func TestMaskIdentity(t *testing.T) {

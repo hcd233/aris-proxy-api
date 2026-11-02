@@ -5,8 +5,8 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/hcd233/aris-proxy-api/internal/domain/agentharness"
-	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/hcd233/aris-mass/internal/domain/agentharness"
+	"github.com/hcd233/aris-mass/internal/logger"
 )
 
 // LoadHarnessRules 读取 harness 规则；读取失败时返回 nil 并只记 warn。

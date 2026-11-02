@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/config"
-	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/config"
+	"github.com/hcd233/aris-mass/internal/logger"
 	"github.com/samber/lo"
 	"github.com/tencentyun/cos-go-sdk-v5"
 	"go.uber.org/zap"

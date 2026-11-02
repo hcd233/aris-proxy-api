@@ -4,8 +4,8 @@ package dto
 import (
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/model"
 )
 
 // ListUpstreamReq 列出 Upstream 分组请求

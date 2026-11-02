@@ -7,9 +7,9 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/samber/lo"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/config"
-	"github.com/hcd233/aris-proxy-api/internal/domain/oauth2/vo"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/config"
+	"github.com/hcd233/aris-mass/internal/domain/oauth2/vo"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/github"
 )

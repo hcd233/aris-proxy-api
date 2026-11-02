@@ -10,15 +10,15 @@ import (
 	"github.com/samber/lo"
 	"go.uber.org/zap"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/port"
-	proxyutil "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	convvo "github.com/hcd233/aris-proxy-api/internal/common/vo"
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
-	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/logger"
-	"github.com/hcd233/aris-proxy-api/internal/util"
+	"github.com/hcd233/aris-mass/internal/application/llmproxy/port"
+	proxyutil "github.com/hcd233/aris-mass/internal/application/llmproxy/util"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	convvo "github.com/hcd233/aris-mass/internal/common/vo"
+	"github.com/hcd233/aris-mass/internal/domain/llmproxy/aggregate"
+	"github.com/hcd233/aris-mass/internal/dto"
+	"github.com/hcd233/aris-mass/internal/logger"
+	"github.com/hcd233/aris-mass/internal/util"
 )
 
 // ==================== Capture 触发词短路 ====================

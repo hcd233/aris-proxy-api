@@ -20,10 +20,10 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
-	"github.com/hcd233/aris-proxy-api/internal/middleware"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/infrastructure/database/model"
+	"github.com/hcd233/aris-mass/internal/middleware"
 )
 
 // 各用例必须使用彼此不同的密钥：鉴权回源的 singleflight 组是包级的（生产只有一套

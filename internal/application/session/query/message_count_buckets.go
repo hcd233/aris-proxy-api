@@ -4,7 +4,7 @@ package query
 import (
 	"fmt"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/constant"
 )
 
 // BuildMessageCountBuckets 按固定边界 + 动态上限生成消息数区间桶，仅保留有会话的桶。

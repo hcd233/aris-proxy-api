@@ -11,7 +11,7 @@ import (
 
 	"github.com/bytedance/sonic"
 
-	"github.com/hcd233/aris-proxy-api/test/e2e/e2eguard"
+	"github.com/hcd233/aris-mass/test/e2e/e2eguard"
 )
 
 // mustTriggerE2EEnv 返回 (baseURL, apiKey, adminToken) 或 t.Skip。

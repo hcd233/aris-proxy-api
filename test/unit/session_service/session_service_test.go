@@ -7,9 +7,9 @@ import (
 
 	"github.com/bytedance/sonic"
 
-	convvo "github.com/hcd233/aris-proxy-api/internal/common/vo"
-	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
+	convvo "github.com/hcd233/aris-mass/internal/common/vo"
+	dbmodel "github.com/hcd233/aris-mass/internal/infrastructure/database/model"
+	"github.com/hcd233/aris-mass/internal/infrastructure/repository"
 )
 
 // messageFixture represents a message entry in the fixture JSON

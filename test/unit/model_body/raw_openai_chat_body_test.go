@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	proxyutil "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
+	proxyutil "github.com/hcd233/aris-mass/internal/application/llmproxy/util"
 )
 
 func TestMarshalRawOpenAIChatCompletionBodyForModel_PreservesUnknownFields(t *testing.T) {

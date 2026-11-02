@@ -5,7 +5,7 @@ import (
 
 	"github.com/samber/lo"
 
-	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-mass/internal/dto"
 )
 
 // TestSetTokensFromOpenAIUsage_NormalizesCachedInput 覆盖 OpenAI Chat 语义：

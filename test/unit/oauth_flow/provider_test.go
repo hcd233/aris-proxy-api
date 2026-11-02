@@ -11,10 +11,10 @@ import (
 
 	"github.com/bytedance/sonic"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/httpclient"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/oauthprovider"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/infrastructure/httpclient"
+	"github.com/hcd233/aris-mass/internal/infrastructure/oauthprovider"
 )
 
 // 全局 HTTP 客户端由应用启动时初始化；测试进程需显式初始化（config 包 init 已提供默认超时）。

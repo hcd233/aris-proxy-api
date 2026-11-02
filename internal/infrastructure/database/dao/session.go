@@ -8,12 +8,12 @@ import (
 	"strconv"
 	"time"
 
-	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
+	dbmodel "github.com/hcd233/aris-mass/internal/infrastructure/database/model"
 	"github.com/samber/lo"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/constant"
 )
 
 // MessageDAO 消息数据访问对象

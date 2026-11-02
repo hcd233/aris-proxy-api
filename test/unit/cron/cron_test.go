@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/config"
-	"github.com/hcd233/aris-proxy-api/internal/cron"
-	"github.com/hcd233/aris-proxy-api/internal/domain/conversation"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/config"
+	"github.com/hcd233/aris-mass/internal/cron"
+	"github.com/hcd233/aris-mass/internal/domain/conversation"
+	"github.com/hcd233/aris-mass/internal/infrastructure/pool"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )

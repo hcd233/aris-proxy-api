@@ -5,9 +5,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/identity/command"
-	"github.com/hcd233/aris-proxy-api/internal/application/identity/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/application/identity/command"
+	"github.com/hcd233/aris-mass/internal/application/identity/port"
+	"github.com/hcd233/aris-mass/internal/common/enum"
 )
 
 // recordInvalidations 记录被失效缓存的 userID（验证回调被调用）。

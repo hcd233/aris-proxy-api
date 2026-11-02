@@ -7,9 +7,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	dbmodel "github.com/hcd233/aris-mass/internal/infrastructure/database/model"
+	"github.com/hcd233/aris-mass/internal/infrastructure/repository"
 )
 
 // 并发改名的形态：调用方读到的旧值是 other-id，但库里已经是 old-id（另一个请求先改过）。

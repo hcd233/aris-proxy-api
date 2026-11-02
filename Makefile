@@ -1,6 +1,6 @@
-# Makefile for aris-proxy-api
+# Makefile for aris-mass
 
-APP_NAME   := aris-proxy-api
+APP_NAME   := aris-mass
 SERVER_MAIN := ./cmd/server
 CLIENT_MAIN := ./cmd/client
 CLIENT_OUTPUT_DIR := build/client

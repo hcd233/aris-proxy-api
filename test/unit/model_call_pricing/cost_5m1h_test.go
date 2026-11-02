@@ -4,10 +4,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
-	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-mass/internal/application/llmproxy/usecase"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/domain/llmproxy/vo"
+	"github.com/hcd233/aris-mass/internal/dto"
 )
 
 func TestCostBreakdown5m1h(t *testing.T) {

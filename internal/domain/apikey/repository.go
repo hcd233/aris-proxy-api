@@ -4,8 +4,8 @@ package apikey
 import (
 	"context"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
-	"github.com/hcd233/aris-proxy-api/internal/domain/apikey/aggregate"
+	"github.com/hcd233/aris-mass/internal/common/model"
+	"github.com/hcd233/aris-mass/internal/domain/apikey/aggregate"
 )
 
 // APIKeyRepository API Key 仓储接口

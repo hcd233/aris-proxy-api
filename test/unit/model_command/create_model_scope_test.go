@@ -9,16 +9,16 @@ import (
 	"testing"
 
 	"errors"
-	"github.com/hcd233/aris-proxy-api/internal/application/model/command"
-	"github.com/hcd233/aris-proxy-api/internal/application/model/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
-	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
-	useragg "github.com/hcd233/aris-proxy-api/internal/domain/identity/aggregate"
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
+	"github.com/hcd233/aris-mass/internal/application/model/command"
+	"github.com/hcd233/aris-mass/internal/application/model/port"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/common/model"
+	"github.com/hcd233/aris-mass/internal/domain/identity"
+	useragg "github.com/hcd233/aris-mass/internal/domain/identity/aggregate"
+	"github.com/hcd233/aris-mass/internal/domain/llmproxy"
+	"github.com/hcd233/aris-mass/internal/domain/llmproxy/aggregate"
+	"github.com/hcd233/aris-mass/internal/domain/llmproxy/vo"
 )
 
 // scopedEndpointRepo 内存端点仓储：epA 归 user 101、epB 归 user 202。

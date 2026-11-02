@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
-	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-mass/internal/dto"
 )
 
 const e2eHTTPTimeout = 30 * time.Second

@@ -3,13 +3,13 @@ package model_repository
 import (
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
-	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/domain/llmproxy"
+	"github.com/hcd233/aris-mass/internal/domain/llmproxy/aggregate"
+	"github.com/hcd233/aris-mass/internal/domain/llmproxy/vo"
+	dbmodel "github.com/hcd233/aris-mass/internal/infrastructure/database/model"
+	"github.com/hcd233/aris-mass/internal/infrastructure/repository"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )

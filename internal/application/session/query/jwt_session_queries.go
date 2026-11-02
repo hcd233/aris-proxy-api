@@ -7,17 +7,17 @@ import (
 	"github.com/samber/lo"
 	"go.uber.org/zap"
 
-	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/common/filter"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
-	"github.com/hcd233/aris-proxy-api/internal/domain/agentharness"
-	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
-	"github.com/hcd233/aris-proxy-api/internal/domain/session"
-	"github.com/hcd233/aris-proxy-api/internal/logger"
-	"github.com/hcd233/aris-proxy-api/internal/util"
+	sessionport "github.com/hcd233/aris-mass/internal/application/session/port"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/filter"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/common/model"
+	"github.com/hcd233/aris-mass/internal/domain/agentharness"
+	"github.com/hcd233/aris-mass/internal/domain/apikey"
+	"github.com/hcd233/aris-mass/internal/domain/session"
+	"github.com/hcd233/aris-mass/internal/logger"
+	"github.com/hcd233/aris-mass/internal/util"
 )
 
 var validSessionSortFields = map[string]bool{

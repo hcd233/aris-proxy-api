@@ -14,17 +14,17 @@ import (
 
 	"golang.org/x/oauth2"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/oauth2/command"
-	"github.com/hcd233/aris-proxy-api/internal/application/oauth2/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
-	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
-	"github.com/hcd233/aris-proxy-api/internal/domain/identity/aggregate"
-	identityvo "github.com/hcd233/aris-proxy-api/internal/domain/identity/vo"
-	"github.com/hcd233/aris-proxy-api/internal/domain/oauth2/service"
-	"github.com/hcd233/aris-proxy-api/internal/domain/oauth2/vo"
-	infraoauth "github.com/hcd233/aris-proxy-api/internal/infrastructure/oauth2"
+	"github.com/hcd233/aris-mass/internal/application/oauth2/command"
+	"github.com/hcd233/aris-mass/internal/application/oauth2/port"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/common/model"
+	"github.com/hcd233/aris-mass/internal/domain/identity"
+	"github.com/hcd233/aris-mass/internal/domain/identity/aggregate"
+	identityvo "github.com/hcd233/aris-mass/internal/domain/identity/vo"
+	"github.com/hcd233/aris-mass/internal/domain/oauth2/service"
+	"github.com/hcd233/aris-mass/internal/domain/oauth2/vo"
+	infraoauth "github.com/hcd233/aris-mass/internal/infrastructure/oauth2"
 )
 
 // callbackCase 回调测试用例

@@ -23,16 +23,16 @@ SSH 失败时报告连接错误，不要尝试使用裸 IP 绕过。
 
 | 组件 | 说明 |
 |------|------|
-| **k3s 集群** | v1.35.5 单节点（control-plane `10-7-109-6`），`kubectl` 直接可用；业务部署在 namespace `aris-proxy-api` |
+| **k3s 集群** | v1.35.5 单节点（control-plane `10-7-109-6`），`kubectl` 直接可用；业务部署在 namespace `aris-mass` |
 | **Docker 容器** | `redis`（redis:8.4.0，由 1Panel 管理）、`postgresql`，供 k3s 集群外部访问 |
-| **应用目录** | `/home/ubuntu/code/aris-proxy-api/`（含 `env/api.env`） |
+| **应用目录** | `/home/ubuntu/code/aris-mass/`（含 `env/api.env`） |
 | **1Panel** | 管理 Redis 等容器，数据/配置在 `/opt/1panel/apps/` |
 
 **不要假设容器名/部署名永远不变**；执行前先确认：
 
 ```bash
 docker ps --format '{{.Names}}\t{{.Image}}\t{{.Status}}'
-kubectl -n aris-proxy-api get deploy,svc
+kubectl -n aris-mass get deploy,svc
 ```
 
 找不到明确目标时停止并向用户报告，不要猜测。
@@ -42,7 +42,7 @@ kubectl -n aris-proxy-api get deploy,svc
 应用自身的连接凭据统一存放在：
 
 ```text
-/home/ubuntu/code/aris-proxy-api/env/api.env
+/home/ubuntu/code/aris-mass/env/api.env
 ```
 
 常见键包括：
@@ -58,7 +58,7 @@ POSTGRES_USER / POSTGRES_PASSWORD / POSTGRES_DATABASE / POSTGRES_HOST / POSTGRES
 
 ```bash
 awk -F= 'tolower($1) ~ /(redis|cache|postgres|database|db|dsn)/ {print $1"=<redacted>"}' \
-  /home/ubuntu/code/aris-proxy-api/env/api.env
+  /home/ubuntu/code/aris-mass/env/api.env
 ```
 
 ## 统一安全基线

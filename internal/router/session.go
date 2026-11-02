@@ -6,11 +6,11 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/redis/go-redis/v9"
 
-	demoport "github.com/hcd233/aris-proxy-api/internal/application/demo/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/handler"
-	"github.com/hcd233/aris-proxy-api/internal/middleware"
+	demoport "github.com/hcd233/aris-mass/internal/application/demo/port"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/handler"
+	"github.com/hcd233/aris-mass/internal/middleware"
 )
 
 func initSessionJWTRouter(sessionGroup huma.API, sessionHandler handler.SessionHandler, demoAccessor demoport.DemoModuleAccessor, auditSubmitter demoport.DemoSubmitter) {

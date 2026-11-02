@@ -9,7 +9,7 @@ Claude Code（CLI）会把每一次会话完整持久化为一个 **JSONL** 文�
 ```
 
 - 目录按**项目工作目录**切分，cwd 的路径编码规则：把绝对路径中的 `/` 全部替换为 `-`。
-  - 例：`/Users/centonhuang/Desktop/code/aris-proxy-api` → `-Users-centonhuang-Desktop-code-aris-proxy-api`
+  - 例：`/Users/centonhuang/Desktop/code/aris-mass` → `-Users-centonhuang-Desktop-code-aris-mass`
 - 文件名即 `session_id`（UUIDv4），如 `5add3648-b40d-49f5-9a3b-fbddb140331a.jsonl`。
 - 同级可能存在同名目录 `<session-uuid>/`，用于存放该会话派生的子代理数据：
   ```
@@ -91,7 +91,7 @@ Claude Code（CLI）会把每一次会话完整持久化为一个 **JSONL** 文�
   "parentUuid": "5add3648-b40d-49f5-9a3b-fbddb140331a",
   "sessionId": "5add3648-b40d-49f5-9a3b-fbddb140331a",
   "timestamp": "2026-07-08T15:57:16.269Z",
-  "cwd": "/Users/centonhuang/Desktop/code/aris-proxy-api",
+  "cwd": "/Users/centonhuang/Desktop/code/aris-mass",
   "gitBranch": "bugfix/dataset-preview-route-2026-07-04",
   "version": "2.1.92",
   "userType": "external",

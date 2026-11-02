@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/constant"
 	"github.com/redis/go-redis/v9"
 )
 

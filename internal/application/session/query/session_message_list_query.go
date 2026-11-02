@@ -6,10 +6,10 @@ import (
 	"github.com/samber/lo"
 	"go.uber.org/zap"
 
-	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/domain/session"
-	"github.com/hcd233/aris-proxy-api/internal/logger"
+	sessionport "github.com/hcd233/aris-mass/internal/application/session/port"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/domain/session"
+	"github.com/hcd233/aris-mass/internal/logger"
 )
 
 type listSessionMessagesHandler struct {

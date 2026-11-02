@@ -4,7 +4,7 @@ package port
 import (
 	"context"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/enum"
 )
 
 // CreateEndpointCommand 创建 Endpoint 命令

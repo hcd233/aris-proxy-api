@@ -3,7 +3,7 @@ package model
 import (
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/constant"
 )
 
 // DemoConfig Demo 演示配置数据库模型（单行表，固定 ID=1）

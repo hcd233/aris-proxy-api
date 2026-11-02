@@ -5,8 +5,8 @@ import (
 
 	"github.com/bytedance/sonic"
 
-	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/dto/anthropic"
+	"github.com/hcd233/aris-mass/internal/dto"
+	"github.com/hcd233/aris-mass/internal/dto/anthropic"
 )
 
 func TestSetTokensFromAnthropicUsage5m1h(t *testing.T) {

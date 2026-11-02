@@ -4,7 +4,7 @@ package main
 import (
 	"os"
 
-	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/hcd233/aris-mass/internal/logger"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )

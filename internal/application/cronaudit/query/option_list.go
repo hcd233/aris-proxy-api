@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/cronaudit/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/application/cronaudit/port"
+	"github.com/hcd233/aris-mass/internal/common/constant"
 )
 
 // listCronCallAuditOptionsHandler 获取 CronCallAudit 筛选项处理器

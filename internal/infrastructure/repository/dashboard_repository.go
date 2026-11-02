@@ -7,12 +7,12 @@ import (
 
 	"gorm.io/gorm"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
-	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/domain/modelcall"
+	"github.com/hcd233/aris-mass/internal/infrastructure/cache"
+	dbmodel "github.com/hcd233/aris-mass/internal/infrastructure/database/model"
 )
 
 // dashboardRepository DashboardRepository 的 GORM(PostgreSQL) 实现

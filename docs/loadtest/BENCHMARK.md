@@ -259,7 +259,7 @@ JWT 鉴权（admin）的查询接口，毫秒级快接口——与 §3.1~3.3 的
 | 1Panel-openresty | 38.8% |
 | postgresql | 35.9% |
 | xray | 26.0% |
-| aris-proxy-api pod×2 | ~40%（合计） |
+| aris-mass pod×2 | ~40%（合计） |
 | redis / 其他 | <1% |
 
 **2026-10-22 补充采样**（`stats/model/trend` c=100、891 req/s 进行中）：`vmstat` **id=0 / sy=57%**，openresty **37.0%**、postgresql **0.2%**、redis **7.6%**；pod CPU 折算 0.3~0.6ms/req。PG 已不在缓存接口的路径上，宿主 2 核被 TLS/网关/软中断吃满——与 10-17 的「PG 35.9%」形成对照，也是 stats/选项类缓存生效的直接证据。

@@ -17,8 +17,8 @@ import (
 
 	"github.com/bytedance/sonic"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/test/e2e/e2eguard"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/test/e2e/e2eguard"
 )
 
 const e2eHTTPTimeout = 30 * time.Second

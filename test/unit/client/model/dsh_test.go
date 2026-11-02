@@ -8,7 +8,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/hcd233/aris-proxy-api/internal/client/model"
+	"github.com/hcd233/aris-mass/internal/client/model"
 )
 
 // dshPatchFixture 模拟用户手工维护的 dsh profile patch：含注释、无关条目与 aris provider

@@ -9,13 +9,13 @@ import (
 	"github.com/alicebob/miniredis/v2"
 	"github.com/redis/go-redis/v9"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/trigger"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
-	triggerdomain "github.com/hcd233/aris-proxy-api/internal/domain/trigger"
-	"github.com/hcd233/aris-proxy-api/internal/domain/trigger/aggregate"
+	"github.com/hcd233/aris-mass/internal/application/trigger"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/common/model"
+	triggerdomain "github.com/hcd233/aris-mass/internal/domain/trigger"
+	"github.com/hcd233/aris-mass/internal/domain/trigger/aggregate"
 )
 
 type fakeRepo struct {

@@ -9,12 +9,12 @@ import (
 
 	"github.com/bytedance/sonic"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	commonutil "github.com/hcd233/aris-proxy-api/internal/common/util"
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
-	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	commonutil "github.com/hcd233/aris-mass/internal/common/util"
+	"github.com/hcd233/aris-mass/internal/domain/llmproxy/vo"
+	"github.com/hcd233/aris-mass/internal/dto"
 )
 
 // 本文件承载订阅账号（OAuth）端点的上游请求特化：headers 补丁与 body 最小改写。

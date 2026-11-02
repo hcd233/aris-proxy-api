@@ -1,7 +1,7 @@
 package proxyutil
 
 import (
-	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-mass/internal/dto"
 	"github.com/samber/lo"
 )
 

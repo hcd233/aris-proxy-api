@@ -7,10 +7,10 @@ import (
 
 	"github.com/samber/lo"
 
-	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/domain/agentharness"
-	"github.com/hcd233/aris-proxy-api/internal/domain/session"
+	sessionport "github.com/hcd233/aris-mass/internal/application/session/port"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/domain/agentharness"
+	"github.com/hcd233/aris-mass/internal/domain/session"
 )
 
 // ownerIDLookup 接口定义见 jwt_session_queries.go（同包共享，由 apikey 仓储实现）。

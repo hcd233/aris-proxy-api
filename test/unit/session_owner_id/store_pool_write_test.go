@@ -7,13 +7,13 @@ import (
 
 	"gorm.io/gorm"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	commonvo "github.com/hcd233/aris-proxy-api/internal/common/vo"
-	"github.com/hcd233/aris-proxy-api/internal/dto"
-	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
-	"github.com/hcd233/aris-proxy-api/internal/util"
-	"github.com/hcd233/aris-proxy-api/test/unit/sqlitetest"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	commonvo "github.com/hcd233/aris-mass/internal/common/vo"
+	"github.com/hcd233/aris-mass/internal/dto"
+	dbmodel "github.com/hcd233/aris-mass/internal/infrastructure/database/model"
+	"github.com/hcd233/aris-mass/internal/infrastructure/pool"
+	"github.com/hcd233/aris-mass/internal/util"
+	"github.com/hcd233/aris-mass/test/unit/sqlitetest"
 )
 
 // TestStorePoolPersistsAPIKeyID 协程池落库时必须写入 api_key_id。

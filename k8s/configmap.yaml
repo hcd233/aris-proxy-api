@@ -1,8 +1,8 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: aris-proxy-api-config
-  namespace: aris-proxy-api
+  name: aris-mass-config
+  namespace: aris-mass
 data:
   PORT: "8080"
   READ_TIMEOUT: "10s"

@@ -3,8 +3,8 @@ package modelcall_status
 import (
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall/vo"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/domain/modelcall/vo"
 )
 
 // TestCallStatusIsError 覆盖触发词标注与真实失败的判定边界：

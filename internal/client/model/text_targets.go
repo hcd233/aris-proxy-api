@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/constant"
 )
 
 // ─── Claude Code ───
@@ -178,7 +178,7 @@ func (CodexTarget) Write(path, host, apiKey string, models []TargetModel) error 
 	}
 	providerBlock := []string{
 		`[model_providers.` + tomlQuote(constant.ClientModelProviderID) + `]`,
-		`name = ` + tomlQuote(constant.ClientModelLabelArisProxy),
+		`name = ` + tomlQuote(constant.ClientModelLabelArisMass),
 		`base_url = ` + tomlQuote(host+constant.OpenAIProxyPrefix),
 		`wire_api = "responses"`,
 		`experimental_bearer_token = ` + tomlQuote(apiKey),

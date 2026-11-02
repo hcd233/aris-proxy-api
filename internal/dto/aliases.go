@@ -1,9 +1,9 @@
 package dto
 
 import (
-	"github.com/hcd233/aris-proxy-api/internal/dto/anthropic"
-	"github.com/hcd233/aris-proxy-api/internal/dto/openai"
-	"github.com/hcd233/aris-proxy-api/internal/dto/schema"
+	"github.com/hcd233/aris-mass/internal/dto/anthropic"
+	"github.com/hcd233/aris-mass/internal/dto/openai"
+	"github.com/hcd233/aris-mass/internal/dto/schema"
 )
 
 // Schema types (aliased from dto/schema)

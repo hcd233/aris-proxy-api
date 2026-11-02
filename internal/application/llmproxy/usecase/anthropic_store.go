@@ -6,12 +6,12 @@ import (
 	"github.com/samber/lo"
 	"go.uber.org/zap"
 
-	proxyutil "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	convvo "github.com/hcd233/aris-proxy-api/internal/common/vo"
-	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/logger"
-	"github.com/hcd233/aris-proxy-api/internal/util"
+	proxyutil "github.com/hcd233/aris-mass/internal/application/llmproxy/util"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	convvo "github.com/hcd233/aris-mass/internal/common/vo"
+	"github.com/hcd233/aris-mass/internal/dto"
+	"github.com/hcd233/aris-mass/internal/logger"
+	"github.com/hcd233/aris-mass/internal/util"
 )
 
 func (u *anthropicUseCase) storeAnthropicFromMsg(ctx context.Context, req *dto.AnthropicCreateMessageRequest, msg *dto.AnthropicMessage, proxyErr error, modelID string) {

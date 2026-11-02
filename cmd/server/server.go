@@ -4,9 +4,9 @@ import (
 	"os"
 	"runtime/debug"
 
-	"github.com/hcd233/aris-proxy-api/internal/bootstrap"
-	"github.com/hcd233/aris-proxy-api/internal/config"
-	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/hcd233/aris-mass/internal/bootstrap"
+	"github.com/hcd233/aris-mass/internal/config"
+	"github.com/hcd233/aris-mass/internal/logger"
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"

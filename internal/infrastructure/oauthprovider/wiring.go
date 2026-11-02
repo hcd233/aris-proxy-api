@@ -7,13 +7,13 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/config"
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/service"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
-	"github.com/hcd233/aris-proxy-api/internal/lock"
-	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/config"
+	"github.com/hcd233/aris-mass/internal/domain/llmproxy"
+	"github.com/hcd233/aris-mass/internal/domain/llmproxy/service"
+	"github.com/hcd233/aris-mass/internal/infrastructure/cache"
+	"github.com/hcd233/aris-mass/internal/lock"
+	"github.com/hcd233/aris-mass/internal/logger"
 )
 
 // credentialKeyWarnOnce 保证启动期密钥告警只打一次（fx 与 cron 两条装配路径都会调用）。

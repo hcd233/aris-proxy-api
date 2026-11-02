@@ -3,8 +3,8 @@ package share_id
 import (
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/util"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/util"
 )
 
 // TestGenerateShareID_Length 验证生成结果的长度等于入参 length。

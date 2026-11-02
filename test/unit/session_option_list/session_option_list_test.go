@@ -6,12 +6,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/session/port"
-	"github.com/hcd233/aris-proxy-api/internal/application/session/query"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/filter"
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
-	"github.com/hcd233/aris-proxy-api/internal/domain/session"
+	"github.com/hcd233/aris-mass/internal/application/session/port"
+	"github.com/hcd233/aris-mass/internal/application/session/query"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/filter"
+	"github.com/hcd233/aris-mass/internal/common/model"
+	"github.com/hcd233/aris-mass/internal/domain/session"
 )
 
 type fakeSessionReadRepo struct {

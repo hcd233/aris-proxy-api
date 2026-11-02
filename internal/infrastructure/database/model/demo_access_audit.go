@@ -1,7 +1,7 @@
 package model
 
 import (
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/constant"
 )
 
 // DemoAccessAudit Demo 访问审计记录

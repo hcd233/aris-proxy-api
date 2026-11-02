@@ -1,7 +1,7 @@
 package dao
 
 import (
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
+	"github.com/hcd233/aris-mass/internal/infrastructure/database/model"
 )
 
 // UserDAO 用户DAO

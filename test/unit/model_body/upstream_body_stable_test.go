@@ -8,8 +8,8 @@ import (
 
 	"github.com/bytedance/sonic"
 
-	proxyutil "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
-	"github.com/hcd233/aris-proxy-api/internal/dto"
+	proxyutil "github.com/hcd233/aris-mass/internal/application/llmproxy/util"
+	"github.com/hcd233/aris-mass/internal/dto"
 )
 
 // 这组测试守护"上游请求体字节稳定"——这是上游 prompt cache 命中的硬前提。

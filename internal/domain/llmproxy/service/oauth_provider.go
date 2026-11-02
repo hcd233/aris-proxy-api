@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/domain/llmproxy/vo"
 )
 
 // OAuthTokenSet 一次 OAuth token 交换/刷新的结果（明文，落库前由 repository 加密）。

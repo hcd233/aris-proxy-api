@@ -9,16 +9,16 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	commonutil "github.com/hcd233/aris-proxy-api/internal/common/util"
-	"github.com/hcd233/aris-proxy-api/internal/config"
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
-	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	commonutil "github.com/hcd233/aris-mass/internal/common/util"
+	"github.com/hcd233/aris-mass/internal/config"
+	"github.com/hcd233/aris-mass/internal/domain/llmproxy"
+	"github.com/hcd233/aris-mass/internal/domain/llmproxy/aggregate"
+	"github.com/hcd233/aris-mass/internal/domain/llmproxy/vo"
+	"github.com/hcd233/aris-mass/internal/infrastructure/database/dao"
+	dbmodel "github.com/hcd233/aris-mass/internal/infrastructure/database/model"
 )
 
 // oauthCredentialRepository OAuthCredentialRepository 的 GORM 实现

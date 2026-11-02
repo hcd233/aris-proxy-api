@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/port"
-	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
-	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-mass/internal/application/llmproxy/port"
+	"github.com/hcd233/aris-mass/internal/application/llmproxy/usecase"
+	"github.com/hcd233/aris-mass/internal/dto"
 	"github.com/samber/lo"
 )
 

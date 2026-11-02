@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	commonmodel "github.com/hcd233/aris-proxy-api/internal/common/model"
+	commonmodel "github.com/hcd233/aris-mass/internal/common/model"
 )
 
 // CronCallAuditView CronCallAudit 展示视图

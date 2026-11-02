@@ -1,9 +1,9 @@
 package aggregate
 
 import (
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/common/vo"
-	"github.com/hcd233/aris-proxy-api/internal/domain/common/aggregate"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/common/vo"
+	"github.com/hcd233/aris-mass/internal/domain/common/aggregate"
 )
 
 // Tool 工具聚合根（内容寻址去重）

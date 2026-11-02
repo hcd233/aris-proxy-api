@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
 )
 
 // TargetModel 写入目标的统一模型描述

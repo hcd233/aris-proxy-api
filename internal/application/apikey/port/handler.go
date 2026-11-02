@@ -5,8 +5,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/model"
 )
 
 // IssueAPIKeyCommand 签发新 API Key 命令

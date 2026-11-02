@@ -12,9 +12,9 @@ import (
 	"github.com/samber/mo"
 	"github.com/samber/mo/option"
 
-	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	sessionport "github.com/hcd233/aris-mass/internal/application/session/port"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
 )
 
 type sessionDetailCache struct {

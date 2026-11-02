@@ -6,12 +6,12 @@ import (
 
 	"github.com/samber/lo"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/audit/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
-	commonutil "github.com/hcd233/aris-proxy-api/internal/common/util"
+	"github.com/hcd233/aris-mass/internal/application/audit/port"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/common/model"
+	commonutil "github.com/hcd233/aris-mass/internal/common/util"
 )
 
 type auditService struct {

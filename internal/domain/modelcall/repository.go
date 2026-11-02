@@ -8,9 +8,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/filter"
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
-	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall/aggregate"
+	"github.com/hcd233/aris-mass/internal/common/filter"
+	"github.com/hcd233/aris-mass/internal/common/model"
+	"github.com/hcd233/aris-mass/internal/domain/modelcall/aggregate"
 )
 
 // AuditRelation 审计列表关联展示信息。

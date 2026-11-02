@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/bytedance/sonic"
-	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-mass/internal/dto"
 )
 
 func requireJSONContains(t *testing.T, raw []byte, fragments ...string) {

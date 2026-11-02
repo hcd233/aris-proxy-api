@@ -1,7 +1,7 @@
 /** 门户页的常量与纯逻辑：组件只负责渲染，这里集中决定链接、文案 key 与演示数据。 */
 import { DASHBOARD_HOME_PATH } from "./nav";
 
-export const GITHUB_REPO_URL = "https://github.com/hcd233/aris-proxy-api";
+export const GITHUB_REPO_URL = "https://github.com/hcd233/aris-mass";
 
 export const LOGIN_PATH = "/login/";
 

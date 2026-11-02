@@ -13,11 +13,11 @@ import (
 	"github.com/charmbracelet/huh"
 	"golang.org/x/term"
 
-	"github.com/hcd233/aris-proxy-api/internal/client/api"
-	clientconfig "github.com/hcd233/aris-proxy-api/internal/client/config"
-	"github.com/hcd233/aris-proxy-api/internal/client/ui"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/client/api"
+	clientconfig "github.com/hcd233/aris-mass/internal/client/config"
+	"github.com/hcd233/aris-mass/internal/client/ui"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
 )
 
 // InitOptions aris init 运行参数

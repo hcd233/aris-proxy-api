@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
 )
 
 // GenerateShareID 基于 sessionID + 纳秒时间戳 + 随机熵进行 SHA-256 散列，

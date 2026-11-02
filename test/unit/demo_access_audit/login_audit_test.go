@@ -7,14 +7,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/demo/command"
-	"github.com/hcd233/aris-proxy-api/internal/application/demo/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
-	identityaggregate "github.com/hcd233/aris-proxy-api/internal/domain/identity/aggregate"
-	identityservice "github.com/hcd233/aris-proxy-api/internal/domain/identity/service"
-	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-mass/internal/application/demo/command"
+	"github.com/hcd233/aris-mass/internal/application/demo/port"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/domain/identity"
+	identityaggregate "github.com/hcd233/aris-mass/internal/domain/identity/aggregate"
+	identityservice "github.com/hcd233/aris-mass/internal/domain/identity/service"
+	"github.com/hcd233/aris-mass/internal/dto"
 )
 
 // ── fakes ──

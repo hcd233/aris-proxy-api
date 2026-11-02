@@ -6,9 +6,9 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/samber/lo"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/common/vo"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/common/vo"
 )
 
 // ==================== Conversion: OpenAI -> Unified ====================

@@ -17,9 +17,9 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/samber/lo"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/metrics/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-mass/internal/application/metrics/port"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/dto"
 )
 
 // SnapshotReader 运行时快照读取能力（由 cache.RuntimeMetricsCache 实现）。

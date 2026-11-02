@@ -7,15 +7,15 @@ import (
 	"github.com/samber/lo"
 	"gorm.io/gorm"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
-	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
-	"github.com/hcd233/aris-proxy-api/internal/domain/apikey/aggregate"
-	"github.com/hcd233/aris-proxy-api/internal/domain/apikey/vo"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
-	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
-	"github.com/hcd233/aris-proxy-api/internal/util"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/common/model"
+	"github.com/hcd233/aris-mass/internal/domain/apikey"
+	"github.com/hcd233/aris-mass/internal/domain/apikey/aggregate"
+	"github.com/hcd233/aris-mass/internal/domain/apikey/vo"
+	"github.com/hcd233/aris-mass/internal/infrastructure/database/dao"
+	dbmodel "github.com/hcd233/aris-mass/internal/infrastructure/database/model"
+	"github.com/hcd233/aris-mass/internal/util"
 )
 
 // apiKeyRepository APIKeyRepository 的 GORM 实现

@@ -9,7 +9,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/constant"
 )
 
 // CheckOptions 使用中更新检查参数；Out/BaseURL/HTTPClient 为空时使用默认实现，

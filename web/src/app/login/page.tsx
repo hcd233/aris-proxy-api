@@ -135,7 +135,7 @@ export default function LoginPage() {
           </span>
           <div>
             <p className="font-display text-3xl font-semibold tracking-tight text-foreground">
-              Aris Proxy
+              Aris Mass
             </p>
             <p className="mt-2 text-sm text-muted-foreground">{t("common.loading")}</p>
           </div>

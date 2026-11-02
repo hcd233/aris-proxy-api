@@ -5,7 +5,7 @@
 package dao
 
 import (
-	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
+	dbmodel "github.com/hcd233/aris-mass/internal/infrastructure/database/model"
 )
 
 // ModelCallAuditDAO 模型调用审计DAO

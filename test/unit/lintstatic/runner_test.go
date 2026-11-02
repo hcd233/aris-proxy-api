@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/tool/lintstatic"
+	"github.com/hcd233/aris-mass/internal/tool/lintstatic"
 )
 
 // TestRun_MissingGolangciLintFails 回归（2026-09-09 CR）：golangci-lint 缺失时

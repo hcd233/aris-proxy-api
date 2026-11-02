@@ -6,8 +6,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
 )
 
 // LookupIPFn 主机名 DNS 解析函数；包级可注入以便测试替换，生产默认 net.LookupIP。

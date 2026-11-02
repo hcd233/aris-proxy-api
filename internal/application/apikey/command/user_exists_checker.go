@@ -4,7 +4,7 @@ package command
 import (
 	"context"
 
-	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
+	"github.com/hcd233/aris-mass/internal/domain/identity"
 )
 
 // userExistenceChecker UserExistenceChecker 的实现，通过 identity.UserRepository 查询用户存在性

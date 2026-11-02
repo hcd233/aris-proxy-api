@@ -7,14 +7,14 @@ import (
 	"github.com/samber/lo"
 	"go.uber.org/zap"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/apikey/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
-	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
-	"github.com/hcd233/aris-proxy-api/internal/domain/apikey/aggregate"
-	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
-	identityaggregate "github.com/hcd233/aris-proxy-api/internal/domain/identity/aggregate"
-	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/hcd233/aris-mass/internal/application/apikey/port"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/model"
+	"github.com/hcd233/aris-mass/internal/domain/apikey"
+	"github.com/hcd233/aris-mass/internal/domain/apikey/aggregate"
+	"github.com/hcd233/aris-mass/internal/domain/identity"
+	identityaggregate "github.com/hcd233/aris-mass/internal/domain/identity/aggregate"
+	"github.com/hcd233/aris-mass/internal/logger"
 )
 
 type listAPIKeysHandler struct {

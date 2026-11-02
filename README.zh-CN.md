@@ -1,4 +1,4 @@
-# Aris
+# Aris Mass
 
 [English](README.md) | **简体中文**
 
@@ -158,8 +158,8 @@ Aris 将多个 MaaS 平台、多种模型和多种 API 协议统一接入，通�
 ### 启动依赖与配置
 
 ```bash
-git clone https://github.com/hcd233/aris-proxy-api.git
-cd aris-proxy-api
+git clone https://github.com/hcd233/aris-mass.git
+cd aris-mass
 go mod download
 
 # 准备配置（按需修改数据库、Redis、JWT Secret、OAuth2 等）

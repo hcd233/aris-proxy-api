@@ -10,9 +10,9 @@ import (
 
 	"github.com/bytedance/sonic"
 
-	sessionport "github.com/hcd233/aris-proxy-api/internal/application/session/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/common/vo"
+	sessionport "github.com/hcd233/aris-mass/internal/application/session/port"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/vo"
 )
 
 func TestSessionMetaCacheRecord_RoundTrip(t *testing.T) {

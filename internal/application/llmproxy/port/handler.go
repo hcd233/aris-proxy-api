@@ -4,7 +4,7 @@ package port
 import (
 	"context"
 
-	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-mass/internal/dto"
 )
 
 // OpenAIUseCase OpenAI 协议用例端口

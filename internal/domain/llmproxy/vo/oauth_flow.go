@@ -3,7 +3,7 @@ package vo
 import (
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/enum"
 )
 
 // OAuthFlow 订阅账号授权流临时记录（Redis，TTL 见 constant.OAuthFlowTTL）。

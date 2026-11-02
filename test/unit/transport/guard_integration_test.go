@@ -12,11 +12,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/inflight"
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
-	"github.com/hcd233/aris-proxy-api/internal/config"
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/transport"
+	"github.com/hcd233/aris-mass/internal/common/inflight"
+	"github.com/hcd233/aris-mass/internal/common/model"
+	"github.com/hcd233/aris-mass/internal/config"
+	"github.com/hcd233/aris-mass/internal/domain/llmproxy/vo"
+	"github.com/hcd233/aris-mass/internal/infrastructure/transport"
 )
 
 // waitUntil 以 ticker 轮询等待条件成立（lint 的 testing.sleep 规则禁止用固定 time.Sleep 同步）。

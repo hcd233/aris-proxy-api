@@ -3,8 +3,8 @@ package api
 import (
 	"github.com/bytedance/sonic"
 	"github.com/gofiber/fiber/v3"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/config"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/config"
 )
 
 // NewFiberApp 创建 Fiber 应用实例

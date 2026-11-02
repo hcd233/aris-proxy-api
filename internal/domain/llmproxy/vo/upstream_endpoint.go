@@ -1,6 +1,6 @@
 package vo
 
-import "github.com/hcd233/aris-proxy-api/internal/common/enum"
+import "github.com/hcd233/aris-mass/internal/common/enum"
 
 // UpstreamEndpoint 上游端点信息（与数据库模型解耦）
 // 原定义位于 infrastructure/transport，移至 domain 层以消除 application → infrastructure 依赖。

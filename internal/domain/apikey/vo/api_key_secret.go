@@ -1,8 +1,8 @@
 package vo
 
 import (
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/common/util"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/common/util"
 )
 
 // APIKeySecret API Key 密钥值（对客户端隐藏的敏感数据）

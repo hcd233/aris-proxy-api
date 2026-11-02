@@ -8,11 +8,11 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/samber/lo"
 
-	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
-	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/metrics"
+	apiutil "github.com/hcd233/aris-mass/internal/api/util"
+	"github.com/hcd233/aris-mass/internal/application/llmproxy/port"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/dto"
+	"github.com/hcd233/aris-mass/internal/infrastructure/metrics"
 )
 
 // openAIInternalFallbackBody 是 application 返回非 ProxyError 错误时的 fallback 响应体。

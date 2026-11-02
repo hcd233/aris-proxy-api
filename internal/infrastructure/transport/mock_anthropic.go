@@ -3,9 +3,9 @@ package transport
 import (
 	"github.com/samber/lo"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/dto"
 )
 
 // buildMessageBlock 构造承载完整正文的 text block（非流式响应与流内 message_done 用）。

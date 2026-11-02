@@ -3,9 +3,9 @@ package llmproxy_usecase
 import (
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
+	"github.com/hcd233/aris-mass/internal/application/llmproxy/usecase"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/common/model"
 )
 
 func TestCanSwitchEndpoint(t *testing.T) {

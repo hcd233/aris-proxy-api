@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
-	"github.com/hcd233/aris-proxy-api/internal/config"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
+	"github.com/hcd233/aris-mass/internal/config"
+	"github.com/hcd233/aris-mass/internal/infrastructure/pool"
 )
 
 // testCase represents raw JSON structure aligned with fixtures/pool_config_cases.json

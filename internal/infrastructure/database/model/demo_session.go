@@ -3,7 +3,7 @@ package model
 import (
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/constant"
 )
 
 // DemoSession demo 会话白名单（admin 选取供 demo 只读访问的会话）

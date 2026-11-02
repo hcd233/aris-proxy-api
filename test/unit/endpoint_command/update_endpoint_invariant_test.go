@@ -6,12 +6,12 @@ import (
 
 	"github.com/samber/lo"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/endpoint/command"
-	"github.com/hcd233/aris-proxy-api/internal/application/endpoint/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
+	"github.com/hcd233/aris-mass/internal/application/endpoint/command"
+	"github.com/hcd233/aris-mass/internal/application/endpoint/port"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/model"
+	"github.com/hcd233/aris-mass/internal/domain/llmproxy"
+	"github.com/hcd233/aris-mass/internal/domain/llmproxy/aggregate"
 )
 
 // endpointRepoStub 按预置聚合根应答 FindByID，并记录 Update 调用次数。

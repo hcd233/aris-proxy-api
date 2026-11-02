@@ -6,7 +6,7 @@ package model
 import (
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/enum"
 )
 
 // User 用户数据库模型

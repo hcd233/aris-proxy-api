@@ -1,7 +1,7 @@
 package dao
 
 import (
-	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
+	dbmodel "github.com/hcd233/aris-mass/internal/infrastructure/database/model"
 )
 
 // ProxyAPIKeyDAO 代理API密钥DAO

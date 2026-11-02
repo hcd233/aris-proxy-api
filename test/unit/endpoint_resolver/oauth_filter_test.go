@@ -5,11 +5,11 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/service"
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/domain/llmproxy/aggregate"
+	"github.com/hcd233/aris-mass/internal/domain/llmproxy/service"
+	"github.com/hcd233/aris-mass/internal/domain/llmproxy/vo"
 )
 
 // oauthFilterEndpointRepo 按 ID 返回预置端点集合（嵌入 stubEndpointRepo 复用其余接口方法）。

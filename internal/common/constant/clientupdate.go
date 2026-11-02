@@ -5,7 +5,7 @@ import "time"
 // aris 客户端自更新（aris update）与使用中更新检查常量
 const (
 	// ArisClientReleaseBaseURL release 资产源；与 install_aris_client.sh.tmpl 的 gh_base 同源
-	ArisClientReleaseBaseURL = "https://github.com/hcd233/aris-proxy-api/releases/latest/download"
+	ArisClientReleaseBaseURL = "https://github.com/hcd233/aris-mass/releases/latest/download"
 
 	// ArisClientReleaseAssetFormat release 资产名模板（os, arch）
 	ArisClientReleaseAssetFormat = "aris-%s-%s.tar.gz"

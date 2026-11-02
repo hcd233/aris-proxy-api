@@ -7,16 +7,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/apikey/command"
-	"github.com/hcd233/aris-proxy-api/internal/application/apikey/port"
-	"github.com/hcd233/aris-proxy-api/internal/application/apikey/query"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
-	"github.com/hcd233/aris-proxy-api/internal/domain/apikey/aggregate"
-	"github.com/hcd233/aris-proxy-api/internal/domain/apikey/vo"
-	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
-	identityaggregate "github.com/hcd233/aris-proxy-api/internal/domain/identity/aggregate"
+	"github.com/hcd233/aris-mass/internal/application/apikey/command"
+	"github.com/hcd233/aris-mass/internal/application/apikey/port"
+	"github.com/hcd233/aris-mass/internal/application/apikey/query"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/common/model"
+	"github.com/hcd233/aris-mass/internal/domain/apikey/aggregate"
+	"github.com/hcd233/aris-mass/internal/domain/apikey/vo"
+	"github.com/hcd233/aris-mass/internal/domain/identity"
+	identityaggregate "github.com/hcd233/aris-mass/internal/domain/identity/aggregate"
 )
 
 func mustAPIKeySecret(raw string) vo.APIKeySecret {

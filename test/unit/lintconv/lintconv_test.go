@@ -6,9 +6,9 @@ import (
 	"testing"
 
 	"github.com/bytedance/sonic"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/tool/lintconv"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/tool/lintconv"
 )
 
 type fixtureCase struct {
@@ -102,7 +102,7 @@ func loadFixtureCases(t *testing.T) []fixtureCase {
 
 func writeModule(t *testing.T, root string) {
 	t.Helper()
-	content := "module github.com/hcd233/aris-proxy-api\n\ngo 1.25.1\n\nrequire go.uber.org/zap v1.27.0\n"
+	content := "module github.com/hcd233/aris-mass\n\ngo 1.25.1\n\nrequire go.uber.org/zap v1.27.0\n"
 	if err := os.WriteFile(filepath.Join(root, "go.mod"), []byte(content), 0o600); err != nil {
 		t.Fatalf("write go.mod: %v", err)
 	}

@@ -3,7 +3,7 @@ package session_dedup
 import (
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
+	"github.com/hcd233/aris-mass/internal/infrastructure/database/dao"
 )
 
 // TestFilterTerminalToolCallIDsEmptyInput 验证空输入直接短路，不触发数据库查询。

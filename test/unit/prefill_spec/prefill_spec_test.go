@@ -5,10 +5,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/model/port"
-	"github.com/hcd233/aris-proxy-api/internal/application/model/query"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/application/model/port"
+	"github.com/hcd233/aris-mass/internal/application/model/query"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
 )
 
 type fakeSpecProvider struct {

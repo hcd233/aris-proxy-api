@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/inflight"
+	"github.com/hcd233/aris-mass/internal/common/inflight"
 )
 
 func TestTracker_TrackAndUntrack(t *testing.T) {

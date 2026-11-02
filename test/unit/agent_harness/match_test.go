@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/domain/agentharness"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/domain/agentharness"
 )
 
 // ruleSet 构造一组规则：一条窄前缀 + 两条宽前缀，故意把窄前缀排在最后。

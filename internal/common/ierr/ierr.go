@@ -9,8 +9,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
-	"github.com/hcd233/aris-proxy-api/internal/i18n"
+	"github.com/hcd233/aris-mass/internal/common/model"
+	"github.com/hcd233/aris-mass/internal/i18n"
 )
 
 // InternalError 内部错误，携带哨兵错误 + 可选上下文信息 + 可选原始错误

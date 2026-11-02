@@ -20,10 +20,10 @@ import (
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
 
-	clientapi "github.com/hcd233/aris-proxy-api/internal/client/api"
-	"github.com/hcd233/aris-proxy-api/internal/handler"
-	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
-	"github.com/hcd233/aris-proxy-api/internal/router"
+	clientapi "github.com/hcd233/aris-mass/internal/client/api"
+	"github.com/hcd233/aris-mass/internal/handler"
+	dbmodel "github.com/hcd233/aris-mass/internal/infrastructure/database/model"
+	"github.com/hcd233/aris-mass/internal/router"
 )
 
 // fiberTestTransport 把真实 fiber app 适配为 http.Client RoundTripper

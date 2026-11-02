@@ -5,8 +5,8 @@ import (
 	"context"
 	"io"
 
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
-	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-mass/internal/domain/llmproxy/vo"
+	"github.com/hcd233/aris-mass/internal/dto"
 )
 
 // TaskSubmitter 异步任务提交端口

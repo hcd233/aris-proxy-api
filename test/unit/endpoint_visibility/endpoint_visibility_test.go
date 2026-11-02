@@ -4,7 +4,7 @@ package endpoint_visibility
 import (
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/enum"
 )
 
 func TestIsValid(t *testing.T) {

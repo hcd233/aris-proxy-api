@@ -4,7 +4,7 @@ package port
 import (
 	"context"
 
-	"github.com/hcd233/aris-proxy-api/internal/domain/identity/vo"
+	"github.com/hcd233/aris-mass/internal/domain/identity/vo"
 )
 
 // InitiateLoginCommand 登录发起命令

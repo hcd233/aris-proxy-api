@@ -57,7 +57,7 @@
             "type": "function",
             "function": {
               "name": "read",
-              "arguments": "{\"filePath\":\"/Users/centonhuang/Desktop/code/aris-proxy-api\"}"
+              "arguments": "{\"filePath\":\"/Users/centonhuang/Desktop/code/aris-mass\"}"
             }
           }
         ]

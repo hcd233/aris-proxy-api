@@ -1,6 +1,6 @@
 ---
 name: query-prod-database
-description: Use when the user asks to inspect, count, diagnose, or query the production PostgreSQL database running in Docker on aris-proxy-api. Also use when a production database read or explicitly authorized data write is requested, or when the user asks to create/drop an index on the production database.
+description: Use when the user asks to inspect, count, diagnose, or query the production PostgreSQL database running in Docker on aris-mass. Also use when a production database read or explicitly authorized data write is requested, or when the user asks to create/drop an index on the production database.
 ---
 
 # query-prod-database
@@ -25,7 +25,7 @@ description: Use when the user asks to inspect, count, diagnose, or query the pr
 1. 加载 `login-prod-server` skill，确认 SSH 方式、环境布局、凭据读取规则与安全基线；
 2. 连接：`ssh ubuntu@api.lvlvko.top`；
 3. 确认 PostgreSQL 容器（当前为 `postgresql`，勿假设不变）：`docker ps --format '{{.Names}}\t{{.Image}}\t{{.Status}}'`，找不到明确目标时停止并报告；
-4. 从 `/home/ubuntu/code/aris-proxy-api/env/api.env` 读取 `POSTGRES_*` 连接键（读取与脱敏规则见 `login-prod-server`）。
+4. 从 `/home/ubuntu/code/aris-mass/env/api.env` 读取 `POSTGRES_*` 连接键（读取与脱敏规则见 `login-prod-server`）。
 
 ## 只读 SQL：默认直接执行
 
@@ -50,7 +50,7 @@ description: Use when the user asks to inspect, count, diagnose, or query the pr
 
 ```bash
 set -a
-. /home/ubuntu/code/aris-proxy-api/env/api.env
+. /home/ubuntu/code/aris-mass/env/api.env
 set +a
 
 docker exec -i \

@@ -7,16 +7,16 @@ import (
 	"github.com/samber/lo"
 	"go.uber.org/zap"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/audit/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/common/filter"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
-	commonutil "github.com/hcd233/aris-proxy-api/internal/common/util"
-	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall"
-	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall/aggregate"
-	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/hcd233/aris-mass/internal/application/audit/port"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/filter"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/common/model"
+	commonutil "github.com/hcd233/aris-mass/internal/common/util"
+	"github.com/hcd233/aris-mass/internal/domain/modelcall"
+	"github.com/hcd233/aris-mass/internal/domain/modelcall/aggregate"
+	"github.com/hcd233/aris-mass/internal/logger"
 )
 
 var validSortFields = map[string]bool{

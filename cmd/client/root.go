@@ -7,7 +7,7 @@ import (
 
 	"golang.org/x/term"
 
-	"github.com/hcd233/aris-proxy-api/internal/client/update"
+	"github.com/hcd233/aris-mass/internal/client/update"
 	"github.com/spf13/cobra"
 )
 

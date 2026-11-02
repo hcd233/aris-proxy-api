@@ -43,7 +43,7 @@ describe("portalPrimaryCta", () => {
 
 describe("portal demo data", () => {
   it("points at the public repository", () => {
-    expect(GITHUB_REPO_URL).toBe("https://github.com/hcd233/aris-proxy-api");
+    expect(GITHUB_REPO_URL).toBe("https://github.com/hcd233/aris-mass");
   });
 
   it("lists the five export targets as clients", () =>

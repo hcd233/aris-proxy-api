@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/constant"
 )
 
 // TestMessagesNameTheirCommand 回归：交互命令曾共用同一个常量，报错文案与用户实际执行的命令不符。

@@ -10,7 +10,7 @@ import (
 
 	"go.uber.org/fx"
 
-	appbootstrap "github.com/hcd233/aris-proxy-api/internal/bootstrap"
+	appbootstrap "github.com/hcd233/aris-mass/internal/bootstrap"
 )
 
 func TestBuildFxAppOptions(t *testing.T) {

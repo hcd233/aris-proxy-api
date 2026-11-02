@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/demoaccessaudit/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
+	"github.com/hcd233/aris-mass/internal/application/demoaccessaudit/port"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/model"
 )
 
 type listDemoAccessAuditsHandler struct {

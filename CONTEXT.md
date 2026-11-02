@@ -1,4 +1,4 @@
-# aris-proxy-api
+# Aris Mass
 
 LLM 代理网关 + 配套管理后台。本文件是项目的领域词汇表（glossary），只定义术语，不含实现细节。
 

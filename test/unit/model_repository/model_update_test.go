@@ -4,8 +4,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	dbmodel "github.com/hcd233/aris-mass/internal/infrastructure/database/model"
 )
 
 // TestModelUpdateColumnConstants verifies that the column name constants used

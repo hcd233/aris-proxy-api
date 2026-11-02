@@ -15,8 +15,8 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/client/update"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/client/update"
+	"github.com/hcd233/aris-mass/internal/common/constant"
 )
 
 // releaseRequests 记录本地 release 服务的请求次数

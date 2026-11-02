@@ -3,8 +3,8 @@ package metrics_test
 import (
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/metrics/port"
-	metricsquery "github.com/hcd233/aris-proxy-api/internal/application/metrics/query"
+	"github.com/hcd233/aris-mass/internal/application/metrics/port"
+	metricsquery "github.com/hcd233/aris-mass/internal/application/metrics/query"
 )
 
 func TestAggregate_CrossPodSumRateAndP95(t *testing.T) {

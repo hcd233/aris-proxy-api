@@ -6,7 +6,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/termenv"
 
-	clientui "github.com/hcd233/aris-proxy-api/internal/client/ui"
+	clientui "github.com/hcd233/aris-mass/internal/client/ui"
 )
 
 func init() {

@@ -1,4 +1,4 @@
-# Aris
+# Aris Mass
 
 **English** | [简体中文](README.zh-CN.md)
 
@@ -156,8 +156,8 @@ Interactive version (node search / impact tracing / light-dark themes / guided t
 ### Start dependencies & configure
 
 ```bash
-git clone https://github.com/hcd233/aris-proxy-api.git
-cd aris-proxy-api
+git clone https://github.com/hcd233/aris-mass.git
+cd aris-mass
 go mod download
 
 # Prepare config (adjust DB, Redis, JWT Secret, OAuth2, etc. as needed)

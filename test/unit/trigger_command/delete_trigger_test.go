@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/trigger/command"
-	"github.com/hcd233/aris-proxy-api/internal/application/trigger/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
-	triggerdomain "github.com/hcd233/aris-proxy-api/internal/domain/trigger"
-	"github.com/hcd233/aris-proxy-api/internal/domain/trigger/aggregate"
+	"github.com/hcd233/aris-mass/internal/application/trigger/command"
+	"github.com/hcd233/aris-mass/internal/application/trigger/port"
+	"github.com/hcd233/aris-mass/internal/common/model"
+	triggerdomain "github.com/hcd233/aris-mass/internal/domain/trigger"
+	"github.com/hcd233/aris-mass/internal/domain/trigger/aggregate"
 )
 
 type deleteFakeRepo struct {

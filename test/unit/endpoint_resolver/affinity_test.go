@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
+	"github.com/hcd233/aris-mass/internal/domain/llmproxy/aggregate"
 )
 
 // fakeAffinity 内存亲和映射。

@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"os"
 
-	clientconfig "github.com/hcd233/aris-proxy-api/internal/client/config"
-	"github.com/hcd233/aris-proxy-api/internal/client/ui"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	clientconfig "github.com/hcd233/aris-mass/internal/client/config"
+	"github.com/hcd233/aris-mass/internal/client/ui"
+	"github.com/hcd233/aris-mass/internal/common/constant"
 )
 
 // StatusOptions aris status 运行参数

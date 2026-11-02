@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/hcd233/aris-proxy-api/internal/client/status"
+	"github.com/hcd233/aris-mass/internal/client/status"
 	"github.com/spf13/cobra"
 )
 

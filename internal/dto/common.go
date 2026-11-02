@@ -1,6 +1,6 @@
 package dto
 
-import "github.com/hcd233/aris-proxy-api/internal/common/model"
+import "github.com/hcd233/aris-mass/internal/common/model"
 
 // CommonRsp 通用响应
 //

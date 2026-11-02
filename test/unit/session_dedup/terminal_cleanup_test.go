@@ -8,8 +8,8 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/cron"
-	dao "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
+	"github.com/hcd233/aris-mass/internal/cron"
+	dao "github.com/hcd233/aris-mass/internal/infrastructure/database/dao"
 )
 
 func TestPickTerminalStuckSessions(t *testing.T) {

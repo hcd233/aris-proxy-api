@@ -3,9 +3,9 @@ package query
 import (
 	"context"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/cronmgmt/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
+	"github.com/hcd233/aris-mass/internal/application/cronmgmt/port"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/model"
 )
 
 // listCronJobsHandler 列出 CronJob 处理器

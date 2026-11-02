@@ -3,9 +3,9 @@ package command
 import (
 	"context"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/cronmgmt/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/application/cronmgmt/port"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
 	"github.com/robfig/cron/v3"
 )
 

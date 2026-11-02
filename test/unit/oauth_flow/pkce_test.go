@@ -7,9 +7,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	commonutil "github.com/hcd233/aris-proxy-api/internal/common/util"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	commonutil "github.com/hcd233/aris-mass/internal/common/util"
 )
 
 // assertS256Challenge 独立复算 S256 challenge，防止实现里 challenge 与 verifier 不配对。

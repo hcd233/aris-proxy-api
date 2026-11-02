@@ -3,8 +3,8 @@ package aggregate
 import (
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall/vo"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/domain/modelcall/vo"
 )
 
 // ReconstructAuditInput 从持久层重建聚合的输入参数

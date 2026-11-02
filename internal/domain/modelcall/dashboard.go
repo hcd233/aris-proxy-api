@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/enum"
 )
 
 // DashboardStats dashboard 统计块：一个时间窗（或一个时间桶）内的全部 KPI 原始量。

@@ -4,7 +4,7 @@ package dto
 import (
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
+	"github.com/hcd233/aris-mass/internal/common/model"
 )
 
 // CreateShareReq 创建分享请求

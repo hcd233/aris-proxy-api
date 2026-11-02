@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/bytedance/sonic"
-	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
-	repository "github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
+	dbmodel "github.com/hcd233/aris-mass/internal/infrastructure/database/model"
+	repository "github.com/hcd233/aris-mass/internal/infrastructure/repository"
 )
 
 // sessionFixture represents session data in fixture JSON

@@ -5,7 +5,7 @@ import (
 	"os/exec"
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/config"
+	"github.com/hcd233/aris-mass/internal/config"
 )
 
 // TestMockUpstreamDisabledByDefault 验证 mock 开关默认关闭，

@@ -7,12 +7,12 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	cronauditport "github.com/hcd233/aris-proxy-api/internal/application/cronaudit/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	commonmodel "github.com/hcd233/aris-proxy-api/internal/common/model"
-	"github.com/hcd233/aris-proxy-api/internal/lock"
-	"github.com/hcd233/aris-proxy-api/internal/logger"
-	"github.com/hcd233/aris-proxy-api/internal/util"
+	cronauditport "github.com/hcd233/aris-mass/internal/application/cronaudit/port"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	commonmodel "github.com/hcd233/aris-mass/internal/common/model"
+	"github.com/hcd233/aris-mass/internal/lock"
+	"github.com/hcd233/aris-mass/internal/logger"
+	"github.com/hcd233/aris-mass/internal/util"
 	"go.uber.org/zap"
 )
 

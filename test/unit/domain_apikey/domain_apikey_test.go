@@ -9,9 +9,9 @@ import (
 
 	"github.com/bytedance/sonic"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/domain/apikey/aggregate"
-	"github.com/hcd233/aris-proxy-api/internal/domain/apikey/vo"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/domain/apikey/aggregate"
+	"github.com/hcd233/aris-mass/internal/domain/apikey/vo"
 )
 
 type issueCase struct {

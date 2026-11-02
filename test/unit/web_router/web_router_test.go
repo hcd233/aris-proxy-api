@@ -11,7 +11,7 @@ import (
 	"testing/fstest"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/hcd233/aris-proxy-api/internal/router"
+	"github.com/hcd233/aris-mass/internal/router"
 )
 
 func TestRegisterWebRouter_RedirectsWebRootToTrailingSlash(t *testing.T) {

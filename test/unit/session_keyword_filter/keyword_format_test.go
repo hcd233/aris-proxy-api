@@ -4,8 +4,8 @@ package session_keyword_filter
 import (
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
-	"github.com/hcd233/aris-proxy-api/internal/util"
+	"github.com/hcd233/aris-mass/internal/infrastructure/repository"
+	"github.com/hcd233/aris-mass/internal/util"
 )
 
 // TestFormatBigIntArray 断言 id 数组序列化为 PG bigint[] 字面量。

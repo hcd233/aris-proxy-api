@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
-	"github.com/hcd233/aris-proxy-api/internal/common/resilience"
+	"github.com/hcd233/aris-mass/internal/common/model"
+	"github.com/hcd233/aris-mass/internal/common/resilience"
 )
 
 func TestSemaphore_AcquireRelease(t *testing.T) {

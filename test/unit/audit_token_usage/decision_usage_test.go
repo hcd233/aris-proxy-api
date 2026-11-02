@@ -3,7 +3,7 @@ package audit_token_usage
 import (
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-mass/internal/dto"
 )
 
 func TestSetTokensFromDecisionUsage_NormalizesNetInput(t *testing.T) {

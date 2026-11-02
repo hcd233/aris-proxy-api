@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	metricsquery "github.com/hcd233/aris-proxy-api/internal/application/metrics/query"
+	metricsquery "github.com/hcd233/aris-mass/internal/application/metrics/query"
 )
 
 type countingSnapshotReader struct {

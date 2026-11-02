@@ -5,10 +5,10 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/identity/command"
-	"github.com/hcd233/aris-proxy-api/internal/application/identity/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/application/identity/command"
+	"github.com/hcd233/aris-mass/internal/application/identity/port"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
 )
 
 func TestDemoteUser_UserToPending(t *testing.T) {

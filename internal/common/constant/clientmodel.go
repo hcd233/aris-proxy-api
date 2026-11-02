@@ -1,11 +1,13 @@
 // Package constant 客户端模型导出常量
 package constant
 
-import "github.com/hcd233/aris-proxy-api/internal/common/enum"
+import "github.com/hcd233/aris-mass/internal/common/enum"
 
 // ClientModelExport 模型导出目标与默认值
 const (
-	// ClientModelProviderID 本工具写入各 harness 的 provider 标识
+	// ClientModelProviderID 本工具写入各 harness 的 provider 标识。
+	// 这是落在用户 opencode.json / models.json / Codex TOML 里的配置键，
+	// 改名会让存量配置多出孤儿 provider 且破坏幂等 patch，故不随品牌升级改动。
 	ClientModelProviderID = "aris-proxy"
 
 	// ClientModelTargetOpenCode OpenCode 目标标识
@@ -140,8 +142,8 @@ const (
 
 // ClientModelCodexExtra Codex/Claude Code 配置细节常量
 const (
-	// ClientModelLabelArisProxy Codex provider 展示名
-	ClientModelLabelArisProxy = "Aris Proxy"
+	// ClientModelLabelArisMass Codex provider 展示名
+	ClientModelLabelArisMass = "Aris Mass"
 	// ClientModelDefaultMemoryModel memories 表模型缺省值
 	ClientModelDefaultMemoryModel = ""
 	// ClientModelKeyEnv Claude Code settings.json 的 env 键

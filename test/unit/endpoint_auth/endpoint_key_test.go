@@ -3,9 +3,9 @@ package endpoint_auth
 import (
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/transport"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/domain/llmproxy/vo"
+	"github.com/hcd233/aris-mass/internal/infrastructure/transport"
 )
 
 // TestEndpointKeyStableAcrossTokenRotation OAuth 端点熔断/隔离键不随 access token 轮换漂移（Review Focus 2）。

@@ -3,7 +3,7 @@ package jwt
 import (
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/config"
+	"github.com/hcd233/aris-mass/internal/config"
 )
 
 func NewAccessTokenSigner() TokenSigner {

@@ -69,7 +69,7 @@ Codex（含 Codex CLI / Codex Desktop）会把每一次会话完整持久化为�
 
 - `cwd: string`
 
-  会话启动时的工作目录，如 `"/Users/centonhuang/Desktop/code/aris-proxy-api"`。
+  会话启动时的工作目录，如 `"/Users/centonhuang/Desktop/code/aris-mass"`。
 
 - `originator: string`
 
@@ -124,7 +124,7 @@ Codex（含 Codex CLI / Codex Desktop）会把每一次会话完整持久化为�
 
   - `commit_hash: string` — 当前 commit，如 `"9ceefffd189987670fa7e3bf6004e556404113f2"`
   - `branch: string` — 当前分支，如 `"master"`
-  - `repository_url: string` — 远程地址，如 `"git@github.com:hcd233/aris-proxy-api.git"`
+  - `repository_url: string` — 远程地址，如 `"git@github.com:hcd233/aris-mass.git"`
 
 - `memory_mode: optional string`
 
@@ -160,7 +160,7 @@ Codex（含 Codex CLI / Codex Desktop）会把每一次会话完整持久化为�
     "session_id": "019f45dd-798a-79d0-9ea2-c7446f13e324",
     "id": "019f45dd-798a-79d0-9ea2-c7446f13e324",
     "timestamp": "2026-07-09T07:52:50.350Z",
-    "cwd": "/Users/centonhuang/Desktop/code/aris-proxy-api",
+    "cwd": "/Users/centonhuang/Desktop/code/aris-mass",
     "originator": "Codex Desktop",
     "cli_version": "0.142.5",
     "source": "vscode",
@@ -171,7 +171,7 @@ Codex（含 Codex CLI / Codex Desktop）会把每一次会话完整持久化为�
     "git": {
       "commit_hash": "9ceefffd189987670fa7e3bf6004e556404113f2",
       "branch": "master",
-      "repository_url": "git@github.com:hcd233/aris-proxy-api.git"
+      "repository_url": "git@github.com:hcd233/aris-mass.git"
     }
   }
 }
@@ -195,7 +195,7 @@ Codex（含 Codex CLI / Codex Desktop）会把每一次会话完整持久化为�
 
 - `workspace_roots: optional array of string`
 
-  工作区根目录列表，如 `["/Users/centonhuang/Desktop/code/aris-proxy-api"]`。
+  工作区根目录列表，如 `["/Users/centonhuang/Desktop/code/aris-mass"]`。
 
 - `current_date: string`
 
@@ -292,8 +292,8 @@ Codex（含 Codex CLI / Codex Desktop）会把每一次会话完整持久化为�
   "type": "turn_context",
   "payload": {
     "turn_id": "019f45dd-b197-7e03-b21f-4b02e145a2b8",
-    "cwd": "/Users/centonhuang/Desktop/code/aris-proxy-api",
-    "workspace_roots": ["/Users/centonhuang/Desktop/code/aris-proxy-api"],
+    "cwd": "/Users/centonhuang/Desktop/code/aris-mass",
+    "workspace_roots": ["/Users/centonhuang/Desktop/code/aris-mass"],
     "current_date": "2026-07-09",
     "timezone": "Asia/Shanghai",
     "approval_policy": "never",

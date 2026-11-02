@@ -3,8 +3,8 @@ package port
 import (
 	"github.com/samber/lo"
 
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
-	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-mass/internal/domain/llmproxy/vo"
+	"github.com/hcd233/aris-mass/internal/dto"
 )
 
 // PricingFromDTO wire 定价 → 值对象；校验统一走 vo.NewPricing（错误为 ErrValidation → 422）。

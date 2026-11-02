@@ -9,12 +9,12 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
 
-	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
+	apiutil "github.com/hcd233/aris-mass/internal/api/util"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/common/model"
 
 	// 触发 internal/api 包的 init()，验证其中对 huma.NewError 的全局替换。
-	_ "github.com/hcd233/aris-proxy-api/internal/api"
+	_ "github.com/hcd233/aris-mass/internal/api"
 )
 
 // TestErrorStatusCode 验证业务错误码 → HTTP 状态码映射函数本身。

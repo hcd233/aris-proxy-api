@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"github.com/alicebob/miniredis/v2"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	commonmodel "github.com/hcd233/aris-proxy-api/internal/common/model"
-	"github.com/hcd233/aris-proxy-api/internal/cron"
-	"github.com/hcd233/aris-proxy-api/internal/lock"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	commonmodel "github.com/hcd233/aris-mass/internal/common/model"
+	"github.com/hcd233/aris-mass/internal/cron"
+	"github.com/hcd233/aris-mass/internal/lock"
 	"github.com/redis/go-redis/v9"
 )
 
