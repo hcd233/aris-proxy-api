@@ -29,8 +29,12 @@ _Avoid_: fluid element, auto-size block
 _Avoid_: per-key reservation, dynamic min-width
 
 **Font Scale（字号缩放）**:
-对 CJK Locale 等比下调字号，使中/日文字形在相同 utility 下的视觉高度对齐拉丁字母。仅作用于字号，不影响 rem 基准与间距。
+对 CJK Locale 等比下调字号，使中/日文字形在相同 utility 下的视觉高度对齐拉丁字母。仅作用于字号，不影响 rem 基准与间距。下调有下限：`text-xs` 在 CJK 下不低于 12px。
 _Avoid_: font zoom, cjk shrink
+
+**Text Floor（字号下限）**:
+全站任何文字不小于 11px：密集数据标签（表头、环比、坐标轴）用 11px，正文与说明不小于 12px。与 Font Scale 配合——缩放只能把字号压到这条线为止。
+_Avoid_: min font size, readable size
 
 **Layout-Pattern Height Fix（布局高度约定）**:
 按布局类型分别约束高度：表格表头不换行 + 单行单元格截断带提示；卡片网格等高 + 描述限两行；对话框正文按最长语言的行数预留最小高度。自由描述文本不受约束。
@@ -43,6 +47,24 @@ _Avoid_: responsive table, auto-width table
 **Column Budget（列宽预算）**:
 一张 `Table fit` 表所有列宽声明之和必须小于容器可用宽度，否则 fixed 布局会溢出成横向滚动。时间戳一类不可截断的等宽内容按实测宽度给足（不足会被静默裁掉），可截断内容一律配 Tooltip。含固定尺寸按钮的操作列也按实测给足：行内 flex 右对齐时溢出从左侧裁掉，`scrollWidth` 检测不到，表现为最左按钮整颗消失。
 _Avoid_: column width, col size
+
+**Progressive Columns（渐进显示列）**:
+面板宽度不够放下所有列时，不压缩主名列，而是按优先级逐列隐藏次要列（容器查询驱动）；面板变宽再逐列展开。保证主名列始终有足够可见宽度。仪表盘的 Endpoint 与 Top 排行两张表采用。
+_Avoid_: responsive columns, column hiding
+
+## Navigation（导航）
+
+**Command Palette（页面跳转面板）**:
+`⌘K` / `Ctrl+K`（或侧栏搜索按钮、移动端顶栏图标）打开的页面搜索框，按标题、路径、分组名过滤，回车跳转。与侧栏共用同一份导航配置，按当前身份裁剪；demo 账户未开放的模块不会出现。
+_Avoid_: spotlight, quick switcher, global search
+
+**Pinned Group（置顶分组）**:
+导航配置里不可折叠、没有组头的分组，条目直接铺在导航顶层。仪表盘是唯一成员，避免「只有一项的分组还要多点一次」。
+_Avoid_: single-item group, top-level item
+
+**Break Hint（断行提示）**:
+文案里用 U+200B（零宽空格）显式标出的允许断行位置。逐字入场标题（SplitText）在有提示时，中日文连续文字只在提示处断行；没有空格的 CJK 无法可靠分词，所以由文案作者决定。
+_Avoid_: soft hyphen, wbr
 
 ## Dataset Page（训练数据页）
 
