@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { PreferenceControls } from "@/components/preference-controls";
 import { ThemeSwitcher } from "@/components/theme/theme-switcher";
 import { LocaleFade } from "@/components/locale-fade";
 import { NavIndicator } from "@/components/motion/nav-indicator";
@@ -390,11 +391,12 @@ function UserBar({ collapsed = false }: { collapsed?: boolean }) {
           </div>
         )}
       </div>
+      {collapsed && <PreferenceControls tone="sidebar" orientation="vertical" />}
       {!collapsed && (
         <div className="flex items-center justify-between">
-          <LanguageSwitcher />
+          <LanguageSwitcher tone="sidebar" />
           <div className="flex items-center gap-1">
-            <ThemeSwitcher variant="inline" />
+            <ThemeSwitcher tone="sidebar" tooltipSide="top" />
             <TooltipProvider>
               <TooltipRoot>
                 <TooltipTrigger

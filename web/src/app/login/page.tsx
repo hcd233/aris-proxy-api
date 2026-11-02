@@ -10,8 +10,7 @@ import { parseOAuthCallbackParams, resolveOAuthPlatform } from "@/lib/oauth";
 import type { OAuth2Provider } from "@/lib/types";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { LanguageSwitcher } from "@/components/language-switcher";
-import { ThemeSwitcher } from "@/components/theme/theme-switcher";
+import { PreferenceControls } from "@/components/preference-controls";
 import { ProviderIcon } from "@/components/provider-icon";
 import { SplitText } from "@/components/motion/split-text";
 
@@ -153,10 +152,7 @@ export default function LoginPage() {
       <script dangerouslySetInnerHTML={{ __html: LOGIN_SEEN_SCRIPT }} />
 
       {/* 页头控件：登录页自带主题/语言切换，不再挂左下角悬浮球 */}
-      <div className="absolute right-5 top-5 z-20 flex items-center gap-1.5 sm:right-8 sm:top-6">
-        <LanguageSwitcher />
-        <ThemeSwitcher variant="inline" />
-      </div>
+      <PreferenceControls className="absolute right-5 top-5 z-20 sm:right-8 sm:top-6" />
 
       {/* 左：产品世界（纸 / 虚空） */}
       <div className="relative flex flex-col px-7 pb-2 pt-5 sm:px-12 lg:px-[clamp(3rem,6vw,5.5rem)] lg:py-10">
