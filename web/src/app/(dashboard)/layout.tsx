@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useT } from "@/lib/i18n";
+import { DASHBOARD_HOME_PATH, isNavItemActive } from "@/lib/nav";
 import type { DemoModule } from "@/lib/types";
 import { PermissionGuard } from "@/components/permission-guard";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -33,6 +34,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { PreferenceControls } from "@/components/preference-controls";
 import { ThemeSwitcher } from "@/components/theme/theme-switcher";
 import { LocaleFade } from "@/components/locale-fade";
 import { NavIndicator } from "@/components/motion/nav-indicator";
@@ -83,7 +85,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       {
         labelKey: "nav.dashboard",
-        href: "/",
+        href: DASHBOARD_HOME_PATH,
         icon: <LayoutDashboard className="size-4" />,
         demoModule: "dashboard",
       },
@@ -194,13 +196,10 @@ const NAV_GROUPS: NavGroup[] = [
   },
 ];
 
-function isItemActive(pathname: string, href: string): boolean {
-  return href === "/" ? pathname === "/" : pathname.startsWith(href);
-}
-
 function findActiveGroupKey(pathname: string): string | undefined {
-  return NAV_GROUPS.find((group) => group.items.some((item) => isItemActive(pathname, item.href)))
-    ?.key;
+  return NAV_GROUPS.find((group) =>
+    group.items.some((item) => isNavItemActive(pathname, item.href)),
+  )?.key;
 }
 
 const OPEN_GROUPS_STORAGE_KEY = "sidebar-nav-open-groups";
@@ -293,7 +292,7 @@ function SidebarNav({
               <CollapsibleContent data-instant="">
                 <SidebarMenu className="nav-items flex flex-col gap-0.5">
                   {group.items.map((item) => {
-                    const isActive = isItemActive(pathname, item.href);
+                    const isActive = isNavItemActive(pathname, item.href);
                     const label = t(item.labelKey);
                     const demoLocked =
                       isDemo() && !(item.demoModule !== undefined && isModuleOpen(item.demoModule));
@@ -392,11 +391,12 @@ function UserBar({ collapsed = false }: { collapsed?: boolean }) {
           </div>
         )}
       </div>
+      {collapsed && <PreferenceControls tone="sidebar" orientation="vertical" />}
       {!collapsed && (
         <div className="flex items-center justify-between">
-          <LanguageSwitcher />
+          <LanguageSwitcher tone="sidebar" />
           <div className="flex items-center gap-1">
-            <ThemeSwitcher variant="inline" />
+            <ThemeSwitcher tone="sidebar" tooltipSide="top" />
             <TooltipProvider>
               <TooltipRoot>
                 <TooltipTrigger

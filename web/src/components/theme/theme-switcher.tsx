@@ -1,6 +1,5 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import { Feather, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,20 +11,28 @@ import {
 import { useT } from "@/lib/i18n";
 import { useTheme } from "@/lib/theme";
 
+/** 偏好控件所处底色：普通页面背景，或侧栏（使用 sidebar-* token）。 */
+export type PreferenceTone = "page" | "sidebar";
+
+export const PREFERENCE_TONE_CLASS: Record<PreferenceTone, string> = {
+  page: "text-foreground/70 hover:bg-secondary hover:text-foreground",
+  sidebar: "text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+};
+
 /** Viewport center of the clicked switch: the theme transition's origin. */
 function centerOf(el: Element) {
   const r = el.getBoundingClientRect();
   return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
 }
 
-// The FAB mounts only on public pages that have no chrome of their own (they
-// have no UserBar); login renders the inline variant in its header, dashboard
-// pages render it inside UserBar instead.
-const FAB_PATHS = ["/callback", "/share"];
-
-export function ThemeSwitcher({ variant = "fab" }: { variant?: "fab" | "inline" }) {
+export function ThemeSwitcher({
+  tone = "page",
+  tooltipSide = "bottom",
+}: {
+  tone?: PreferenceTone;
+  tooltipSide?: "top" | "bottom" | "right";
+}) {
   const t = useT();
-  const pathname = usePathname();
   const { theme, setTheme } = useTheme();
 
   const next = theme === "moonshot" ? "anthropic" : "moonshot";
@@ -33,48 +40,23 @@ export function ThemeSwitcher({ variant = "fab" }: { variant?: "fab" | "inline" 
   const icon =
     theme === "moonshot" ? <Feather className="size-4" /> : <Sparkles className="size-4" />;
 
-  if (variant === "inline") {
-    return (
-      <TooltipProvider>
-        <TooltipRoot>
-          <TooltipTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={(e) => setTheme(next, centerOf(e.currentTarget))}
-                aria-label={label}
-                className="text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-              >
-                {icon}
-              </Button>
-            }
-          />
-          <TooltipContent side="top">{label}</TooltipContent>
-        </TooltipRoot>
-      </TooltipProvider>
-    );
-  }
-
-  const showFab = FAB_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
-  if (!showFab) return null;
-
   return (
     <TooltipProvider>
       <TooltipRoot>
         <TooltipTrigger
           render={
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="icon-sm"
               onClick={(e) => setTheme(next, centerOf(e.currentTarget))}
               aria-label={label}
-              className="fixed bottom-6 left-6 z-50 flex h-9 w-9 items-center justify-center rounded-full border border-border bg-popover/70 text-foreground/70 opacity-60 backdrop-blur-md transition-opacity hover:text-foreground hover:opacity-100"
+              className={PREFERENCE_TONE_CLASS[tone]}
             >
               {icon}
-            </button>
+            </Button>
           }
         />
-        <TooltipContent side="right">{label}</TooltipContent>
+        <TooltipContent side={tooltipSide}>{label}</TooltipContent>
       </TooltipRoot>
     </TooltipProvider>
   );

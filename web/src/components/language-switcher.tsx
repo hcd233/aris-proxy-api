@@ -11,26 +11,54 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
+import type { PreferenceTone } from "@/components/theme/theme-switcher";
 
 /// Add entries here when adding a new language.
-const LANGUAGE_LABELS: Record<Locale, { native: string }> = {
-  en: { native: "English" },
-  zh: { native: "中文" },
-  ja: { native: "日本語" },
+const LANGUAGE_LABELS: Record<Locale, { native: string; short: string }> = {
+  en: { native: "English", short: "EN" },
+  zh: { native: "中文", short: "中" },
+  ja: { native: "日本語", short: "日" },
 };
 
-const LOCALE_LIST = Object.entries(LANGUAGE_LABELS) as [Locale, { native: string }][];
+const LOCALE_LIST = Object.entries(LANGUAGE_LABELS) as [
+  Locale,
+  { native: string; short: string },
+][];
 
-export function LanguageSwitcher() {
+const TRIGGER_TONE_CLASS: Record<PreferenceTone, string> = {
+  page: "",
+  sidebar:
+    "border-sidebar-border bg-transparent text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+};
+
+export function LanguageSwitcher({
+  tone = "page",
+  compact = false,
+}: {
+  tone?: PreferenceTone;
+  /** 仅显示语言短码（折叠侧栏等窄位） */
+  compact?: boolean;
+}) {
   const { locale, setLocale } = useI18n();
+  const label = LANGUAGE_LABELS[locale];
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger render={<Button variant="outline" size="xs" className="min-w-0" />}>
-        {LANGUAGE_LABELS[locale].native}
-        <ChevronDown data-icon="inline-end" />
+      <DropdownMenuTrigger
+        render={
+          <Button
+            variant="outline"
+            size="xs"
+            aria-label={label.native}
+            className={cn("min-w-0", compact && "w-8 px-0", TRIGGER_TONE_CLASS[tone])}
+          />
+        }
+      >
+        {compact ? label.short : label.native}
+        {!compact && <ChevronDown data-icon="inline-end" />}
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-32">
+      <DropdownMenuContent align={compact ? "start" : "end"} className="min-w-32">
         <DropdownMenuGroup>
           <DropdownMenuRadioGroup value={locale} onValueChange={(v) => setLocale(v as Locale)}>
             {LOCALE_LIST.map(([code, lang]) => (

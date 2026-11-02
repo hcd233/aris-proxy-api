@@ -16,7 +16,6 @@ import { MOTION_TIER_INIT_SCRIPT } from "@/lib/motion/tier";
 import { HtmlLangUpdater } from "@/components/html-lang-updater";
 import { Toaster } from "@/components/ui/sonner";
 import { InteractionLayer } from "@/components/motion/interaction-layer";
-import { ThemeSwitcher } from "@/components/theme/theme-switcher";
 import "./globals.css";
 
 const sourceSerif = Source_Serif_4({
@@ -60,7 +59,6 @@ export default function RootLayout({
             <HtmlLangUpdater />
             <AuthProvider>{children}</AuthProvider>
             <InteractionLayer />
-            <ThemeSwitcher />
             <Toaster />
           </ThemeProvider>
         </I18nProvider>

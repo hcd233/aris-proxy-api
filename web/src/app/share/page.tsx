@@ -23,6 +23,7 @@ import { useInfiniteList } from "@/hooks/use-infinite-list";
 import { formatRelativeTime } from "@/lib/utils";
 import { ReadingLayout } from "@/components/shared/reading-layout";
 import { LocaleFade } from "@/components/locale-fade";
+import { PreferenceControls } from "@/components/preference-controls";
 import { useI18n } from "@/lib/i18n";
 
 type ShareError =
@@ -60,6 +61,7 @@ function ShareErrorView({ error }: { error: ShareError }) {
 
   return (
     <div className="page-surface flex min-h-[100dvh] items-center justify-center bg-background px-4">
+      <PreferenceControls className="fixed right-4 top-4 z-20" />
       <div className="w-full max-w-md rounded-3xl border border-border/70 bg-card p-8 text-center shadow-xl">
         <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-muted">
           <Share2 className="size-5 text-muted-foreground" />
@@ -76,6 +78,7 @@ function ShareErrorView({ error }: { error: ShareError }) {
 function ShareLoading() {
   return (
     <div className="mx-auto w-full max-w-[768px] space-y-5 px-4 py-10 sm:px-6">
+      <PreferenceControls className="fixed right-4 top-4 z-20" />
       <Skeleton className="h-8 w-48" />
       <div className="space-y-5">
         <Skeleton className="ml-auto h-20 w-3/4 rounded-[20px]" />
@@ -283,6 +286,7 @@ function SharedSessionView() {
           {t("sessions.messages").toLowerCase()}
         </p>
       </div>
+      <PreferenceControls compact={isMobile} className="shrink-0" />
       {metadata.toolCount > 0 && (
         <TooltipProvider>
           <TooltipRoot>

@@ -13,8 +13,10 @@
 ## 目录结构
 
 - `src/app/layout.tsx`：全局布局，挂载 `AuthProvider` 和 `Toaster`。
-- `src/app/login/`、`src/app/callback/`：OAuth2 登录入口与回调。
-- `src/app/(dashboard)/`：登录后的管理后台路由组，包含 `apikeys/`、`endpoints/`、`models/`、`profile/`、`sessions/`、`shares/` 子页面，以及 `layout.tsx`、`page.tsx`。
+- `src/app/page.tsx`：公开门户页（`/web/`），组件在 `src/components/portal/`，常量与按钮逻辑在 `src/lib/portal.ts`；不挂 `PermissionGuard`，已登录不自动跳转。
+- `src/app/login/`、`src/app/callback/`：OAuth2 登录入口与回调，登录成功落到 `DASHBOARD_HOME_URL`（`/web/dashboard/`，见 `src/lib/nav.ts`）。
+- `src/app/(dashboard)/`：登录后的管理后台路由组，仪表盘首页在 `dashboard/page.tsx`（`/web/dashboard/`），其余子页面（`sessions/`、`apikeys/`、`upstream/` 等）路径不带 `dashboard` 前缀；导航高亮统一用 `isNavItemActive`。
+- 主题/语言切换：唯一实现是 `src/components/preference-controls.tsx`（`tone="page" | "sidebar"`），门户、登录、回调、分享、仪表盘侧栏（含折叠态）都挂它，不要再单独拼 `LanguageSwitcher` + `ThemeSwitcher`。
 - `src/app/share/`：会话分享只读页面（公开访问）。
 - `src/components/ui/`：shadcn 生成的基础组件，遵循其约定，禁止手改命名/导出方式。
 - `src/components/chat/`、`src/components/session-detail/`、`src/components/share/`：业务组件按页面切分。
