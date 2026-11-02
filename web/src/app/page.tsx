@@ -1,5 +1,7 @@
 "use client";
 
+import { PortalEcosystem } from "@/components/portal/portal-ecosystem";
+import { PortalFeatureMarquee } from "@/components/portal/portal-feature-marquee";
 import { PortalHeader, PortalHero } from "@/components/portal/portal-hero";
 import { useAuth } from "@/lib/auth-context";
 import { portalPrimaryCta } from "@/lib/portal";
@@ -15,6 +17,8 @@ export default function PortalPage() {
       <PortalHeader cta={cta} />
       <main className="flex-1">
         <PortalHero cta={cta} />
+        <PortalFeatureMarquee />
+        <PortalEcosystem />
       </main>
     </div>
   );
