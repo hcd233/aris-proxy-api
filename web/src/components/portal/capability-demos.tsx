@@ -23,7 +23,9 @@ export function DemoPane({
   className?: string;
 }) {
   return (
-    <figure className={cn("min-w-0 rounded-2xl bg-muted/50 p-4", className)}>
+    // 不再给每块演示再套一层淡底面板：卡片 > 面板 > 内框 的三层嵌套会让内框失去层次，
+    // 改用发丝线分段，内框（Code / 行 / 卡）成为卡片里唯一的二级容器。
+    <figure className={cn("min-w-0 border-t border-border/60 pt-4", className)}>
       <figcaption className="mb-3 text-[0.6875rem] tracking-wide text-muted-foreground">
         {label}
       </figcaption>
@@ -51,7 +53,7 @@ export function RouteDemo() {
     <div className="grid grid-cols-[5.5rem_1fr] items-center gap-5">
       <div className="relative rounded-xl bg-foreground px-2 py-3 text-center font-mono text-sm font-medium text-background">
         {PORTAL_ROUTE.alias}
-        <span className="block font-sans text-[0.625rem] font-normal opacity-70">
+        <span className="block font-sans text-[0.6875rem] font-normal opacity-70">
           {t("portal.cap.access.alias_caption")}
         </span>
         <span
@@ -76,7 +78,7 @@ export function RouteDemo() {
                 <ProviderIcon decorative protocol={ep.icon} size={15} />
                 <span className="flex min-w-0 flex-col leading-tight">
                   <span className="text-foreground">{ep.labelKey ? t(ep.labelKey) : ep.label}</span>
-                  <span className="text-[0.625rem] text-muted-foreground">
+                  <span className="text-[0.6875rem] text-muted-foreground">
                     {t("portal.cap.access.weight").replace("{n}", String(ep.weight))}
                   </span>
                 </span>
@@ -307,7 +309,7 @@ export function BreakerDemo() {
               {s.label}
               <span
                 className={cn(
-                  "mt-0.5 block text-[0.625rem] font-normal",
+                  "mt-0.5 block text-[0.6875rem] font-normal",
                   f.state === s.key ? "opacity-85" : "text-muted-foreground",
                 )}
               >

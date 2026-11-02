@@ -306,7 +306,7 @@ function SharedSessionView() {
                 >
                   <Wrench className="size-5" />
                   <Badge
-                    className="absolute -top-1 -right-1 h-4 min-w-4 px-1 text-[10px] tabular-nums"
+                    className="absolute -top-1 -right-1 h-4 min-w-4 px-1 text-[11px] tabular-nums"
                     aria-hidden
                   >
                     {metadata.toolCount}
@@ -340,7 +340,7 @@ function SharedSessionView() {
           )}
           {!messagesList.hasMore && messages.length > 0 && (
             <div className="pt-3 pb-1 text-center">
-              <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground/50">
+              <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground/50">
                 {t("share.end_of_conversation")}
               </span>
             </div>

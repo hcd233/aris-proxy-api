@@ -37,6 +37,7 @@
   --color-border: var(--border);
   --color-destructive: var(--destructive);
   --color-positive: var(--positive);
+  --color-primary-ink: var(--primary-ink);
   --color-warning: var(--warning);
   --color-negative: var(--negative);
   --color-accent-foreground: var(--accent-foreground);
@@ -81,6 +82,9 @@
   --primary: #b5543a;
   --primary-foreground: #ffffff;
   --primary-hover: #a3472c;
+  /* 品牌色用作小字（eyebrow、类别标签、头像首字母）时的墨色版本：
+   * --primary / --chart-2 在 #faf8f5 与 #f5f0eb 上只有 3.96–4.3:1，不够 4.5:1。 */
+  --primary-ink: #a3472c;
   --secondary: #f5f0eb;
   --secondary-foreground: #1f1a14;
   --muted: #f5f0eb;
@@ -88,9 +92,10 @@
   --accent: #f5e6e0;
   --accent-foreground: #1f1a14;
   --destructive: #b3564f;
-  /* 状态色（dashboard 环比 / 健康度）：正向 = 鼠尾草青绿，警示 = 赭石，负向 = 赤陶 */
-  --positive: #4f7f6f;
-  --warning: #b9852f;
+  /* 状态色（dashboard 环比 / 健康度）：正向 = 鼠尾草青绿，警示 = 赭石，负向 = 赤陶。
+   * 三者都会直接当文字色用，在白卡 / #f5f0eb 上均需 ≥4.5:1。 */
+  --positive: #467060;
+  --warning: #8a6119;
   --negative: #b3564f;
   --border: #e8e0d8;
   --input: #9c8d7a;
@@ -124,6 +129,7 @@
   --primary: #d97757;
   --primary-foreground: #ffffff;
   --primary-hover: #e08a6c;
+  --primary-ink: #e08a6c;
   --secondary: #322c25;
   --secondary-foreground: #f5f0eb;
   --muted: #322c25;
@@ -175,9 +181,14 @@
    * (original unitless lh * original rem = constant px; new unitless lh =
    * that px / new rem). See docs/adr/0005-i18n-layout-stability.md.
    * <html lang> is set by HtmlLangUpdater, so :lang() needs no extra markup. */
+  /* CJK floor: --text-xs never drops below 12px. CJK strokes are denser than
+   * Latin, and at 11px and below they stop being legible; the cost is that xs
+   * and sm are only ~0.9px apart in zh, which is cheaper than unreadable
+   * table headers and captions. Anything smaller must be a deliberate
+   * text-[11px] on dense data labels, never lower. */
   :lang(zh) {
-    --text-xs: 0.69rem;
-    --text-xs--line-height: 1.4493;
+    --text-xs: 0.75rem;
+    --text-xs--line-height: 1.3333;
     --text-sm: 0.805rem;
     --text-sm--line-height: 1.5528;
     --text-base: 0.92rem;
@@ -196,8 +207,8 @@
     --text-5xl--line-height: 1;
   }
   :lang(ja) {
-    --text-xs: 0.66rem;
-    --text-xs--line-height: 1.5152;
+    --text-xs: 0.75rem;
+    --text-xs--line-height: 1.3333;
     --text-sm: 0.77rem;
     --text-sm--line-height: 1.6234;
     --text-base: 0.88rem;
@@ -254,6 +265,7 @@
   --primary: #ffffff;
   --primary-foreground: #000000;
   --primary-hover: #e0e0e0;
+  --primary-ink: #a8bdd8;
   --secondary: rgb(26 26 26 / 0.8);
   --secondary-foreground: #f5f5f5;
   --muted: rgb(26 26 26 / 0.8);

@@ -147,7 +147,7 @@ export function ReadingLayout({
                 <span className="font-display text-[14px] font-semibold text-foreground">
                   {t("reading_layout.available_tools")}
                 </span>
-                <Badge variant="secondary" className="text-[10px]">
+                <Badge variant="secondary" className="text-[11px]">
                   {toolsCount}
                 </Badge>
               </div>

@@ -63,7 +63,7 @@ function EndpointDetailPopover({
   // copyable=false 的字段（掩码凭据、创建日期）复制无意义，渲染为纯文本
   const field = (label: string, value: string, copyable = true) => (
     <div className="min-w-0 rounded-md border border-border bg-background px-2 py-1.5">
-      <p className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground">{label}</p>
+      <p className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground">{label}</p>
       {value ? (
         copyable ? (
           <div className="mt-0.5 flex items-start gap-1">
@@ -87,7 +87,7 @@ function EndpointDetailPopover({
         render={
           <Badge
             variant="outline"
-            className="shrink-0 cursor-pointer gap-1 border-dashed px-1.5 py-0 text-[10px] font-normal text-muted-foreground hover:text-foreground"
+            className="shrink-0 cursor-pointer gap-1 border-dashed px-1.5 py-0 text-[11px] font-normal text-muted-foreground hover:text-foreground"
           >
             <Info className="size-3" />
             {t("upstream.connection_details")}
@@ -108,7 +108,7 @@ function EndpointDetailPopover({
             field(t("endpoints.api_key"), endpoint.maskedAPIKey, false)}
           {endpoint.oauth && (
             <div className="min-w-0 rounded-md border border-border bg-background px-2 py-1.5">
-              <p className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground">
+              <p className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
                 {t("oauth.account")}
               </p>
               <p className="mt-0.5 text-[11px] break-all text-foreground">
@@ -130,7 +130,7 @@ function EndpointDetailPopover({
               </p>
               {(endpoint.oauth.quota?.windows ?? []).map((w) => (
                 <div key={w.key} className="mt-1.5">
-                  <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                  <div className="flex items-center justify-between text-[11px] text-muted-foreground">
                     <span>{t(`oauth.window_${w.key}`)}</span>
                     <span>{quotaPercent(w.usedPercent)}%</span>
                   </div>
@@ -185,7 +185,7 @@ function ProtocolBadge({ protocol, label }: { protocol: string; label: string })
         render={
           <Badge
             variant="secondary"
-            className="cursor-default gap-1 px-1 py-0 text-[10px] font-normal"
+            className="cursor-default gap-1 px-1 py-0 text-[11px] font-normal"
           >
             <ProviderIcon protocol={protocol} size={12} />
           </Badge>
@@ -290,17 +290,17 @@ export function GroupedView({
                   </TooltipRoot>
                   <div className="flex flex-wrap items-center gap-1.5">
                     {ep.visibility === "public" && (
-                      <Badge variant="secondary" className="px-1.5 py-0 text-[10px] font-normal">
+                      <Badge variant="secondary" className="px-1.5 py-0 text-[11px] font-normal">
                         {t("upstream.public_badge")}
                       </Badge>
                     )}
                     {oauthBadgeKey(ep.authType) && (
-                      <Badge variant="secondary" className="px-1.5 py-0 text-[10px] font-normal">
+                      <Badge variant="secondary" className="px-1.5 py-0 text-[11px] font-normal">
                         {t(oauthBadgeKey(ep.authType) ?? "")}
                       </Badge>
                     )}
                     {ep.oauth?.status === "reauth_required" && (
-                      <Badge variant="destructive" className="px-1.5 py-0 text-[10px] font-normal">
+                      <Badge variant="destructive" className="px-1.5 py-0 text-[11px] font-normal">
                         {t("oauth.status_reauth")}
                       </Badge>
                     )}
@@ -315,7 +315,7 @@ export function GroupedView({
                       {t("upstream.model_count").replace("{count}", String(group.modelCount))}
                     </span>
                     {group.truncated && (
-                      <Badge variant="outline" className="text-[10px] font-normal">
+                      <Badge variant="outline" className="text-[11px] font-normal">
                         {t("upstream.truncated_detail")
                           .replace("{total}", String(group.totalModelCount ?? group.modelCount))
                           .replace("{shown}", String(group.modelCount))}
@@ -520,7 +520,7 @@ export function GroupedView({
                         {ep.visibility === "public" && (
                           <Badge
                             variant="secondary"
-                            className="px-1.5 py-0 text-[10px] font-normal"
+                            className="px-1.5 py-0 text-[11px] font-normal"
                           >
                             {t("upstream.public_badge")}
                           </Badge>
@@ -558,7 +558,7 @@ export function GroupedView({
                         onProbeOAuthQuota={onProbeOAuthQuota}
                       />
                       {group.truncated && (
-                        <Badge variant="outline" className="shrink-0 text-[10px] font-normal">
+                        <Badge variant="outline" className="shrink-0 text-[11px] font-normal">
                           {t("upstream.truncated_detail")
                             .replace("{total}", String(group.totalModelCount ?? group.modelCount))
                             .replace("{shown}", String(group.modelCount))}
