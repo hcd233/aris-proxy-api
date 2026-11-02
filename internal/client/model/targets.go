@@ -70,6 +70,78 @@ func (c *opencodeConfig) MarshalJSON() ([]byte, error) { return sonicMarshal(c.R
 
 func defaultCapabilities() []string { return []string{enum.InputModalityText} }
 
+// migrateLegacyProvider 把品牌升级前的 provider 配置迁移到新键：
+// 新键不存在时整体搬移；两侧都存在时把旧键里用户自加的模型并入新键，然后删除旧键。
+func migrateLegacyProvider(providers map[string]any) {
+	legacy, ok := providers[constant.ClientModelLegacyProviderID].(map[string]any)
+	if !ok {
+		return
+	}
+	current, exists := providers[constant.ClientModelProviderID].(map[string]any)
+	if !exists {
+		providers[constant.ClientModelProviderID] = legacy
+	} else {
+		mergeProviderModels(current, legacy)
+	}
+	delete(providers, constant.ClientModelLegacyProviderID)
+}
+
+// mergeProviderModels 把旧 provider 的 models 并入新 provider：
+// OpenCode 是 map，Pi 是 []any，两种形态都按「新键优先、旧键只补缺」处理。
+func mergeProviderModels(current, legacy map[string]any) {
+	switch currentModels := current[constant.ClientModelKeyModels].(type) {
+	case map[string]any:
+		mergeModelMap(currentModels, legacy)
+	case []any:
+		current[constant.ClientModelKeyModels] = mergeModelSlice(currentModels, legacy)
+	default:
+		if legacyModels, ok := legacy[constant.ClientModelKeyModels]; ok {
+			current[constant.ClientModelKeyModels] = legacyModels
+		}
+	}
+}
+
+// mergeModelMap 把旧 provider 的 map 形态模型按 id 补进新 provider。
+func mergeModelMap(currentModels, legacy map[string]any) {
+	legacyModels, _ := legacy[constant.ClientModelKeyModels].(map[string]any)
+	for id, model := range legacyModels {
+		if _, exists := currentModels[id]; !exists {
+			currentModels[id] = model
+		}
+	}
+}
+
+// mergeModelSlice 把旧 provider 的 []any 形态模型按 id 补进新 provider。
+func mergeModelSlice(currentModels []any, legacy map[string]any) []any {
+	legacyModels, _ := legacy[constant.ClientModelKeyModels].([]any)
+	seen := make(map[string]struct{}, len(currentModels))
+	for _, model := range currentModels {
+		if id, ok := modelID(model); ok {
+			seen[id] = struct{}{}
+		}
+	}
+	for _, model := range legacyModels {
+		if id, ok := modelID(model); ok {
+			if _, exists := seen[id]; exists {
+				continue
+			}
+			seen[id] = struct{}{}
+		}
+		currentModels = append(currentModels, model)
+	}
+	return currentModels
+}
+
+// modelID 读取模型条目的 id 字段；非对象或缺失 id 时返回 false（按新条目追加）。
+func modelID(model any) (string, bool) {
+	obj, ok := model.(map[string]any)
+	if !ok {
+		return "", false
+	}
+	id, ok := obj[constant.ClientModelKeyID].(string)
+	return id, ok
+}
+
 // OpenCodeTarget 写入 ~/.config/opencode/opencode.json
 type OpenCodeTarget struct{}
 
@@ -93,6 +165,7 @@ func (OpenCodeTarget) Write(path, host, apiKey string, models []TargetModel) err
 		providers = map[string]any{}
 		cfg.Raw[constant.ClientModelKeyProvider] = providers
 	}
+	migrateLegacyProvider(providers)
 	provider, _ := providers[constant.ClientModelProviderID].(map[string]any)
 	if provider == nil {
 		provider = map[string]any{
@@ -101,8 +174,9 @@ func (OpenCodeTarget) Write(path, host, apiKey string, models []TargetModel) err
 		}
 		providers[constant.ClientModelProviderID] = provider
 	}
-	// baseURL 与 apiKey 由本工具管理，每次导出覆盖：保留旧值会让存量配置永远停在错误地址。
+	// name/baseURL/apiKey 由本工具管理，每次导出覆盖：保留旧值会让存量配置永远停在错误地址。
 	// models 保持 merge 语义，保留用户手工添加的模型。
+	provider[constant.ClientModelKeyName] = constant.ClientModelProviderID
 	options, _ := provider[constant.ClientModelKeyOptions].(map[string]any)
 	if options == nil {
 		options = map[string]any{}
@@ -211,14 +285,16 @@ func (PiTarget) Write(path, host, apiKey string, models []TargetModel) error {
 		providers = map[string]any{}
 		cfg.Raw[constant.ClientModelKeyProviders] = providers
 	}
+	migrateLegacyProvider(providers)
 	provider, _ := providers[constant.ClientModelProviderID].(map[string]any)
 	if provider == nil {
 		provider = map[string]any{constant.ClientModelKeyName: constant.ClientModelProviderID}
 		providers[constant.ClientModelProviderID] = provider
 	}
-	// baseUrl 与 apiKey 由本工具管理，每次导出覆盖：保留旧值会让存量配置永远停在错误地址。
+	// name/baseUrl/apiKey 由本工具管理，每次导出覆盖：保留旧值会让存量配置永远停在错误地址。
 	// models 保持 merge 语义：服务端列表内的同名条目整体刷新（否则调价后仍是旧价），
 	// 用户自己添加的模型（不在服务端列表内）原样保留。
+	provider[constant.ClientModelKeyName] = constant.ClientModelProviderID
 	provider[constant.ClientModelKeyBaseUrl] = host + constant.OpenAIProxyPrefix
 	provider[constant.ClientModelKeyAPIKey] = apiKey
 	provider[constant.ClientModelKeyAPI] = constant.ClientModelAPIOpenAI

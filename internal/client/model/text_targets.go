@@ -103,6 +103,9 @@ var tomlTableHeader = regexp.MustCompile(`^\s*\[{1,2}\s*[A-Za-z0-9_."'-]+(?:\s*\
 // tomlProviderHeader 匹配本工具 provider 表头（裸键或引号键）
 var tomlProviderHeader = regexp.MustCompile(`^\s*\[\s*model_providers\s*\.\s*(?:"?` + regexp.QuoteMeta(constant.ClientModelProviderID) + `"?)\s*\]\s*(?:#.*)?$`)
 
+// tomlLegacyProviderHeader 匹配品牌升级前的 provider 表头，导出时一并清理。
+var tomlLegacyProviderHeader = regexp.MustCompile(`^\s*\[\s*model_providers\s*\.\s*(?:"?` + regexp.QuoteMeta(constant.ClientModelLegacyProviderID) + `"?)\s*\]\s*(?:#.*)?$`)
+
 // tomlProfilesHeader 匹配 [profiles.*] 表头：Codex profile 合法使用 model / model_provider 同名键
 var tomlProfilesHeader = regexp.MustCompile(`^\s*\[\s*profiles\s*\.`)
 
@@ -259,7 +262,7 @@ func cleanCodexConfig(lines []string) codexCleanResult {
 
 		if !inLiteral {
 			switch {
-			case tomlProviderHeader.MatchString(line):
+			case tomlProviderHeader.MatchString(line), tomlLegacyProviderHeader.MatchString(line):
 				inProvider, seenTable = true, true
 				continue
 			case tomlMemoriesHeader.MatchString(line):
