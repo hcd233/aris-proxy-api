@@ -14,7 +14,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Panel } from "@/components/dashboard/panel";
-import { DENSE_CELL, DENSE_HEAD, TruncatedName } from "@/components/dashboard/dense-table";
+import {
+  DENSE_CELL,
+  DENSE_HEAD,
+  SHOW_FROM_310,
+  SHOW_FROM_360,
+  SHOW_FROM_440,
+  TruncatedName,
+} from "@/components/dashboard/dense-table";
 import { useOverview } from "@/components/dashboard/overview-context";
 import { useDashboardQuery } from "@/components/dashboard/use-dashboard-query";
 import type { DashboardRange } from "@/components/dashboard/use-dashboard-range";
@@ -47,25 +54,25 @@ export function EndpointHealthPanel({ range }: { range: DashboardRange }) {
       error={error}
       empty={!data || data.length === 0}
       onRetry={retry}
-      bodyClassName="px-1.5"
+      bodyClassName="@container px-1.5"
     >
       <Table fit>
         <TableHeader className="bg-transparent">
           <TableRow className="hover:bg-transparent">
             <TableHead className={DENSE_HEAD}>{t("dashboard.col.name")}</TableHead>
-            <TableHead className={cn(DENSE_HEAD, "w-14 text-right")}>
+            <TableHead className={cn(DENSE_HEAD, "w-16 text-right")}>
               {t("dashboard.col.requests")}
             </TableHead>
-            <TableHead className={cn(DENSE_HEAD, "w-14 text-right")}>
+            <TableHead className={cn(DENSE_HEAD, "w-[3.75rem] text-right")}>
               {t("dashboard.col.error_rate")}
             </TableHead>
-            <TableHead className={cn(DENSE_HEAD, "w-14 text-right")}>
+            <TableHead className={cn(DENSE_HEAD, "w-12 text-right", SHOW_FROM_310)}>
               {t("dashboard.col.p95")}
             </TableHead>
-            <TableHead className={cn(DENSE_HEAD, "w-12 text-right")}>
+            <TableHead className={cn(DENSE_HEAD, "w-12 text-right", SHOW_FROM_440)}>
               {t("dashboard.col.speed")}
             </TableHead>
-            <TableHead className={cn(DENSE_HEAD, "w-16 text-right")}>
+            <TableHead className={cn(DENSE_HEAD, "w-16 text-right", SHOW_FROM_360)}>
               {t("dashboard.col.cost")}
             </TableHead>
           </TableRow>
@@ -98,15 +105,15 @@ export function EndpointHealthPanel({ range }: { range: DashboardRange }) {
               >
                 {formatRate(row.errorRate)}
               </TableCell>
-              <TableCell className={cn(DENSE_CELL, "text-right")}>
+              <TableCell className={cn(DENSE_CELL, "text-right", SHOW_FROM_310)}>
                 {formatDurationMs(row.p95LatencyMs)}
               </TableCell>
-              <TableCell className={cn(DENSE_CELL, "text-right")}>
+              <TableCell className={cn(DENSE_CELL, "text-right", SHOW_FROM_440)}>
                 {row.outputTokensPerSecond != null
                   ? formatDecimal(row.outputTokensPerSecond, 0)
                   : "\u2014"}
               </TableCell>
-              <TableCell className={cn(DENSE_CELL, "text-right")}>
+              <TableCell className={cn(DENSE_CELL, "text-right", SHOW_FROM_360)}>
                 {formatCostShort(row.cost, overview?.currency)}
               </TableCell>
             </TableRow>
