@@ -30,7 +30,9 @@ html[data-theme="moonshot"] .portal-root .portal-stars {
 html[data-theme="moonshot"][data-motion-tier="immersive"] .portal-root .portal-stars {
   animation: portal-star-drift 240s linear infinite;
 }
-.portal-root > :not(.portal-stars) {
+/* lift content above the fixed starfield; the sticky header keeps its own position */
+.portal-root > main,
+.portal-root > footer {
   position: relative;
   z-index: 1;
 }
