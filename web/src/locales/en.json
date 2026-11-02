@@ -961,6 +961,7 @@
   "dashboard.metric.cost": "Cost",
   "dashboard.metric.requests": "Requests",
   "dashboard.metric.tokens": "Tokens",
+  "dashboard.failure.title": "Failures by status",
   "dashboard.failure.connection": "Connection",
   "dashboard.failure.unknown": "Unknown",
   "dashboard.failure.rest": "Rest",

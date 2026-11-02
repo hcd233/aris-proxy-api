@@ -961,6 +961,7 @@
   "dashboard.metric.cost": "费用",
   "dashboard.metric.requests": "请求",
   "dashboard.metric.tokens": "Token",
+  "dashboard.failure.title": "失败分布",
   "dashboard.failure.connection": "连接异常",
   "dashboard.failure.unknown": "未知错误",
   "dashboard.failure.rest": "其余",

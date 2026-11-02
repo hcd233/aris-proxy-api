@@ -44,7 +44,13 @@ describe("topFailures", () => {
   it("keeps the first k and folds the rest", () => {
     const { top, rest } = topFailures(failures, 4);
     expect(top.map((f) => f.statusCode)).toEqual([429, 502, -1, 400]);
-    expect(rest).toEqual({ codes: 2, count: 2 });
+    expect(rest).toEqual({
+      items: [
+        { statusCode: 0, count: 1 },
+        { statusCode: 503, count: 1 },
+      ],
+      count: 2,
+    });
   });
   it("returns null rest when everything fits", () => {
     expect(topFailures(failures.slice(0, 2), 4).rest).toBeNull();

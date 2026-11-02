@@ -71,15 +71,15 @@ export function failureCodeLabel(statusCode: number, t: (key: string) => string)
   return String(statusCode);
 }
 
-/** 取前 k 个失败状态码（后端已按 count 降序），其余合并为 rest；rest 为 null 表示无剩余 */
+/** 取前 k 个失败状态码（后端已按 count 降序），其余合并为 rest（保留明细供浮层展示）；rest 为 null 表示无剩余 */
 export function topFailures(
   failures: DashboardFailure[],
   k = FAILURE_TOP_K,
-): { top: DashboardFailure[]; rest: { codes: number; count: number } | null } {
+): { top: DashboardFailure[]; rest: { items: DashboardFailure[]; count: number } | null } {
   const top = failures.slice(0, k);
-  const tail = failures.slice(k);
-  if (tail.length === 0) return { top, rest: null };
-  return { top, rest: { codes: tail.length, count: tail.reduce((s, f) => s + f.count, 0) } };
+  const items = failures.slice(k);
+  if (items.length === 0) return { top, rest: null };
+  return { top, rest: { items, count: items.reduce((s, f) => s + f.count, 0) } };
 }
 
 /** 总输入 = 净输入 + 缓存读 + 缓存写（后端四维 token 互斥：input 落库时已归一化为净输入，不得再做 input − cacheRead 二次扣减） */

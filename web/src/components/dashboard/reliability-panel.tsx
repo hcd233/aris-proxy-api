@@ -43,30 +43,79 @@ function segmentLabel(seg: DashboardUptimeBucket, spanDays: number): string {
   return from === to ? from : `${from} – ${to}`;
 }
 
-/** 失败按状态码拆分（后端已降序）：只展示前 k 个，其余合并为一行，各行合计恒等于失败数 */
-function FailureCounts({ failures }: { failures: DashboardFailure[] }) {
+/** 紧凑状态码清单（段悬停浮层、「其余」浮层共用）：全部列出，不折叠 */
+function FailureList({ failures }: { failures: DashboardFailure[] }) {
   const t = useT();
   if (failures.length === 0) return null;
-  const { top, rest } = topFailures(failures);
   return (
-    <dl className="grid grid-cols-2 gap-x-4 gap-y-0.5">
-      {top.map((f) => (
-        <div key={f.statusCode} className="flex items-baseline justify-between gap-2">
+    <dl className="flex flex-col gap-0.5">
+      {failures.map((f) => (
+        <div key={f.statusCode} className="flex items-baseline justify-between gap-4">
           <dt className="text-muted-foreground tabular-nums">
             {failureCodeLabel(f.statusCode, t)}
           </dt>
           <dd className="font-mono tabular-nums">{formatInteger(f.count)}</dd>
         </div>
       ))}
-      {rest && (
-        <div className="flex items-baseline justify-between gap-2">
-          <dt className="text-muted-foreground tabular-nums">
-            {t("dashboard.failure.rest")} ({rest.codes})
-          </dt>
-          <dd className="font-mono tabular-nums">{formatInteger(rest.count)}</dd>
-        </div>
-      )}
     </dl>
+  );
+}
+
+/** 失败分布一行：状态码 · 占比条 · 次数 · 占比 */
+function FailureRow({ label, count, total }: { label: string; count: number; total: number }) {
+  const share = total > 0 ? count / total : 0;
+  return (
+    <>
+      <span className="text-muted-foreground tabular-nums">{label}</span>
+      <span className="h-1.5 overflow-hidden rounded-full bg-muted">
+        <span
+          className="block h-full rounded-full bg-negative/70"
+          style={{ width: `${Math.max(share * 100, 1)}%` }}
+        />
+      </span>
+      <span className="text-right font-mono tabular-nums">{formatInteger(count)}</span>
+      <span className="w-9 text-right font-mono text-muted-foreground tabular-nums">
+        {formatRate(share, 0)}
+      </span>
+    </>
+  );
+}
+
+/** 失败分布（后端已降序）：前 k 个状态码各占一行，其余合并为一行并以浮层展示明细；各行合计恒等于失败数 */
+function FailureBreakdown({ failures }: { failures: DashboardFailure[] }) {
+  const t = useT();
+  if (failures.length === 0) return null;
+  const total = failures.reduce((s, f) => s + f.count, 0);
+  const { top, rest } = topFailures(failures);
+  return (
+    <div className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-x-3 gap-y-1">
+      {top.map((f) => (
+        <FailureRow
+          key={f.statusCode}
+          label={failureCodeLabel(f.statusCode, t)}
+          count={f.count}
+          total={total}
+        />
+      ))}
+      {rest && (
+        <TooltipRoot>
+          <TooltipTrigger
+            render={
+              <div className="col-span-4 grid cursor-default grid-cols-subgrid items-center rounded-sm transition-colors hover:bg-muted/60">
+                <FailureRow
+                  label={`${t("dashboard.failure.rest")} (${rest.items.length})`}
+                  count={rest.count}
+                  total={total}
+                />
+              </div>
+            }
+          />
+          <TooltipContent className="min-w-36 text-xs">
+            <FailureList failures={rest.items} />
+          </TooltipContent>
+        </TooltipRoot>
+      )}
+    </div>
   );
 }
 
@@ -129,7 +178,7 @@ export function ReliabilityPanel({ range }: { range: DashboardRange }) {
         )
       }
     >
-      <div className="flex h-full flex-col gap-2 text-[11px]">
+      <div className="flex h-full flex-col gap-3 text-[11px]">
         <div className="flex items-baseline justify-end gap-1.5">
           <span className="font-display text-base text-foreground tabular-nums">
             {summary ? formatRate(successRate(summary), 2) : "\u2014"}
@@ -137,9 +186,9 @@ export function ReliabilityPanel({ range }: { range: DashboardRange }) {
           <span className="text-muted-foreground">{t("dashboard.kpi.success_rate")}</span>
         </div>
 
-        {/* 状态条固定高度，面板被网格拉高时多余空间均分到上下，避免竖条被拉成细长柱 */}
-        <div className="flex min-h-0 flex-1 flex-col justify-center gap-1">
-          <div className="flex h-10 gap-[2px]">
+        {/* 状态条随面板高度伸缩但封顶，避免大屏被拉成细长柱；内容整体顶对齐，余量留在底部 */}
+        <div className="flex max-h-28 min-h-14 flex-1 flex-col gap-1">
+          <div className="flex min-h-0 flex-1 gap-[2px]">
             {segments.map((seg, i) => {
               const level = uptimeLevel(seg);
               const label = segmentLabel(seg, spanDays);
@@ -183,7 +232,7 @@ export function ReliabilityPanel({ range }: { range: DashboardRange }) {
                               {formatRate(successRate(seg), 2)}
                             </span>
                           </div>
-                          <FailureCounts failures={seg.failures} />
+                          <FailureList failures={seg.failures} />
                         </>
                       )}
                     </div>
@@ -200,7 +249,14 @@ export function ReliabilityPanel({ range }: { range: DashboardRange }) {
           )}
         </div>
 
-        {summary && <FailureCounts failures={summary.failures} />}
+        {summary && summary.failures.length > 0 && (
+          <div className="flex flex-col gap-1.5 border-t border-border/60 pt-2.5">
+            <span className="text-[10px] tracking-wide text-muted-foreground">
+              {t("dashboard.failure.title")}
+            </span>
+            <FailureBreakdown failures={summary.failures} />
+          </div>
+        )}
       </div>
     </Panel>
   );

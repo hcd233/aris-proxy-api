@@ -961,6 +961,7 @@
   "dashboard.metric.cost": "コスト",
   "dashboard.metric.requests": "リクエスト",
   "dashboard.metric.tokens": "トークン",
+  "dashboard.failure.title": "失敗の内訳",
   "dashboard.failure.connection": "接続異常",
   "dashboard.failure.unknown": "不明なエラー",
   "dashboard.failure.rest": "その他",
