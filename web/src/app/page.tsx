@@ -1,5 +1,6 @@
 "use client";
 
+import { PortalCapabilities } from "@/components/portal/portal-capabilities";
 import { PortalEcosystem } from "@/components/portal/portal-ecosystem";
 import { PortalFeatureMarquee } from "@/components/portal/portal-feature-marquee";
 import { PortalFlow } from "@/components/portal/portal-flow";
@@ -21,6 +22,7 @@ export default function PortalPage() {
         <PortalFeatureMarquee />
         <PortalEcosystem />
         <PortalFlow />
+        <PortalCapabilities />
       </main>
     </div>
   );
