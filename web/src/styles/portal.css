@@ -131,17 +131,13 @@ html:not([data-motion-tier="still"]) .portal-hero-title .split-char {
   animation: portal-glyph-rise 0.9s var(--ease-silk, cubic-bezier(0.2, 0.8, 0.2, 1))
     calc(120ms + var(--i) * 40ms) backwards;
 }
-html[data-theme="moonshot"] .portal-hero-title {
+/* SplitText nests glyphs under an aria-hidden span, so the gradient cannot be
+ * inherited: each glyph carries its own text-clipped gradient. */
+html[data-theme="moonshot"] .portal-hero-title .split-char {
   background: linear-gradient(180deg, var(--foreground) 30%, var(--muted-foreground));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-}
-html[data-theme="moonshot"] .portal-hero-title .split-char {
-  /* each glyph is its own box: re-apply the clip so the gradient survives */
-  background: inherit;
-  -webkit-background-clip: text;
-  background-clip: text;
 }
 
 /* Hero copy / CTA stagger */
