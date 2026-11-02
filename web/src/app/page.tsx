@@ -4,6 +4,7 @@ import { PortalCapabilities } from "@/components/portal/portal-capabilities";
 import { PortalEcosystem } from "@/components/portal/portal-ecosystem";
 import { PortalFeatureMarquee } from "@/components/portal/portal-feature-marquee";
 import { PortalFlow } from "@/components/portal/portal-flow";
+import { PortalGetStarted } from "@/components/portal/portal-get-started";
 import { PortalHeader, PortalHero } from "@/components/portal/portal-hero";
 import { useAuth } from "@/lib/auth-context";
 import { portalPrimaryCta } from "@/lib/portal";
@@ -23,6 +24,7 @@ export default function PortalPage() {
         <PortalEcosystem />
         <PortalFlow />
         <PortalCapabilities />
+        <PortalGetStarted />
       </main>
     </div>
   );
