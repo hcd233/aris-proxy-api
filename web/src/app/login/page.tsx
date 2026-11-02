@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { AlertCircle, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { DASHBOARD_HOME_URL } from "@/lib/nav";
 import { useT } from "@/lib/i18n";
 import { api } from "@/lib/api-client";
 import { parseOAuthCallbackParams, resolveOAuthPlatform } from "@/lib/oauth";
@@ -67,7 +68,7 @@ export default function LoginPage() {
       }
       if (rsp.accessToken && rsp.refreshToken) {
         await handleCallback(rsp.accessToken, rsp.refreshToken);
-        window.location.href = "/web/";
+        window.location.href = DASHBOARD_HOME_URL;
       } else {
         setError(t("login.failed_no_tokens"));
         setProcessing(false);
@@ -99,7 +100,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (accessToken && user) {
-      window.location.href = "/web/";
+      window.location.href = DASHBOARD_HOME_URL;
     }
   }, [accessToken, user]);
 
@@ -115,7 +116,7 @@ export default function LoginPage() {
       }
       if (rsp.accessToken && rsp.refreshToken) {
         await handleCallback(rsp.accessToken, rsp.refreshToken);
-        window.location.href = "/web/";
+        window.location.href = DASHBOARD_HOME_URL;
       } else {
         setError(t("login.failed_no_tokens"));
         setProcessing(false);

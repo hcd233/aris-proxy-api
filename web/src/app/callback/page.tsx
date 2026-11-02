@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { DASHBOARD_HOME_URL } from "@/lib/nav";
 import { useT } from "@/lib/i18n";
 import { api } from "@/lib/api-client";
 import { parseOAuthCallbackParams, resolveOAuthPlatform } from "@/lib/oauth";
@@ -39,7 +40,7 @@ export default function CallbackPage() {
 
       if (data.accessToken && data.refreshToken) {
         await handleCallback(data.accessToken, data.refreshToken);
-        window.location.href = "/web/";
+        window.location.href = DASHBOARD_HOME_URL;
       } else {
         setError(t("callback.no_tokens"));
       }

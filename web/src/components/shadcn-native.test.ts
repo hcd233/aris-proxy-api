@@ -259,7 +259,7 @@ describe("agent harness 详情", () => {
 
 describe("dashboard 一屏指挥台", () => {
   it("页面由 KPI 行与六块面板组成，共用一个时间范围", () => {
-    const page = read("app/(dashboard)/page.tsx");
+    const page = read("app/(dashboard)/dashboard/page.tsx");
     for (const panel of [
       "<KpiRow",
       "<UsageTrendPanel",
