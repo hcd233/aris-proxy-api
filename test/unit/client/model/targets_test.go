@@ -42,13 +42,13 @@ func TestOpenCodeWrite_CreatesAndMerges(t *testing.T) {
 	if !ok {
 		t.Fatalf("opencode.json missing provider block:\n%s", s)
 	}
-	provider, ok := providers["aris-proxy"].(map[string]any)
+	provider, ok := providers["aris-mass"].(map[string]any)
 	if !ok {
-		t.Fatalf("opencode.json missing provider.aris-proxy:\n%s", s)
+		t.Fatalf("opencode.json missing provider.aris-mass:\n%s", s)
 	}
 	options, ok := provider["options"].(map[string]any)
 	if !ok {
-		t.Fatalf("opencode.json missing provider.aris-proxy.options:\n%s", s)
+		t.Fatalf("opencode.json missing provider.aris-mass.options:\n%s", s)
 	}
 	if got := options["baseURL"]; got != "https://aris.example.com/api/openai/v1" {
 		t.Fatalf("opencode provider baseURL must carry the openai proxy prefix, got %v", got)
@@ -82,9 +82,9 @@ func TestPiWrite_CreatesFile(t *testing.T) {
 	if !ok {
 		t.Fatalf("pi models.json missing top-level providers wrapper:\n%s", data)
 	}
-	provider, ok := providers["aris-proxy"].(map[string]any)
+	provider, ok := providers["aris-mass"].(map[string]any)
 	if !ok {
-		t.Fatalf("pi models.json missing providers.aris-proxy:\n%s", data)
+		t.Fatalf("pi models.json missing providers.aris-mass:\n%s", data)
 	}
 	if provider["baseUrl"] != "https://aris.example.com/api/openai/v1" {
 		t.Fatalf("pi provider baseUrl mismatch: %v", provider["baseUrl"])
@@ -104,7 +104,7 @@ func TestPiWrite_MergesExistingModels(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	path := filepath.Join(dir, "models.json")
-	if err := os.WriteFile(path, []byte(`{"providers":{"aris-proxy":{"baseUrl":"https://old.example.com","models":[{"id":"existing"}]}}}`), 0o600); err != nil {
+	if err := os.WriteFile(path, []byte(`{"providers":{"aris-mass":{"baseUrl":"https://old.example.com","models":[{"id":"existing"}]}}}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	target := model.PiTarget{}
@@ -120,7 +120,7 @@ func TestPiWrite_MergesExistingModels(t *testing.T) {
 		t.Fatalf("invalid JSON: %v", err)
 	}
 	providers := root["providers"].(map[string]any)
-	provider := providers["aris-proxy"].(map[string]any)
+	provider := providers["aris-mass"].(map[string]any)
 	// provider 已存在时 baseUrl/apiKey 仍由本工具覆盖：保留旧值会让存量配置永远停在错误地址
 	if provider["baseUrl"] != "https://aris.example.com/api/openai/v1" {
 		t.Fatalf("stale provider baseUrl must be overwritten: %v", provider["baseUrl"])
@@ -138,7 +138,7 @@ func TestOpenCodeWrite_OverwritesStaleBaseURL(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	path := filepath.Join(dir, "opencode.json")
-	stale := `{"provider":{"aris-proxy":{"options":{"baseURL":"https://old.example.com"},"models":{"existing":{"name":"Existing"}}}}}`
+	stale := `{"provider":{"aris-mass":{"options":{"baseURL":"https://old.example.com"},"models":{"existing":{"name":"Existing"}}}}}`
 	if err := os.WriteFile(path, []byte(stale), 0o600); err != nil { //nolint:gosec // test fixture
 		t.Fatal(err)
 	}
@@ -155,7 +155,7 @@ func TestOpenCodeWrite_OverwritesStaleBaseURL(t *testing.T) {
 		t.Fatalf("invalid JSON: %v", err)
 	}
 	providers := cfg["provider"].(map[string]any)
-	provider := providers["aris-proxy"].(map[string]any)
+	provider := providers["aris-mass"].(map[string]any)
 	options := provider["options"].(map[string]any)
 	// provider 已存在时 baseURL/apiKey 仍由本工具覆盖：保留旧值会让存量配置永远停在错误地址
 	if options["baseURL"] != "https://aris.example.com/api/openai/v1" {
@@ -177,7 +177,7 @@ func TestOpenCodeWrite_PreservesUnmanagedKeys(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "opencode.json")
 	existing := `{"$schema":"https://opencode.ai/config.json","theme":"tokyonight","mcp":{"docs":{"type":"local"}},` +
-		`"provider":{"aris-proxy":{"options":{"timeout":30000,"baseURL":"https://old"},"models":{"mine":{"name":"Mine"}}},` +
+		`"provider":{"aris-mass":{"options":{"timeout":30000,"baseURL":"https://old"},"models":{"mine":{"name":"Mine"}}},` +
 		`"anthropic":{"options":{"apiKey":"user-key"}}}}`
 	if err := os.WriteFile(path, []byte(existing), 0o600); err != nil { //nolint:gosec // test fixture
 		t.Fatal(err)
@@ -205,7 +205,7 @@ func TestOpenCodeWrite_PreservesUnmanagedKeys(t *testing.T) {
 	if _, ok := providers["anthropic"].(map[string]any); !ok {
 		t.Fatalf("other providers must be preserved:\n%s", data)
 	}
-	provider := providers["aris-proxy"].(map[string]any)
+	provider := providers["aris-mass"].(map[string]any)
 	options := provider["options"].(map[string]any)
 	if options["timeout"] != float64(30000) {
 		t.Fatalf("unmanaged provider option must be preserved: %v", options["timeout"])
@@ -255,7 +255,7 @@ func TestPiWrite_FiltersUnsupportedModalitiesAndWritesCost(t *testing.T) {
 	if err := sonic.Unmarshal(data, &root); err != nil {
 		t.Fatalf("invalid JSON: %v", err)
 	}
-	entries := root["providers"].(map[string]any)["aris-proxy"].(map[string]any)["models"].([]any)
+	entries := root["providers"].(map[string]any)["aris-mass"].(map[string]any)["models"].([]any)
 	omni := entries[0].(map[string]any)
 	if got := omni["input"].([]any); len(got) != 2 || got[0] != "text" || got[1] != "image" {
 		t.Fatalf("pi input must keep only text/image, got %v", got)
@@ -294,7 +294,7 @@ func TestOpenCodeWrite_WritesCostOnlyWhenPriced(t *testing.T) {
 	if err := sonic.Unmarshal(data, &cfg); err != nil {
 		t.Fatalf("invalid JSON: %v", err)
 	}
-	entries := cfg["provider"].(map[string]any)["aris-proxy"].(map[string]any)["models"].(map[string]any)
+	entries := cfg["provider"].(map[string]any)["aris-mass"].(map[string]any)["models"].(map[string]any)
 	cost, ok := entries["omni"].(map[string]any)["cost"].(map[string]any)
 	if !ok {
 		t.Fatalf("priced model must carry cost:\n%s", data)
@@ -311,7 +311,7 @@ func TestOpenCodeWrite_WritesCostOnlyWhenPriced(t *testing.T) {
 func TestPiWrite_RefreshesExportedModelsAndKeepsUserModels(t *testing.T) {
 	t.Parallel()
 	path := filepath.Join(t.TempDir(), "models.json")
-	existing := `{"providers":{"aris-proxy":{"apiKey":"old","models":[` +
+	existing := `{"providers":{"aris-mass":{"apiKey":"old","models":[` +
 		`{"id":"gpt-4o","name":"gpt-4o","cost":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0}},` +
 		`{"id":"mine","name":"Mine","cost":{"input":9,"output":9,"cacheRead":1,"cacheWrite":1}}]}}}`
 	if err := os.WriteFile(path, []byte(existing), 0o600); err != nil { //nolint:gosec // test fixture
@@ -334,7 +334,7 @@ func TestPiWrite_RefreshesExportedModelsAndKeepsUserModels(t *testing.T) {
 	if err := sonic.Unmarshal(data, &root); err != nil {
 		t.Fatalf("invalid JSON: %v", err)
 	}
-	entries := root["providers"].(map[string]any)["aris-proxy"].(map[string]any)["models"].([]any)
+	entries := root["providers"].(map[string]any)["aris-mass"].(map[string]any)["models"].([]any)
 	if len(entries) != 2 {
 		t.Fatalf("expected refreshed + user model, got %d:\n%s", len(entries), data)
 	}
@@ -369,7 +369,7 @@ func TestPiWrite_RefreshesExportedModelsAndKeepsUserModels(t *testing.T) {
 	if err := sonic.Unmarshal(second, &root); err != nil {
 		t.Fatalf("invalid JSON: %v", err)
 	}
-	entries = root["providers"].(map[string]any)["aris-proxy"].(map[string]any)["models"].([]any)
+	entries = root["providers"].(map[string]any)["aris-mass"].(map[string]any)["models"].([]any)
 	if len(entries) != 2 {
 		t.Fatalf("re-export must not duplicate entries, got %d:\n%s", len(entries), second)
 	}
@@ -397,11 +397,88 @@ func TestOpenCodeWrite_PDFEnablesAttachment(t *testing.T) {
 	if err := sonic.Unmarshal(data, &cfg); err != nil {
 		t.Fatalf("invalid JSON: %v", err)
 	}
-	entries := cfg["provider"].(map[string]any)["aris-proxy"].(map[string]any)["models"].(map[string]any)
+	entries := cfg["provider"].(map[string]any)["aris-mass"].(map[string]any)["models"].(map[string]any)
 	if entries["pdf"].(map[string]any)["attachment"] != true {
 		t.Fatalf("pdf model must enable attachment:\n%s", data)
 	}
 	if _, ok := entries["plain"].(map[string]any)["attachment"]; ok {
 		t.Fatalf("text-only model must not enable attachment:\n%s", data)
+	}
+}
+
+// 品牌升级：旧 aris-proxy provider 必须整体迁移到 aris-mass，且保留用户自加模型。
+func TestOpenCodeWrite_MigratesLegacyProvider(t *testing.T) {
+	t.Parallel()
+	path := filepath.Join(t.TempDir(), "opencode.json")
+	legacy := `{"provider":{"aris-proxy":{"name":"Aris Proxy","options":{"timeout":30000,"baseURL":"https://old"},` +
+		`"models":{"mine":{"name":"Mine"}}}}}`
+	if err := os.WriteFile(path, []byte(legacy), 0o600); err != nil { //nolint:gosec // test fixture
+		t.Fatal(err)
+	}
+	if err := (model.OpenCodeTarget{}).Write(path, "https://aris.example.com", "sk-test", fixtureModels[:1]); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cfg map[string]any
+	if err := sonic.Unmarshal(data, &cfg); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	providers := cfg["provider"].(map[string]any)
+	if _, ok := providers["aris-proxy"]; ok {
+		t.Fatalf("legacy provider must be removed:\n%s", data)
+	}
+	provider, ok := providers["aris-mass"].(map[string]any)
+	if !ok {
+		t.Fatalf("migrated provider missing:\n%s", data)
+	}
+	if provider["name"] != "aris-mass" {
+		t.Fatalf("provider name must follow the new id, got %v", provider["name"])
+	}
+	models := provider["models"].(map[string]any)
+	if _, ok := models["mine"]; !ok {
+		t.Fatalf("user model under legacy provider must be preserved:\n%s", data)
+	}
+	if _, ok := models["gpt-4o"]; !ok {
+		t.Fatalf("exported model missing after migration:\n%s", data)
+	}
+}
+
+// 品牌升级：旧 aris-proxy provider 的 Pi 配置同样迁移，用户自加模型按 id 保留。
+func TestPiWrite_MigratesLegacyProvider(t *testing.T) {
+	t.Parallel()
+	path := filepath.Join(t.TempDir(), "models.json")
+	legacy := `{"providers":{"aris-proxy":{"apiKey":"old","models":[{"id":"mine","name":"Mine"}]}}}`
+	if err := os.WriteFile(path, []byte(legacy), 0o600); err != nil { //nolint:gosec // test fixture
+		t.Fatal(err)
+	}
+	if err := (model.PiTarget{}).Write(path, "https://aris.example.com", "sk-test", fixtureModels[:1]); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var root map[string]any
+	if err := sonic.Unmarshal(data, &root); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	providers := root["providers"].(map[string]any)
+	if _, ok := providers["aris-proxy"]; ok {
+		t.Fatalf("legacy provider must be removed:\n%s", data)
+	}
+	provider, ok := providers["aris-mass"].(map[string]any)
+	if !ok {
+		t.Fatalf("migrated provider missing:\n%s", data)
+	}
+	ids := map[string]bool{}
+	for _, entry := range provider["models"].([]any) {
+		obj := entry.(map[string]any)
+		ids[obj["id"].(string)] = true
+	}
+	if !ids["mine"] || !ids["gpt-4o"] {
+		t.Fatalf("user and exported models must both survive migration: %v\n%s", ids, data)
 	}
 }

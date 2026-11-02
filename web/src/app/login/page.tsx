@@ -171,7 +171,7 @@ export default function LoginPage() {
               <SplitText text="Aris" />
             </span>
             <span className="block">
-              <SplitText text="Proxy" />
+              <SplitText text="Mass" />
             </span>
           </h1>
           <p className="login-at login-at-3 mt-6 max-w-[24rem] text-base leading-[1.8] text-muted-foreground lg:mt-8 lg:text-lg">

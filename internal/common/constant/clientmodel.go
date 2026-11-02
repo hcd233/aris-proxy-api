@@ -5,10 +5,11 @@ import "github.com/hcd233/aris-mass/internal/common/enum"
 
 // ClientModelExport 模型导出目标与默认值
 const (
-	// ClientModelProviderID 本工具写入各 harness 的 provider 标识。
-	// 这是落在用户 opencode.json / models.json / Codex TOML 里的配置键，
-	// 改名会让存量配置多出孤儿 provider 且破坏幂等 patch，故不随品牌升级改动。
-	ClientModelProviderID = "aris-proxy"
+	// ClientModelProviderID 本工具写入各 harness 的 provider 标识
+	ClientModelProviderID = "aris-mass"
+	// ClientModelLegacyProviderID 品牌升级前的 provider 标识。
+	// 导出时把旧键整体迁移到新键并删除旧键，避免用户配置里留下孤儿 provider。
+	ClientModelLegacyProviderID = "aris-proxy"
 
 	// ClientModelTargetOpenCode OpenCode 目标标识
 	ClientModelTargetOpenCode = "opencode"

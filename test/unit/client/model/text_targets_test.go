@@ -72,7 +72,7 @@ func TestCodexWrite_RootAndProviderBlocks(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	path := filepath.Join(dir, "config.toml")
-	stale := "model = \"old-model\"\nmodel_provider = \"old\"\n\n[model_providers.\"aris-proxy\"]\nname = \"Old\"\nbase_url = \"https://old\"\n"
+	stale := "model = \"old-model\"\nmodel_provider = \"old\"\n\n[model_providers.\"aris-mass\"]\nname = \"Old\"\nbase_url = \"https://old\"\n"
 	if err := os.WriteFile(path, []byte(stale), 0o600); err != nil { //nolint:gosec // test fixture
 		t.Fatal(err)
 	}
@@ -86,7 +86,7 @@ func TestCodexWrite_RootAndProviderBlocks(t *testing.T) {
 	}
 	s := string(data)
 	for _, want := range []string{
-		`[model_providers."aris-proxy"]`,
+		`[model_providers."aris-mass"]`,
 		`wire_api = "responses"`,
 		`experimental_bearer_token`,
 		`model_context_window`,
@@ -102,9 +102,9 @@ func TestCodexWrite_RootAndProviderBlocks(t *testing.T) {
 		t.Fatalf("codex stale root model keys not cleaned:\n%s", s)
 	}
 	// 旧同名 provider 段应被清理
-	count := strings.Count(s, `[model_providers."aris-proxy"]`)
+	count := strings.Count(s, `[model_providers."aris-mass"]`)
 	if count != 1 {
-		t.Fatalf("expected exactly one aris-proxy provider block, got %d:\n%s", count, s)
+		t.Fatalf("expected exactly one aris-mass provider block, got %d:\n%s", count, s)
 	}
 }
 
@@ -132,7 +132,7 @@ func TestCodexWrite_RepairsNestedRootKeysAndDuplicatedMemories(t *testing.T) {
 		`extract_model = "gpt-4o"`,
 		`consolidation_model = "gpt-4o"`,
 		"",
-		`[model_providers."aris-proxy"]`,
+		`[model_providers."aris-mass"]`,
 		`name = "Old"`,
 		"",
 	}, "\n")
@@ -162,8 +162,8 @@ func TestCodexWrite_RepairsNestedRootKeysAndDuplicatedMemories(t *testing.T) {
 	if n := strings.Count(got, "[memories]"); n != 1 {
 		t.Fatalf("expected exactly one [memories] table, got %d:\n%s", n, got)
 	}
-	if n := strings.Count(got, `[model_providers."aris-proxy"]`); n != 1 {
-		t.Fatalf("expected exactly one aris-proxy provider block, got %d:\n%s", n, got)
+	if n := strings.Count(got, `[model_providers."aris-mass"]`); n != 1 {
+		t.Fatalf("expected exactly one aris-mass provider block, got %d:\n%s", n, got)
 	}
 	if !strings.Contains(got, `name = "DeepSeek"`) || !strings.Contains(got, "generate_memories = true") {
 		t.Fatalf("unrelated config must be preserved:\n%s", got)
@@ -213,7 +213,7 @@ func TestCodexWrite_RepairsRootKeysInForeignTailTable(t *testing.T) {
 		`model_provider = "stale-provider"`,
 		"model_context_window = 100000",
 		"",
-		`[model_providers."aris-proxy"]`,
+		`[model_providers."aris-mass"]`,
 		`name = "Old"`,
 	}, "\n")
 	if err := os.WriteFile(path, []byte(broken), 0o600); err != nil { //nolint:gosec // test fixture
@@ -245,8 +245,8 @@ func TestCodexWrite_RepairsRootKeysInForeignTailTable(t *testing.T) {
 	if !strings.Contains(got, "memories = true") || !strings.Contains(got, `notify = ["x"]`) {
 		t.Fatalf("unrelated config must be preserved:\n%s", got)
 	}
-	if n := strings.Count(got, `[model_providers."aris-proxy"]`); n != 1 {
-		t.Fatalf("expected exactly one aris-proxy provider block, got %d:\n%s", n, got)
+	if n := strings.Count(got, `[model_providers."aris-mass"]`); n != 1 {
+		t.Fatalf("expected exactly one aris-mass provider block, got %d:\n%s", n, got)
 	}
 }
 
@@ -332,7 +332,7 @@ func TestCodexWrite_ReplacesProviderBlockWithTrailingComment(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "config.toml")
 	existing := strings.Join([]string{
-		`[model_providers."aris-proxy"] # 我加的`,
+		`[model_providers."aris-mass"] # 我加的`,
 		`name = "Old"`,
 		`base_url = "https://old"`,
 	}, "\n")
@@ -349,10 +349,40 @@ func TestCodexWrite_ReplacesProviderBlockWithTrailingComment(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := string(data)
-	if n := strings.Count(got, `[model_providers."aris-proxy"]`); n != 1 {
-		t.Fatalf("expected exactly one aris-proxy provider block, got %d:\n%s", n, got)
+	if n := strings.Count(got, `[model_providers."aris-mass"]`); n != 1 {
+		t.Fatalf("expected exactly one aris-mass provider block, got %d:\n%s", n, got)
 	}
 	if strings.Contains(got, `name = "Old"`) {
 		t.Fatalf("stale provider block not replaced:\n%s", got)
+	}
+}
+
+// 品牌升级：旧 [model_providers."aris-proxy"] 段必须在导出时清理，只留新段。
+func TestCodexWrite_MigratesLegacyProvider(t *testing.T) {
+	t.Parallel()
+	path := filepath.Join(t.TempDir(), "config.toml")
+	legacy := "notify = [\"x\"]\n\n[model_providers.\"aris-proxy\"]\nname = \"Old\"\nbase_url = \"https://old\"\n"
+	if err := os.WriteFile(path, []byte(legacy), 0o600); err != nil { //nolint:gosec // test fixture
+		t.Fatal(err)
+	}
+	if err := (model.CodexTarget{}).Write(path, "https://aris.example.com", "sk-test", fixtureModels[:1]); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(data)
+	if strings.Contains(s, `[model_providers."aris-proxy"]`) {
+		t.Fatalf("legacy provider block must be removed:\n%s", s)
+	}
+	if got := strings.Count(s, `[model_providers."aris-mass"]`); got != 1 {
+		t.Fatalf("expected exactly one aris-mass provider block, got %d:\n%s", got, s)
+	}
+	if !strings.Contains(s, `model_provider = "aris-mass"`) {
+		t.Fatalf("root model_provider must point at the new id:\n%s", s)
+	}
+	if !strings.Contains(s, `notify = ["x"]`) {
+		t.Fatalf("unmanaged root keys must be preserved:\n%s", s)
 	}
 }
