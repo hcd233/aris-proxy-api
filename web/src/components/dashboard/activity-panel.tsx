@@ -95,7 +95,10 @@ export function ActivityPanel({ range }: { range: DashboardRange }) {
               <span
                 key={h}
                 onMouseEnter={() => setHover({ d, h, count })}
-                className={cn("min-h-1.5 rounded-[2px]", count > 0 ? "bg-primary" : "bg-muted")}
+                className={cn(
+                  "min-h-1.5 rounded-[2px] transition-[opacity,background-color] duration-500",
+                  count > 0 ? "bg-primary" : "bg-muted",
+                )}
                 style={count > 0 ? { opacity: 0.15 + (count / max) * 0.85 } : undefined}
               />
             ))}
@@ -117,7 +120,7 @@ export function ActivityPanel({ range }: { range: DashboardRange }) {
           {segments.map((s) => (
             <div
               key={s.key}
-              className="h-full"
+              className="h-full transition-[width] duration-500 ease-out"
               style={{ width: `${s.share * 100}%`, backgroundColor: s.color }}
             />
           ))}

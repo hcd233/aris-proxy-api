@@ -45,4 +45,12 @@ describe("planDigits", () => {
     const plan = planDigits(5, -12);
     expect(plan.cells[0]).toEqual({ from: "-", to: "-", changed: false });
   });
+
+  it("rolls only the digits of formatted text", () => {
+    const plan = planDigits("99.50%", "99.62%");
+    expect(plan.direction).toBe(1);
+    expect(plan.cells.map((c) => c.changed)).toEqual([false, false, false, true, true, false]);
+    expect(plan.cells[3]).toEqual({ from: "5", to: "6", changed: true });
+    expect(planDigits("1.2K", "1.2K").direction).toBe(0);
+  });
 });

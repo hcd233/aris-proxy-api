@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback } from "react";
 import { Line, LineChart, XAxis, YAxis, CartesianGrid } from "recharts";
 
 import {
@@ -12,6 +13,7 @@ import {
 } from "@/components/ui/chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useChartLegendHighlight } from "@/hooks/use-chart-legend-highlight";
+import { useChartMotion } from "@/lib/motion/chart-motion";
 import { formatDecimal } from "@/lib/utils";
 
 interface RuntimeChartSeries {
@@ -29,6 +31,9 @@ interface RuntimeChartProps {
   rangeKey: string;
   emptyLabel: string;
 }
+
+/** 模块级常量：内联数组每次渲染都是新引用，会让 recharts 重算坐标轴并重放曲线动画 */
+const Y_DOMAIN: [number, "auto"] = [0, "auto"];
 
 function formatTick(unix: number, rangeKey: string): string {
   const d = new Date(unix * 1000);
@@ -66,6 +71,9 @@ export function RuntimeChart({
   const isEmpty = data.length === 0;
   const showLegend = series.length > 1;
   const { activeLegend, onLegendHover, getStrokeOpacity } = useChartLegendHighlight();
+  // 刷新按 time 配对补间：窗口右移时曲线平移、新点滑入；data 引用不变时不触发
+  const motion = useChartMotion();
+  const xTickFormatter = useCallback((v: unknown) => formatTick(Number(v), rangeKey), [rangeKey]);
 
   return (
     <Card>
@@ -83,7 +91,7 @@ export function RuntimeChart({
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis
                 dataKey="time"
-                tickFormatter={(v) => formatTick(Number(v), rangeKey)}
+                tickFormatter={xTickFormatter}
                 tickLine={false}
                 axisLine={false}
                 tickMargin={8}
@@ -95,7 +103,7 @@ export function RuntimeChart({
                 axisLine={false}
                 tickMargin={8}
                 width={44}
-                domain={[0, "auto"]}
+                domain={Y_DOMAIN}
                 fontSize={12}
               />
               <ChartTooltip
@@ -145,7 +153,7 @@ export function RuntimeChart({
                   strokeOpacity={getStrokeOpacity(s.key)}
                   strokeDasharray={s.dashed ? "6 4" : undefined}
                   dot={false}
-                  isAnimationActive={false}
+                  {...motion}
                 />
               ))}
             </LineChart>

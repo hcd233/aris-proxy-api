@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { Area, CartesianGrid, ComposedChart, Line, XAxis, YAxis } from "recharts";
 import { useI18n } from "@/lib/i18n";
 import { useChartSeriesColors, useStatusColors } from "@/lib/theme";
@@ -18,12 +18,14 @@ import { useOverview } from "@/components/dashboard/overview-context";
 import type { DashboardRange } from "@/components/dashboard/use-dashboard-range";
 
 /** 延迟：首字 P50 / P95 / P99 三线 + P50–P95 带；底部输出速度与平均流式时长 */
+const yTickFormatter = (v: number) => formatDurationMs(v);
+
 export function LatencyPanel({ range }: { range: DashboardRange }) {
   const { t, locale } = useI18n();
   const colors = useChartSeriesColors();
   const status = useStatusColors();
   const motion = useChartMotion();
-  const { data, loading, error, retry } = useOverview();
+  const { data, scope, loading, error, retry } = useOverview();
 
   const config = useMemo<ChartConfig>(
     () => ({
@@ -36,6 +38,12 @@ export function LatencyPanel({ range }: { range: DashboardRange }) {
     [colors, status, locale],
   );
 
+  // 坐标轴回调保持引用稳定：内联函数每次渲染都会让 recharts 重算坐标并重放曲线动画
+  const { key: rangeKey, customStart, customEnd } = range;
+  const xTickFormatter = useCallback(
+    (v: string) => formatChartTime(v, rangeKey, customStart, customEnd),
+    [rangeKey, customStart, customEnd],
+  );
   const series = data?.current.series;
   const chartData = useMemo(
     () =>
@@ -74,7 +82,8 @@ export function LatencyPanel({ range }: { range: DashboardRange }) {
         )
       }
     >
-      <ChartContainer config={config} className="aspect-auto h-full min-h-32 w-full">
+      {/* 换视图时整图重新入场；同视图刷新只做点位补间 */}
+      <ChartContainer key={scope} config={config} className="aspect-auto h-full min-h-32 w-full">
         <ComposedChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
           <CartesianGrid vertical={false} strokeDasharray="3 3" />
           <XAxis
@@ -82,16 +91,9 @@ export function LatencyPanel({ range }: { range: DashboardRange }) {
             tickLine={false}
             axisLine={false}
             minTickGap={28}
-            tickFormatter={(v: string) =>
-              formatChartTime(v, range.key, range.customStart, range.customEnd)
-            }
+            tickFormatter={xTickFormatter}
           />
-          <YAxis
-            tickLine={false}
-            axisLine={false}
-            width={40}
-            tickFormatter={(v: number) => formatDurationMs(v)}
-          />
+          <YAxis tickLine={false} axisLine={false} width={40} tickFormatter={yTickFormatter} />
           <ChartTooltip
             content={
               <ChartTooltipContent

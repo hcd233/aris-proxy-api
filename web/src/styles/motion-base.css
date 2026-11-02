@@ -24,6 +24,30 @@
   }
 }
 
+/* Auto refresh countdown: the ring fills over one interval (--refresh-ms)
+ * and the data refreshes when it closes. Restarted by re-keying the node. */
+@keyframes refresh-countdown {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.refresh-ring {
+  stroke-dasharray: 1;
+  animation: refresh-countdown var(--refresh-ms, 30s) linear both;
+}
+
+/* Data morph: sparkline paths glide to their refreshed shape instead of
+ * jumping (CSS `d`; browsers without it simply snap). */
+.data-morph {
+  transition: d 600ms var(--ease-silk, ease);
+}
+html[data-motion-tier="still"] .data-morph {
+  transition: none;
+}
+
 /* Pseudo-element overlays (card light, popover beam) need a positioned
  * host. Kept in the components layer so an explicit `absolute` / `fixed`
  * utility on the same element still wins. */

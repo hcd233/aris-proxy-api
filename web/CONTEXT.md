@@ -148,6 +148,16 @@ _Avoid_: message metadata, debug info
 按模型 pricing 的「无条件默认规则（代表档）」估算的单轮费用：`(prompt−cached)×input + cached×cacheRead + completion×output`，单价每 1M tokens。不做时段/上下文区间匹配，精确值以审计为准。
 _Avoid_: cost, billing amount
 
+## Refresh（刷新）
+
+**Auto Refresh（自动刷新）**:
+Dashboard / Monitor 页头的刷新按钮（`components/shared/auto-refresh-button.tsx`）：主按钮立即刷新，图标外圈的倒计时环转满即自动刷新，右侧菜单选「关闭」或频率档位。间隔持久化在 `localStorage`（`dashboard.autoRefreshMs` 默认关闭、`monitor.autoRefreshMs` 默认 5s），`0` 表示关闭。标签页隐藏时停表，回到前台立即补一次。
+_Avoid_: polling, live update
+
+**Refresh Tween（刷新补间）**:
+同一视图内刷新时，只让真正变化的部分动：数据先与上一份做结构共享（`lib/structural-share.ts`），内容不变则引用不变、图表完全静止；变化的图表按 `time` 配对新旧点位过渡（新点滑入、过期点滑出）。切换时间范围属于「换视图」，图表以 scope 作 key 整图重新入场。
+_Avoid_: re-render animation, chart replay
+
 ## Motion（动效）
 
 **Motion World（动效世界）**:

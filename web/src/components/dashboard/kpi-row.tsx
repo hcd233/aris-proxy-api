@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, type ReactNode } from "react";
+import { useMemo } from "react";
 import { useI18n } from "@/lib/i18n";
 import { cn, formatDurationMs, formatInteger, formatTokenCount, formatDecimal } from "@/lib/utils";
 import {
@@ -24,6 +24,7 @@ import {
 import type { DashboardStats, DashboardStatsPoint } from "@/lib/types";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { MetricNumber } from "@/components/motion/metric-number";
 import { Sparkline } from "@/components/dashboard/sparkline";
 import { useOverview } from "@/components/dashboard/overview-context";
 import type { DashboardRange } from "@/components/dashboard/use-dashboard-range";
@@ -37,7 +38,7 @@ const TONE_CLASS: Record<DeltaTone, string> = {
 interface KpiSpec {
   kind: KpiKind;
   label: string;
-  value: ReactNode;
+  value: string;
   unit?: string;
   delta: number | null;
   sub: string[];
@@ -74,7 +75,7 @@ function KpiCard({ spec, loading }: { spec: KpiSpec; loading: boolean }) {
       ) : (
         <>
           <div className="font-display text-2xl leading-tight font-normal whitespace-nowrap text-foreground tabular-nums">
-            {spec.value}
+            <MetricNumber value={spec.value} />
             {spec.unit && <span className="ml-1 text-xs text-muted-foreground">{spec.unit}</span>}
           </div>
           <div className="min-h-[2lh] text-[11px] leading-snug text-muted-foreground tabular-nums">

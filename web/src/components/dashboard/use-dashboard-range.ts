@@ -2,6 +2,12 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { usePersistentState } from "@/hooks/use-persistent-state";
+import { useAutoRefresh } from "@/hooks/use-auto-refresh";
+import {
+  DASHBOARD_REFRESH_INTERVALS,
+  REFRESH_OFF,
+  normalizeRefreshInterval,
+} from "@/lib/refresh-interval";
 import { computeRange, type TimeRangeKey } from "@/lib/time-range";
 import type { Granularity } from "@/lib/types";
 
@@ -14,9 +20,17 @@ export interface DashboardRange {
   granularity: Granularity;
   /** 对比周期的长度（天，可为小数），用于页头「对比上一 N 天」文案 */
   spanDays: number;
+  /** 用户选定的视图（范围 + 粒度）；刷新不变，换范围才变。图表以它区分刷新与换视图 */
+  scope: string;
   /** 每次刷新自增；面板以它作为拉取依赖 */
   refreshToken: number;
+  /** 自动刷新间隔，REFRESH_OFF 表示关闭（默认） */
+  refreshIntervalMs: number;
+  /** 自动刷新轮次，驱动倒计时环 */
+  refreshCycle: number;
+  setRefreshIntervalMs: (ms: number) => void;
   setRange: (key: TimeRangeKey, customStart: string, customEnd: string) => void;
+  /** 立即刷新，并重置自动刷新倒计时 */
   refresh: () => void;
 }
 
@@ -29,6 +43,15 @@ export function useDashboardRange(): DashboardRange {
   const [customStart, setCustomStart] = usePersistentState("dashboard.range.customStart", "");
   const [customEnd, setCustomEnd] = usePersistentState("dashboard.range.customEnd", "");
   const [refreshToken, setRefreshToken] = useState(0);
+  const [storedIntervalMs, setRefreshIntervalMs] = usePersistentState<number>(
+    "dashboard.autoRefreshMs",
+    REFRESH_OFF,
+  );
+  const refreshIntervalMs = normalizeRefreshInterval(
+    storedIntervalMs,
+    DASHBOARD_REFRESH_INTERVALS,
+    REFRESH_OFF,
+  );
 
   const { startTime, endTime, granularity } = useMemo(
     () => computeRange(key, customStart, customEnd),
@@ -46,7 +69,8 @@ export function useDashboardRange(): DashboardRange {
     },
     [setKey, setCustomStart, setCustomEnd],
   );
-  const refresh = useCallback(() => setRefreshToken((n) => n + 1), []);
+  const bump = useCallback(() => setRefreshToken((n) => n + 1), []);
+  const { cycle, refreshNow } = useAutoRefresh(refreshIntervalMs, bump);
 
   return {
     key,
@@ -56,8 +80,12 @@ export function useDashboardRange(): DashboardRange {
     endTime,
     granularity,
     spanDays,
+    scope: `${key}|${customStart}|${customEnd}|${granularity}`,
     refreshToken,
+    refreshIntervalMs,
+    refreshCycle: cycle,
+    setRefreshIntervalMs,
     setRange,
-    refresh,
+    refresh: refreshNow,
   };
 }
