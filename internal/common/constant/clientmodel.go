@@ -144,7 +144,7 @@ const (
 // ClientModelCodexExtra Codex/Claude Code 配置细节常量
 const (
 	// ClientModelLabelArisMass Codex provider 展示名
-	ClientModelLabelArisMass = "Aris Mass"
+	ClientModelLabelArisMass = "Aris MaaS"
 	// ClientModelDefaultMemoryModel memories 表模型缺省值
 	ClientModelDefaultMemoryModel = ""
 	// ClientModelKeyEnv Claude Code settings.json 的 env 键

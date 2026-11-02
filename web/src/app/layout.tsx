@@ -24,8 +24,8 @@ const sourceSerif = Source_Serif_4({
 });
 
 export const metadata: Metadata = {
-  title: "Aris Mass",
-  description: "Management interface for Aris Mass",
+  title: "Aris MaaS",
+  description: "Management interface for Aris MaaS",
 };
 
 export default function RootLayout({

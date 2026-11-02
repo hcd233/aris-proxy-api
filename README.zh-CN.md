@@ -1,4 +1,4 @@
-# Aris Mass
+# Aris MaaS
 
 [English](README.md) | **简体中文**
 

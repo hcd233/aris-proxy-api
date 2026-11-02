@@ -256,7 +256,7 @@ function SharedSessionView() {
     <>
       <Link
         href="/"
-        aria-label="Aris Mass"
+        aria-label="Aris MaaS"
         className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary font-display text-sm font-semibold text-primary-foreground"
       >
         A

@@ -33,7 +33,7 @@ mcp__chrome_devtools__new_page { "url": "https://api.lvlvko.top/web/" }
 用 `mcp__chrome_devtools__take_snapshot` 拿页面 a11y 快照，按特征判断：
 
 - **已登录**：URL 是 `/web/` 或 `/web/<页面>`；快照里有左侧 `navigation`（Dashboard、Sessions、API Keys、Models、Cron Audit 等链接）和顶部用户信息（头像、用户名、角色、Logout 按钮）。
-- **未登录**：URL 被重定向到 `/web/login/`；快照里只有 "Aris Mass" 品牌区 + 两个登录按钮（GitHub / Google），没有侧边栏。
+- **未登录**：URL 被重定向到 `/web/login/`；快照里只有 "Aris MaaS" 品牌区 + 两个登录按钮（GitHub / Google），没有侧边栏。
 
 ### 3. 未登录 → 引导用户登录
 

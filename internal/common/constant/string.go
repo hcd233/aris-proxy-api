@@ -75,8 +75,8 @@ const (
 
 	// OpenAPI / Huma configuration
 	OpenAPIVersion       = "3.1.0"
-	APITitle             = "Aris Mass API"
-	APIDescription       = "Aris Mass is a MaaS model aggregation gateway and usage-data curation platform."
+	APITitle             = "Aris MaaS API"
+	APIDescription       = "Aris MaaS is a MaaS model aggregation gateway and usage-data curation platform."
 	APIVersion           = "1.0"
 	ContactName          = "hcd233"
 	ContactEmail         = "lvlvko233@qq.com"

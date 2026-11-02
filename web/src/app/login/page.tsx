@@ -135,7 +135,7 @@ export default function LoginPage() {
           </span>
           <div>
             <p className="font-display text-3xl font-semibold tracking-tight text-foreground">
-              Aris Mass
+              Aris MaaS
             </p>
             <p className="mt-2 text-sm text-muted-foreground">{t("common.loading")}</p>
           </div>
@@ -171,7 +171,7 @@ export default function LoginPage() {
               <SplitText text="Aris" />
             </span>
             <span className="block">
-              <SplitText text="Mass" />
+              <SplitText text="MaaS" />
             </span>
           </h1>
           <p className="login-at login-at-3 mt-6 max-w-[24rem] text-base leading-[1.8] text-muted-foreground lg:mt-8 lg:text-lg">
