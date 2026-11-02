@@ -252,7 +252,28 @@ export default function APIKeysPage() {
             {loading ? (
               <TableSkeleton />
             ) : keys.length === 0 ? (
-              <ListEmptyState icon={Key} message={t("apikeys.empty")} />
+              filterBar.tokens.length > 0 ? (
+                <ListEmptyState
+                  icon={Key}
+                  message={t("apikeys.no_match")}
+                  action={
+                    <Button variant="outline" size="sm" onClick={filterBar.clearTokens}>
+                      {t("filter_bar.clear_filters")}
+                    </Button>
+                  }
+                />
+              ) : (
+                <ListEmptyState
+                  icon={Key}
+                  message={t("apikeys.empty")}
+                  action={
+                    <Button size="sm" onClick={() => setCreateOpen(true)}>
+                      <Plus className="mr-1 size-4" />
+                      {t("apikeys.create_key")}
+                    </Button>
+                  }
+                />
+              )
             ) : (
               <>
                 {isMobile ? (
@@ -286,7 +307,7 @@ export default function APIKeysPage() {
                                 {key.user.avatar && (
                                   <AvatarImage src={key.user.avatar} alt={key.user.name} />
                                 )}
-                                <AvatarFallback className="text-[10px]">
+                                <AvatarFallback className="text-[11px]">
                                   {key.user.name.charAt(0).toUpperCase() || "?"}
                                 </AvatarFallback>
                               </Avatar>

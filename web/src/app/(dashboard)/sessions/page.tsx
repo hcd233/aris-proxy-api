@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { api } from "@/lib/api-client";
 import { showErrorToast } from "@/lib/api-error-handler";
@@ -368,7 +369,33 @@ export default function SessionsPage() {
             {loading ? (
               <TableSkeleton rows={5} rowClassName="h-10" />
             ) : sessions.length === 0 ? (
-              <ListEmptyState icon={MessageSquare} message={t("sessions.no_sessions")} />
+              filterBar.tokens.length > 0 ? (
+                <ListEmptyState
+                  icon={MessageSquare}
+                  message={t("sessions.no_match")}
+                  action={
+                    <Button variant="outline" size="sm" onClick={filterBar.clearTokens}>
+                      {t("filter_bar.clear_filters")}
+                    </Button>
+                  }
+                />
+              ) : (
+                <ListEmptyState
+                  icon={MessageSquare}
+                  message={t("sessions.no_sessions")}
+                  hint={t("sessions.empty_hint")}
+                  action={
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      nativeButton={false}
+                      render={<Link href="/apikeys/" />}
+                    >
+                      {t("sessions.empty_action")}
+                    </Button>
+                  }
+                />
+              )
             ) : (
               <>
                 {isMobile ? (

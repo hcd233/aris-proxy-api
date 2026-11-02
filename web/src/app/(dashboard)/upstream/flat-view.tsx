@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -15,9 +16,8 @@ import {
 import { DeleteButton } from "@/components/delete-button";
 import { Switch } from "@/components/ui/switch";
 import { ProviderIcon } from "@/components/provider-icon";
-import { ListEmptyState } from "@/components/list-empty-state";
 import { TableSkeleton } from "@/components/table-skeleton";
-import { Pencil, ArrowUp, ArrowDown, ArrowUpDown, Coins, Layers, Lock } from "lucide-react";
+import { Pencil, ArrowUp, ArrowDown, ArrowUpDown, Coins, Lock } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { cn, formatDate } from "@/lib/utils";
 import type { ModelListSortField, ModelListItem, UpstreamUser } from "@/lib/types";
@@ -40,7 +40,7 @@ function EndpointOwnerCell({ name, user }: { name: string; user?: UpstreamUser }
     <div className="flex min-w-0 items-center gap-1.5">
       <Avatar size="sm">
         {user?.avatar && <AvatarImage src={user.avatar} alt={user.name} />}
-        <AvatarFallback className="text-[10px]">
+        <AvatarFallback className="text-[11px]">
           {(user?.name || name).charAt(0).toUpperCase() || "?"}
         </AvatarFallback>
       </Avatar>
@@ -56,6 +56,8 @@ function EndpointOwnerCell({ name, user }: { name: string; user?: UpstreamUser }
 
 export interface FlatViewProps {
   items: ModelListItem[];
+  /** 无数据时的空态；页面据此区分「真没有」与「被筛选掉」并给出各自的下一步 */
+  emptyState: ReactNode;
   loading: boolean;
   isMobile: boolean;
   isDemo: boolean;
@@ -119,6 +121,7 @@ function SortableHead({
 /** 平铺视图：模型为行、端点为属性列，支持 SQL 级排序与真分页 */
 export function FlatView({
   items,
+  emptyState,
   loading,
   isMobile,
   isDemo,
@@ -140,9 +143,7 @@ export function FlatView({
 
   if (loading) return <TableSkeleton />;
 
-  if (items.length === 0) {
-    return <ListEmptyState icon={Layers} message={t("upstream.empty")} />;
-  }
+  if (items.length === 0) return emptyState;
 
   if (isMobile) {
     return (
@@ -228,7 +229,7 @@ export function FlatView({
             >
               {m.endpoint && <EndpointOwnerCell name={m.endpoint.name} user={m.user} />}
               {m.endpoint?.visibility === "public" && (
-                <Badge variant="secondary" className="px-1.5 py-0 text-[10px] font-normal">
+                <Badge variant="secondary" className="px-1.5 py-0 text-[11px] font-normal">
                   {t("upstream.public_badge")}
                 </Badge>
               )}
