@@ -18,9 +18,10 @@ function centerOf(el: Element) {
   return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
 }
 
-// The FAB mounts only on public pages (they have no UserBar); dashboard
-// pages render the inline variant inside UserBar instead.
-const FAB_PATHS = ["/login", "/callback", "/share"];
+// The FAB mounts only on public pages that have no chrome of their own (they
+// have no UserBar); login renders the inline variant in its header, dashboard
+// pages render it inside UserBar instead.
+const FAB_PATHS = ["/callback", "/share"];
 
 export function ThemeSwitcher({ variant = "fab" }: { variant?: "fab" | "inline" }) {
   const t = useT();

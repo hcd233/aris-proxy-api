@@ -1,17 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { AlertCircle, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useT } from "@/lib/i18n";
 import { api } from "@/lib/api-client";
 import { parseOAuthCallbackParams, resolveOAuthPlatform } from "@/lib/oauth";
 import type { OAuth2Provider } from "@/lib/types";
-import { AlertCircle } from "lucide-react";
-import { Github, Google } from "@lobehub/icons";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { FieldSeparator } from "@/components/ui/field";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { ThemeSwitcher } from "@/components/theme/theme-switcher";
+import { ProviderIcon } from "@/components/provider-icon";
 import { SplitText } from "@/components/motion/split-text";
 
 /* Runs during HTML parsing, before the first animated frame: marks repeat
@@ -128,54 +128,77 @@ export default function LoginPage() {
 
   if (processing) {
     return (
-      <div className="page-surface flex min-h-screen items-center justify-center bg-background px-4">
-        <div className="animate-scale-in w-full max-w-sm rounded-xl border border-border/70 bg-card p-8 text-center shadow-lg">
-          <p className="font-display text-3xl font-semibold text-foreground">Aris Proxy</p>
-          <p className="mt-3 text-sm text-muted-foreground">{t("common.loading")}</p>
+      <div className="page-surface flex min-h-dvh items-center justify-center bg-background px-6">
+        <div className="animate-scale-in flex flex-col items-center gap-7 text-center">
+          <span className="flex size-12 items-center justify-center rounded-[0.7rem] bg-primary font-display text-2xl font-semibold text-primary-foreground">
+            A
+          </span>
+          <div>
+            <p className="font-display text-3xl font-semibold tracking-tight text-foreground">
+              Aris Proxy
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">{t("common.loading")}</p>
+          </div>
+          <span className="h-0.5 w-28 overflow-hidden rounded-full bg-border">
+            <span className="block h-full w-1/2 animate-shimmer bg-foreground/50" />
+          </span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="login-stage page-surface flex min-h-screen items-center justify-center bg-background px-4 py-10">
+    <div className="login-stage page-surface relative grid min-h-dvh grid-cols-1 bg-background lg:grid-cols-[1fr_minmax(420px,37%)]">
       <script dangerouslySetInnerHTML={{ __html: LOGIN_SEEN_SCRIPT }} />
-      {/* 登录前也能切语言：fixed 到页面右上，避免挤进窄屏卡片标题 */}
-      <div className="fixed top-4 right-4 z-50">
+
+      {/* 页头控件：登录页自带主题/语言切换，不再挂左下角悬浮球 */}
+      <div className="absolute right-5 top-5 z-20 flex items-center gap-1.5 sm:right-8 sm:top-6">
         <LanguageSwitcher />
+        <ThemeSwitcher variant="inline" />
       </div>
-      <div className="login-card relative grid w-full max-w-5xl overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xl md:grid-cols-[1.05fr_0.95fr]">
-        <div className="hidden bg-sidebar p-10 text-sidebar-foreground md:flex md:flex-col md:justify-between bg-[radial-gradient(120%_90%_at_0%_0%,color-mix(in_oklab,var(--sidebar-primary)_14%,transparent),transparent_55%)]">
-          <div>
-            <div className="login-mark mb-10 inline-flex size-14 items-center justify-center rounded-xl bg-sidebar-primary font-display text-3xl font-semibold text-sidebar-primary-foreground shadow-sm">
-              A
-            </div>
-            <h1 className="login-title font-display text-5xl font-semibold leading-none tracking-tight">
-              <SplitText text="Aris Proxy" />
-            </h1>
-            <p className="login-at login-at-3 mt-4 max-w-sm text-sm leading-6 text-sidebar-foreground/70">
-              {t("auth.login_subtitle")}
-            </p>
-          </div>
-          <p className="login-at login-at-5 text-xs text-sidebar-foreground/50">
-            {t("login.secure_access")}
+
+      {/* 左：产品世界（纸 / 虚空） */}
+      <div className="relative flex flex-col px-7 pb-2 pt-5 sm:px-12 lg:px-[clamp(3rem,6vw,5.5rem)] lg:py-10">
+        <header className="flex items-center gap-3">
+          <span className="login-mark flex size-9 items-center justify-center rounded-[0.6rem] bg-primary font-display text-base font-semibold text-primary-foreground">
+            A
+          </span>
+          <span className="font-display text-[1.05rem] font-semibold tracking-tight text-foreground">
+            {t("auth.login_title")}
+          </span>
+        </header>
+
+        <div className="mt-10 lg:my-auto lg:py-10">
+          <h1 className="login-title font-display text-[clamp(3.5rem,9.2vw,8.75rem)] font-semibold leading-[0.84] tracking-[-0.035em] text-foreground moonshot:[text-shadow:0_0_70px_rgb(255_255_255/0.14)]">
+            <span className="block">
+              <SplitText text="Aris" />
+            </span>
+            <span className="block">
+              <SplitText text="Proxy" />
+            </span>
+          </h1>
+          <p className="login-at login-at-3 mt-6 max-w-[24rem] text-base leading-[1.8] text-muted-foreground lg:mt-8 lg:text-lg">
+            {t("auth.login_subtitle")}
           </p>
         </div>
+      </div>
 
-        <div className="flex flex-col justify-center p-8 md:p-10">
-          <div className="mb-8 md:hidden">
-            <h1 className="login-title font-display text-5xl font-semibold tracking-tight text-foreground">
-              <SplitText text="Aris Proxy" />
-            </h1>
-            <p className="login-at login-at-3 mt-2 text-sm text-muted-foreground">
-              {t("auth.login_subtitle")}
-            </p>
-          </div>
-          <div className="login-at login-at-2 hidden md:block">
-            <h2 className="font-display text-4xl font-semibold tracking-tight text-foreground">
+      {/* 右：门页 + 表单 */}
+      <div className="relative flex items-center justify-center rounded-t-[1.75rem] border-t border-border bg-card px-6 pb-12 pt-10 sm:px-10 lg:rounded-l-[2rem] lg:rounded-tr-none lg:border-l lg:border-t-0 lg:px-10 lg:py-16 lg:shadow-[-28px_0_60px_-42px_color-mix(in_oklab,var(--foreground)_50%,transparent)] xl:px-14 moonshot:lg:border-white/[0.1] moonshot:lg:shadow-[inset_1px_0_0_rgb(255_255_255/0.08)]">
+        {/* 门槛销钉 */}
+        <span
+          aria-hidden="true"
+          className="absolute left-0 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 lg:block"
+        >
+          <span className="block size-[7px] rounded-full bg-primary ring-[5px] ring-background" />
+        </span>
+
+        <div className="w-full max-w-[360px]">
+          <div className="login-at login-at-2">
+            <h2 className="font-display text-4xl font-semibold leading-[1.1] tracking-[-0.02em] text-foreground">
               {t("login.welcome_back")}
             </h2>
-            <p className="mt-2 text-sm text-muted-foreground">{t("login.sign_in")}</p>
+            <p className="mt-3 text-base text-muted-foreground">{t("login.sign_in")}</p>
           </div>
 
           {error && (
@@ -185,42 +208,50 @@ export default function LoginPage() {
             </Alert>
           )}
 
-          <div className="login-actions mt-8 flex flex-col gap-3">
+          <div className="login-actions mt-9 flex flex-col gap-2.5">
             <Button
               size="lg"
-              className="relative"
+              className="relative h-12 w-full justify-center gap-2.5 rounded-xl bg-foreground text-background hover:bg-foreground/90"
               data-pending={pending === "github" ? "" : undefined}
               aria-busy={pending === "github"}
               onClick={() => startOAuth("github")}
             >
-              <span aria-hidden="true" className="inline-flex">
-                <Github size={18} />
-              </span>
+              <ProviderIcon protocol="github" size={18} className="size-[18px]" />
               {t("auth.login_github")}
             </Button>
             <Button
               size="lg"
-              variant="outline"
-              className="relative"
-              data-magnetic=""
+              variant="secondary"
+              className="relative h-12 w-full justify-center gap-2.5 rounded-xl"
               data-pending={pending === "google" ? "" : undefined}
               aria-busy={pending === "google"}
               onClick={() => startOAuth("google")}
             >
-              <span aria-hidden="true" className="inline-flex">
-                <Google size={18} />
-              </span>
+              <ProviderIcon protocol="google" size={18} className="size-[18px]" />
               {t("auth.login_google")}
             </Button>
             {demoAvailable && (
               <>
-                <FieldSeparator className="my-1 text-xs">{t("login.demo_or")}</FieldSeparator>
-                <Button size="lg" variant="secondary" data-magnetic="" onClick={demoLogin}>
+                <div aria-hidden="true" className="my-5 flex items-center gap-4">
+                  <span className="h-px flex-1 bg-border" />
+                  <span className="text-xs text-muted-foreground">{t("login.demo_or")}</span>
+                  <span className="h-px flex-1 bg-border" />
+                </div>
+                <Button
+                  variant="ghost"
+                  className="h-11 w-full justify-center text-muted-foreground hover:text-foreground"
+                  onClick={demoLogin}
+                >
                   {t("login.demo_continue")}
                 </Button>
               </>
             )}
           </div>
+
+          <p className="login-at login-at-5 mt-10 flex items-center justify-center gap-2 text-xs text-muted-foreground">
+            <ShieldCheck className="size-3.5" aria-hidden="true" />
+            {t("login.secure_access")}
+          </p>
         </div>
       </div>
     </div>
