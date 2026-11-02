@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useChartLegendHighlight } from "@/hooks/use-chart-legend-highlight";
-import { useChartMotion } from "@/lib/motion/chart-motion";
 import { formatDecimal } from "@/lib/utils";
 
 interface RuntimeChartSeries {
@@ -67,7 +66,6 @@ export function RuntimeChart({
   const isEmpty = data.length === 0;
   const showLegend = series.length > 1;
   const { activeLegend, onLegendHover, getStrokeOpacity } = useChartLegendHighlight();
-  const motion = useChartMotion();
 
   return (
     <Card>
@@ -147,7 +145,7 @@ export function RuntimeChart({
                   strokeOpacity={getStrokeOpacity(s.key)}
                   strokeDasharray={s.dashed ? "6 4" : undefined}
                   dot={false}
-                  {...motion}
+                  isAnimationActive={false}
                 />
               ))}
             </LineChart>

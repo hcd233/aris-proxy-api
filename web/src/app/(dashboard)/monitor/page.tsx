@@ -1,27 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Activity, MemoryStick, Radio, RotateCw } from "lucide-react";
+import { Activity, MemoryStick, Radio } from "lucide-react";
 
 import { api } from "@/lib/api-client";
 import { useT } from "@/lib/i18n";
 import { PermissionGuard } from "@/components/permission-guard";
 import { usePersistentState } from "@/hooks/use-persistent-state";
-import { useAutoRefresh } from "@/hooks/use-auto-refresh";
-import {
-  DEFAULT_MONITOR_REFRESH_MS,
-  MONITOR_REFRESH_INTERVALS,
-  formatRefreshInterval,
-  normalizeRefreshInterval,
-} from "@/lib/refresh-interval";
 import type { RuntimeInstanceSeries, RuntimePoint } from "@/lib/types";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Button } from "@/components/ui/button";
-import { AutoRefreshControl } from "@/components/shared/auto-refresh-control";
 import { RuntimeGaugeCard } from "@/components/charts/runtime-gauge-card";
 import { RuntimeChart } from "@/components/charts/runtime-chart";
 import { useChartSeriesColors } from "@/lib/theme";
-import { cn, formatDecimal, formatInteger } from "@/lib/utils";
+import { formatDecimal, formatInteger } from "@/lib/utils";
+
+const POLL_INTERVAL_MS = 5000;
 
 const RANGE_KEYS = ["15m", "1h", "6h", "24h"] as const;
 type RangeKey = (typeof RANGE_KEYS)[number];
@@ -220,16 +213,6 @@ function tpsChartData(input: Pt[], output: Pt[]): Array<Record<string, number>> 
 export default function MonitorPage() {
   const t = useT();
   const [range, setRange] = usePersistentState<RangeKey>("monitor.range", "1h");
-  const [autoRefresh, setAutoRefresh] = usePersistentState("monitor.autoRefresh", false);
-  const [storedIntervalMs, setStoredIntervalMs] = usePersistentState(
-    "monitor.refreshIntervalMs",
-    DEFAULT_MONITOR_REFRESH_MS,
-  );
-  const refreshIntervalMs = normalizeRefreshInterval(
-    storedIntervalMs,
-    MONITOR_REFRESH_INTERVALS,
-    DEFAULT_MONITOR_REFRESH_MS,
-  );
   const [state, setState] = useState<SeriesState>(EMPTY_STATE);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<string>("--:--:--");
@@ -262,17 +245,14 @@ export default function MonitorPage() {
     }
   }, []);
 
-  const refreshNow = useCallback(() => {
-    void poll(range);
-  }, [poll, range]);
-  useAutoRefresh({ enabled: autoRefresh, intervalMs: refreshIntervalMs, onRefresh: refreshNow });
-
   /* eslint-disable react-hooks/set-state-in-effect -- range 切换需重置时序状态并立即触发首次拉取 */
   useEffect(() => {
     sinceRef.current = 0;
     setState(EMPTY_STATE);
     setLoading(true);
-    void poll(range);
+    poll(range);
+    const interval = setInterval(() => poll(range), POLL_INTERVAL_MS);
+    return () => clearInterval(interval);
   }, [range, poll]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
@@ -332,42 +312,14 @@ export default function MonitorPage() {
             </h1>
             <p className="mt-1.5 text-sm text-muted-foreground">{t("monitor.subtitle")}</p>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span className="relative flex size-2">
-                {autoRefresh && (
-                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-positive opacity-60" />
-                )}
-                <span
-                  className={cn(
-                    "relative inline-flex size-2 rounded-full",
-                    autoRefresh ? "bg-positive" : "bg-muted-foreground/40",
-                  )}
-                />
+                <span className="absolute inline-flex size-full animate-ping rounded-full opacity-60 bg-[#4A9E7D]" />
+                <span className="relative inline-flex size-2 rounded-full bg-[#4A9E7D]" />
               </span>
-              <span className="font-mono tabular-nums">
-                {autoRefresh ? formatRefreshInterval(refreshIntervalMs) : t("auto_refresh.paused")}{" "}
-                · {lastUpdated}
-              </span>
+              <span className="font-mono tabular-nums">5s · {lastUpdated}</span>
             </div>
-            <AutoRefreshControl
-              enabled={autoRefresh}
-              onEnabledChange={(enabled) => {
-                setAutoRefresh(enabled);
-                if (enabled) refreshNow();
-              }}
-              intervalMs={refreshIntervalMs}
-              onIntervalChange={setStoredIntervalMs}
-              options={MONITOR_REFRESH_INTERVALS}
-            />
-            <Button
-              variant="outline"
-              size="icon-sm"
-              onClick={refreshNow}
-              aria-label={t("monitor.refresh")}
-            >
-              <RotateCw />
-            </Button>
             <ToggleGroup
               variant="segmented"
               spacing={0.5}

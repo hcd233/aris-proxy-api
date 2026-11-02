@@ -2,9 +2,7 @@
 
 import { RotateCw } from "lucide-react";
 import { useT } from "@/lib/i18n";
-import { DASHBOARD_REFRESH_INTERVALS } from "@/lib/refresh-interval";
 import { PermissionGuard } from "@/components/permission-guard";
-import { AutoRefreshControl } from "@/components/shared/auto-refresh-control";
 import { Button } from "@/components/ui/button";
 import { TimeRangePicker } from "@/components/ui/time-range-picker";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -41,22 +39,12 @@ export default function DashboardPage() {
                   {t("dashboard.title")}
                 </h1>
               </div>
-              <div className="flex flex-wrap items-center justify-end gap-2">
+              <div className="flex items-center gap-2">
                 <TimeRangePicker
                   value={range.key}
                   customStart={range.customStart}
                   customEnd={range.customEnd}
                   onChange={range.setRange}
-                />
-                <AutoRefreshControl
-                  enabled={range.autoRefresh}
-                  onEnabledChange={(enabled) => {
-                    range.setAutoRefresh(enabled);
-                    if (enabled) range.refresh();
-                  }}
-                  intervalMs={range.refreshIntervalMs}
-                  onIntervalChange={range.setRefreshIntervalMs}
-                  options={DASHBOARD_REFRESH_INTERVALS}
                 />
                 <Button
                   variant="outline"
