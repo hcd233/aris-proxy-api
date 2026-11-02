@@ -54,7 +54,8 @@ export default function DashboardPage() {
                   {t("dashboard.title")}
                 </h1>
               </div>
-              <div className="flex items-center gap-2">
+              {/* 窄屏独占一行并撑满：范围条 + 刷新按钮不再把自己挤出视口 */}
+              <div className="flex max-w-full min-w-0 items-center gap-2 max-sm:w-full max-sm:justify-between">
                 <TimeRangePicker
                   value={range.key}
                   customStart={range.customStart}

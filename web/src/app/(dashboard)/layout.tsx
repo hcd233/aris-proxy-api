@@ -5,8 +5,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useT } from "@/lib/i18n";
-import { DASHBOARD_HOME_PATH, isNavItemActive } from "@/lib/nav";
-import type { DemoModule } from "@/lib/types";
+import {
+  NAV_GROUPS,
+  findActiveGroupKey,
+  isNavItemActive,
+  resolveNavGroups,
+  type NavGroup,
+  type ResolvedNavGroup,
+} from "@/lib/nav";
 import { PermissionGuard } from "@/components/permission-guard";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -40,167 +46,8 @@ import { LocaleFade } from "@/components/locale-fade";
 import { NavIndicator } from "@/components/motion/nav-indicator";
 import { SessionHistorySidebar } from "@/components/session-detail/session-history-sidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
-import {
-  LayoutDashboard,
-  MessageSquare,
-  Key,
-  User,
-  LogOut,
-  Menu,
-  Share2,
-  ScrollText,
-  Play,
-  Ban,
-  Timer,
-  Activity,
-  Database,
-  Users,
-  Lock,
-  Settings2,
-  ChevronDown,
-  Bot,
-  Footprints,
-  Layers,
-} from "lucide-react";
-
-interface NavItem {
-  labelKey: string;
-  href: string;
-  icon: ReactNode;
-  adminOnly?: boolean;
-  /** demo 用户可配置开放的模块 key；无 key 的导航项对 demo 隐藏 */
-  demoModule?: DemoModule;
-}
-
-interface NavGroup {
-  key: string;
-  labelKey: string;
-  items: NavItem[];
-}
-
-const NAV_GROUPS: NavGroup[] = [
-  {
-    key: "overview",
-    labelKey: "nav.group.overview",
-    items: [
-      {
-        labelKey: "nav.dashboard",
-        href: DASHBOARD_HOME_PATH,
-        icon: <LayoutDashboard className="size-4" />,
-        demoModule: "dashboard",
-      },
-    ],
-  },
-  {
-    key: "data",
-    labelKey: "nav.group.data",
-    items: [
-      {
-        labelKey: "nav.sessions",
-        href: "/sessions/",
-        icon: <MessageSquare className="size-4" />,
-        demoModule: "sessions",
-      },
-      { labelKey: "nav.shares", href: "/shares/", icon: <Share2 className="size-4" /> },
-      {
-        labelKey: "nav.audit",
-        href: "/audit/model/",
-        icon: <ScrollText className="size-4" />,
-        demoModule: "audit",
-      },
-      { labelKey: "nav.dataset", href: "/dataset/", icon: <Database className="size-4" /> },
-    ],
-  },
-  {
-    key: "gateway",
-    labelKey: "nav.group.gateway",
-    items: [
-      { labelKey: "nav.api_keys", href: "/apikeys/", icon: <Key className="size-4" /> },
-      {
-        labelKey: "nav.upstream",
-        href: "/upstream/",
-        icon: <Layers className="size-4" />,
-        demoModule: "upstream",
-      },
-      {
-        labelKey: "nav.trigger",
-        href: "/trigger/",
-        icon: <Ban className="size-4" />,
-        adminOnly: true,
-        demoModule: "trigger",
-      },
-      {
-        labelKey: "nav.harness",
-        href: "/harness/",
-        icon: <Bot className="size-4" />,
-        adminOnly: true,
-      },
-      {
-        labelKey: "nav.playground",
-        href: "/playground/",
-        icon: <Play className="size-4" />,
-      },
-    ],
-  },
-  {
-    key: "ops",
-    labelKey: "nav.group.ops",
-    items: [
-      {
-        labelKey: "nav.cron",
-        href: "/cron/",
-        icon: <Timer className="size-4" />,
-        adminOnly: true,
-        demoModule: "cron",
-      },
-      {
-        labelKey: "nav.cron_audit",
-        href: "/audit/cron/",
-        icon: <ScrollText className="size-4" />,
-        adminOnly: true,
-        demoModule: "cron_audit",
-      },
-      {
-        labelKey: "nav.demo_access_audit",
-        href: "/audit/demo/",
-        icon: <Footprints className="size-4" />,
-        adminOnly: true,
-      },
-      {
-        labelKey: "nav.monitor",
-        href: "/monitor/",
-        icon: <Activity className="size-4" />,
-        adminOnly: true,
-        demoModule: "monitor",
-      },
-    ],
-  },
-  {
-    key: "system",
-    labelKey: "nav.group.system",
-    items: [
-      {
-        labelKey: "nav.users",
-        href: "/users/",
-        icon: <Users className="size-4" />,
-        adminOnly: true,
-      },
-      {
-        labelKey: "nav.demo",
-        href: "/demo/",
-        icon: <Settings2 className="size-4" />,
-        adminOnly: true,
-      },
-      { labelKey: "nav.profile", href: "/profile/", icon: <User className="size-4" /> },
-    ],
-  },
-];
-
-function findActiveGroupKey(pathname: string): string | undefined {
-  return NAV_GROUPS.find((group) =>
-    group.items.some((item) => isNavItemActive(pathname, item.href)),
-  )?.key;
-}
+import { NavCommandPalette, NavSearchButton } from "@/components/nav-command-palette";
+import { ChevronDown, Lock, LogOut, Menu, Search } from "lucide-react";
 
 const OPEN_GROUPS_STORAGE_KEY = "sidebar-nav-open-groups";
 
@@ -219,23 +66,22 @@ function SidebarNav({
   const collapsed = state === "collapsed";
   const t = useT();
 
-  const visibleGroups = groups
-    .map((group) => ({
-      ...group,
-      items: group.items.filter((item) => {
-        // demo 用户：全部显示，未开放的模块置灰锁定；其余按 admin 权限过滤
-        if (isDemo()) return true;
-        return !item.adminOnly || isAdmin();
-      }),
-    }))
-    .filter((group) => group.items.length > 0);
+  // demo 用户：全部显示，未开放的模块置灰锁定；其余按 admin 权限过滤（规则见 resolveNavGroups）
+  const visibleGroups = resolveNavGroups(groups, {
+    isAdmin: isAdmin(),
+    isDemo: isDemo(),
+    isModuleOpen,
+  });
 
   // Anything that can move the active item re-targets the indicator.
   const layoutKey = [
     pathname,
     collapsed ? "c" : "e",
     visibleGroups
-      .map((g) => `${g.key}:${g.items.length}:${collapsed || openGroups.has(g.key) ? 1 : 0}`)
+      .map(
+        (g) =>
+          `${g.key}:${g.items.length}:${g.pinned || collapsed || openGroups.has(g.key) ? 1 : 0}`,
+      )
       .join(","),
   ].join("|");
 
@@ -253,11 +99,67 @@ function SidebarNav({
     lastScrolledKey.current = scrollKey;
   }, [layoutKey, scrollKey]);
 
+  const renderItem = (item: ResolvedNavGroup["items"][number]) => {
+    const isActive = isNavItemActive(pathname, item.href);
+    const label = t(item.labelKey);
+    const demoLocked = item.locked;
+    const Icon = item.icon;
+
+    return (
+      <SidebarMenuItem key={item.href}>
+        <SidebarMenuButton
+          variant="nav"
+          isActive={isActive}
+          data-nav-item=""
+          render={
+            demoLocked ? (
+              <span aria-disabled="true" />
+            ) : (
+              <Link
+                href={item.href}
+                onClick={() => {
+                  if (isMobile) setOpenMobile(false);
+                }}
+              />
+            )
+          }
+          tooltip={
+            demoLocked ? { children: `${label} · ${t("nav.demo_locked")}`, hidden: false } : label
+          }
+          className="h-auto gap-3 rounded-lg px-3 py-2 font-medium"
+        >
+          <span className={isActive ? "text-sidebar-primary" : ""}>
+            <Icon className="size-4" />
+          </span>
+          {/* 静态分析假阳性豁免：truncate 的 tooltip 由 SidebarMenuButton 的
+              tooltip prop 内部提供（collapsed/locked 时弹出），变量引用不构成
+              ESLint parent 链，规则无法静态判定。 */}
+          {/* eslint-disable-next-line truncate-requires-tooltip/truncate-requires-tooltip */}
+          <span className="min-w-0 truncate">
+            {label}
+            {demoLocked && <Lock className="ml-1 inline size-3.5 opacity-60" />}
+          </span>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    );
+  };
+
   return (
     <TooltipProvider>
       <nav ref={navRef} className="relative flex flex-col px-2">
         <NavIndicator layoutKey={layoutKey} />
         {visibleGroups.map((group, groupIndex) => {
+          // 置顶分组（仪表盘）：没有组头可折叠，条目直接铺在顶层，一次点击到达
+          if (group.pinned) {
+            return (
+              <SidebarMenu
+                key={group.key}
+                className={`nav-items flex flex-col gap-0.5 ${groupIndex > 0 ? "mt-3" : ""}`}
+              >
+                {group.items.map(renderItem)}
+              </SidebarMenu>
+            );
+          }
           // 窄栏模式无组头，子项平铺不折叠
           const groupOpen = collapsed || openGroups.has(group.key);
           return (
@@ -291,52 +193,7 @@ function SidebarNav({
                   高度过渡会让测量落在动画起点，所以侧栏分组不做展开动画 */}
               <CollapsibleContent data-instant="">
                 <SidebarMenu className="nav-items flex flex-col gap-0.5">
-                  {group.items.map((item) => {
-                    const isActive = isNavItemActive(pathname, item.href);
-                    const label = t(item.labelKey);
-                    const demoLocked =
-                      isDemo() && !(item.demoModule !== undefined && isModuleOpen(item.demoModule));
-
-                    return (
-                      <SidebarMenuItem key={item.href}>
-                        <SidebarMenuButton
-                          variant="nav"
-                          isActive={isActive}
-                          data-nav-item=""
-                          render={
-                            demoLocked ? (
-                              <span aria-disabled="true" />
-                            ) : (
-                              <Link
-                                href={item.href}
-                                onClick={() => {
-                                  if (isMobile) setOpenMobile(false);
-                                }}
-                              />
-                            )
-                          }
-                          tooltip={
-                            demoLocked
-                              ? { children: `${label} · ${t("nav.demo_locked")}`, hidden: false }
-                              : label
-                          }
-                          className="h-auto gap-3 rounded-lg px-3 py-2 font-medium"
-                        >
-                          <span className={isActive ? "text-sidebar-primary" : ""}>
-                            {item.icon}
-                          </span>
-                          {/* 静态分析假阳性豁免：truncate 的 tooltip 由 SidebarMenuButton 的
-                              tooltip prop 内部提供（collapsed/locked 时弹出），变量引用不构成
-                              ESLint parent 链，规则无法静态判定。 */}
-                          {/* eslint-disable-next-line truncate-requires-tooltip/truncate-requires-tooltip */}
-                          <span className="min-w-0 truncate">
-                            {label}
-                            {demoLocked && <Lock className="ml-1 inline size-3.5 opacity-60" />}
-                          </span>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    );
-                  })}
+                  {group.items.map(renderItem)}
                 </SidebarMenu>
               </CollapsibleContent>
             </Collapsible>
@@ -365,7 +222,7 @@ function UserBar({ collapsed = false }: { collapsed?: boolean }) {
       <div className={`flex items-center gap-3 ${collapsed ? "justify-center" : ""}`}>
         <Avatar size="sm">
           {user.avatar && <AvatarImage src={user.avatar} alt={user.name ?? ""} />}
-          <AvatarFallback className="bg-sidebar-primary/20 text-sidebar-primary text-xs font-medium">
+          <AvatarFallback className="bg-sidebar-primary/20 text-xs font-medium text-sidebar-foreground">
             {initials}
           </AvatarFallback>
         </Avatar>
@@ -384,7 +241,7 @@ function UserBar({ collapsed = false }: { collapsed?: boolean }) {
               </TooltipContent>
             </TooltipRoot>
             <div className="mt-1 flex items-center gap-1.5">
-              <Badge variant="secondary" className="px-1.5 py-0 text-[10px] font-medium">
+              <Badge variant="secondary" className="px-1.5 py-0 text-[11px] font-medium">
                 {t(`permission.${user.permission}`)}
               </Badge>
             </div>
@@ -423,7 +280,7 @@ function UserBar({ collapsed = false }: { collapsed?: boolean }) {
 }
 
 /** 移动端顶栏（SidebarTrigger 需要 SidebarProvider context，故独立组件）。 */
-function MobileTopBar() {
+function MobileTopBar({ onSearch }: { onSearch: () => void }) {
   const { toggleSidebar } = useSidebar();
   const t = useT();
 
@@ -446,6 +303,15 @@ function MobileTopBar() {
           {t("layout.aris_mass")}
         </span>
       </span>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        onClick={onSearch}
+        aria-label={t("nav.search.trigger")}
+        className="ml-auto text-foreground/60 hover:bg-secondary hover:text-foreground"
+      >
+        <Search className="size-5" />
+      </Button>
     </header>
   );
 }
@@ -458,6 +324,19 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const isSessionDetail = pathname.startsWith("/sessions/detail");
 
   const t = useT();
+
+  // ⌘K / Ctrl+K 页面跳转面板：侧栏入口、移动端顶栏入口与快捷键共用同一个开关
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() !== "k" || event.shiftKey || event.altKey) return;
+      if (!(event.metaKey || event.ctrlKey)) return;
+      event.preventDefault();
+      setPaletteOpen((open) => !open);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   // 初始只展开当前页面所在组；用户手动切换后由 localStorage 接管
   const [openGroups, setOpenGroups] = useState<ReadonlySet<string>>(() => {
@@ -561,6 +440,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             </Button>
           </SidebarHeader>
           <SidebarContent className="overflow-y-auto! py-3">
+            <NavSearchButton
+              collapsed={collapsed && !isMobile}
+              onClick={() => setPaletteOpen(true)}
+            />
             <SidebarNav groups={NAV_GROUPS} openGroups={openGroups} onToggleGroup={toggleGroup} />
             {!collapsed && !isMobile && isSessionDetail && (
               <Suspense fallback={null}>
@@ -576,7 +459,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
         {/* Main content */}
         <SidebarInset className="overflow-hidden">
-          <MobileTopBar />
+          <MobileTopBar onSearch={() => setPaletteOpen(true)} />
           <div className="flex-1 overflow-y-auto p-4 md:p-8 lg:p-10">
             <LocaleFade>
               {/* data-page-wide：信息密度高的页面（dashboard）放宽到 1600px，其余页面保持 6xl 阅读宽度 */}
@@ -586,6 +469,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             </LocaleFade>
           </div>
         </SidebarInset>
+        <NavCommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
       </SidebarProvider>
     </PermissionGuard>
   );

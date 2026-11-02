@@ -25,7 +25,9 @@ export interface TimeRangePickerProps {
   className?: string;
 }
 
-const PRESET_KEYS: TimeRangeKey[] = ["1h", "24h", "7d", "30d"];
+type PresetKey = Exclude<TimeRangeKey, "custom">;
+
+const PRESET_KEYS: PresetKey[] = ["1h", "24h", "7d", "30d"];
 
 export function TimeRangePicker({
   value,
@@ -172,6 +174,14 @@ export function TimeRangePicker({
     "30d": t("time.last_30d"),
     custom: t("time.custom"),
   };
+  // 窄屏去掉「最近 / Last」前缀：5 个按钮的完整文案约 406px，390 宽手机放不下，
+  // 控件被推出视口外就点不到了；分段控件本身已表达「时间范围」语义。
+  const shortLabels: Record<PresetKey, string> = {
+    "1h": t("time.short_1h"),
+    "24h": t("time.short_24h"),
+    "7d": t("time.short_7d"),
+    "30d": t("time.short_30d"),
+  };
 
   return (
     <ToggleGroup
@@ -186,8 +196,9 @@ export function TimeRangePicker({
       }}
     >
       {PRESET_KEYS.map((key) => (
-        <ToggleGroupItem key={key} value={key}>
-          {timeLabels[key]}
+        <ToggleGroupItem key={key} value={key} aria-label={timeLabels[key]}>
+          <span className="sm:hidden">{shortLabels[key]}</span>
+          <span className="max-sm:hidden">{timeLabels[key]}</span>
         </ToggleGroupItem>
       ))}
 
@@ -229,7 +240,7 @@ export function TimeRangePicker({
             <div className="border-t border-border px-3 py-3">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <Label className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">
+                  <Label className="text-[0.6875rem] uppercase tracking-wider text-muted-foreground">
                     {t("time_range.start")}
                   </Label>
                   <Input
@@ -240,7 +251,7 @@ export function TimeRangePicker({
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">
+                  <Label className="text-[0.6875rem] uppercase tracking-wider text-muted-foreground">
                     {t("time_range.end")}
                   </Label>
                   <Input

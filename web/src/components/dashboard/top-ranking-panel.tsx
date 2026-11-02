@@ -17,7 +17,14 @@ import {
 } from "@/components/ui/table";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Panel } from "@/components/dashboard/panel";
-import { DENSE_CELL, DENSE_HEAD, TruncatedName } from "@/components/dashboard/dense-table";
+import {
+  DENSE_CELL,
+  DENSE_HEAD,
+  SHOW_FROM_360,
+  SHOW_FROM_440,
+  SHOW_FROM_520,
+  TruncatedName,
+} from "@/components/dashboard/dense-table";
 import { useOverview } from "@/components/dashboard/overview-context";
 import { useDashboardQuery } from "@/components/dashboard/use-dashboard-query";
 import type { DashboardRange } from "@/components/dashboard/use-dashboard-range";
@@ -50,7 +57,7 @@ export function TopRankingPanel({ range }: { range: DashboardRange }) {
       error={error}
       empty={!data || data.items.length === 0}
       onRetry={retry}
-      bodyClassName="px-1.5"
+      bodyClassName="@container px-1.5"
       action={
         <ToggleGroup
           variant="segmented"
@@ -73,13 +80,13 @@ export function TopRankingPanel({ range }: { range: DashboardRange }) {
         <TableHeader className="bg-transparent">
           <TableRow className="hover:bg-transparent">
             <TableHead className={DENSE_HEAD}>{t(`dashboard.dim.${dimension}`)}</TableHead>
-            <TableHead className={cn(DENSE_HEAD, "w-14 text-right")}>
+            <TableHead className={cn(DENSE_HEAD, "w-16 text-right", SHOW_FROM_360)}>
               {t("dashboard.col.requests")}
             </TableHead>
-            <TableHead className={cn(DENSE_HEAD, "w-14 text-right")}>
+            <TableHead className={cn(DENSE_HEAD, "w-[3.75rem] text-right", SHOW_FROM_440)}>
               {t("dashboard.col.tokens")}
             </TableHead>
-            <TableHead className={cn(DENSE_HEAD, "w-12 text-right")}>
+            <TableHead className={cn(DENSE_HEAD, "w-20 text-right", SHOW_FROM_520)}>
               {t("dashboard.col.cache")}
             </TableHead>
             <TableHead className={cn(DENSE_HEAD, "w-16 text-right")}>
@@ -94,13 +101,13 @@ export function TopRankingPanel({ range }: { range: DashboardRange }) {
               <TableCell className={DENSE_CELL}>
                 <TruncatedName text={item.name || item.key} className="font-medium" />
               </TableCell>
-              <TableCell className={cn(DENSE_CELL, "text-right")}>
+              <TableCell className={cn(DENSE_CELL, "text-right", SHOW_FROM_360)}>
                 {formatInteger(item.requests)}
               </TableCell>
-              <TableCell className={cn(DENSE_CELL, "text-right")}>
+              <TableCell className={cn(DENSE_CELL, "text-right", SHOW_FROM_440)}>
                 {formatTokenCount(item.tokens)}
               </TableCell>
-              <TableCell className={cn(DENSE_CELL, "text-right")}>
+              <TableCell className={cn(DENSE_CELL, "text-right", SHOW_FROM_520)}>
                 {formatRate(item.cacheHitRate, 0)}
               </TableCell>
               <TableCell className={cn(DENSE_CELL, "text-right")}>
@@ -114,7 +121,7 @@ export function TopRankingPanel({ range }: { range: DashboardRange }) {
                       style={{ width: `${Math.min(100, item.costShare * 100)}%` }}
                     />
                   </div>
-                  <span className="w-8 text-right text-[10px] text-muted-foreground">
+                  <span className="w-8 text-right text-[11px] text-muted-foreground">
                     {formatRate(item.costShare, 0)}
                   </span>
                 </div>

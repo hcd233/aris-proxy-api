@@ -79,7 +79,7 @@ export function OwnerCell({ user }: { user?: UpstreamUser }) {
           <span className="flex max-w-[14ch] items-center gap-1.5">
             <Avatar size="sm">
               {user.avatar && <AvatarImage src={user.avatar} alt={user.name} />}
-              <AvatarFallback className="text-[10px]">
+              <AvatarFallback className="text-[11px]">
                 {user.name.charAt(0).toUpperCase() || "?"}
               </AvatarFallback>
             </Avatar>
@@ -209,7 +209,7 @@ export function PricingInline({ pricing }: { pricing?: PricingDTO }) {
       <TooltipContent side="top" align="start" className="max-w-xs">
         <div className="space-y-1">
           <p className="text-[11px] text-muted-foreground">{t("upstream.pricing.unit")}</p>
-          <div className="flex items-center justify-between gap-3 text-[10px] tracking-[0.08em] text-muted-foreground uppercase">
+          <div className="flex items-center justify-between gap-3 text-[11px] tracking-[0.08em] text-muted-foreground uppercase">
             <span>{t("upstream.pricing.cell_tier")}</span>
             <span>{t("upstream.pricing.cell_inout")}</span>
           </div>

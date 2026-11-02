@@ -739,6 +739,31 @@ export default function UpstreamPage() {
 
   /* ─── 共享渲染片段 ──────────────────────────────────────────── */
 
+  // 空态两种成因给两种下一步：被筛选条件筛空 → 清除筛选；真没有端点 → 就地新建
+  const upstreamEmptyState =
+    activeFilterBar.tokens.length > 0 ? (
+      <ListEmptyState
+        icon={Layers}
+        message={t("upstream.no_match")}
+        action={
+          <Button variant="outline" size="sm" onClick={activeFilterBar.clearTokens}>
+            {t("filter_bar.clear_filters")}
+          </Button>
+        }
+      />
+    ) : (
+      <ListEmptyState
+        icon={Layers}
+        message={t("upstream.empty")}
+        action={
+          <Button size="sm" onClick={openCreateEndpoint} disabled={isDemo()}>
+            {isDemo() ? <Lock className="mr-1 size-4" /> : <Plus className="mr-1 size-4" />}
+            {t("upstream.create_endpoint")}
+          </Button>
+        }
+      />
+    );
+
   return (
     <PermissionGuard module="upstream">
       <TooltipProvider>
@@ -795,7 +820,7 @@ export default function UpstreamPage() {
                 loading ? (
                   <TableSkeleton />
                 ) : groups.length === 0 ? (
-                  <ListEmptyState icon={Layers} message={t("upstream.empty")} />
+                  upstreamEmptyState
                 ) : (
                   <>
                     <GroupedView
@@ -838,6 +863,7 @@ export default function UpstreamPage() {
                 <>
                   <FlatView
                     items={flat.items}
+                    emptyState={upstreamEmptyState}
                     loading={flat.loading}
                     isMobile={isMobile}
                     isDemo={isDemo()}

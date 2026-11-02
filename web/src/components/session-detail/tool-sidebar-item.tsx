@@ -54,7 +54,7 @@ export function ToolSidebarItem({ tool }: { tool: ToolItem }) {
         <div className="space-y-3 border-t border-border/60 px-3.5 py-3">
           {toolData.description && (
             <div>
-              <p className="mb-1 flex items-center gap-1 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+              <p className="mb-1 flex items-center gap-1 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
                 <FileText className="size-3" />
                 {t("tool_sidebar.description")}
               </p>
@@ -67,7 +67,7 @@ export function ToolSidebarItem({ tool }: { tool: ToolItem }) {
           )}
           {Object.keys(paramProperties).length > 0 && (
             <div>
-              <p className="mb-1.5 flex items-center gap-1 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+              <p className="mb-1.5 flex items-center gap-1 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
                 <Braces className="size-3" />
                 {t("tool_sidebar.parameters")}
               </p>
@@ -79,14 +79,14 @@ export function ToolSidebarItem({ tool }: { tool: ToolItem }) {
                         {name}
                       </span>
                       {requiredParams.includes(name) && (
-                        <span className="text-[9px] font-medium uppercase tracking-wider text-rose-500">
+                        <span className="text-[11px] font-medium uppercase tracking-wider text-rose-500">
                           {t("tool_sidebar.required")}
                         </span>
                       )}
                       {schema.type !== undefined && (
                         <Badge
                           variant="secondary"
-                          className="ml-auto px-1.5 py-0 font-mono text-[9px]"
+                          className="ml-auto px-1.5 py-0 font-mono text-[11px]"
                         >
                           {schema.type as string}
                         </Badge>
@@ -105,7 +105,7 @@ export function ToolSidebarItem({ tool }: { tool: ToolItem }) {
             </div>
           )}
           {params?.type !== undefined && (
-            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/60">
+            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground/60">
               <Hash className="size-3" />
               {t("tool_sidebar.schema_type").replace("{type}", params.type as string)}
             </div>

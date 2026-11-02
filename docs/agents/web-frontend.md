@@ -20,6 +20,7 @@
   - 厂商与客户端图标都走 `ProviderIcon`；旁边已有文字时传 `decorative`，对读屏器隐藏图标自带的 `<title>`。
 - `src/app/login/`、`src/app/callback/`：OAuth2 登录入口与回调，登录成功落到 `DASHBOARD_HOME_URL`（`/web/dashboard/`，见 `src/lib/nav.ts`）。
 - `src/app/(dashboard)/`：登录后的管理后台路由组，仪表盘首页在 `dashboard/page.tsx`（`/web/dashboard/`），其余子页面（`sessions/`、`apikeys/`、`upstream/` 等）路径不带 `dashboard` 前缀；导航高亮统一用 `isNavItemActive`。
+- 导航与 ⌘K：侧栏和页面跳转面板（`src/components/nav-command-palette.tsx`，Dialog + Base UI `Autocomplete inline`）共用 `src/lib/nav.ts` 的 `NAV_GROUPS`；新增页面只改这里，`resolveNavGroups` 统一做按身份裁剪与 demo 锁定（面板不列出被锁模块）。`pinned` 分组（仪表盘）不渲染组头、直接铺在顶层，不参与展开逻辑（`findActiveGroupKey` 会跳过）。入口有三处：侧栏搜索按钮、移动端顶栏图标、`⌘K` / `Ctrl+K`，共用 `DashboardLayout` 里同一个 `paletteOpen`。
 - 主题/语言切换：唯一实现是 `src/components/preference-controls.tsx`（`tone="page" | "sidebar"`），门户、登录、回调、分享、仪表盘侧栏（含折叠态）都挂它，不要再单独拼 `LanguageSwitcher` + `ThemeSwitcher`。
 - `src/app/share/`：会话分享只读页面（公开访问）。
 - `src/components/ui/`：shadcn 生成的基础组件，遵循其约定，禁止手改命名/导出方式。
@@ -42,6 +43,7 @@
 - 图标：统一 `lucide-react`，不要混用其他图标库。
 - Toast：用 `sonner` 的 `toast.*`，禁止 `alert/confirm`。
 - 路径前缀：所有内部跳转链接必须考虑 `basePath=/web`；用 `next/link`、`next/navigation` 即可，框架自动加前缀，**不要手动拼 `/web` 前缀**。
+- **空态要有下一步**：列表空态用 `ListEmptyState` 的 `action` 槽位，别做死胡同。真没数据 → 给创建 / 前往入口；被筛选条件筛空 → 给「清除筛选」（`filterBar.clearTokens`），两者用 `filterBar.tokens.length > 0` 区分，文案也要分开（`xxx.no_match` 与 `xxx.empty`）。已接入：`sessions`、`apikeys`、`upstream`。
 - 数值展示：统一走 `src/lib/utils.ts` 的格式化入口——token 用 `formatTokenCount`（K/M/B 量级缩写）、计数用 `formatInteger`（千分位）、小数用 `formatDecimal`、时长用 `formatDurationMs`、占比用 `formatPct`、金额用 `formatCost`（`src/lib/money.ts`）。禁止在页面/组件里自写 `toLocaleString`、`toFixed` 拼数值文案（日期格式化除外）。
 - 修改前端 DTO 时如发现后端字段缺失，按 `huma-dto-conventions` 流程到 `internal/dto/` 同步更新。
 - **不适用的上游 skill**：`next-cache-components-adoption` / `next-cache-components-optimizer` / `next-partial-prefetching-adoption` 都要求服务端渲染 + 流式 Suspense，与本项目 `output: "export"` 静态导出（88/101 个组件是 `"use client"`，数据全部经 `api-client.ts` 在浏览器 fetch）架构冲突，**不要引入**。
@@ -65,6 +67,7 @@
 - **刷新不重绘没变的图**：recharts 只要 points 换引用就重放动画，而 points 依赖 data 与坐标轴配置。① 图表 data 用 `useMemo` 按各自的源曲线派生，源数据经 `replaceEqualDeep`（`@/lib/structural-share`）结构共享，内容不变则引用不变；② `XAxis`/`YAxis` 的 `tickFormatter`、`domain` 不要写内联函数/数组（每次渲染新引用会让坐标轴选择器失效、整图重放），用 `useCallback` 或模块级常量；③ 换时间范围属于换视图，用 scope 作 `ChartContainer` 的 key 整图重新入场。
 - **定时刷新**：统一用 `@/hooks/use-auto-refresh` + `AutoRefreshButton`，档位在 `@/lib/refresh-interval`（`0` = 关闭）；不要在页面里自建 `setInterval`。
 - **指标数字用 `MetricNumber`**：直接写 DOM 做里程表 / 解码动画，只动变化的位；不要再新增 `CountUp` 一类逐帧 setState 的计数器。
+- **逐字入场标题（`SplitText`）按词断行**：字符被包进 `.split-word`（`inline-block` + `nowrap`），一行只能在词与词之间断，否则每个 inline-block 字符两侧都是换行机会，中文会拆出「接 / 入」、英文会断出 `mod / el`。英文按 `Intl.Segmenter` 词边界即可；中日文没有空格，ICU 词典认不出「接入」这类词，所以**文案里用 U+200B（JSON 写 `\u200b`）显式标出允许断行的位置**，有标记时 CJK 连续文字只在标记处断（`lib/split-words.ts`）。新增 / 修改 `portal.tagline` 这类用 `SplitText` 的文案时，zh / ja 都要补标记，并实测三语 × 桌面 / 手机无断词、无溢出。
 - **内联脚本不要拼接**：根布局是 server component，从 `"use client"` 模块（如 `lib/theme.tsx`）导入的常量在这里是客户端引用，只能原样作为 prop 传入；与其他字符串拼接会把引用代理 stringify 成 `function(){throw …}`。每段首帧脚本单独一个 `<script>`。
 
 ## i18n 布局稳定性契约
@@ -98,10 +101,15 @@
 - **可截断内容一律 `truncate` + Tooltip**（lint 强制）；实测「静默裁掉」的方法：遍历 `tbody td`，`td.scrollWidth > td.clientWidth + 1` 且不在 `TooltipTrigger` 子树内即为不合格。**注意 `scrollWidth` 只看得见右侧溢出**，`justify-end` 的 flex 从左侧裁掉时该判据失效，需另比单元格内容盒与子元素包围盒的左右边界（任一侧溢出 > 1px 即不合格）。
 - **窄视口兜底**：容器保留 `overflow-x-auto`，只有预算放不下时才出现横向滚动，属于预期行为。
 - 开启 `fit` 的页面：`upstream`（分组/平铺）、`audit/model`、`audit/demo`、`sessions`、`cron`。
+- **按面板宽度渐进显示列（仪表盘 Endpoint / Top 两张表）**：1280 视口下面板表格只有约 310px，六列常驻的声明宽度就占 280px，主名列被挤到 17px（Top 排行只剩 5px）——名字完全看不见。这两张表的面板主体声明 `@container`，次要列用 `dense-table.tsx` 的 `SHOW_FROM_*`（`hidden @min-[Npx]:table-cell`）按优先级渐进展开；阈值按「主名列可见宽度 ≥ ~110px」反推，数值是表格可用宽度。新增列先定优先级，不要直接常驻。验证按 zh / en / ja × 1280 / 1440 / 1920 三语三宽实测（主名列 `clientWidth ≥ scrollWidth`、无被裁表头）。
 
 ### Font Scale（CJK 字号对齐）
 
 `globals.css` 的 `:lang(zh)/:lang(ja)` 块覆盖 Tailwind v4 `--text-*` 主题变量，等比下调 CJK 字号（zh 0.92、ja 0.88），仅动字号不动 rem 间距。新增 text utility 档位时同步在两个 `:lang()` 块补对应 `--text-*` 覆盖。预留 `min-w` 应以缩放后的 CJK 宽度为准核定。
+
+- **字号下限**：`--text-xs` 在 zh / ja 钉在 `0.75rem`（12px），不再等比下调——CJK 笔画密，11px 以下读不清。业务里的字面量字号不得小于 `text-[11px]`（`text-[10px]`、`text-[9px]`、`text-[0.625rem]` 一律不允许）：表头、环比、热力图坐标这类密集数据标签用 11px，正文与说明 ≥ 12px。
+- **小字品牌色用 `text-primary-ink`**：`--primary` / `--chart-2` 在 `#faf8f5`、`#f5f0eb` 上只有 3.96–4.3:1，eyebrow、类别标签这类 ≤13px 的品牌色文字改用 `--primary-ink`（≥ 4.5:1）。`--positive` / `--warning` 会直接当文字色，浅色主题下已调到白卡上 ≥ 4.5:1，别再调浅。
+- 验证：无头浏览器遍历文本节点，按「字号 < 11px」与「前景色 alpha 合成到真实背景后的对比度 < 4.5:1」两个判据统计，目标均为 0。
 
 ### 切换闪烁
 

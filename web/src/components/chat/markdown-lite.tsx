@@ -140,7 +140,7 @@ function MermaidBlock({ code }: { code: string }) {
 
   return (
     <div className="my-3 overflow-hidden rounded-lg border border-border/60 bg-card">
-      <div className="border-b border-border/60 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+      <div className="border-b border-border/60 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
         mermaid
       </div>
       <div
@@ -170,7 +170,7 @@ function CodeBlock({
   return (
     <div className="group/code my-3 overflow-hidden rounded-xl border border-(--code-border) bg-(--code-bg)">
       <div className="flex items-center justify-between border-b border-(--code-border) px-3.5 py-1.5">
-        <span className="font-mono text-[10px] tracking-[0.12em] text-(--code-text)/35">
+        <span className="font-mono text-[11px] tracking-[0.12em] text-(--code-text)/35">
           {lang || "text"}
         </span>
         <CopyButton

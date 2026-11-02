@@ -190,7 +190,7 @@ export function ReliabilityPanel({ range }: { range: DashboardRange }) {
             <TooltipRoot>
               <TooltipTrigger
                 render={
-                  <code className="min-w-0 truncate rounded bg-muted px-1 font-mono text-[10px] text-foreground">
+                  <code className="min-w-0 truncate rounded bg-muted px-1 font-mono text-[11px] text-foreground">
                     {top.statusCode} {top.message || "\u2014"}
                   </code>
                 }
@@ -271,7 +271,7 @@ export function ReliabilityPanel({ range }: { range: DashboardRange }) {
             })}
           </div>
           {segments.length > 0 && (
-            <div className="flex justify-between text-[10px] text-muted-foreground tabular-nums">
+            <div className="flex justify-between text-[11px] text-muted-foreground tabular-nums">
               <span>{format(new Date(segments[0].start), axisFormat)}</span>
               <span>{format(new Date(segments[segments.length - 1].end), axisFormat)}</span>
             </div>
@@ -280,7 +280,7 @@ export function ReliabilityPanel({ range }: { range: DashboardRange }) {
 
         {summary && summary.failures.length > 0 && (
           <div className="flex min-h-0 flex-[2_1_0] flex-col gap-1.5 border-t border-border/60 pt-2">
-            <span className="shrink-0 text-[10px] tracking-wide text-muted-foreground">
+            <span className="shrink-0 text-[11px] tracking-wide text-muted-foreground">
               {t("dashboard.failure.title")}
             </span>
             <FailureBreakdown failures={summary.failures} />

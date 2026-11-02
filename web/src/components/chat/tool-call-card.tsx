@@ -79,12 +79,12 @@ export function ToolCallCard({ call, result }: ToolCallCardProps) {
         <div className="border-t border-border bg-background/40 min-w-0">
           {call.id && (
             <div className="border-b border-border/50 px-3 py-1.5">
-              <span className="font-mono text-[10px] text-muted-foreground/60">{call.id}</span>
+              <span className="font-mono text-[11px] text-muted-foreground/60">{call.id}</span>
             </div>
           )}
           <div className="px-3 py-2.5">
             <div className="mb-1.5 flex items-center justify-between">
-              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+              <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
                 {t("tool_call.input")}
               </p>
               <CopyButton value={args || "{}"} ariaLabel={t("tool_call.copy_input_aria")} />
@@ -96,7 +96,7 @@ export function ToolCallCard({ call, result }: ToolCallCardProps) {
           {out !== undefined && (
             <div className="border-t border-border px-3 py-2.5">
               <div className="mb-1.5 flex items-center justify-between">
-                <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
                   {t("tool_call.output")}
                 </p>
                 <CopyButton value={out} ariaLabel={t("tool_call.copy_output_aria")} />

@@ -58,7 +58,7 @@ function KpiCard({ spec, loading }: { spec: KpiSpec; loading: boolean }) {
         {!loading && (
           <span
             className={cn(
-              "font-mono text-[10px] font-semibold whitespace-nowrap tabular-nums",
+              "font-mono text-[11px] font-semibold whitespace-nowrap tabular-nums",
               TONE_CLASS[tone],
             )}
           >

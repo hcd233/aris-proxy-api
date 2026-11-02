@@ -39,8 +39,8 @@ function CapabilityCard({
       )}
     >
       <header>
-        <p className="text-xs text-chart-2 moonshot:text-chart-4">{t(`portal.cap.${k}.eyebrow`)}</p>
-        <h3 className="mt-1 font-display text-2xl leading-tight font-normal tracking-[-0.025em] text-foreground">
+        <p className="text-xs text-primary-ink">{t(`portal.cap.${k}.eyebrow`)}</p>
+        <h3 className="mt-1 font-display text-2xl leading-tight font-normal tracking-[-0.025em] text-balance text-foreground">
           {t(`portal.cap.${k}.title`)}
         </h3>
         <p className="mt-1.5 text-sm text-muted-foreground">{t(`portal.cap.${k}.desc`)}</p>

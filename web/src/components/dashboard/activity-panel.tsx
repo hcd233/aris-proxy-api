@@ -84,11 +84,11 @@ export function ActivityPanel({ range }: { range: DashboardRange }) {
     >
       <div
         onMouseLeave={() => setHover(null)}
-        className="grid min-h-0 flex-1 grid-cols-[14px_repeat(24,minmax(0,1fr))] grid-rows-[repeat(7,minmax(0,1fr))_auto] gap-[2px]"
+        className="grid min-h-0 flex-1 grid-cols-[18px_repeat(24,minmax(0,1fr))] grid-rows-[repeat(7,minmax(0,1fr))_auto] gap-[2px]"
       >
         {matrix.map((row, d) => (
           <div key={d} className="contents">
-            <span className="flex items-center text-[9px] leading-none text-muted-foreground">
+            <span className="flex items-center text-[11px] leading-none text-muted-foreground">
               {weekdays[d]}
             </span>
             {row.map((count, h) => (
@@ -106,14 +106,17 @@ export function ActivityPanel({ range }: { range: DashboardRange }) {
         ))}
         <span />
         {HOURS.map((h) => (
-          <span key={h} className="text-center text-[8px] leading-none text-muted-foreground">
+          <span
+            key={h}
+            className="text-center text-[11px] leading-none whitespace-nowrap text-muted-foreground tabular-nums"
+          >
             {h % 6 === 0 ? h : ""}
           </span>
         ))}
       </div>
 
       <div className="space-y-1">
-        <div className="text-[10px] tracking-wide text-muted-foreground uppercase">
+        <div className="text-[11px] tracking-wide text-muted-foreground uppercase">
           {t("dashboard.panel.clients")}
         </div>
         <div className="flex h-1.5 overflow-hidden rounded-full bg-muted">
@@ -125,7 +128,7 @@ export function ActivityPanel({ range }: { range: DashboardRange }) {
             />
           ))}
         </div>
-        <div className="flex flex-wrap gap-x-2.5 gap-y-0.5 text-[10px] text-muted-foreground">
+        <div className="flex flex-wrap gap-x-2.5 gap-y-0.5 text-[11px] text-muted-foreground">
           {segments.map((s) => (
             <span key={s.key} className="inline-flex items-center gap-1">
               <span className="size-1.5 rounded-[2px]" style={{ backgroundColor: s.color }} />

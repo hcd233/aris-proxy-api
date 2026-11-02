@@ -233,7 +233,8 @@ class ApiClient {
       action: {
         label: translate("auth.login"),
         onClick: () => {
-          window.location.href = "/web/login";
+          // 凭据失效需要整页重载清空内存态；replace 避免回退到已失效页面
+          window.location.replace("/web/login/");
         },
       },
     });

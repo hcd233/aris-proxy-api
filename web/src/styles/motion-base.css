@@ -48,6 +48,14 @@ html[data-motion-tier="still"] .data-morph {
   transition: none;
 }
 
+/* SplitText groups glyphs into words: a line may break between words but never
+ * inside one (otherwise 「接入」 becomes 「接 / 入」 and `model` becomes `mod / el`,
+ * because every inline-block glyph is a break opportunity on its own). */
+.split-word {
+  display: inline-block;
+  white-space: nowrap;
+}
+
 /* Pseudo-element overlays (card light, popover beam) need a positioned
  * host. Kept in the components layer so an explicit `absolute` / `fixed`
  * utility on the same element still wins. */
