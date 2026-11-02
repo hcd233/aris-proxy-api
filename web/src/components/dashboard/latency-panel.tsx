@@ -18,7 +18,18 @@ import { useOverview } from "@/components/dashboard/overview-context";
 import type { DashboardRange } from "@/components/dashboard/use-dashboard-range";
 
 /** 延迟：首字 P50 / P95 / P99 三线 + P50–P95 带；底部输出速度与平均流式时长 */
-const yTickFormatter = (v: number) => formatDurationMs(v);
+/**
+ * 轴刻度格式化：整根轴共用一个量纲与一个精度。
+ *
+ * 逐点调用 `formatDurationMs` 会让同一根轴同时出现 `950ms`、`2.85s`、`3.8s`
+ * 三种刻度——单位跳变、小数位也随数值抖动，读起来像三套标尺叠在一起。
+ * 这里按轴域最大值定单位：≥1s 整轴走秒（<10s 保留 1 位小数，≥10s 取整），
+ * 否则整轴走毫秒。单个数值的浮层仍用 `formatDurationMs` 精确展示。
+ */
+function formatAxisDuration(v: number, axisMax: number): string {
+  if (axisMax >= 1000) return `${formatDecimal(v / 1000, axisMax >= 10_000 ? 0 : 1)}s`;
+  return `${formatDecimal(v, 0)}ms`;
+}
 
 export function LatencyPanel({ range }: { range: DashboardRange }) {
   const { t, locale } = useI18n();
@@ -61,6 +72,19 @@ export function LatencyPanel({ range }: { range: DashboardRange }) {
   );
 
   const summary = data?.current.summary;
+
+  // 轴域上限决定整根轴的单位与精度（见 formatAxisDuration）
+  const axisMax = useMemo(() => {
+    let max = 0;
+    for (const p of chartData) {
+      for (const v of [p.p50, p.p95, p.p99]) {
+        if (v != null && Number.isFinite(v) && v > max) max = v;
+      }
+    }
+    return max;
+  }, [chartData]);
+  // 引用必须稳定：内联 tickFormatter 会让 recharts 重算坐标并重放曲线动画
+  const yTickFormatter = useCallback((v: number) => formatAxisDuration(v, axisMax), [axisMax]);
 
   return (
     <Panel
