@@ -45,12 +45,12 @@ function FlowNode({
       data-flow-node={kind}
       data-hot={hot || undefined}
       className={cn(
-        "flex h-10 items-center gap-2.5 rounded-xl bg-background px-3.5 text-sm text-foreground ring-1 ring-border transition-[box-shadow,transform] duration-300",
+        "flex min-h-10 min-w-0 items-center gap-2.5 rounded-xl bg-background px-3.5 py-1.5 text-sm leading-tight text-foreground ring-1 ring-border transition-[box-shadow,transform] duration-300",
         hot && "scale-[1.03] ring-[1.5px] ring-primary",
       )}
     >
       <ProviderIcon decorative protocol={entity.icon} size={18} />
-      <span className="whitespace-nowrap">
+      <span className="min-w-0 lg:whitespace-nowrap">
         {entity.labelKey ? t(entity.labelKey) : entity.label}
       </span>
     </li>
