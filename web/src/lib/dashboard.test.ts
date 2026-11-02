@@ -69,8 +69,8 @@ describe("fitFailureTopK", () => {
     expect(fitFailureTopK(8, 1)).toBe(0);
     expect(fitFailureTopK(8, 0)).toBe(0);
   });
-  it("caps rows at FAILURE_TOP_K + 1 even on tall panels", () => {
-    expect(fitFailureTopK(8, 20)).toBe(4);
+  it("spreads every code on tall panels (no fixed cap)", () => {
+    expect(fitFailureTopK(8, 20)).toBe(8);
     expect(fitFailureTopK(5, 20)).toBe(5);
   });
 });

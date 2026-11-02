@@ -61,9 +61,6 @@ export function successRate(s: Pick<DashboardStats, "requests" | "success">): nu
   return s.requests > 0 ? s.success / s.requests : null;
 }
 
-/** 失败状态码只展示前 k 个，其余合并 */
-export const FAILURE_TOP_K = 4;
-
 /** 失败状态码展示名：-1 / 0 是网关内部约定码，需要 i18n 文案；其余直接显示 HTTP 状态码 */
 export function failureCodeLabel(statusCode: number, t: (key: string) => string): string {
   if (statusCode === -1) return t("dashboard.failure.connection");
@@ -73,17 +70,17 @@ export function failureCodeLabel(statusCode: number, t: (key: string) => string)
 
 /**
  * 按可容纳行数决定展示几个状态码：全部放得下就全展示，否则留一行给「其余」。
- * 行数上限为 FAILURE_TOP_K + 1（大屏也不铺满长尾）；至少返回 0（只剩「其余」一行）。
+ * 行数只受容器实测高度约束（不设人为上限，长尾也能铺开）；至少返回 0（只剩「其余」一行）。
  */
-export function fitFailureTopK(codes: number, capacityRows: number, cap = FAILURE_TOP_K): number {
-  const maxRows = Math.max(1, Math.min(capacityRows, cap + 1));
+export function fitFailureTopK(codes: number, capacityRows: number): number {
+  const maxRows = Math.max(1, capacityRows);
   return codes <= maxRows ? codes : maxRows - 1;
 }
 
 /** 取前 k 个失败状态码（后端已按 count 降序），其余合并为 rest（保留明细供浮层展示）；rest 为 null 表示无剩余 */
 export function topFailures(
   failures: DashboardFailure[],
-  k = FAILURE_TOP_K,
+  k = failures.length,
 ): { top: DashboardFailure[]; rest: { items: DashboardFailure[]; count: number } | null } {
   const top = failures.slice(0, k);
   const items = failures.slice(k);

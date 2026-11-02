@@ -8,7 +8,6 @@ import { cn, formatInteger } from "@/lib/utils";
 import {
   failureCodeLabel,
   fitFailureTopK,
-  FAILURE_TOP_K,
   formatRate,
   successRate,
   topFailures,
@@ -105,14 +104,14 @@ function useRowCapacity() {
 }
 
 /**
- * 失败分布（后端已降序）：按容器实际高度自适应 Top-K——放得下就全展示，
- * 否则前 k 个各占一行、其余合并为一行并以浮层展示明细；各行合计恒等于失败数。
+ * 失败分布（后端已降序）：按容器实际高度自适应 Top-K——放得下就全展示（首帧未量到高度时同样全展示），
+ * 只有容器放不下时才前 k 个各占一行、其余合并为一行并以浮层展示明细；各行合计恒等于失败数。
  */
 function FailureBreakdown({ failures }: { failures: DashboardFailure[] }) {
   const t = useT();
   const { ref, rows } = useRowCapacity();
   const total = failures.reduce((s, f) => s + f.count, 0);
-  const k = fitFailureTopK(failures.length, rows ?? FAILURE_TOP_K + 1);
+  const k = rows == null ? failures.length : fitFailureTopK(failures.length, rows);
   const { top, rest } = topFailures(failures, k);
   return (
     <div ref={ref} className="min-h-0 flex-1 overflow-hidden">
