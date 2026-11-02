@@ -23,6 +23,14 @@ const DEFAULT_REFRESH_MS = 5_000;
 const RANGE_KEYS = ["15m", "1h", "6h", "24h"] as const;
 type RangeKey = (typeof RANGE_KEYS)[number];
 
+// 档位文案复用全站 time.* 键，与 TimeRangePicker 的选择器保持同一套 i18n 术语
+const RANGE_LABEL_KEYS: Record<RangeKey, string> = {
+  "15m": "time.last_15m",
+  "1h": "time.last_1h",
+  "6h": "time.last_6h",
+  "24h": "time.last_24h",
+};
+
 const RANGE_WINDOW_SEC: Record<RangeKey, number> = {
   "15m": 900,
   "1h": 3600,
@@ -372,6 +380,7 @@ export default function MonitorPage() {
             <ToggleGroup
               variant="segmented"
               spacing={0.5}
+              className="no-scrollbar max-w-full overflow-x-auto"
               value={[range]}
               onValueChange={(next) => {
                 if (next[0]) setRange(next[0] as RangeKey);
@@ -379,7 +388,7 @@ export default function MonitorPage() {
             >
               {RANGE_KEYS.map((key) => (
                 <ToggleGroupItem key={key} value={key}>
-                  {key}
+                  {t(RANGE_LABEL_KEYS[key])}
                 </ToggleGroupItem>
               ))}
             </ToggleGroup>

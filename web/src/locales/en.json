@@ -304,6 +304,7 @@
   "profile.unnamed": "Unnamed",
   "profile.joined": "Joined {date}",
   "time.all": "All",
+  "time.last_15m": "Last 15 minutes",
   "time.last_1h": "Last 1 hour",
   "time.last_6h": "Last 6 hours",
   "time.last_24h": "Last 24 hours",

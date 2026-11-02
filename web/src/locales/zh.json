@@ -389,6 +389,7 @@
   "profile.unnamed": "未命名",
   "profile.joined": "注册于 {date}",
   "time.all": "全部",
+  "time.last_15m": "最近 15 分钟",
   "time.last_1h": "最近 1 小时",
   "time.last_6h": "最近 6 小时",
   "time.last_24h": "最近 24 小时",

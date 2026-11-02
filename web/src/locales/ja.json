@@ -304,6 +304,7 @@
   "profile.unnamed": "未設定",
   "profile.joined": "{date} に参加",
   "time.all": "すべて",
+  "time.last_15m": "過去 15 分間",
   "time.last_1h": "過去 1 時間",
   "time.last_6h": "過去 6 時間",
   "time.last_24h": "過去 24 時間",
