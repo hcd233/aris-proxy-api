@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { ShieldAlert } from "lucide-react";
 import {
   Empty,
@@ -46,12 +47,14 @@ export function PermissionGuard({
 }: PermissionGuardProps) {
   const { user, isLoading, isUser, isAdmin, isDemo, isModuleOpen } = useAuth();
   const t = useT();
+  const router = useRouter();
 
   useEffect(() => {
     if (!isLoading && !user) {
-      window.location.href = "/web/login/";
+      // replace 而非 push：未登录不该在历史栈里留下受保护页面，避免回退死循环
+      router.replace("/login/");
     }
-  }, [isLoading, user]);
+  }, [isLoading, user, router]);
 
   if (isLoading) {
     return (

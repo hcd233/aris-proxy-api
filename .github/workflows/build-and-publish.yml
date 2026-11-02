@@ -44,7 +44,7 @@ jobs:
       digest: ${{ steps.image.outputs.digest }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           # docs/diagrams 下的架构图走 Git LFS：关掉 smudge 会拿到指针文件
           lfs: true
@@ -55,7 +55,7 @@ jobs:
 
       - name: Cache frontend build
         id: web-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: web/out
           key: ${{ steps.web-hash.outputs.key }}
@@ -70,13 +70,13 @@ jobs:
         run: find web/out -type f -exec gzip -9 {} +
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           go-version: '1.25.1'
           cache: false
 
       - name: Cache Go modules and build
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/go/pkg/mod
