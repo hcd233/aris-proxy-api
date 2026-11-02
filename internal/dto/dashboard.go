@@ -43,12 +43,10 @@ type DashboardHeatmapReq struct {
 	TZ        string    `query:"tz" required:"true" minLength:"1" maxLength:"64" doc:"IANA 时区名，如 Asia/Shanghai"`
 }
 
-// DashboardFailures 失败请求按原因拆分
-type DashboardFailures struct {
-	RateLimit  int64 `json:"rateLimit" doc:"429 限流"`
-	Server     int64 `json:"server" doc:"5xx"`
-	Connection int64 `json:"connection" doc:"连接失败（状态码 -1）"`
-	Other      int64 `json:"other" doc:"其他非 200"`
+// DashboardFailureItem 某个上游状态码的失败请求数
+type DashboardFailureItem struct {
+	StatusCode int   `json:"statusCode" doc:"上游状态码：-1 连接异常（建连失败/读流中断/响应解析失败），0 未知错误，其余为 HTTP 状态码"`
+	Count      int64 `json:"count" doc:"失败请求数"`
 }
 
 // DashboardTokens 成功请求的四维 token（input 为净输入，不含缓存）
@@ -68,15 +66,15 @@ type DashboardLatency struct {
 
 // DashboardStatsItem 统计块
 type DashboardStatsItem struct {
-	Requests              int64              `json:"requests" doc:"全部请求数"`
-	Success               int64              `json:"success" doc:"成功请求数（上游 200）"`
-	Failures              *DashboardFailures `json:"failures" doc:"失败拆分"`
-	Tokens                *DashboardTokens   `json:"tokens" doc:"token 拆分（仅成功请求）"`
-	Cost                  float64            `json:"cost" doc:"已计价费用（展示单位）"`
-	PricedSuccess         int64              `json:"pricedSuccess" doc:"已计价的成功请求数"`
-	Latency               *DashboardLatency  `json:"latency" doc:"首 token 延迟分位数"`
-	OutputTokensPerSecond *float64           `json:"outputTokensPerSecond,omitempty" doc:"输出速度 tok/s（仅流式成功请求）"`
-	AvgStreamDurationMs   *float64           `json:"avgStreamDurationMs,omitempty" doc:"平均流式时长（ms）"`
+	Requests              int64                   `json:"requests" doc:"全部请求数"`
+	Success               int64                   `json:"success" doc:"成功请求数（上游 200）"`
+	Failures              []*DashboardFailureItem `json:"failures" doc:"失败按上游状态码拆分（请求数降序，合计 = requests − success）；仅周期总量填充，时间序列恒为空"`
+	Tokens                *DashboardTokens        `json:"tokens" doc:"token 拆分（仅成功请求）"`
+	Cost                  float64                 `json:"cost" doc:"已计价费用（展示单位）"`
+	PricedSuccess         int64                   `json:"pricedSuccess" doc:"已计价的成功请求数"`
+	Latency               *DashboardLatency       `json:"latency" doc:"首 token 延迟分位数"`
+	OutputTokensPerSecond *float64                `json:"outputTokensPerSecond,omitempty" doc:"输出速度 tok/s（仅流式成功请求）"`
+	AvgStreamDurationMs   *float64                `json:"avgStreamDurationMs,omitempty" doc:"平均流式时长（ms）"`
 }
 
 // DashboardStatsPointItem 时间桶统计
@@ -87,11 +85,11 @@ type DashboardStatsPointItem struct {
 
 // DashboardUptimeBucketItem 可用性状态条的一个时间桶
 type DashboardUptimeBucketItem struct {
-	Start    time.Time          `json:"start" doc:"桶起点"`
-	End      time.Time          `json:"end" doc:"桶终点（末桶为区间终点）"`
-	Requests int64              `json:"requests" doc:"请求数"`
-	Success  int64              `json:"success" doc:"成功请求数（上游 200）"`
-	Failures *DashboardFailures `json:"failures" doc:"失败拆分"`
+	Start    time.Time               `json:"start" doc:"桶起点"`
+	End      time.Time               `json:"end" doc:"桶终点（末桶为区间终点）"`
+	Requests int64                   `json:"requests" doc:"请求数"`
+	Success  int64                   `json:"success" doc:"成功请求数（上游 200）"`
+	Failures []*DashboardFailureItem `json:"failures" doc:"失败按上游状态码拆分（请求数降序，合计 = requests − success）"`
 }
 
 // DashboardPeriodItem 一个统计周期

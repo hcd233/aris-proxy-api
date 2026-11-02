@@ -14,9 +14,6 @@ import (
 type DashboardStats struct {
 	Requests              int64    `gorm:"column:requests"`
 	Success               int64    `gorm:"column:success"`
-	RateLimitFailures     int64    `gorm:"column:rate_limit_failures"`
-	ServerFailures        int64    `gorm:"column:server_failures"`
-	ConnectionFailures    int64    `gorm:"column:connection_failures"`
 	InputTokens           int64    `gorm:"column:input_tokens"`
 	OutputTokens          int64    `gorm:"column:output_tokens"`
 	CacheReadTokens       int64    `gorm:"column:cache_read_tokens"`
@@ -28,6 +25,21 @@ type DashboardStats struct {
 	LatencyP99Ms          *float64 `gorm:"column:latency_p99_ms"`
 	OutputTokensPerSecond *float64 `gorm:"column:output_tokens_per_second"`
 	AvgStreamDurationMs   *float64 `gorm:"column:avg_stream_duration_ms"`
+	// Failures 失败按上游状态码拆分（调用数降序），仅 QueryStats 填充；时间桶序列不拆分
+	Failures []*DashboardFailureCount `gorm:"-"`
+}
+
+// DashboardFailureCount 某个上游状态码的失败调用数（-1 连接异常、0 未知错误，其余为 HTTP 状态码）
+type DashboardFailureCount struct {
+	StatusCode int   `gorm:"column:status_code"`
+	Count      int64 `gorm:"column:count"`
+}
+
+// DashboardFailureBucketRow 可用性时间桶 × 失败状态码的计数行
+type DashboardFailureBucketRow struct {
+	Time       time.Time `gorm:"column:time"`
+	StatusCode int       `gorm:"column:status_code"`
+	Count      int64     `gorm:"column:count"`
 }
 
 // DashboardStatsPoint 按时间桶的统计块
@@ -40,12 +52,24 @@ type DashboardStatsPoint struct {
 type DashboardUptimePoint struct {
 	Time time.Time `gorm:"column:time"`
 	// End 桶终点（补桶时算出，不来自 SQL）
-	End                time.Time `gorm:"-"`
-	Requests           int64     `gorm:"column:requests"`
-	Success            int64     `gorm:"column:success"`
-	RateLimitFailures  int64     `gorm:"column:rate_limit_failures"`
-	ServerFailures     int64     `gorm:"column:server_failures"`
-	ConnectionFailures int64     `gorm:"column:connection_failures"`
+	End      time.Time `gorm:"-"`
+	Requests int64     `gorm:"column:requests"`
+	Success  int64     `gorm:"column:success"`
+	// Failures 失败按上游状态码拆分（调用数降序，不来自主查询）
+	Failures []*DashboardFailureCount `gorm:"-"`
+}
+
+// AttachUptimeFailures 把「桶 × 状态码」计数行挂到对应桶上（行已按桶内调用数降序排好）
+func AttachUptimeFailures(points []*DashboardUptimePoint, rows []*DashboardFailureBucketRow) {
+	byTime := make(map[int64]*DashboardUptimePoint, len(points))
+	for _, p := range points {
+		byTime[p.Time.Unix()] = p
+	}
+	for _, r := range rows {
+		if p, ok := byTime[r.Time.Unix()]; ok {
+			p.Failures = append(p.Failures, &DashboardFailureCount{StatusCode: r.StatusCode, Count: r.Count})
+		}
+	}
 }
 
 // UptimeBucketWidth 可用性状态条的桶宽：区间秒数整除桶数后加 1 秒，保证 buckets 个桶能覆盖整个区间。
@@ -83,9 +107,7 @@ func BuildUptimeBuckets(points []*DashboardUptimePoint, start, end time.Time, bu
 		if p, ok := byTime[bucketStart.Unix()]; ok {
 			bucket.Requests = p.Requests
 			bucket.Success = p.Success
-			bucket.RateLimitFailures = p.RateLimitFailures
-			bucket.ServerFailures = p.ServerFailures
-			bucket.ConnectionFailures = p.ConnectionFailures
+			bucket.Failures = p.Failures
 		}
 		result = append(result, bucket)
 	}

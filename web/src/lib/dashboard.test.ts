@@ -4,6 +4,7 @@ import {
   deltaDiff,
   deltaPct,
   deltaTone,
+  failureCodeLabel,
   formatCostShort,
   formatDelta,
   foldTopModels,
@@ -13,6 +14,7 @@ import {
   peakBucket,
   rangeDays,
   successRate,
+  topFailures,
   uptimeLevel,
 } from "./dashboard";
 import type { DashboardModelPoint, DashboardStats, DashboardStatsPoint } from "./types";
@@ -21,7 +23,7 @@ function stats(partial: Partial<DashboardStats> = {}): DashboardStats {
   return {
     requests: 0,
     success: 0,
-    failures: { rateLimit: 0, server: 0, connection: 0, other: 0 },
+    failures: [],
     tokens: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
     cost: 0,
     pricedSuccess: 0,
@@ -29,6 +31,35 @@ function stats(partial: Partial<DashboardStats> = {}): DashboardStats {
     ...partial,
   };
 }
+
+describe("topFailures", () => {
+  const failures = [
+    { statusCode: 429, count: 9 },
+    { statusCode: 502, count: 5 },
+    { statusCode: -1, count: 3 },
+    { statusCode: 400, count: 2 },
+    { statusCode: 0, count: 1 },
+    { statusCode: 503, count: 1 },
+  ];
+  it("keeps the first k and folds the rest", () => {
+    const { top, rest } = topFailures(failures, 4);
+    expect(top.map((f) => f.statusCode)).toEqual([429, 502, -1, 400]);
+    expect(rest).toEqual({ codes: 2, count: 2 });
+  });
+  it("returns null rest when everything fits", () => {
+    expect(topFailures(failures.slice(0, 2), 4).rest).toBeNull();
+    expect(topFailures([], 4)).toEqual({ top: [], rest: null });
+  });
+});
+
+describe("failureCodeLabel", () => {
+  const t = (k: string) => `t:${k}`;
+  it("maps gateway-internal codes to i18n keys and keeps HTTP codes as is", () => {
+    expect(failureCodeLabel(-1, t)).toBe("t:dashboard.failure.connection");
+    expect(failureCodeLabel(0, t)).toBe("t:dashboard.failure.unknown");
+    expect(failureCodeLabel(429, t)).toBe("429");
+  });
+});
 
 describe("deltaPct", () => {
   it("returns null when both periods are empty", () => {

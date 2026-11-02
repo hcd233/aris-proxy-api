@@ -5,8 +5,15 @@ import { format } from "date-fns";
 import { api } from "@/lib/api-client";
 import { useT } from "@/lib/i18n";
 import { cn, formatInteger } from "@/lib/utils";
-import { formatRate, successRate, uptimeLevel, type UptimeLevel } from "@/lib/dashboard";
-import type { DashboardFailures, DashboardUptimeBucket } from "@/lib/types";
+import {
+  failureCodeLabel,
+  formatRate,
+  successRate,
+  topFailures,
+  uptimeLevel,
+  type UptimeLevel,
+} from "@/lib/dashboard";
+import type { DashboardFailure, DashboardUptimeBucket } from "@/lib/types";
 import { TooltipContent, TooltipRoot, TooltipTrigger } from "@/components/ui/tooltip";
 import { Panel } from "@/components/dashboard/panel";
 import { useOverview } from "@/components/dashboard/overview-context";
@@ -14,14 +21,6 @@ import { useDashboardQuery } from "@/components/dashboard/use-dashboard-query";
 import type { DashboardRange } from "@/components/dashboard/use-dashboard-range";
 
 const DAY_MS = 86_400_000;
-
-const FAILURE_KEYS = ["rateLimit", "server", "connection", "other"] as const;
-const FAILURE_LABEL: Record<keyof DashboardFailures, string> = {
-  rateLimit: "dashboard.failure.rate_limit",
-  server: "dashboard.failure.server",
-  connection: "dashboard.failure.connection",
-  other: "dashboard.failure.other",
-};
 
 const LEVEL_FILL: Record<UptimeLevel, string> = {
   ok: "bg-positive",
@@ -44,16 +43,29 @@ function segmentLabel(seg: DashboardUptimeBucket, spanDays: number): string {
   return from === to ? from : `${from} – ${to}`;
 }
 
-function FailureCounts({ failures }: { failures: DashboardFailures }) {
+/** 失败按状态码拆分（后端已降序）：只展示前 k 个，其余合并为一行，各行合计恒等于失败数 */
+function FailureCounts({ failures }: { failures: DashboardFailure[] }) {
   const t = useT();
+  if (failures.length === 0) return null;
+  const { top, rest } = topFailures(failures);
   return (
     <dl className="grid grid-cols-2 gap-x-4 gap-y-0.5">
-      {FAILURE_KEYS.map((k) => (
-        <div key={k} className="flex items-baseline justify-between gap-2">
-          <dt className="text-muted-foreground">{t(FAILURE_LABEL[k])}</dt>
-          <dd className="font-mono tabular-nums">{formatInteger(failures[k])}</dd>
+      {top.map((f) => (
+        <div key={f.statusCode} className="flex items-baseline justify-between gap-2">
+          <dt className="text-muted-foreground tabular-nums">
+            {failureCodeLabel(f.statusCode, t)}
+          </dt>
+          <dd className="font-mono tabular-nums">{formatInteger(f.count)}</dd>
         </div>
       ))}
+      {rest && (
+        <div className="flex items-baseline justify-between gap-2">
+          <dt className="text-muted-foreground tabular-nums">
+            {t("dashboard.failure.rest")} ({rest.codes})
+          </dt>
+          <dd className="font-mono tabular-nums">{formatInteger(rest.count)}</dd>
+        </div>
+      )}
     </dl>
   );
 }
@@ -125,8 +137,9 @@ export function ReliabilityPanel({ range }: { range: DashboardRange }) {
           <span className="text-muted-foreground">{t("dashboard.kpi.success_rate")}</span>
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col gap-1">
-          <div className="flex min-h-8 flex-1 gap-[2px]">
+        {/* 状态条固定高度，面板被网格拉高时多余空间均分到上下，避免竖条被拉成细长柱 */}
+        <div className="flex min-h-0 flex-1 flex-col justify-center gap-1">
+          <div className="flex h-10 gap-[2px]">
             {segments.map((seg) => {
               const level = uptimeLevel(seg);
               const label = segmentLabel(seg, spanDays);

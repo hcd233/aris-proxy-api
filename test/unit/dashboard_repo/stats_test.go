@@ -26,9 +26,6 @@ func TestQueryStatsSQL(t *testing.T) {
 	}
 	assertSQLContains(t, sqls[0],
 		"count(*) filter (where upstream_status_code = 200)",
-		"upstream_status_code = 429",
-		"between 500 and 599",
-		"upstream_status_code = -1",
 		"percentile_cont(0.95) within group (order by first_token_latency_ms)",
 		"cost_micro is not null",
 		"stream_duration_ms > 0",
@@ -72,13 +69,17 @@ func TestQueryUptimeBucketsSQL(t *testing.T) {
 		t.Errorf("uptime range = [%v,%v], want [%v,%v]", points[0].Time, points[31].End, rangeStart, rangeEnd)
 	}
 	sqls := captured.all()
-	if len(sqls) != 1 {
-		t.Fatalf("QueryUptimeBuckets produced %d queries, want 1: %v", len(sqls), sqls)
+	if len(sqls) != 2 {
+		t.Fatalf("QueryUptimeBuckets produced %d queries, want 2 (buckets + failure codes): %v", len(sqls), sqls)
 	}
 	assertSQLContains(t, sqls[0], "date_bin(interval '18901 seconds'", "group by", "api_key_id in")
-	if strings.Contains(strings.ToLower(sqls[0]), "percentile_cont") {
-		t.Errorf("uptime query must not compute percentiles: %s", sqls[0])
+	for _, s := range sqls {
+		if strings.Contains(strings.ToLower(s), "percentile_cont") {
+			t.Errorf("uptime query must not compute percentiles: %s", s)
+		}
 	}
+	assertSQLContains(t, sqls[1], "date_bin(interval '18901 seconds'", "upstream_status_code <> 200",
+		"upstream_status_code as status_code", "group by time, status_code", "api_key_id in")
 	// date_bin 的原点必须是区间起点，且作为第一个绑定参数（SELECT 先于 WHERE 绑定）
 	vars := captured.lastVars()
 	if len(vars) == 0 {

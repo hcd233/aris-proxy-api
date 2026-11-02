@@ -56,17 +56,19 @@ func newHandler(f *fakeDashboard) handler.AuditHandler {
 func TestDashboardHandler_OverviewMapsCostAndFailures(t *testing.T) {
 	t.Parallel()
 
-	stats := &modelcall.DashboardStats{Requests: 10, Success: 6, RateLimitFailures: 2, ServerFailures: 1, CostMicro: 1_500_000}
+	stats := &modelcall.DashboardStats{
+		Requests: 12, Success: 6, CostMicro: 1_500_000,
+		Failures: []*modelcall.DashboardFailureCount{{StatusCode: 429, Count: 3}, {StatusCode: 502, Count: 2}, {StatusCode: -1, Count: 1}},
+	}
 	f := &fakeDashboard{overview: &port.DashboardOverview{
-		Current:  port.DashboardPeriod{Summary: stats, Series: []*modelcall.DashboardStatsPoint{{Time: start, DashboardStats: *stats}}},
+		Current:  port.DashboardPeriod{Summary: stats, Series: []*modelcall.DashboardStatsPoint{{Time: start, DashboardStats: modelcall.DashboardStats{Requests: 12, Success: 6}}}},
 		Previous: port.DashboardPeriod{Summary: &modelcall.DashboardStats{}, Series: []*modelcall.DashboardStatsPoint{}},
 		Uptime: []*modelcall.DashboardUptimePoint{{
-			Time:              start,
-			End:               end,
-			Requests:          5,
-			Success:           3,
-			RateLimitFailures: 1,
-			ServerFailures:    1,
+			Time:     start,
+			End:      end,
+			Requests: 5,
+			Success:  3,
+			Failures: []*modelcall.DashboardFailureCount{{StatusCode: 503, Count: 2}},
 		}},
 	}}
 	rsp, err := newHandler(f).HandleDashboardOverview(adminCtx(t), &dto.DashboardOverviewReq{
@@ -86,18 +88,25 @@ func TestDashboardHandler_OverviewMapsCostAndFailures(t *testing.T) {
 		t.Fatalf("uptime = %+v, want 1 bucket", data.Uptime)
 	}
 	uptime := data.Uptime[0]
-	if uptime.Requests != 5 || uptime.Success != 3 || uptime.Failures.RateLimit != 1 || uptime.Failures.Server != 1 || uptime.Failures.Other != 0 {
-		t.Errorf("uptime bucket = %+v, want requests=5 success=3 rateLimit=1 server=1 other=0", uptime)
+	if uptime.Requests != 5 || uptime.Success != 3 || len(uptime.Failures) != 1 ||
+		uptime.Failures[0].StatusCode != 503 || uptime.Failures[0].Count != 2 {
+		t.Errorf("uptime bucket = %+v, want requests=5 success=3 failures=[503×2]", uptime)
 	}
 	sum := data.Current.Summary
 	if sum.Cost != 1.5 {
 		t.Errorf("cost = %v, want 1.5", sum.Cost)
 	}
-	if sum.Failures.RateLimit != 2 || sum.Failures.Server != 1 || sum.Failures.Connection != 0 || sum.Failures.Other != 1 {
-		t.Errorf("failures = %+v, want rateLimit=2 server=1 connection=0 other=1", sum.Failures)
+	wantCodes := []int{429, 502, -1}
+	if len(sum.Failures) != len(wantCodes) {
+		t.Fatalf("failures = %+v, want %d codes", sum.Failures, len(wantCodes))
 	}
-	if len(data.Current.Series) != 1 || data.Current.Series[0].Failures.Other != 1 {
-		t.Errorf("series must carry the same mapping, got %+v", data.Current.Series)
+	for i, code := range wantCodes {
+		if sum.Failures[i].StatusCode != code {
+			t.Errorf("failures[%d].statusCode = %d, want %d (order must be preserved)", i, sum.Failures[i].StatusCode, code)
+		}
+	}
+	if len(data.Current.Series) != 1 || data.Current.Series[0].Failures == nil || len(data.Current.Series[0].Failures) != 0 {
+		t.Errorf("series failures must be a non-nil empty slice, got %+v", data.Current.Series)
 	}
 	if data.Previous.Series == nil {
 		t.Error("previous series must be a non-nil empty slice")

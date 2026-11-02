@@ -333,17 +333,24 @@ func TestBuildUptimeBuckets(t *testing.T) {
 		t.Fatalf("width = %v, want 18901s", width)
 	}
 	seeded := &modelcall.DashboardUptimePoint{
-		Time:              start.Add(2 * width),
-		Requests:          10,
-		Success:           9,
-		RateLimitFailures: 1,
+		Time:     start.Add(2 * width),
+		Requests: 10,
+		Success:  9,
 	}
+	modelcall.AttachUptimeFailures([]*modelcall.DashboardUptimePoint{seeded}, []*modelcall.DashboardFailureBucketRow{
+		{Time: start.Add(2 * width), StatusCode: 429, Count: 1},
+		{Time: start.Add(5 * width), StatusCode: 500, Count: 7}, // 无对应桶的行必须被忽略
+	})
 	buckets := modelcall.BuildUptimeBuckets([]*modelcall.DashboardUptimePoint{seeded}, start, end, 32)
 	if len(buckets) != 32 {
 		t.Fatalf("len(buckets) = %d, want 32", len(buckets))
 	}
-	if got := buckets[2]; got.Requests != 10 || got.Success != 9 || got.RateLimitFailures != 1 {
+	if got := buckets[2]; got.Requests != 10 || got.Success != 9 || len(got.Failures) != 1 ||
+		got.Failures[0].StatusCode != 429 || got.Failures[0].Count != 1 {
 		t.Errorf("bucket 2 = %+v, want the seeded counts", got)
+	}
+	if len(buckets[5].Failures) != 0 {
+		t.Errorf("bucket 5 failures = %+v, want none (no main-query row)", buckets[5].Failures)
 	}
 	if got := buckets[2]; !got.Time.Equal(seeded.Time) || !got.End.Equal(seeded.Time.Add(width)) {
 		t.Errorf("bucket 2 boundaries = [%v,%v], want [%v,%v]", got.Time, got.End, seeded.Time, seeded.Time.Add(width))

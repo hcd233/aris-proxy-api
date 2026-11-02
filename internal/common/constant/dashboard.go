@@ -19,12 +19,21 @@ const (
 	// dashboardStreamFilter 流式成功调用过滤子句
 	dashboardStreamFilter = " FILTER (WHERE upstream_status_code = 200 AND stream_duration_ms > 0)"
 
+	// DashboardFailureCodeSelect 失败按上游状态码拆分投影（配合 DashboardConditionFailure；
+	// 按单个状态码分组天然互斥穷尽，各项合计恒等于失败数）
+	DashboardFailureCodeSelect = "upstream_status_code AS status_code, COUNT(*) AS count"
+	// DashboardFailureCodeGroup 失败状态码分组
+	DashboardFailureCodeGroup = "status_code"
+	// DashboardFailureCodeOrder 失败状态码排序：调用数降序、状态码升序（保证稳定）
+	DashboardFailureCodeOrder = "count DESC, status_code"
+	// DashboardFailureBucketGroup 可用性桶 × 失败状态码分组
+	DashboardFailureBucketGroup = "time, status_code"
+	// DashboardFailureBucketOrder 可用性桶 × 失败状态码排序
+	DashboardFailureBucketOrder = "time, count DESC, status_code"
+
 	// DashboardStatsSelect 统计块投影（QueryStats 无分组；QueryStatsSeries 前缀时间桶后分组）
 	DashboardStatsSelect = "COUNT(*) AS requests, " +
 		"COUNT(*)" + dashboardSuccessFilter + " AS success, " +
-		"COUNT(*) FILTER (WHERE upstream_status_code = 429) AS rate_limit_failures, " +
-		"COUNT(*) FILTER (WHERE upstream_status_code BETWEEN 500 AND 599) AS server_failures, " +
-		"COUNT(*) FILTER (WHERE upstream_status_code = -1) AS connection_failures, " +
 		"COALESCE(SUM(input_tokens)" + dashboardSuccessFilter + ", 0) AS input_tokens, " +
 		"COALESCE(SUM(output_tokens)" + dashboardSuccessFilter + ", 0) AS output_tokens, " +
 		"COALESCE(SUM(cache_read_input_tokens)" + dashboardSuccessFilter + ", 0) AS cache_read_tokens, " +
@@ -108,24 +117,22 @@ const (
 	// DashboardHeatmapGroup 热力图分组
 	DashboardHeatmapGroup = "weekday, hour"
 
-	// DashboardUptimeSelect 可用性状态条投影（只统计请求数与失败拆分，避免分位数/费用聚合）
+	// DashboardUptimeSelect 可用性状态条投影（只统计请求数与成功数，避免分位数/费用聚合；失败拆分另查）
 	DashboardUptimeSelect = "COUNT(*) AS requests, " +
-		"COUNT(*)" + dashboardSuccessFilter + " AS success, " +
-		"COUNT(*) FILTER (WHERE upstream_status_code = 429) AS rate_limit_failures, " +
-		"COUNT(*) FILTER (WHERE upstream_status_code BETWEEN 500 AND 599) AS server_failures, " +
-		"COUNT(*) FILTER (WHERE upstream_status_code = -1) AS connection_failures"
+		"COUNT(*)" + dashboardSuccessFilter + " AS success"
 
 	// DashboardTimeBucketAlias 时间桶列别名
 	DashboardTimeBucketAlias = " AS time, "
 	// DashboardGroupByTime 按时间桶分组/排序
 	DashboardGroupByTime = "time"
 
-	ReadCachePurposeDashboardStats    = "dashboard:stats"
+	// stats/uptime 缓存值结构含失败状态码拆分（v2），升版本避免命中旧结构缓存
+	ReadCachePurposeDashboardStats    = "dashboard:stats:v2"
 	ReadCachePurposeDashboardSeries   = "dashboard:series"
 	ReadCachePurposeDashboardModel    = "dashboard:model-series"
 	ReadCachePurposeDashboardErrors   = "dashboard:errors"
 	ReadCachePurposeDashboardEndpoint = "dashboard:endpoint"
 	ReadCachePurposeDashboardGroup    = "dashboard:group"
 	ReadCachePurposeDashboardHeatmap  = "dashboard:heatmap"
-	ReadCachePurposeDashboardUptime   = "dashboard:uptime"
+	ReadCachePurposeDashboardUptime   = "dashboard:uptime:v2"
 )

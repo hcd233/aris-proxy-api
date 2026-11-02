@@ -60,6 +60,19 @@ func (r *dashboardRepository) QueryStats(ctx context.Context, apiKeyIDs []uint, 
 			Find(&results).Error; err != nil {
 			return nil, ierr.Wrap(ierr.ErrDBQuery, err, "query dashboard stats")
 		}
+		if len(results) == 0 || results[0] == nil {
+			return results, nil
+		}
+		var failures []*modelcall.DashboardFailureCount
+		if err := r.windowQuery(loadCtx, apiKeyIDs, start, end).
+			Where(constant.DashboardConditionFailure).
+			Select(constant.DashboardFailureCodeSelect).
+			Group(constant.DashboardFailureCodeGroup).
+			Order(constant.DashboardFailureCodeOrder).
+			Find(&failures).Error; err != nil {
+			return nil, ierr.Wrap(ierr.ErrDBQuery, err, "query dashboard failure codes")
+		}
+		results[0].Failures = failures
 		return results, nil
 	})
 	if err != nil {
@@ -112,6 +125,16 @@ func (r *dashboardRepository) QueryUptimeBuckets(ctx context.Context, apiKeyIDs 
 			Find(&results).Error; err != nil {
 			return nil, ierr.Wrap(ierr.ErrDBQuery, err, "query dashboard uptime buckets")
 		}
+		var failures []*modelcall.DashboardFailureBucketRow
+		if err := r.windowQuery(loadCtx, apiKeyIDs, start, end).
+			Where(constant.DashboardConditionFailure).
+			Select(bucketExpr+constant.DashboardFailureCodeSelect, start).
+			Group(constant.DashboardFailureBucketGroup).
+			Order(constant.DashboardFailureBucketOrder).
+			Find(&failures).Error; err != nil {
+			return nil, ierr.Wrap(ierr.ErrDBQuery, err, "query dashboard uptime failure codes")
+		}
+		modelcall.AttachUptimeFailures(results, failures)
 		return modelcall.BuildUptimeBuckets(results, start, end, buckets), nil
 	})
 }

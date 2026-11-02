@@ -938,11 +938,11 @@ export interface DemoAccessAuditOptionListRsp extends CommonRsp {
 
 export type DashboardDimension = "model" | "user" | "apikey" | "harness";
 
-export interface DashboardFailures {
-  rateLimit: number;
-  server: number;
-  connection: number;
-  other: number;
+/** 某个上游状态码的失败请求数；列表按 count 降序，合计 = requests − success */
+export interface DashboardFailure {
+  /** -1 连接异常（建连失败/读流中断/响应解析失败），0 未知错误，其余为 HTTP 状态码 */
+  statusCode: number;
+  count: number;
 }
 
 export interface DashboardTokens {
@@ -962,7 +962,8 @@ export interface DashboardLatency {
 export interface DashboardStats {
   requests: number;
   success: number;
-  failures: DashboardFailures;
+  /** 仅 summary 填充；series 恒为空数组 */
+  failures: DashboardFailure[];
   tokens: DashboardTokens;
   cost: number;
   pricedSuccess: number;
@@ -981,7 +982,7 @@ export interface DashboardUptimeBucket {
   end: string;
   requests: number;
   success: number;
-  failures: DashboardFailures;
+  failures: DashboardFailure[];
 }
 
 export interface DashboardPeriod {

@@ -8,6 +8,7 @@ import {
   deltaDiff,
   deltaPct,
   deltaTone,
+  failureCodeLabel,
   formatCostShort,
   formatDelta,
   formatRate,
@@ -170,7 +171,14 @@ export function KpiRow({ range }: { range: DashboardRange }) {
         delta: deltaDiff(curRate, successRate(prev)),
         sub: [
           `${t("dashboard.kpi.failures")} ${formatInteger(failed)}`,
-          `429 ${formatRate(failed > 0 ? cur.failures.rateLimit / failed : null, 0)} · 5xx ${formatRate(failed > 0 ? cur.failures.server / failed : null, 0)}`,
+          failed > 0
+            ? cur.failures
+                .slice(0, 2)
+                .map(
+                  (f) => `${failureCodeLabel(f.statusCode, t)} ${formatRate(f.count / failed, 0)}`,
+                )
+                .join(" · ")
+            : "\u2014",
         ],
         series: pick(cs, successRate),
         previous: pick(ps, successRate),

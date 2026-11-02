@@ -16,7 +16,14 @@ func ratio(num, den int64) float64 {
 	return float64(num) / float64(den)
 }
 
-// toDashboardStats 统计块 → DTO（Other 失败数 = 总数 − 成功 − 已归类失败，下限 0）
+// toDashboardFailures 失败状态码拆分 → DTO（lo.Map 对 nil 输入返回非 nil 空切片，响应恒为数组）
+func toDashboardFailures(failures []*modelcall.DashboardFailureCount) []*dto.DashboardFailureItem {
+	return lo.Map(failures, func(f *modelcall.DashboardFailureCount, _ int) *dto.DashboardFailureItem {
+		return &dto.DashboardFailureItem{StatusCode: f.StatusCode, Count: f.Count}
+	})
+}
+
+// toDashboardStats 统计块 → DTO
 func toDashboardStats(s *modelcall.DashboardStats) *dto.DashboardStatsItem {
 	if s == nil {
 		s = &modelcall.DashboardStats{}
@@ -24,12 +31,7 @@ func toDashboardStats(s *modelcall.DashboardStats) *dto.DashboardStatsItem {
 	return &dto.DashboardStatsItem{
 		Requests: s.Requests,
 		Success:  s.Success,
-		Failures: &dto.DashboardFailures{
-			RateLimit:  s.RateLimitFailures,
-			Server:     s.ServerFailures,
-			Connection: s.ConnectionFailures,
-			Other:      max(0, s.Requests-s.Success-s.RateLimitFailures-s.ServerFailures-s.ConnectionFailures),
-		},
+		Failures: toDashboardFailures(s.Failures),
 		Tokens: &dto.DashboardTokens{
 			Input:      s.InputTokens,
 			Output:     s.OutputTokens,
@@ -63,7 +65,7 @@ func ToDashboardOverviewDTO(ov *DashboardOverview) *dto.DashboardOverview {
 	}
 }
 
-// toDashboardUptimeDTO 可用性状态条 → DTO（Other 失败数 = 总数 − 成功 − 已归类失败，下限 0）
+// toDashboardUptimeDTO 可用性状态条 → DTO
 func toDashboardUptimeDTO(points []*modelcall.DashboardUptimePoint) []*dto.DashboardUptimeBucketItem {
 	return lo.Map(points, func(p *modelcall.DashboardUptimePoint, _ int) *dto.DashboardUptimeBucketItem {
 		return &dto.DashboardUptimeBucketItem{
@@ -71,12 +73,7 @@ func toDashboardUptimeDTO(points []*modelcall.DashboardUptimePoint) []*dto.Dashb
 			End:      p.End,
 			Requests: p.Requests,
 			Success:  p.Success,
-			Failures: &dto.DashboardFailures{
-				RateLimit:  p.RateLimitFailures,
-				Server:     p.ServerFailures,
-				Connection: p.ConnectionFailures,
-				Other:      max(0, p.Requests-p.Success-p.RateLimitFailures-p.ServerFailures-p.ConnectionFailures),
-			},
+			Failures: toDashboardFailures(p.Failures),
 		}
 	})
 }

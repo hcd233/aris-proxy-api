@@ -1,5 +1,6 @@
 import { formatDecimal, formatDurationMs } from "./utils";
 import type {
+  DashboardFailure,
   DashboardHeatmapCell,
   DashboardModelPoint,
   DashboardStats,
@@ -58,6 +59,27 @@ export function deltaTone(kind: KpiKind, delta: number | null): DeltaTone {
 
 export function successRate(s: Pick<DashboardStats, "requests" | "success">): number | null {
   return s.requests > 0 ? s.success / s.requests : null;
+}
+
+/** 失败状态码只展示前 k 个，其余合并 */
+export const FAILURE_TOP_K = 4;
+
+/** 失败状态码展示名：-1 / 0 是网关内部约定码，需要 i18n 文案；其余直接显示 HTTP 状态码 */
+export function failureCodeLabel(statusCode: number, t: (key: string) => string): string {
+  if (statusCode === -1) return t("dashboard.failure.connection");
+  if (statusCode === 0) return t("dashboard.failure.unknown");
+  return String(statusCode);
+}
+
+/** 取前 k 个失败状态码（后端已按 count 降序），其余合并为 rest；rest 为 null 表示无剩余 */
+export function topFailures(
+  failures: DashboardFailure[],
+  k = FAILURE_TOP_K,
+): { top: DashboardFailure[]; rest: { codes: number; count: number } | null } {
+  const top = failures.slice(0, k);
+  const tail = failures.slice(k);
+  if (tail.length === 0) return { top, rest: null };
+  return { top, rest: { codes: tail.length, count: tail.reduce((s, f) => s + f.count, 0) } };
 }
 
 /** 总输入 = 净输入 + 缓存读 + 缓存写（后端四维 token 互斥：input 落库时已归一化为净输入，不得再做 input − cacheRead 二次扣减） */
