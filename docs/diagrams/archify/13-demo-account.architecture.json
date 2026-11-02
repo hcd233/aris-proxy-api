@@ -7,7 +7,7 @@
     "quality_profile": "showcase",
     "animation": "trace",
     "repository": {
-      "url": "https://github.com/hcd233/aris-proxy-api",
+      "url": "https://github.com/hcd233/aris-mass",
       "revision": "cf60466b7bbd28b6fb4e8a8a91afb54b4eefbd2b"
     },
     "viewBox": [1260, 640],

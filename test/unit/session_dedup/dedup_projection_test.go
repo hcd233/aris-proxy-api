@@ -3,9 +3,9 @@ package session_dedup
 import (
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
-	repository "github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	dbmodel "github.com/hcd233/aris-mass/internal/infrastructure/database/model"
+	repository "github.com/hcd233/aris-mass/internal/infrastructure/repository"
 )
 
 // TestDedupProjection_KeepsOwnerForSessionTarget 回归：会话续写时 ID 漂移。

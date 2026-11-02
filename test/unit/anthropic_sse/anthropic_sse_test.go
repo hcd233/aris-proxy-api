@@ -13,9 +13,9 @@ import (
 	"testing"
 
 	"github.com/bytedance/sonic"
-	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
-	proxyutil "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	apiutil "github.com/hcd233/aris-mass/internal/api/util"
+	proxyutil "github.com/hcd233/aris-mass/internal/application/llmproxy/util"
+	"github.com/hcd233/aris-mass/internal/common/constant"
 )
 
 type testCase struct {

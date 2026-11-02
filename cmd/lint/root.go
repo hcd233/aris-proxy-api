@@ -3,10 +3,10 @@ package main
 import (
 	"sync"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/tool/lintconv"
-	"github.com/hcd233/aris-proxy-api/internal/tool/lintstatic"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/tool/lintconv"
+	"github.com/hcd233/aris-mass/internal/tool/lintstatic"
 	"github.com/spf13/cobra"
 )
 

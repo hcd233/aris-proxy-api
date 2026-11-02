@@ -7,7 +7,7 @@ import (
 
 	"github.com/alicebob/miniredis/v2"
 	"github.com/google/uuid"
-	"github.com/hcd233/aris-proxy-api/internal/lock"
+	"github.com/hcd233/aris-mass/internal/lock"
 	"github.com/redis/go-redis/v9"
 )
 

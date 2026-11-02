@@ -5,10 +5,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/session/query"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/common/filter"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/application/session/query"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/filter"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
 )
 
 func TestBuildHarnessFilterCondition(t *testing.T) {

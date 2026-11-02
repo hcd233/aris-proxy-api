@@ -3,7 +3,7 @@ package dto
 import (
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/enum"
 )
 
 // DashboardRangeReq dashboard 时间窗 + 时间桶请求

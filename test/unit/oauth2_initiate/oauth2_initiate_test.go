@@ -14,13 +14,13 @@ import (
 	"github.com/bytedance/sonic"
 	"golang.org/x/oauth2"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/oauth2/command"
-	"github.com/hcd233/aris-proxy-api/internal/application/oauth2/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/domain/oauth2/service"
-	"github.com/hcd233/aris-proxy-api/internal/domain/oauth2/vo"
-	infraoauth "github.com/hcd233/aris-proxy-api/internal/infrastructure/oauth2"
+	"github.com/hcd233/aris-mass/internal/application/oauth2/command"
+	"github.com/hcd233/aris-mass/internal/application/oauth2/port"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/domain/oauth2/service"
+	"github.com/hcd233/aris-mass/internal/domain/oauth2/vo"
+	infraoauth "github.com/hcd233/aris-mass/internal/infrastructure/oauth2"
 )
 
 // stubStateManager 模拟 StateManager，委托给真实实现

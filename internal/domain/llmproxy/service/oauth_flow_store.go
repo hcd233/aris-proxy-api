@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
+	"github.com/hcd233/aris-mass/internal/domain/llmproxy/vo"
 )
 
 // OAuthFlowStore 订阅账号授权流临时记录存储（实现于 infrastructure/cache）。

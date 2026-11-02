@@ -8,12 +8,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/audit/port"
-	"github.com/hcd233/aris-proxy-api/internal/application/audit/query"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	commonutil "github.com/hcd233/aris-proxy-api/internal/common/util"
-	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall"
+	"github.com/hcd233/aris-mass/internal/application/audit/port"
+	"github.com/hcd233/aris-mass/internal/application/audit/query"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	commonutil "github.com/hcd233/aris-mass/internal/common/util"
+	"github.com/hcd233/aris-mass/internal/domain/modelcall"
 )
 
 var (

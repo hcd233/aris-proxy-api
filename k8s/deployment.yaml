@@ -1,10 +1,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: aris-proxy-api
-  namespace: aris-proxy-api
+  name: aris-mass
+  namespace: aris-mass
   labels:
-    app: aris-proxy-api
+    app: aris-mass
 spec:
   replicas: 2
   revisionHistoryLimit: 3
@@ -15,11 +15,11 @@ spec:
       maxSurge: 2
   selector:
     matchLabels:
-      app: aris-proxy-api
+      app: aris-mass
   template:
     metadata:
       labels:
-        app: aris-proxy-api
+        app: aris-mass
     spec:
       securityContext:
         fsGroup: 65532
@@ -27,9 +27,9 @@ spec:
       terminationGracePeriodSeconds: 480
       containers:
       - name: app
-        image: ghcr.io/hcd233/aris-proxy-api:PLACEHOLDER
+        image: ghcr.io/hcd233/aris-mass:PLACEHOLDER
         imagePullPolicy: Always
-        command: ["/app/aris-proxy-api", "server", "start", "--host", "0.0.0.0", "--port", "8080"]
+        command: ["/app/aris-mass", "server", "start", "--host", "0.0.0.0", "--port", "8080"]
         ports:
         - name: http
           containerPort: 8080
@@ -39,9 +39,9 @@ spec:
           value: "440MiB"
         envFrom:
         - configMapRef:
-            name: aris-proxy-api-config
+            name: aris-mass-config
         - secretRef:
-            name: aris-proxy-api-secret
+            name: aris-mass-secret
         volumeMounts:
         - name: logs
           mountPath: /app/logs

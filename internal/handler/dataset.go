@@ -9,13 +9,13 @@ import (
 	"github.com/danielgtaylor/huma/v2/adapters/humafiber"
 	"go.uber.org/zap"
 
-	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
-	datasetport "github.com/hcd233/aris-proxy-api/internal/application/dataset/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/logger"
-	"github.com/hcd233/aris-proxy-api/internal/util"
+	apiutil "github.com/hcd233/aris-mass/internal/api/util"
+	datasetport "github.com/hcd233/aris-mass/internal/application/dataset/port"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/dto"
+	"github.com/hcd233/aris-mass/internal/logger"
+	"github.com/hcd233/aris-mass/internal/util"
 )
 
 // DatasetHandler 数据集导出处理器接口

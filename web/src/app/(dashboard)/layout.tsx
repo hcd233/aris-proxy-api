@@ -443,7 +443,7 @@ function MobileTopBar() {
           A
         </span>
         <span className="font-display text-lg font-semibold tracking-tight">
-          {t("layout.aris_proxy")}
+          {t("layout.aris_mass")}
         </span>
       </span>
     </header>
@@ -541,7 +541,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                   A
                 </span>
                 <span className="font-display text-lg font-semibold tracking-tight text-sidebar-foreground">
-                  {t("layout.aris_proxy")}
+                  {t("layout.aris_mass")}
                 </span>
               </span>
             )}

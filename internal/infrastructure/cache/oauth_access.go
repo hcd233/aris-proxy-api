@@ -8,9 +8,9 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/redis/go-redis/v9"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/util"
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/service"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/util"
+	"github.com/hcd233/aris-mass/internal/domain/llmproxy/service"
 )
 
 // oauthAccessCache OAuthAccessCache 的 Redis 实现

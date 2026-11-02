@@ -3,8 +3,8 @@ package model
 import (
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/model"
 )
 
 // CronJob 定时任务元数据

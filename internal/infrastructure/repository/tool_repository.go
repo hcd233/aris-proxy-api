@@ -7,12 +7,12 @@ import (
 	"github.com/samber/lo"
 	"gorm.io/gorm"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/domain/conversation"
-	"github.com/hcd233/aris-proxy-api/internal/domain/conversation/aggregate"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
-	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/domain/conversation"
+	"github.com/hcd233/aris-mass/internal/domain/conversation/aggregate"
+	"github.com/hcd233/aris-mass/internal/infrastructure/database/dao"
+	dbmodel "github.com/hcd233/aris-mass/internal/infrastructure/database/model"
 )
 
 // toolRepoFieldsChecksum 去重查询的最小字段集

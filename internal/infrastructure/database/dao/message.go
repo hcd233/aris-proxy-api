@@ -5,8 +5,8 @@
 package dao
 
 import (
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	dbmodel "github.com/hcd233/aris-mass/internal/infrastructure/database/model"
 	"github.com/samber/lo"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"

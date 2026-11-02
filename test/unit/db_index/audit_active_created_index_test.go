@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/constant"
 )
 
 // TestAuditActiveCreatedIndexDDL 锁定审计部分索引的形态：

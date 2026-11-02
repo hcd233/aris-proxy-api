@@ -7,10 +7,10 @@ import (
 	"testing"
 
 	"github.com/bytedance/sonic"
-	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
-	convapi "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/converter"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/dto"
+	apiutil "github.com/hcd233/aris-mass/internal/api/util"
+	convapi "github.com/hcd233/aris-mass/internal/application/llmproxy/converter"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/dto"
 	"github.com/samber/lo"
 )
 

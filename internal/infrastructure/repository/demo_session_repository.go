@@ -6,10 +6,10 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
-	demoport "github.com/hcd233/aris-proxy-api/internal/application/demo/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
+	demoport "github.com/hcd233/aris-mass/internal/application/demo/port"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	dbmodel "github.com/hcd233/aris-mass/internal/infrastructure/database/model"
 	"github.com/samber/lo"
 )
 

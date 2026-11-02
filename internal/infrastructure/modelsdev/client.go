@@ -16,10 +16,10 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/samber/lo"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/model/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/application/model/port"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
 )
 
 // Client models.dev 公开规格查询：拉取公开文档（Redis 缓存原文 24h + 进程内缓存解析结果），

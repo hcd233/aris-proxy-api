@@ -5,9 +5,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/dto"
 )
 
 // ChatStreamLen 流式 chunk 总数：N 个内容片 + 1 个收尾片（finish_reason + usage）。

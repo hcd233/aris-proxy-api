@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/constant"
 )
 
 // passthroughExcludedHeaders 不透传到上游的请求头。

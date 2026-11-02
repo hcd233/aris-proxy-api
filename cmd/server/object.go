@@ -3,9 +3,9 @@ package main
 import (
 	"context"
 
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/storage"
-	objdao "github.com/hcd233/aris-proxy-api/internal/infrastructure/storage/obj_dao"
-	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/hcd233/aris-mass/internal/infrastructure/storage"
+	objdao "github.com/hcd233/aris-mass/internal/infrastructure/storage/obj_dao"
+	"github.com/hcd233/aris-mass/internal/logger"
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"

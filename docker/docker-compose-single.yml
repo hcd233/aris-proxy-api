@@ -6,19 +6,19 @@ networks:
 
 services:
 
-  aris-proxy-api-db-migrate:
-    image: ghcr.io/hcd233/aris-proxy-api:${IMAGE_TAG}
-    container_name: aris-proxy-api-db-migrate
+  aris-mass-db-migrate:
+    image: ghcr.io/hcd233/aris-mass:${IMAGE_TAG}
+    container_name: aris-mass-db-migrate
     restart: no
     networks:
       - 1panel-network
     env_file:
       - ../env/api.env
-    command: ["/app/aris-proxy-api", "database", "migrate"]
+    command: ["/app/aris-mass", "database", "migrate"]
 
-  aris-proxy-api:
-    image: ghcr.io/hcd233/aris-proxy-api:${IMAGE_TAG}
-    container_name: aris-proxy-api
+  aris-mass:
+    image: ghcr.io/hcd233/aris-mass:${IMAGE_TAG}
+    container_name: aris-mass
     restart: always
     networks:
       - 1panel-network
@@ -29,7 +29,7 @@ services:
     volumes:
       - ../logs:/app/logs
     depends_on:
-      aris-proxy-api-db-migrate:
+      aris-mass-db-migrate:
         condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "curl", "-f", "http://0.0.0.0:8080/health"]
@@ -37,6 +37,6 @@ services:
       timeout: 5s
       retries: 5
 
-    command: ["/app/aris-proxy-api", "server", "start", "--host", "0.0.0.0", "--port", "8080"]
+    command: ["/app/aris-mass", "server", "start", "--host", "0.0.0.0", "--port", "8080"]
 
 # docker compose -f docker/docker-compose-single.yml up -d

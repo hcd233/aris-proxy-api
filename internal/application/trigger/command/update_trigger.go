@@ -4,10 +4,10 @@ import (
 	"context"
 	"slices"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/trigger/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/domain/trigger"
+	"github.com/hcd233/aris-mass/internal/application/trigger/port"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/domain/trigger"
 )
 
 type updateTriggerHandler struct {

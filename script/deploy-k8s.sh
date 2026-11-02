@@ -3,8 +3,11 @@ set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 K8S_DIR="${REPO_DIR}/k8s"
-NAMESPACE="aris-proxy-api"
-APP_NAME="aris-proxy-api"
+NAMESPACE="aris-mass"
+APP_NAME="aris-mass"
+# 品牌升级前的工作负载命名：仅用于一次性迁移，观察期结束后删除。
+LEGACY_NAMESPACE="aris-proxy-api"
+LEGACY_APP_NAME="aris-proxy-api"
 ENV_FILE="${REPO_DIR}/env/api.env"
 SERVICE_PORT="18080"
 
@@ -28,6 +31,45 @@ require_cmd() {
     echo "missing required command: $1" >&2
     exit 1
   fi
+}
+
+# retire_legacy_workload 让旧命名空间释放 18080：旧 Deployment 缩到 0（保留对象便于回滚），
+# 删除旧 Service 并等待 k3s svclb DaemonSet 消失，避免新 Service 抢占同一 hostPort。
+retire_legacy_workload() {
+  if [[ "${LEGACY_NAMESPACE}" == "${NAMESPACE}" ]]; then
+    return 0
+  fi
+
+  if ! kubectl get namespace "${LEGACY_NAMESPACE}" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  local has_workload="false"
+  if kubectl get deployment "${LEGACY_APP_NAME}" -n "${LEGACY_NAMESPACE}" >/dev/null 2>&1; then
+    has_workload="true"
+  fi
+  if kubectl get service "${LEGACY_APP_NAME}" -n "${LEGACY_NAMESPACE}" >/dev/null 2>&1; then
+    has_workload="true"
+  fi
+
+  if [[ "${has_workload}" != "true" ]]; then
+    return 0
+  fi
+
+  log "Retiring legacy workload in ${LEGACY_NAMESPACE} to free port ${SERVICE_PORT}"
+  kubectl -n "${LEGACY_NAMESPACE}" scale deployment "${LEGACY_APP_NAME}" --replicas=0 --ignore-not-found
+  kubectl -n "${LEGACY_NAMESPACE}" delete service "${LEGACY_APP_NAME}" --ignore-not-found --wait=true
+
+  local i
+  for i in $(seq 1 30); do
+    if ! kubectl -n kube-system get daemonset \
+      -l "svccontroller.k3s.cattle.io/svcname=${LEGACY_APP_NAME}" -o name 2>/dev/null | grep -q .; then
+      return 0
+    fi
+    sleep 1
+  done
+
+  log "warning: legacy svclb DaemonSet still present after 30s; new Service may stay pending"
 }
 
 wait_for_service_health() {
@@ -168,7 +210,7 @@ spec:
       - name: db-migrate
         image: ${IMAGE}
         imagePullPolicy: ${PULL_POLICY}
-        command: ["/app/aris-proxy-api", "database", "migrate"]
+        command: ["/app/aris-mass", "database", "migrate"]
         envFrom:
         - configMapRef:
             name: ${APP_NAME}-config
@@ -208,7 +250,7 @@ git -C "${REPO_DIR}" pull --ff-only origin "${BRANCH_NAME}"
 COMMIT_SHA=$(git -C "${REPO_DIR}" rev-parse --short=7 HEAD)
 # DEPLOY_IMAGE（CI 传入）为 digest 引用，精确且可配 IfNotPresent 跳过重复拉取校验；
 # 手动部署回退到 master tag + Always
-IMAGE="${DEPLOY_IMAGE:-ghcr.io/hcd233/aris-proxy-api:${DEPLOY_IMAGE_TAG:-master}}"
+IMAGE="${DEPLOY_IMAGE:-ghcr.io/hcd233/aris-mass:${DEPLOY_IMAGE_TAG:-master}}"
 PULL_POLICY="Always"
 if [[ "${IMAGE}" == *"@"* ]]; then
   PULL_POLICY="IfNotPresent"
@@ -237,11 +279,10 @@ kubectl create secret generic "${APP_NAME}-secret" -n "${NAMESPACE}" --from-env-
 log "Running database migration job ${MIGRATION_JOB}"
 run_migration
 
-log "Applying deployment and service"
-sed -e "s|ghcr.io/hcd233/aris-proxy-api:PLACEHOLDER|${IMAGE}|g" \
+log "Applying deployment"
+sed -e "s|ghcr.io/hcd233/aris-mass:PLACEHOLDER|${IMAGE}|g" \
     -e "s|imagePullPolicy: Always|imagePullPolicy: ${PULL_POLICY}|g" \
     "${K8S_DIR}/deployment.yaml" | kubectl apply -f -
-kubectl apply -f "${K8S_DIR}/service.yaml"
 
 log "Cleaning up stuck pods before rollout (if any)"
 kubectl delete pod -n "${NAMESPACE}" -l app=${APP_NAME} --field-selector=status.phase!=Running --ignore-not-found=true || true
@@ -252,11 +293,19 @@ kubectl rollout restart "deployment/${APP_NAME}" -n "${NAMESPACE}"
 log "Waiting for rollout"
 kubectl rollout status "deployment/${APP_NAME}" -n "${NAMESPACE}" --timeout=600s
 
+# 新 Pod 已就绪后才摘除旧服务：先退役旧工作负载释放端口，再绑定新 Service，
+# 这样健康检查只会命中新服务，不会出现旧服务假成功。
+log "Retiring legacy workload (if any)"
+retire_legacy_workload
+
+log "Applying service"
+kubectl apply -f "${K8S_DIR}/service.yaml"
+
 log "Verifying k3s service health"
 wait_for_service_health
 
 log "Removing legacy canary resources after formal deployment is healthy"
-kubectl delete deployment,service,configmap,secret -n "${NAMESPACE}" -l app=aris-proxy-api-k3s-canary --ignore-not-found=true >/dev/null 2>&1 || true
+kubectl delete deployment,service,configmap,secret -n "${NAMESPACE}" -l app=aris-mass-k3s-canary --ignore-not-found=true >/dev/null 2>&1 || true
 
 if command -v docker >/dev/null 2>&1 && docker ps -a --format '{{.Names}}' | grep -qx "${APP_NAME}"; then
   log "Stopping legacy Docker app container to avoid duplicate cron jobs"

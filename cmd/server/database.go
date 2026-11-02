@@ -7,9 +7,9 @@ import (
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
-	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/hcd233/aris-mass/internal/infrastructure/database"
+	"github.com/hcd233/aris-mass/internal/infrastructure/repository"
+	"github.com/hcd233/aris-mass/internal/logger"
 )
 
 var databaseCmd = &cobra.Command{

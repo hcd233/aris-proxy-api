@@ -8,7 +8,7 @@ import (
 
 	"github.com/bytedance/sonic"
 
-	"github.com/hcd233/aris-proxy-api/internal/client/model"
+	"github.com/hcd233/aris-mass/internal/client/model"
 )
 
 func TestClaudeCodeWrite_EnvAndOneMSuffix(t *testing.T) {

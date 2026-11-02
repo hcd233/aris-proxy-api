@@ -4,11 +4,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/filter"
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
-	conversationvo "github.com/hcd233/aris-proxy-api/internal/common/vo"
-	"github.com/hcd233/aris-proxy-api/internal/domain/session/aggregate"
-	sessionvo "github.com/hcd233/aris-proxy-api/internal/domain/session/vo"
+	"github.com/hcd233/aris-mass/internal/common/filter"
+	"github.com/hcd233/aris-mass/internal/common/model"
+	conversationvo "github.com/hcd233/aris-mass/internal/common/vo"
+	"github.com/hcd233/aris-mass/internal/domain/session/aggregate"
+	sessionvo "github.com/hcd233/aris-mass/internal/domain/session/vo"
 )
 
 // SessionRepository Session 聚合仓储接口

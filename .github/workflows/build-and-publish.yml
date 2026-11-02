@@ -92,7 +92,7 @@ jobs:
           # binary-prebuilt 路径不经过 docker 内的 frontend-final 注入，必须在此拷入
           rm -rf internal/web/dist
           cp -r web/out internal/web/dist
-          CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o aris-proxy-api ./cmd/server
+          CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o aris-mass ./cmd/server
 
       # runner 预装 docker/buildx，直接原生构建推送（免去 setup-buildx/login/metadata 三个 action）
       - name: Build and push image
@@ -113,6 +113,8 @@ jobs:
           docker buildx build -f docker/dockerfile \
             --build-arg FRONTEND_SOURCE=frontend-prebuilt \
             --build-arg BINARY_SOURCE=binary-prebuilt \
+            --label "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
+            --label "org.opencontainers.image.description=Aris Mass - MaaS model aggregation gateway" \
             "${TAG_ARGS[@]}" --push .
 
           DIGEST="$(docker buildx imagetools inspect "${IMAGE}:${FIRST_TAG}" --format '{{.Manifest.Digest}}')"

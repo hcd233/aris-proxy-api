@@ -3,7 +3,7 @@ package command
 import (
 	"slices"
 
-	"github.com/hcd233/aris-proxy-api/internal/domain/session/aggregate"
+	"github.com/hcd233/aris-mass/internal/domain/session/aggregate"
 )
 
 // isOwnedByAny 判断会话是否归属于给定 API Key ID 列表中的任意一个。

@@ -21,10 +21,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/client/executable"
-	"github.com/hcd233/aris-proxy-api/internal/client/ui"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/client/executable"
+	"github.com/hcd233/aris-mass/internal/client/ui"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
 )
 
 // Options aris update 运行参数；In/Out/BaseURL/BinaryPath/HTTPClient 为空时使用默认实现

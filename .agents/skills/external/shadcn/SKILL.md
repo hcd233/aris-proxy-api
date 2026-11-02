@@ -10,7 +10,7 @@ allowed-tools: Bash(npx shadcn@latest info *), Bash(npx shadcn@latest view *), B
 A framework for building ui, components and design systems. Components are added as source code to the user's project via the CLI.
 
 > **⚠️ 本项目覆盖（优先级最高，与下文任何指令冲突时以本节为准）**
-> 本仓库 `aris-proxy-api` 的前端在 `web/`，组件已大量定制。**禁止直接运行 `shadcn add` / `add --all` / `apply` / `init`**：CLI 会顺带 `npm install`（含无版本号的 `@base-ui/react` 与 npm 包 `cn`），并可能覆盖已定制的 `button.tsx` 等文件，破坏 CI 与既有替换成果。**禁止从第三方 registry 拉取组件**（`owner/repo/item`、`@社区/组件`）。
+> 本仓库 `aris-mass` 的前端在 `web/`，组件已大量定制。**禁止直接运行 `shadcn add` / `add --all` / `apply` / `init`**：CLI 会顺带 `npm install`（含无版本号的 `@base-ui/react` 与 npm 包 `cn`），并可能覆盖已定制的 `button.tsx` 等文件，破坏 CI 与既有替换成果。**禁止从第三方 registry 拉取组件**（`owner/repo/item`、`@社区/组件`）。
 > 正确做法见 `docs/agents/web-frontend.md`「新增 shadcn 组件不要直接 `shadcn add`」：用 `npx shadcn@latest add <name> --dry-run --view src/components/ui/<name>.tsx` 取源码落盘，`from "cn"` 改 `@/lib/utils`，删除 tw-animate 进出场类与 `scroll-fade-*` / `shimmer` / `scrollbar-*` 空操作类，再按需 `npm install --package-lock-only` 单独加真正需要的依赖。
 > 组件动效写在 `web/src/styles/motion-{anthropic,moonshot}.css` 语法层（按 `data-slot` 命中），不要加 `data-open:animate-in` 一类类名。`web/src/components/shadcn-native.test.ts` 守护上述规范。
 

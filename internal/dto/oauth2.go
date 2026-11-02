@@ -1,7 +1,7 @@
 // Package dto OAuth2 DTO
 package dto
 
-import "github.com/hcd233/aris-proxy-api/internal/common/enum"
+import "github.com/hcd233/aris-mass/internal/common/enum"
 
 // LoginReq represents a request to initiate OAuth2 login flow
 //

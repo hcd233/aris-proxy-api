@@ -1,11 +1,11 @@
 ---
 name: operate-prod-service
-description: 操作生产环境 aris-proxy-api 服务（api.lvlvko.top 上的 k3s/Kubernetes 集群）。当用户要求查看线上服务状态、pod 资源与负载、pod 日志、滚动重启、跟踪部署、查看服务/端点、检查集群健康，或笼统地说"看一下线上环境/生产服务怎么了"时使用本 skill。
+description: 操作生产环境 aris-mass 服务（api.lvlvko.top 上的 k3s/Kubernetes 集群）。当用户要求查看线上服务状态、pod 资源与负载、pod 日志、滚动重启、跟踪部署、查看服务/端点、检查集群健康，或笼统地说"看一下线上环境/生产服务怎么了"时使用本 skill。
 ---
 
 # operate-prod-service
 
-通过 SSH 到生产服务器（k3s 集群）操作 aris-proxy-api 线上服务。**连接入口、凭据读取与统一安全基线一律以 `login-prod-server` skill 为准**，本 skill 只负责 K8s 操作清单与任务路由。
+通过 SSH 到生产服务器（k3s 集群）操作 aris-mass 线上服务。**连接入口、凭据读取与统一安全基线一律以 `login-prod-server` skill 为准**，本 skill 只负责 K8s 操作清单与任务路由。
 
 ## 前置
 
@@ -20,7 +20,7 @@ ssh ubuntu@api.lvlvko.top
 
 ```bash
 kubectl get nodes -o wide
-kubectl -n aris-proxy-api get deploy,svc,pods -o wide
+kubectl -n aris-mass get deploy,svc,pods -o wide
 ```
 
 ## 生产拓扑（已实测验证，2026-07 现状）
@@ -28,11 +28,11 @@ kubectl -n aris-proxy-api get deploy,svc,pods -o wide
 | 项 | 值 |
 |----|----|
 | 集群 | k3s v1.35.5，单节点 control-plane `10-7-109-6` |
-| namespace | `aris-proxy-api` |
-| Deployment | `aris-proxy-api`，副本 2，镜像 `ghcr.io/hcd233/aris-proxy-api:master` |
+| namespace | `aris-mass` |
+| Deployment | `aris-mass`，副本 2，镜像 `ghcr.io/hcd233/aris-mass:master` |
 | 资源 request | cpu 50m / mem 128Mi |
 | 资源 limit | cpu 300m / mem 512Mi |
-| Service | `aris-proxy-api`（LoadBalancer，端口 18080）、`postgresql`、`redis`（ClusterIP） |
+| Service | `aris-mass`（LoadBalancer，端口 18080）、`postgresql`、`redis`（ClusterIP） |
 | HPA | 无 |
 
 这些值是快照，操作前以 `kubectl get` 实况为准。
@@ -47,23 +47,23 @@ kubectl get nodes -o wide
 kubectl get ns
 
 # 部署与副本状态
-kubectl -n aris-proxy-api get deploy -o wide
-kubectl -n aris-proxy-api get rs,pods -o wide
+kubectl -n aris-mass get deploy -o wide
+kubectl -n aris-mass get rs,pods -o wide
 
 # 服务与端点
-kubectl -n aris-proxy-api get svc,endpoints -o wide
-kubectl -n aris-proxy-api get configmap
-kubectl -n aris-proxy-api get secret
+kubectl -n aris-mass get svc,endpoints -o wide
+kubectl -n aris-mass get configmap
+kubectl -n aris-mass get secret
 ```
 
 ### pod 资源与实时负载
 
 ```bash
 # 各 pod 实时 CPU/内存占用（metrics-server 提供）
-kubectl -n aris-proxy-api top pods
+kubectl -n aris-mass top pods
 
 # 资源请求/限制定义
-kubectl -n aris-proxy-api get deploy aris-proxy-api \
+kubectl -n aris-mass get deploy aris-mass \
   -o jsonpath='{.spec.template.spec.containers[0].resources}{"\n"}'
 
 # 节点资源总量与已用
@@ -76,16 +76,16 @@ kubectl top nodes
 
 ```bash
 # 最近 N 行
-kubectl -n aris-proxy-api logs deploy/aris-proxy-api --tail=200
+kubectl -n aris-mass logs deploy/aris-mass --tail=200
 
 # 指定 pod
-kubectl -n aris-proxy-api logs aris-proxy-api-xxxx --tail=200
+kubectl -n aris-mass logs aris-mass-xxxx --tail=200
 
 # 跟随实时输出（交互排查）
-kubectl -n aris-proxy-api logs deploy/aris-proxy-api -f --tail=50
+kubectl -n aris-mass logs deploy/aris-mass -f --tail=50
 
 # 上一个容器实例（崩溃后排查）
-kubectl -n aris-proxy-api logs aris-proxy-api-xxxx --previous
+kubectl -n aris-mass logs aris-mass-xxxx --previous
 ```
 
 生产日志已接入腾讯云 CLS，深度排障（traceId 追踪、错误链路）转 `query-prod-log`，不要只依赖 `kubectl logs`。
@@ -104,20 +104,20 @@ curl -sN https://api.lvlvko.top/ssehealth
 
 ```bash
 # 排查启动失败、拉镜像失败等
-kubectl -n aris-proxy-api describe pod <pod-name>
-kubectl -n aris-proxy-api get events --sort-by=.lastTimestamp | tail -30
+kubectl -n aris-mass describe pod <pod-name>
+kubectl -n aris-mass get events --sort-by=.lastTimestamp | tail -30
 ```
 
 ## 变更类操作（必须授权）
 
 以下操作属于变更，**必须先向用户完整展示命令、说明影响范围并等待明确授权**，只执行用户授权的原始命令：
 
-- **滚动重启**：`kubectl -n aris-proxy-api rollout restart deployment/aris-proxy-api`（无中断，逐副本替换）
-- **跟踪 rollout 状态**：`kubectl -n aris-proxy-api rollout status deployment/aris-proxy-api --timeout=120s`
-- **查看 rollout 历史/回滚**：`kubectl -n aris-proxy-api rollout history deployment/aris-proxy-api`；回滚 `kubectl -n aris-proxy-api rollout undo deployment/aris-proxy-api`
-- **扩缩容**：`kubectl -n aris-proxy-api scale deployment/aris-proxy-api --replicas=N`
-- **更新镜像/打补丁**：`kubectl -n aris-proxy-api set image` / `kubectl -n aris-proxy-api patch deployment` / `kubectl apply`
-- **删除资源**：`kubectl -n aris-proxy-api delete pod/deployment/...`
+- **滚动重启**：`kubectl -n aris-mass rollout restart deployment/aris-mass`（无中断，逐副本替换）
+- **跟踪 rollout 状态**：`kubectl -n aris-mass rollout status deployment/aris-mass --timeout=120s`
+- **查看 rollout 历史/回滚**：`kubectl -n aris-mass rollout history deployment/aris-mass`；回滚 `kubectl -n aris-mass rollout undo deployment/aris-mass`
+- **扩缩容**：`kubectl -n aris-mass scale deployment/aris-mass --replicas=N`
+- **更新镜像/打补丁**：`kubectl -n aris-mass set image` / `kubectl -n aris-mass patch deployment` / `kubectl apply`
+- **删除资源**：`kubectl -n aris-mass delete pod/deployment/...`
 
 如果用户只说"执行一下""可以""继续"，但没有看到完整命令，先展示命令并再次要求确认。
 

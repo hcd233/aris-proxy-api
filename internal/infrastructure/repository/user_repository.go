@@ -9,15 +9,15 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
-	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
-	"github.com/hcd233/aris-proxy-api/internal/domain/identity/aggregate"
-	"github.com/hcd233/aris-proxy-api/internal/domain/identity/vo"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/dao"
-	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/common/model"
+	"github.com/hcd233/aris-mass/internal/domain/identity"
+	"github.com/hcd233/aris-mass/internal/domain/identity/aggregate"
+	"github.com/hcd233/aris-mass/internal/domain/identity/vo"
+	"github.com/hcd233/aris-mass/internal/infrastructure/database/dao"
+	dbmodel "github.com/hcd233/aris-mass/internal/infrastructure/database/model"
 )
 
 // userRepository UserRepository 的 GORM 实现

@@ -19,9 +19,9 @@ import (
 
 	"gorm.io/gorm"
 
-	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
-	"github.com/hcd233/aris-proxy-api/test/unit/sqlitetest"
+	dbmodel "github.com/hcd233/aris-mass/internal/infrastructure/database/model"
+	"github.com/hcd233/aris-mass/internal/infrastructure/repository"
+	"github.com/hcd233/aris-mass/test/unit/sqlitetest"
 )
 
 // deletedAtStamp 软删标记（BaseModel.DeletedAt 为 int64，0 = 存活）

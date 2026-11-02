@@ -5,12 +5,12 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/agentharness/command"
-	harnessport "github.com/hcd233/aris-proxy-api/internal/application/agentharness/port"
-	"github.com/hcd233/aris-proxy-api/internal/application/agentharness/query"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/domain/agentharness"
+	"github.com/hcd233/aris-mass/internal/application/agentharness/command"
+	harnessport "github.com/hcd233/aris-mass/internal/application/agentharness/port"
+	"github.com/hcd233/aris-mass/internal/application/agentharness/query"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/domain/agentharness"
 )
 
 // fakeRuleRepo 记录命令层的调用与入参。

@@ -1,7 +1,7 @@
 package ierr
 
 import (
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
+	"github.com/hcd233/aris-mass/internal/common/model"
 )
 
 // ==================== 哨兵错误定义 ====================

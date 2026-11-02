@@ -11,7 +11,7 @@ package util
 import (
 	"fmt"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/constant"
 )
 
 // MaskSecret 掩码敏感信息，保留前 4 和后 4 个字符

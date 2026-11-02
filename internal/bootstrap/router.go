@@ -7,11 +7,11 @@ import (
 	"go.uber.org/fx"
 	"gorm.io/gorm"
 
-	demoport "github.com/hcd233/aris-proxy-api/internal/application/demo/port"
-	identityservice "github.com/hcd233/aris-proxy-api/internal/domain/identity/service"
-	"github.com/hcd233/aris-proxy-api/internal/handler"
-	"github.com/hcd233/aris-proxy-api/internal/router"
-	"github.com/hcd233/aris-proxy-api/internal/web"
+	demoport "github.com/hcd233/aris-mass/internal/application/demo/port"
+	identityservice "github.com/hcd233/aris-mass/internal/domain/identity/service"
+	"github.com/hcd233/aris-mass/internal/handler"
+	"github.com/hcd233/aris-mass/internal/router"
+	"github.com/hcd233/aris-mass/internal/web"
 )
 
 type routeParams struct {

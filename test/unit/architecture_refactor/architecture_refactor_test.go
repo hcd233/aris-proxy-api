@@ -20,7 +20,7 @@ func TestLLMProxyUsecaseDoesNotImportInfrastructureTransport(t *testing.T) {
 	t.Parallel()
 	root := repoRoot(t)
 	usecaseDir := filepath.Join(root, "internal", "application", "llmproxy", "usecase")
-	forbidden := "github.com/hcd233/aris-proxy-api/internal/infrastructure/transport"
+	forbidden := "github.com/hcd233/aris-mass/internal/infrastructure/transport"
 
 	var violations []string
 	err := filepath.WalkDir(usecaseDir, func(path string, entry os.DirEntry, walkErr error) error {

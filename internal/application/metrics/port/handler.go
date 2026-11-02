@@ -7,7 +7,7 @@ package port
 import (
 	"context"
 
-	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-mass/internal/dto"
 )
 
 // RuntimeMetricsService 运行时指标聚合查询服务

@@ -3,8 +3,8 @@ package dto
 import (
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/model"
 )
 
 // ListDemoAccessAuditsReq 列出 Demo 访问审计请求（admin only）

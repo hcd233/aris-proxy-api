@@ -3,7 +3,7 @@ package vo
 import (
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/enum"
 )
 
 // OAuthCredentialDisplay 订阅凭据的只读展示投影。

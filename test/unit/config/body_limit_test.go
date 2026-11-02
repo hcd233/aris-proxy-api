@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/api"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/config"
+	"github.com/hcd233/aris-mass/internal/api"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/config"
 )
 
 // TestHTTPBodyLimitEnv 验证 HTTP_BODY_LIMIT 环境变量可覆盖 fiber BodyLimit

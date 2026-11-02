@@ -6,14 +6,14 @@ import (
 	"github.com/samber/lo"
 	"go.uber.org/zap"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/model/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
-	commonutil "github.com/hcd233/aris-proxy-api/internal/common/util"
-	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
-	identityaggregate "github.com/hcd233/aris-proxy-api/internal/domain/identity/aggregate"
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
-	llmagg "github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
-	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/hcd233/aris-mass/internal/application/model/port"
+	"github.com/hcd233/aris-mass/internal/common/model"
+	commonutil "github.com/hcd233/aris-mass/internal/common/util"
+	"github.com/hcd233/aris-mass/internal/domain/identity"
+	identityaggregate "github.com/hcd233/aris-mass/internal/domain/identity/aggregate"
+	"github.com/hcd233/aris-mass/internal/domain/llmproxy"
+	llmagg "github.com/hcd233/aris-mass/internal/domain/llmproxy/aggregate"
+	"github.com/hcd233/aris-mass/internal/logger"
 )
 
 type listModelHandler struct {

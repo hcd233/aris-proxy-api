@@ -1,11 +1,11 @@
 ---
 name: huma-dto-conventions
-description: Use when creating, editing, or reviewing HTTP DTOs in internal/dto/, adding new huma routes, modifying request/response payloads, or debugging "field is always zero / nil body / 422 validation" issues in aris-proxy-api. Mention this skill whenever the work touches `*Req` / `*Rsp` structs, huma path/query/body bindings, or OpenAPI schema fields — even if the user only says "add an API" or "tweak the request payload".
+description: Use when creating, editing, or reviewing HTTP DTOs in internal/dto/, adding new huma routes, modifying request/response payloads, or debugging "field is always zero / nil body / 422 validation" issues in aris-mass. Mention this skill whenever the work touches `*Req` / `*Rsp` structs, huma path/query/body bindings, or OpenAPI schema fields — even if the user only says "add an API" or "tweak the request payload".
 ---
 
 # Huma DTO 规范 (huma-dto-conventions)
 
-aris-proxy-api 用 [huma v2](https://huma.rocks) 把 Go 结构体直接映射成 OpenAPI schema 和 HTTP 处理器。huma 的字段绑定语义和 `encoding/json` 的"反射就反序列化"很不一样：**字段必须用 huma 认识的标签或包装结构告诉它来源于哪里（path/query/header/body/cookie）**，否则 huma 会**静默忽略**这部分输入，让字段保持零值。
+aris-mass 用 [huma v2](https://huma.rocks) 把 Go 结构体直接映射成 OpenAPI schema 和 HTTP 处理器。huma 的字段绑定语义和 `encoding/json` 的"反射就反序列化"很不一样：**字段必须用 huma 认识的标签或包装结构告诉它来源于哪里（path/query/header/body/cookie）**，否则 huma 会**静默忽略**这部分输入，让字段保持零值。
 
 本 skill 的目标是让任何人在写 / 改 / review `internal/dto/**` 时，一次就遵守 huma 规范，避免 zero-value 数据流进数据库或 redis 触发"返回错位记录""沉默丢字段"这类难排查的 bug。
 
@@ -198,7 +198,7 @@ type WebhookReqBody struct {
 
 ```go
 // ❌ 错：跨层依赖，lint 拦下
-import "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
+import "github.com/hcd233/aris-mass/internal/infrastructure/database/model"
 
 func (r *ListUsersRsp) FromModel(u *model.User) { ... }
 ```

@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
-	"github.com/hcd233/aris-proxy-api/test/unit/sqlitetest"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	dbmodel "github.com/hcd233/aris-mass/internal/infrastructure/database/model"
+	"github.com/hcd233/aris-mass/internal/infrastructure/repository"
+	"github.com/hcd233/aris-mass/test/unit/sqlitetest"
 )
 
 func TestQueryStatsSQL(t *testing.T) {

@@ -5,10 +5,10 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/handler"
-	"github.com/hcd233/aris-proxy-api/internal/middleware"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/handler"
+	"github.com/hcd233/aris-mass/internal/middleware"
 )
 
 // initHarnessRouter 注册 harness 规则管理路由（GET/POST/PATCH/DELETE 均为 admin only）。

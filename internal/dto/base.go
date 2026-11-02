@@ -2,7 +2,7 @@ package dto
 
 import (
 	"github.com/bytedance/sonic"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/enum"
 )
 
 // HTTPResponse HTTP响应

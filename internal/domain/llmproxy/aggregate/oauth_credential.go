@@ -3,10 +3,10 @@ package aggregate
 import (
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	commonagg "github.com/hcd233/aris-proxy-api/internal/domain/common/aggregate"
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	commonagg "github.com/hcd233/aris-mass/internal/domain/common/aggregate"
+	"github.com/hcd233/aris-mass/internal/domain/llmproxy/vo"
 )
 
 // OAuthCredential 订阅账号 OAuth 凭据聚合根

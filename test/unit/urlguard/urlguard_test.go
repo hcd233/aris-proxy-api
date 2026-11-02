@@ -5,7 +5,7 @@ import (
 	"net"
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/util"
+	"github.com/hcd233/aris-mass/internal/util"
 )
 
 // fakeLookupIP 按主机名返回预设解析结果，避免真实 DNS（CI 无网 / 解析抖动）。

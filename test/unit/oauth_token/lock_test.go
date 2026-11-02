@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/domain/llmproxy/aggregate"
 )
 
 // TestLockContentionFallsBackToOldToken 锁被持有时用尚未真正过期的旧 token（Review Focus 2 的降级分支）。

@@ -6,8 +6,8 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"gorm.io/gorm"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/middleware"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/middleware"
 )
 
 // TestAPIKeyAuthFailureStatus 区分「Key 不存在」与「DB 不可用」：

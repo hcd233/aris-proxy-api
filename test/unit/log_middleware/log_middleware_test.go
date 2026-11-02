@@ -19,8 +19,8 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/middleware"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/middleware"
 )
 
 func TestShouldLogResponseBody(t *testing.T) {

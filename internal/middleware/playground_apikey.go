@@ -8,13 +8,13 @@ import (
 	"github.com/samber/lo"
 	"go.uber.org/zap"
 
-	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	apikeyagg "github.com/hcd233/aris-proxy-api/internal/domain/apikey/aggregate"
-	"github.com/hcd233/aris-proxy-api/internal/i18n"
-	"github.com/hcd233/aris-proxy-api/internal/logger"
-	"github.com/hcd233/aris-proxy-api/internal/util"
+	apiutil "github.com/hcd233/aris-mass/internal/api/util"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	apikeyagg "github.com/hcd233/aris-mass/internal/domain/apikey/aggregate"
+	"github.com/hcd233/aris-mass/internal/i18n"
+	"github.com/hcd233/aris-mass/internal/logger"
+	"github.com/hcd233/aris-mass/internal/util"
 )
 
 // PlaygroundAPIKeyFinder 按 ID 查询 API Key（apikey.APIKeyRepository 的子集；未找到返回 nil, nil）

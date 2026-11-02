@@ -3,7 +3,7 @@ package session_dedup
 import (
 	"testing"
 
-	repository "github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
+	repository "github.com/hcd233/aris-mass/internal/infrastructure/repository"
 )
 
 // sessionTargetCase 会话快照承接目标选择用例

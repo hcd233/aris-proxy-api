@@ -5,13 +5,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/upstream/port"
-	"github.com/hcd233/aris-proxy-api/internal/application/upstream/query"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
-	useragg "github.com/hcd233/aris-proxy-api/internal/domain/identity/aggregate"
-	llmagg "github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
-	llmvo "github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
+	"github.com/hcd233/aris-mass/internal/application/upstream/port"
+	"github.com/hcd233/aris-mass/internal/application/upstream/query"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/model"
+	useragg "github.com/hcd233/aris-mass/internal/domain/identity/aggregate"
+	llmagg "github.com/hcd233/aris-mass/internal/domain/llmproxy/aggregate"
+	llmvo "github.com/hcd233/aris-mass/internal/domain/llmproxy/vo"
 )
 
 // fakeOAuthCredRepo 可编程凭据仓储（null 值 = 无凭据行）

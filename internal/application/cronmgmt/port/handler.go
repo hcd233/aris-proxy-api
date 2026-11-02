@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
+	"github.com/hcd233/aris-mass/internal/common/model"
 )
 
 // CronJobView CronJob 展示视图

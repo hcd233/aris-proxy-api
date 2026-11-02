@@ -3,7 +3,7 @@ package setup
 import (
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/client/setup"
+	"github.com/hcd233/aris-mass/internal/client/setup"
 )
 
 func TestNormalizeHost(t *testing.T) {

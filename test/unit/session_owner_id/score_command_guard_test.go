@@ -6,14 +6,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/session/command"
-	"github.com/hcd233/aris-proxy-api/internal/application/session/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
-	"github.com/hcd233/aris-proxy-api/internal/domain/session"
-	"github.com/hcd233/aris-proxy-api/internal/domain/session/aggregate"
-	"github.com/hcd233/aris-proxy-api/internal/domain/session/vo"
+	"github.com/hcd233/aris-mass/internal/application/session/command"
+	"github.com/hcd233/aris-mass/internal/application/session/port"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/domain/apikey"
+	"github.com/hcd233/aris-mass/internal/domain/session"
+	"github.com/hcd233/aris-mass/internal/domain/session/aggregate"
+	"github.com/hcd233/aris-mass/internal/domain/session/vo"
 )
 
 // 命令层归属守卫的直接守护。

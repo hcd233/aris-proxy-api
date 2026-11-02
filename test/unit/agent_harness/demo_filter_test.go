@@ -9,11 +9,11 @@ import (
 
 	"gorm.io/gorm"
 
-	sessionquery "github.com/hcd233/aris-proxy-api/internal/application/session/query"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
+	sessionquery "github.com/hcd233/aris-mass/internal/application/session/query"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/common/model"
+	"github.com/hcd233/aris-mass/internal/infrastructure/repository"
 )
 
 func captureSessionListSQL(t *testing.T, db *gorm.DB) *[]string {

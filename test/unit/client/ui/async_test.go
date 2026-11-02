@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	clientui "github.com/hcd233/aris-proxy-api/internal/client/ui"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	clientui "github.com/hcd233/aris-mass/internal/client/ui"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
 )
 
 func TestRunWithSpinnerNonTTYRunsAction(t *testing.T) {

@@ -12,7 +12,7 @@ import (
 
 	"golang.org/x/oauth2"
 
-	"github.com/hcd233/aris-proxy-api/internal/domain/oauth2/vo"
+	"github.com/hcd233/aris-mass/internal/domain/oauth2/vo"
 )
 
 // Platform OAuth2 平台策略接口

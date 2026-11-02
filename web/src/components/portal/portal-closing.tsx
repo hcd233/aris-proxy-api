@@ -56,7 +56,7 @@ export function PortalFooter({ cta }: { cta: Cta }) {
     <footer className="overflow-hidden border-t border-border/60 pt-16">
       <div className="mx-auto grid max-w-6xl grid-cols-2 gap-8 px-5 text-sm sm:px-8 md:grid-cols-[1.6fr_1fr_1fr_1fr]">
         <div className="col-span-2 flex flex-col gap-2 md:col-span-1">
-          <span className="font-display text-base font-semibold text-foreground">Aris Proxy</span>
+          <span className="font-display text-base font-semibold text-foreground">Aris Mass</span>
           <span className="text-muted-foreground">{t("portal.footer.tagline")}</span>
         </div>
         <nav aria-label={t("portal.footer.product")} className="flex flex-col gap-2">
@@ -88,7 +88,7 @@ export function PortalFooter({ cta }: { cta: Cta }) {
             rel="noopener noreferrer"
             className={cn(linkCls, "font-mono text-xs")}
           >
-            hcd233/aris-proxy-api
+            hcd233/aris-mass
           </a>
         </nav>
       </div>

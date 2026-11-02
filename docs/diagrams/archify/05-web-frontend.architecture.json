@@ -7,7 +7,7 @@
     "quality_profile": "showcase",
     "animation": "trace",
     "repository": {
-      "url": "https://github.com/hcd233/aris-proxy-api",
+      "url": "https://github.com/hcd233/aris-mass",
       "revision": "cf60466b7bbd28b6fb4e8a8a91afb54b4eefbd2b"
     },
     "viewBox": [1140, 800],
@@ -25,7 +25,7 @@
     { "id": "pub", "type": "frontend", "label": "公开路由 · 3 页", "sublabel": "login · callback · share 只读", "tag": "无守卫", "pos": [470, 360], "size": [230, 104] },
     { "id": "comp", "type": "frontend", "label": "components + hooks", "sublabel": "ui 24 · charts 9 · chat · session/trace-detail · hooks 6", "tag": "88/101 客户端组件", "pos": [40, 520], "size": [620, 88] },
     { "id": "lib", "type": "frontend", "label": "src/lib 唯一后端出入口", "sublabel": "Bearer 注入 · 401 单飞刷新 · 错误码 toast · types.ts 镜像 huma DTO", "tag": "api.*", "pos": [40, 660], "size": [620, 96] },
-    { "id": "api", "type": "backend", "label": "REST / SSE 后端", "sublabel": "/api/web/v1 JWT · /token/refresh · SSE 导出 · X-Trace-Id", "tag": "aris-proxy-api", "pos": [760, 660], "size": [340, 96] }
+    { "id": "api", "type": "backend", "label": "REST / SSE 后端", "sublabel": "/api/web/v1 JWT · /token/refresh · SSE 导出 · X-Trace-Id", "tag": "aris-mass", "pos": [760, 660], "size": [340, 96] }
   ],
   "boundaries": [
     { "kind": "region", "label": "浏览器", "wraps": ["browser"], "pad": 10 },

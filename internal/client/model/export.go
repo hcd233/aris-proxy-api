@@ -12,11 +12,11 @@ import (
 	"github.com/samber/lo"
 	"golang.org/x/term"
 
-	"github.com/hcd233/aris-proxy-api/internal/client/api"
-	clientconfig "github.com/hcd233/aris-proxy-api/internal/client/config"
-	"github.com/hcd233/aris-proxy-api/internal/client/ui"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/client/api"
+	clientconfig "github.com/hcd233/aris-mass/internal/client/config"
+	"github.com/hcd233/aris-mass/internal/client/ui"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
 )
 
 // ExportOptions aris model export 运行参数

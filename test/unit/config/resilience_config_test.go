@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/config"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/config"
 )
 
 // TestUpstreamCircuitEnv 验证环境变量可覆盖熔断/bulkhead 配置（子进程方式，与 HTTPClientTimeout 测试同模式）。

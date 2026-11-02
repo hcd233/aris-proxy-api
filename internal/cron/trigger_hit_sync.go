@@ -8,12 +8,12 @@ import (
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	commonmodel "github.com/hcd233/aris-proxy-api/internal/common/model"
-	"github.com/hcd233/aris-proxy-api/internal/domain/trigger"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
-	"github.com/hcd233/aris-proxy-api/internal/lock"
-	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	commonmodel "github.com/hcd233/aris-mass/internal/common/model"
+	"github.com/hcd233/aris-mass/internal/domain/trigger"
+	"github.com/hcd233/aris-mass/internal/infrastructure/cache"
+	"github.com/hcd233/aris-mass/internal/lock"
+	"github.com/hcd233/aris-mass/internal/logger"
 	"github.com/redis/go-redis/v9"
 )
 

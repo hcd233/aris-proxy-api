@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/config"
+	"github.com/hcd233/aris-mass/internal/config"
 )
 
 // TestHTTPClientTimeoutEnv 验证 HTTP_CLIENT_TIMEOUT 环境变量可覆盖上游客户端超时。

@@ -9,7 +9,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/termenv"
 
-	"github.com/hcd233/aris-proxy-api/internal/client/status"
+	"github.com/hcd233/aris-mass/internal/client/status"
 )
 
 func init() {

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/client/update"
+	"github.com/hcd233/aris-mass/internal/client/update"
 )
 
 // testBudget 放宽的检查/等待预算：生产预算（检查 1.5s / 提示 0.4s）在全量并行负载下

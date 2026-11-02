@@ -5,11 +5,11 @@ import (
 
 	"go.uber.org/zap"
 
-	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
-	harnessport "github.com/hcd233/aris-proxy-api/internal/application/agentharness/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/logger"
+	apiutil "github.com/hcd233/aris-mass/internal/api/util"
+	harnessport "github.com/hcd233/aris-mass/internal/application/agentharness/port"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/dto"
+	"github.com/hcd233/aris-mass/internal/logger"
 )
 
 // HarnessHandler harness 规则管理 handler

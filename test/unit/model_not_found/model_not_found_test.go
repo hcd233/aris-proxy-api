@@ -12,10 +12,10 @@ import (
 	"github.com/danielgtaylor/huma/v2/adapters/humafiber"
 	"github.com/gofiber/fiber/v3"
 
-	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
-	proxyutil "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/util"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	apiutil "github.com/hcd233/aris-mass/internal/api/util"
+	proxyutil "github.com/hcd233/aris-mass/internal/application/llmproxy/util"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/enum"
 )
 
 // proxyErrorResponse 是 HTTP 层观测到的模型不存在响应结构。

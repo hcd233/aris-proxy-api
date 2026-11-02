@@ -15,16 +15,16 @@ import (
 	humago "github.com/danielgtaylor/huma/v2/adapters/humago"
 	"github.com/gofiber/fiber/v3"
 
-	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
-	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/common/inflight"
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/httpclient"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/transport"
-	"github.com/hcd233/aris-proxy-api/internal/middleware"
-	"github.com/hcd233/aris-proxy-api/internal/util"
+	apiutil "github.com/hcd233/aris-mass/internal/api/util"
+	"github.com/hcd233/aris-mass/internal/application/llmproxy/port"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/inflight"
+	"github.com/hcd233/aris-mass/internal/domain/llmproxy/vo"
+	"github.com/hcd233/aris-mass/internal/infrastructure/httpclient"
+	"github.com/hcd233/aris-mass/internal/infrastructure/transport"
+	"github.com/hcd233/aris-mass/internal/middleware"
+	"github.com/hcd233/aris-mass/internal/util"
 )
 
 func TestGetPassthroughHeaders_NoHeaders(t *testing.T) {

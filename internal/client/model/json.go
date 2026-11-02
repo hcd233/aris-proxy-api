@@ -2,7 +2,7 @@ package model
 
 import (
 	"github.com/bytedance/sonic"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
 )
 
 func sonicUnmarshal(data []byte, dst any) error {

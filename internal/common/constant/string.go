@@ -3,7 +3,7 @@ package constant
 import "time"
 
 const (
-	ProjectName = "aris-proxy-api"
+	ProjectName = "aris-mass"
 
 	// ── 字符串模板（含 Printf/格式化占位符）──
 	FormatDefault        = "%v"
@@ -75,8 +75,8 @@ const (
 
 	// OpenAPI / Huma configuration
 	OpenAPIVersion       = "3.1.0"
-	APITitle             = "Aris API Tmpl"
-	APIDescription       = "Aris API Tmpl is a RESTful API Template."
+	APITitle             = "Aris Mass API"
+	APIDescription       = "Aris Mass is a MaaS model aggregation gateway and usage-data curation platform."
 	APIVersion           = "1.0"
 	ContactName          = "hcd233"
 	ContactEmail         = "lvlvko233@qq.com"

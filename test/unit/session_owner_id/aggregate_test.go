@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/domain/session/aggregate"
-	"github.com/hcd233/aris-proxy-api/internal/domain/session/vo"
+	"github.com/hcd233/aris-mass/internal/domain/session/aggregate"
+	"github.com/hcd233/aris-mass/internal/domain/session/vo"
 )
 
 // TestCreateSessionRequiresOwnerID 归属 ID 为 0 时必须拒绝创建。

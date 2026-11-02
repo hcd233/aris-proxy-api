@@ -3,7 +3,7 @@ package trigger_matcher_test
 import (
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/trigger"
+	"github.com/hcd233/aris-mass/internal/application/trigger"
 )
 
 func TestACmatcher_SingleWord(t *testing.T) {

@@ -8,10 +8,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/client/api"
-	clientconfig "github.com/hcd233/aris-proxy-api/internal/client/config"
-	"github.com/hcd233/aris-proxy-api/internal/client/model"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/client/api"
+	clientconfig "github.com/hcd233/aris-mass/internal/client/config"
+	"github.com/hcd233/aris-mass/internal/client/model"
+	"github.com/hcd233/aris-mass/internal/common/constant"
 )
 
 // Report aris status 全部检查结果

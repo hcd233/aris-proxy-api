@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	metricspkg "github.com/hcd233/aris-proxy-api/internal/infrastructure/metrics"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	metricspkg "github.com/hcd233/aris-mass/internal/infrastructure/metrics"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

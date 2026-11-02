@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/enum"
 )
 
 func TestContextKeyTypeMatch(t *testing.T) {

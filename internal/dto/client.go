@@ -2,7 +2,7 @@
 package dto
 
 import (
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/enum"
 )
 
 // ClientModelsReq 客户端拉取模型列表请求

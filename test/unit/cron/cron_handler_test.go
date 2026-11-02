@@ -8,15 +8,15 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	cronauditport "github.com/hcd233/aris-proxy-api/internal/application/cronaudit/port"
-	cronauditquery "github.com/hcd233/aris-proxy-api/internal/application/cronaudit/query"
-	cronmgmtcommand "github.com/hcd233/aris-proxy-api/internal/application/cronmgmt/command"
-	cronmgmtport "github.com/hcd233/aris-proxy-api/internal/application/cronmgmt/port"
-	cronmgmtquery "github.com/hcd233/aris-proxy-api/internal/application/cronmgmt/query"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
-	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/handler"
+	cronauditport "github.com/hcd233/aris-mass/internal/application/cronaudit/port"
+	cronauditquery "github.com/hcd233/aris-mass/internal/application/cronaudit/query"
+	cronmgmtcommand "github.com/hcd233/aris-mass/internal/application/cronmgmt/command"
+	cronmgmtport "github.com/hcd233/aris-mass/internal/application/cronmgmt/port"
+	cronmgmtquery "github.com/hcd233/aris-mass/internal/application/cronmgmt/query"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/common/model"
+	"github.com/hcd233/aris-mass/internal/dto"
+	"github.com/hcd233/aris-mass/internal/handler"
 )
 
 type fakeCronJobRepo struct {

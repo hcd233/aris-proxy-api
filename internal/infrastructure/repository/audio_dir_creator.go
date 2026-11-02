@@ -4,8 +4,8 @@ package repository
 import (
 	"context"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	objdao "github.com/hcd233/aris-proxy-api/internal/infrastructure/storage/obj_dao"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	objdao "github.com/hcd233/aris-mass/internal/infrastructure/storage/obj_dao"
 )
 
 // AudioDirCreator 将 objdao.ObjDAO 适配为只暴露创建目录语义的小接口，

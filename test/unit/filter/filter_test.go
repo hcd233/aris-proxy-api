@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	commonfilter "github.com/hcd233/aris-proxy-api/internal/common/filter"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	commonfilter "github.com/hcd233/aris-mass/internal/common/filter"
 )
 
 func TestJSONBArrayCondition_SingleEqual(t *testing.T) {

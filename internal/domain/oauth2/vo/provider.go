@@ -1,7 +1,7 @@
 // Package vo OAuth2 域值对象
 package vo
 
-import "github.com/hcd233/aris-proxy-api/internal/common/enum"
+import "github.com/hcd233/aris-mass/internal/common/enum"
 
 // OAuthProvider OAuth2 平台类型值对象
 //

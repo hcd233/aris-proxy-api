@@ -1,4 +1,4 @@
-// Package main aris-proxy-api 服务端入口。
+// Package main aris-mass 服务端入口。
 package main
 
 import _ "time/tzdata"

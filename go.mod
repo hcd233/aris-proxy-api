@@ -1,4 +1,4 @@
-module github.com/hcd233/aris-proxy-api
+module github.com/hcd233/aris-mass
 
 go 1.25.1
 

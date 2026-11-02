@@ -3,8 +3,8 @@ package trigger
 import (
 	"context"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
-	"github.com/hcd233/aris-proxy-api/internal/domain/trigger/aggregate"
+	"github.com/hcd233/aris-mass/internal/common/model"
+	"github.com/hcd233/aris-mass/internal/domain/trigger/aggregate"
 )
 
 type TriggerRepository interface {

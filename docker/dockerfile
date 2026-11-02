@@ -46,13 +46,13 @@ COPY --from=frontend-final /app/out ./internal/web/dist
 
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    go build -trimpath -ldflags="-s -w" -o /go/bin/aris-proxy-api ./cmd/server \
-    && upx -9 /go/bin/aris-proxy-api
+    go build -trimpath -ldflags="-s -w" -o /go/bin/aris-mass ./cmd/server \
+    && upx -9 /go/bin/aris-mass
 
 # 阶段2b: 预构建二进制（CI 模式：runner 上已增量编译完成，容器内不再重编；
-# 路径与 source-builder 统一为 /go/bin/aris-proxy-api）
+# 路径与 source-builder 统一为 /go/bin/aris-mass）
 FROM scratch AS binary-prebuilt
-COPY aris-proxy-api /go/bin/aris-proxy-api
+COPY aris-mass /go/bin/aris-mass
 
 # 阶段2c: 根据 build-arg 选择二进制来源（COPY --from 不支持变量展开，经 FROM 中转）
 FROM ${BINARY_SOURCE} AS binary-final
@@ -62,13 +62,13 @@ FROM gcr.io/distroless/static-debian12:nonroot AS final
 
 WORKDIR /app
 
-COPY --from=binary-final /go/bin/aris-proxy-api /app/aris-proxy-api
+COPY --from=binary-final /go/bin/aris-mass /app/aris-mass
 
 USER nonroot:nonroot
 EXPOSE 8080
 
-ENTRYPOINT ["/app/aris-proxy-api"]
+ENTRYPOINT ["/app/aris-mass"]
 
-# 本地构建：docker buildx build --platform linux/amd64 -t aris-proxy-api:latest -f docker/dockerfile .
+# 本地构建：docker buildx build --platform linux/amd64 -t aris-mass:latest -f docker/dockerfile .
 # CI 构建：docker buildx build --build-arg FRONTEND_SOURCE=frontend-prebuilt --build-arg BINARY_SOURCE=binary-prebuilt ...
-# 本地运行：docker run -d -p 8080:8080 --env-file api.env --name aris-proxy-api -t aris-proxy-api:latest server start --host 0.0.0.0 --port 8080
+# 本地运行：docker run -d -p 8080:8080 --env-file api.env --name aris-mass -t aris-mass:latest server start --host 0.0.0.0 --port 8080

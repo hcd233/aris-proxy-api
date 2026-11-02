@@ -4,7 +4,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/constant"
 )
 
 // IsSafeInstallHost 校验 Host 头是否仅包含 URL host 允许的字符。

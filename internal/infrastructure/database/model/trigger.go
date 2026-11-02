@@ -1,6 +1,6 @@
 package model
 
-import "github.com/hcd233/aris-proxy-api/internal/common/constant"
+import "github.com/hcd233/aris-mass/internal/common/constant"
 
 // Trigger 触发词数据库模型。
 //

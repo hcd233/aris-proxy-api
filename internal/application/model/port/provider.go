@@ -3,7 +3,7 @@ package port
 import (
 	"context"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/enum"
 )
 
 // PricingTier 公开定价的一档（USD/1M tokens）：ContextMin 起（含）的 prompt 量适用本档

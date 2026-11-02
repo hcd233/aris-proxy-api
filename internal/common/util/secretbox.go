@@ -7,8 +7,8 @@ import (
 	"encoding/base64"
 	"strings"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
 )
 
 // EncryptSecret 使用 AES-256-GCM 加密明文，返回

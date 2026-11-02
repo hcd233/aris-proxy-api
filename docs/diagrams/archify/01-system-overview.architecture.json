@@ -2,12 +2,12 @@
   "schema_version": 1,
   "diagram_type": "architecture",
   "meta": {
-    "title": "aris-proxy-api 系统总览 · DDD 分层",
+    "title": "aris-mass 系统总览 · DDD 分层",
     "locale": "zh-CN",
     "quality_profile": "showcase",
     "animation": "trace",
     "repository": {
-      "url": "https://github.com/hcd233/aris-proxy-api",
+      "url": "https://github.com/hcd233/aris-mass",
       "revision": "68c75b31db6e07bd36b067d5be2fb3e1c5e67ebd"
     },
     "viewBox": [1360, 800],
@@ -35,7 +35,7 @@
   ],
   "boundaries": [
     { "kind": "region", "label": "客户端与 Agent Harness", "wraps": ["web-admin", "trace-cli", "agentic-clients"], "pad": 10 },
-    { "kind": "region", "label": "aris-proxy-api · DDD 分层（依赖向内）", "wraps": ["interface", "application", "domain", "infra", "cron", "bootstrap"] },
+    { "kind": "region", "label": "aris-mass · DDD 分层（依赖向内）", "wraps": ["interface", "application", "domain", "infra", "cron", "bootstrap"] },
     { "kind": "region", "label": "外部依赖", "wraps": ["postgres", "redis", "maas", "oauth2"] }
   ],
   "connections": [

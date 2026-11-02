@@ -4,7 +4,7 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/util"
+	"github.com/hcd233/aris-mass/internal/common/util"
 )
 
 // TestTruncateRunes 按字符截断不得产生非法 UTF-8。

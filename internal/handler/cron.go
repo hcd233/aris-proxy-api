@@ -6,14 +6,14 @@ import (
 	"github.com/samber/lo"
 	"go.uber.org/zap"
 
-	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
-	cronauditport "github.com/hcd233/aris-proxy-api/internal/application/cronaudit/port"
-	cronmgmtport "github.com/hcd233/aris-proxy-api/internal/application/cronmgmt/port"
-	demoauditport "github.com/hcd233/aris-proxy-api/internal/application/demoaccessaudit/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
-	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/logger"
+	apiutil "github.com/hcd233/aris-mass/internal/api/util"
+	cronauditport "github.com/hcd233/aris-mass/internal/application/cronaudit/port"
+	cronmgmtport "github.com/hcd233/aris-mass/internal/application/cronmgmt/port"
+	demoauditport "github.com/hcd233/aris-mass/internal/application/demoaccessaudit/port"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/common/model"
+	"github.com/hcd233/aris-mass/internal/dto"
+	"github.com/hcd233/aris-mass/internal/logger"
 )
 
 // CronHandler Cron 相关 HTTP 处理器接口

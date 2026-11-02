@@ -3,7 +3,7 @@ package dto
 import (
 	"math"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/enum"
 )
 
 // PricingDTO 模型定价（wire 展示单位：货币单位每 1M tokens）。

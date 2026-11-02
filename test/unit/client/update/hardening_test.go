@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/client/update"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/client/update"
+	"github.com/hcd233/aris-mass/internal/common/constant"
 )
 
 // roundTripFunc 用函数实现 http.RoundTripper：测试里观察请求 ctx 并伪造响应

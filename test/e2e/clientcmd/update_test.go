@@ -15,7 +15,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/constant"
 )
 
 // releaseArchive 将二进制打包为 release 资产并返回归档与摘要

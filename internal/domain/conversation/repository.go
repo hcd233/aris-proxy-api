@@ -5,8 +5,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/vo"
-	"github.com/hcd233/aris-proxy-api/internal/domain/conversation/aggregate"
+	"github.com/hcd233/aris-mass/internal/common/vo"
+	"github.com/hcd233/aris-mass/internal/domain/conversation/aggregate"
 )
 
 // MessageRepository Message 聚合仓储接口

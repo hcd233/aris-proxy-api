@@ -5,7 +5,7 @@ import (
 	"context"
 	"time"
 
-	commonmodel "github.com/hcd233/aris-proxy-api/internal/common/model"
+	commonmodel "github.com/hcd233/aris-mass/internal/common/model"
 )
 
 // DemoAccessAuditView Demo 访问审计展示视图

@@ -22,7 +22,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/constant"
 )
 
 // TestSessionKeywordFilterSQL_UsesAnyArrayShape 断言 2026-10-15 形态：

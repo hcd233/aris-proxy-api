@@ -7,13 +7,13 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/apikey/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/domain/apikey"
-	"github.com/hcd233/aris-proxy-api/internal/domain/apikey/aggregate"
-	"github.com/hcd233/aris-proxy-api/internal/domain/apikey/service"
-	"github.com/hcd233/aris-proxy-api/internal/domain/apikey/vo"
-	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/hcd233/aris-mass/internal/application/apikey/port"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/domain/apikey"
+	"github.com/hcd233/aris-mass/internal/domain/apikey/aggregate"
+	"github.com/hcd233/aris-mass/internal/domain/apikey/service"
+	"github.com/hcd233/aris-mass/internal/domain/apikey/vo"
+	"github.com/hcd233/aris-mass/internal/logger"
 )
 
 // UserExistenceChecker 用户存在性校验器（跨域适配接口，避免 apikey 域强依赖 identity 域）

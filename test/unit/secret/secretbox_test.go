@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	commonutil "github.com/hcd233/aris-proxy-api/internal/common/util"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	commonutil "github.com/hcd233/aris-mass/internal/common/util"
 )
 
 // testSecretBoxKey 返回 32 字节固定密钥（AES-256 合法长度）。

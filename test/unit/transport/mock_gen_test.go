@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/transport"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/infrastructure/transport"
 )
 
 func fixedRNG() *rand.Rand { return rand.New(rand.NewPCG(1, 2)) }

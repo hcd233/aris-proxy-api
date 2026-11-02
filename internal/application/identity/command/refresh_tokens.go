@@ -5,13 +5,13 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/identity/port"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	commonutil "github.com/hcd233/aris-proxy-api/internal/common/util"
-	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
-	"github.com/hcd233/aris-proxy-api/internal/domain/identity/service"
-	"github.com/hcd233/aris-proxy-api/internal/domain/identity/vo"
-	"github.com/hcd233/aris-proxy-api/internal/logger"
+	"github.com/hcd233/aris-mass/internal/application/identity/port"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	commonutil "github.com/hcd233/aris-mass/internal/common/util"
+	"github.com/hcd233/aris-mass/internal/domain/identity"
+	"github.com/hcd233/aris-mass/internal/domain/identity/service"
+	"github.com/hcd233/aris-mass/internal/domain/identity/vo"
+	"github.com/hcd233/aris-mass/internal/logger"
 )
 
 type refreshTokensHandler struct {

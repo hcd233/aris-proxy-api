@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/vo"
-	"github.com/hcd233/aris-proxy-api/internal/domain/conversation/aggregate"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
+	"github.com/hcd233/aris-mass/internal/common/vo"
+	"github.com/hcd233/aris-mass/internal/domain/conversation/aggregate"
+	"github.com/hcd233/aris-mass/internal/infrastructure/repository"
 )
 
 // mustRecordTool 用当前算法构造 Tool 聚合。

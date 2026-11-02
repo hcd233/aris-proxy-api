@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/bytedance/sonic"
-	dto "github.com/hcd233/aris-proxy-api/internal/dto/openai"
+	dto "github.com/hcd233/aris-mass/internal/dto/openai"
 )
 
 func TestToolParametersRoundTrip(t *testing.T) {

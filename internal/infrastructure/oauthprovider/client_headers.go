@@ -3,7 +3,7 @@ package oauthprovider
 import (
 	"net/http"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/constant"
 )
 
 // setClaudeClientHeaders 补 Claude 客户端身份头（token 与 usage 端点共用）。

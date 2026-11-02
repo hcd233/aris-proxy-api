@@ -29,17 +29,17 @@ import (
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
 
-	endpointcommand "github.com/hcd233/aris-proxy-api/internal/application/endpoint/command"
-	modelcommand "github.com/hcd233/aris-proxy-api/internal/application/model/command"
-	upstreamquery "github.com/hcd233/aris-proxy-api/internal/application/upstream/query"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/config"
-	"github.com/hcd233/aris-proxy-api/internal/handler"
-	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/jwt"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/repository"
-	"github.com/hcd233/aris-proxy-api/internal/router"
+	endpointcommand "github.com/hcd233/aris-mass/internal/application/endpoint/command"
+	modelcommand "github.com/hcd233/aris-mass/internal/application/model/command"
+	upstreamquery "github.com/hcd233/aris-mass/internal/application/upstream/query"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/config"
+	"github.com/hcd233/aris-mass/internal/handler"
+	dbmodel "github.com/hcd233/aris-mass/internal/infrastructure/database/model"
+	"github.com/hcd233/aris-mass/internal/infrastructure/jwt"
+	"github.com/hcd233/aris-mass/internal/infrastructure/repository"
+	"github.com/hcd233/aris-mass/internal/router"
 )
 
 // syncHistoryFixture 真实装配：生产路由 + JWT + sqlite 仓储 + miniredis

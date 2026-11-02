@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/domain/modelcall"
-	mcaggregate "github.com/hcd233/aris-proxy-api/internal/domain/modelcall/aggregate"
-	"github.com/hcd233/aris-proxy-api/internal/dto"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/pool"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/domain/modelcall"
+	mcaggregate "github.com/hcd233/aris-mass/internal/domain/modelcall/aggregate"
+	"github.com/hcd233/aris-mass/internal/dto"
+	"github.com/hcd233/aris-mass/internal/infrastructure/pool"
 )
 
 // fakeAuditRepo 仅实现 Save，用于断言审计写路径确实经 AuditRepository 聚合仓储。

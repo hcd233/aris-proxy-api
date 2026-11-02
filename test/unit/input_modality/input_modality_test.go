@@ -5,7 +5,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/enum"
 )
 
 // TestInputModalitiesOrder 枚举序即规范输出序（models.dev 模态映射与前端 chips 均按此序）

@@ -5,7 +5,7 @@
 __debug*
 
 # Binary files
-aris-proxy-api
+aris-mass
 /client
 server
 test_embed

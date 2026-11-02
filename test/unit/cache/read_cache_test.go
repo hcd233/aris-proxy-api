@@ -12,9 +12,9 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/samber/mo"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/infrastructure/cache"
 )
 
 // 本文件覆盖通用读缓存（cache.GetOrLoad）的四类语义：

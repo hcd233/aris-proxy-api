@@ -1,6 +1,6 @@
 ---
 name: query-prod-cache
-description: Use when the user asks to inspect, count, diagnose, or query the production Redis cache running in Docker on aris-proxy-api. Also use when a production cache read, TTL/key inspection, or explicitly authorized cache data write (e.g. deleting a specific key) is requested. Trigger on mentions of Redis, cache, keys, TTL, sessions, rate limit buckets, or "查一下缓存".
+description: Use when the user asks to inspect, count, diagnose, or query the production Redis cache running in Docker on aris-mass. Also use when a production cache read, TTL/key inspection, or explicitly authorized cache data write (e.g. deleting a specific key) is requested. Trigger on mentions of Redis, cache, keys, TTL, sessions, rate limit buckets, or "查一下缓存".
 ---
 
 # query-prod-cache
@@ -26,7 +26,7 @@ description: Use when the user asks to inspect, count, diagnose, or query the pr
 1. 加载 `login-prod-server` skill，确认 SSH 方式、环境布局、凭据读取规则与安全基线；
 2. 连接：`ssh ubuntu@api.lvlvko.top`；
 3. 确认 Redis 容器（当前为 `redis`，镜像 redis:8.4.0，勿假设不变）：`docker ps --format '{{.Names}}\t{{.Image}}\t{{.Status}}'`，找不到明确目标时停止并报告；
-4. 从 `/home/ubuntu/code/aris-proxy-api/env/api.env` 读取 `REDIS_*` 连接键（读取与脱敏规则见 `login-prod-server`；生产上无独立 `redis.env`，容器由 1Panel 部署，密码在启动参数 `--requirepass` 与 `/opt/1panel/apps/redis/redis/conf/redis.conf`）。
+4. 从 `/home/ubuntu/code/aris-mass/env/api.env` 读取 `REDIS_*` 连接键（读取与脱敏规则见 `login-prod-server`；生产上无独立 `redis.env`，容器由 1Panel 部署，密码在启动参数 `--requirepass` 与 `/opt/1panel/apps/redis/redis/conf/redis.conf`）。
 5. 应用固定使用 `0` 号库（`internal/common/constant/database.go` 中 `RedisDB = 0`，与 redis-cli 默认库一致），`REDIS_DB` 仅作参考。
 
 ## 只读命令：默认直接执行
@@ -54,7 +54,7 @@ description: Use when the user asks to inspect, count, diagnose, or query the pr
 
 ```bash
 set -a
-. /home/ubuntu/code/aris-proxy-api/env/api.env
+. /home/ubuntu/code/aris-mass/env/api.env
 set +a
 
 docker exec -i \

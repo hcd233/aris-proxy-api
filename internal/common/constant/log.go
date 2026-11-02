@@ -18,9 +18,9 @@ const (
 	LogErrMaxBackups  = 3
 	LogErrMaxAgeDays  = 30
 
-	LogInfoFileName  = "aris-proxy-api.log"
-	LogErrFileName   = "aris-proxy-api-error.log"
-	LogPanicFileName = "aris-proxy-api-panic.log"
+	LogInfoFileName  = "aris-mass.log"
+	LogErrFileName   = "aris-mass-error.log"
+	LogPanicFileName = "aris-mass-panic.log"
 
 	CLSFieldMessage   = "message"
 	CLSFieldLevel     = "level"

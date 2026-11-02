@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/middleware"
+	"github.com/hcd233/aris-mass/internal/middleware"
 )
 
 func TestBanCleanCacheUnknownIP(t *testing.T) {

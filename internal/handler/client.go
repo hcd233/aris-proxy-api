@@ -7,9 +7,9 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/gofiber/fiber/v3"
 
-	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
-	llmproxyport "github.com/hcd233/aris-proxy-api/internal/application/llmproxy/port"
-	"github.com/hcd233/aris-proxy-api/internal/dto"
+	apiutil "github.com/hcd233/aris-mass/internal/api/util"
+	llmproxyport "github.com/hcd233/aris-mass/internal/application/llmproxy/port"
+	"github.com/hcd233/aris-mass/internal/dto"
 )
 
 // ClientHandler 客户端接口处理器

@@ -4,7 +4,7 @@ package vo
 import (
 	"time"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
 )
 
 // SessionScore 会话评分值对象

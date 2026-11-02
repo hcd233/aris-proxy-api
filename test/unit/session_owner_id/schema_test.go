@@ -11,8 +11,8 @@ package session_owner_id
 import (
 	"testing"
 
-	dbmodel "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
-	"github.com/hcd233/aris-proxy-api/test/unit/sqlitetest"
+	dbmodel "github.com/hcd233/aris-mass/internal/infrastructure/database/model"
+	"github.com/hcd233/aris-mass/test/unit/sqlitetest"
 )
 
 // TestSessionAPIKeyIDColumnAndIndex sessions 表必须有 api_key_id 列与其索引。

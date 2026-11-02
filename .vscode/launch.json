@@ -2,7 +2,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "aris-proxy-api",
+            "name": "aris-mass",
             "type": "go",
             "request": "launch",
             "mode": "auto",
@@ -11,7 +11,7 @@
             "args": ["server", "start", "--host", "0.0.0.0", "--port", "8170"],
         },
         {
-            "name": "aris-proxy-api-object-bucket-create",
+            "name": "aris-mass-object-bucket-create",
             "type": "go",
             "request": "launch",
             "mode": "auto",
@@ -20,7 +20,7 @@
             "args": ["object", "bucket", "create"],
         },
         {
-            "name": "aris-proxy-api-database-migrate",
+            "name": "aris-mass-database-migrate",
             "type": "go",
             "request": "launch",
             "mode": "auto",

@@ -14,13 +14,13 @@ import (
 	"github.com/samber/lo"
 	"go.uber.org/zap"
 
-	apiutil "github.com/hcd233/aris-proxy-api/internal/api/util"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
-	"github.com/hcd233/aris-proxy-api/internal/common/ratelimit"
-	"github.com/hcd233/aris-proxy-api/internal/i18n"
-	"github.com/hcd233/aris-proxy-api/internal/logger"
+	apiutil "github.com/hcd233/aris-mass/internal/api/util"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/common/ratelimit"
+	"github.com/hcd233/aris-mass/internal/i18n"
+	"github.com/hcd233/aris-mass/internal/logger"
 )
 
 // tokenBucketPeekLua 令牌桶余额探查脚本：refill 后返回当前余额，不扣减。

@@ -7,15 +7,15 @@ import (
 
 	"github.com/samber/lo"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/port"
-	"github.com/hcd233/aris-proxy-api/internal/application/llmproxy/usecase"
-	"github.com/hcd233/aris-proxy-api/internal/application/trigger"
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
-	triggerdomain "github.com/hcd233/aris-proxy-api/internal/domain/trigger"
-	"github.com/hcd233/aris-proxy-api/internal/domain/trigger/aggregate"
-	"github.com/hcd233/aris-proxy-api/internal/dto"
+	"github.com/hcd233/aris-mass/internal/application/llmproxy/port"
+	"github.com/hcd233/aris-mass/internal/application/llmproxy/usecase"
+	"github.com/hcd233/aris-mass/internal/application/trigger"
+	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/model"
+	triggerdomain "github.com/hcd233/aris-mass/internal/domain/trigger"
+	"github.com/hcd233/aris-mass/internal/domain/trigger/aggregate"
+	"github.com/hcd233/aris-mass/internal/dto"
 )
 
 // realTriggerRepo 供真实 TriggerService 使用的词条仓库 fake。

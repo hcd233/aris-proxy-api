@@ -3,8 +3,8 @@ package command
 import (
 	"context"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/trigger/port"
-	"github.com/hcd233/aris-proxy-api/internal/domain/trigger"
+	"github.com/hcd233/aris-mass/internal/application/trigger/port"
+	"github.com/hcd233/aris-mass/internal/domain/trigger"
 )
 
 type deleteTriggerHandler struct {

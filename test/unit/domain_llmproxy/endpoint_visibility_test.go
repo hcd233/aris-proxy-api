@@ -3,8 +3,8 @@ package domain_llmproxy
 import (
 	"testing"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/domain/llmproxy/aggregate"
 )
 
 // mustEndpoint 构造一个合法的最小端点聚合根（可见性走默认值）。

@@ -10,16 +10,16 @@ import (
 
 	"github.com/samber/lo"
 
-	"github.com/hcd233/aris-proxy-api/internal/application/upstream/port"
-	"github.com/hcd233/aris-proxy-api/internal/application/upstream/query"
-	"github.com/hcd233/aris-proxy-api/internal/common/enum"
-	"github.com/hcd233/aris-proxy-api/internal/common/model"
-	"github.com/hcd233/aris-proxy-api/internal/domain/identity"
-	useragg "github.com/hcd233/aris-proxy-api/internal/domain/identity/aggregate"
-	uservo "github.com/hcd233/aris-proxy-api/internal/domain/identity/vo"
-	"github.com/hcd233/aris-proxy-api/internal/domain/llmproxy"
-	llmagg "github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/aggregate"
-	llmvo "github.com/hcd233/aris-proxy-api/internal/domain/llmproxy/vo"
+	"github.com/hcd233/aris-mass/internal/application/upstream/port"
+	"github.com/hcd233/aris-mass/internal/application/upstream/query"
+	"github.com/hcd233/aris-mass/internal/common/enum"
+	"github.com/hcd233/aris-mass/internal/common/model"
+	"github.com/hcd233/aris-mass/internal/domain/identity"
+	useragg "github.com/hcd233/aris-mass/internal/domain/identity/aggregate"
+	uservo "github.com/hcd233/aris-mass/internal/domain/identity/vo"
+	"github.com/hcd233/aris-mass/internal/domain/llmproxy"
+	llmagg "github.com/hcd233/aris-mass/internal/domain/llmproxy/aggregate"
+	llmvo "github.com/hcd233/aris-mass/internal/domain/llmproxy/vo"
 )
 
 // ==================== fakes ====================

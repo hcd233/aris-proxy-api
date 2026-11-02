@@ -110,7 +110,7 @@ linters:
           files:
             - "**/internal/dto/**"
           deny:
-            - pkg: "github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model"
+            - pkg: "github.com/hcd233/aris-mass/internal/infrastructure/database/model"
               desc: "DTO 层禁止依赖数据库模型层，DTO 函数需要 dbmodel 字段时应将具体字段作为参数传入"
 
     # ── nestif: 嵌套深度 ──

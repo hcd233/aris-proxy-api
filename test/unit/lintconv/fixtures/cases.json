@@ -173,7 +173,7 @@
     "files": [
       {
         "path": "internal/domain/demo/domain.go",
-        "content": "package demo\n\nimport _ \"github.com/hcd233/aris-proxy-api/internal/infrastructure/database\"\n"
+        "content": "package demo\n\nimport _ \"github.com/hcd233/aris-mass/internal/infrastructure/database\"\n"
       }
     ],
     "want": [
@@ -185,7 +185,7 @@
     "files": [
       {
         "path": "internal/application/demo/app.go",
-        "content": "package demo\n\nimport _ \"github.com/hcd233/aris-proxy-api/internal/service\"\n"
+        "content": "package demo\n\nimport _ \"github.com/hcd233/aris-mass/internal/service\"\n"
       }
     ],
     "want": [
@@ -281,7 +281,7 @@
     "files": [
       {
         "path": "internal/domain/demo/dto.go",
-        "content": "package demo\n\nimport _ \"github.com/hcd233/aris-proxy-api/internal/dto\"\n"
+        "content": "package demo\n\nimport _ \"github.com/hcd233/aris-mass/internal/dto\"\n"
       }
     ],
     "want": [
@@ -293,7 +293,7 @@
     "files": [
       {
         "path": "internal/domain/demo/util.go",
-        "content": "package demo\n\nimport _ \"github.com/hcd233/aris-proxy-api/internal/util\"\n"
+        "content": "package demo\n\nimport _ \"github.com/hcd233/aris-mass/internal/util\"\n"
       }
     ],
     "want": [
@@ -547,7 +547,7 @@
     "files": [
       {
         "path": "internal/application/session/query/cache.go",
-        "content": "package query\n\nimport _ \"github.com/hcd233/aris-proxy-api/internal/infrastructure/cache\"\n"
+        "content": "package query\n\nimport _ \"github.com/hcd233/aris-mass/internal/infrastructure/cache\"\n"
       }
     ],
     "want": [
@@ -559,7 +559,7 @@
     "files": [
       {
         "path": "internal/dto/demo.go",
-        "content": "package dto\n\nimport _ \"github.com/hcd233/aris-proxy-api/internal/domain/foo\"\n"
+        "content": "package dto\n\nimport _ \"github.com/hcd233/aris-mass/internal/domain/foo\"\n"
       }
     ],
     "want": [
@@ -571,7 +571,7 @@
     "files": [
       {
         "path": "internal/handler/demo.go",
-        "content": "package handler\n\nimport _ \"github.com/hcd233/aris-proxy-api/internal/application/foo/command\"\n"
+        "content": "package handler\n\nimport _ \"github.com/hcd233/aris-mass/internal/application/foo/command\"\n"
       }
     ],
     "want": [
@@ -583,7 +583,7 @@
     "files": [
       {
         "path": "internal/handler/demo.go",
-        "content": "package handler\n\nimport _ \"github.com/hcd233/aris-proxy-api/internal/domain/foo\"\n"
+        "content": "package handler\n\nimport _ \"github.com/hcd233/aris-mass/internal/domain/foo\"\n"
       }
     ],
     "want": [
@@ -619,7 +619,7 @@
     "files": [
       {
         "path": "internal/application/demo/demo.go",
-        "content": "package demo\n\nimport \"github.com/hcd233/aris-proxy-api/internal/common/model\"\n\nfunc New() *model.Error {\n\treturn model.NewError(10001, \"Unauthorized\")\n}\n"
+        "content": "package demo\n\nimport \"github.com/hcd233/aris-mass/internal/common/model\"\n\nfunc New() *model.Error {\n\treturn model.NewError(10001, \"Unauthorized\")\n}\n"
       }
     ],
     "want": [
@@ -679,7 +679,7 @@
     "files": [
       {
         "path": "internal/cron/think_extract.go",
-        "content": "package cron\n\nimport _ \"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model\"\n"
+        "content": "package cron\n\nimport _ \"github.com/hcd233/aris-mass/internal/infrastructure/database/model\"\n"
       }
     ],
     "want": [
@@ -691,7 +691,7 @@
     "files": [
       {
         "path": "internal/infrastructure/repository/message_repository.go",
-        "content": "package repository\n\nimport _ \"github.com/hcd233/aris-proxy-api/internal/infrastructure/database/model\"\n"
+        "content": "package repository\n\nimport _ \"github.com/hcd233/aris-mass/internal/infrastructure/database/model\"\n"
       }
     ],
     "notWant": [

@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/constant"
 )
 
 // parseVersion 解析 vX.Y.Z / X.Y.Z 版本号；缺省段补 0，含非数字段（如 dev、rc）即不可解析

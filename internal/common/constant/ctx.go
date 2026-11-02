@@ -1,7 +1,7 @@
 // Package constant 常量
 package constant
 
-import "github.com/hcd233/aris-proxy-api/internal/common/enum"
+import "github.com/hcd233/aris-mass/internal/common/enum"
 
 const (
 

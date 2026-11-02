@@ -9,7 +9,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"golang.org/x/term"
 
-	"github.com/hcd233/aris-proxy-api/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/common/ierr"
 )
 
 // RunWithSpinner 显示 spinner 执行 action；out 非 TTY 时静默执行（自动降级）
