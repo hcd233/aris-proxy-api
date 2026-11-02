@@ -45,8 +45,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-import "highlight.js/styles/atom-one-dark.css";
-
 /**
  * rehype-sanitize 白名单：基于 GitHub 风格 defaultSchema 扩展：
  * - 允许所有元素的 className：保留 GFM task-list-item 与 ```lang 语言标记

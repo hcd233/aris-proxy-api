@@ -7,6 +7,11 @@
 @import "../styles/motion-signature.css";
 @import "../styles/portal.css";
 
+/* highlight.js 主题走全局样式：留在组件里会被 Next 拆成独立 chunk，首屏
+ * 没有消息的页面（playground / sessions/detail）只发 preload 不发
+ * stylesheet，浏览器会报 "preloaded but not used" 警告。 */
+@import "highlight.js/styles/atom-one-dark.css";
+
 @custom-variant dark (&:is(.dark *));
 @custom-variant moonshot (&:is([data-theme="moonshot"] *));
 
