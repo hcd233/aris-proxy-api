@@ -475,8 +475,16 @@ func dateTruncSQL(granularity string) string {
 	switch granularity {
 	case enum.GranularityMinute:
 		return constant.DateTruncMinute
+	case enum.GranularityFiveMinutes:
+		return constant.DateBinFiveMinutes
+	case enum.GranularityTenMinutes:
+		return constant.DateBinTenMinutes
+	case enum.GranularityThirtyMinutes:
+		return constant.DateBinThirtyMinutes
 	case enum.GranularityHour:
 		return constant.DateTruncHour
+	case enum.GranularityFourHours:
+		return constant.DateBinFourHours
 	case enum.GranularityDay:
 		return constant.DateTruncDay
 	case enum.GranularityWeek:

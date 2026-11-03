@@ -263,3 +263,45 @@ func TestAggregate_ThreadsPerPodSkipsLegacySnapshots(t *testing.T) {
 		t.Errorf("expected 2 goroutines points, got %+v", a.Goroutines)
 	}
 }
+
+func TestAggregate_NetworkRateCrossPodSum(t *testing.T) {
+	t.Parallel()
+	const bucket int64 = 60
+	// 桶内两份快照：接收 1000→7000、发送 0→600 字节——每 pod 相同，跨 2 pod 聚合
+	instanceSnaps := []port.Snapshot{
+		{TS: 0, NetRxBytes: 1000, NetTxBytes: 0},
+		{TS: 30, NetRxBytes: 7000, NetTxBytes: 600},
+	}
+	byInstance := map[string][]port.Snapshot{
+		"pod-a": instanceSnaps,
+		"pod-b": instanceSnaps,
+	}
+
+	got := metricsquery.Aggregate(byInstance, 0, bucket, 60, 0)
+
+	// 下行：每 pod 6000/60=100 B/s，跨 2 pod = 200
+	if len(got.NetRx) == 0 || got.NetRx[0].Value != 200 {
+		t.Errorf("expected netRx 200 B/s, got %+v", got.NetRx)
+	}
+	// 上行：每 pod 600/60=10 B/s，跨 2 pod = 20
+	if len(got.NetTx) == 0 || got.NetTx[0].Value != 20 {
+		t.Errorf("expected netTx 20 B/s, got %+v", got.NetTx)
+	}
+}
+
+func TestAggregate_NetworkCounterResetClamped(t *testing.T) {
+	t.Parallel()
+	// 进程重启后 counter 归零：负 delta 必须截断为 0，不能出现负速率
+	byInstance := map[string][]port.Snapshot{
+		"pod-a": {
+			{TS: 0, NetRxBytes: 9000, NetTxBytes: 9000},
+			{TS: 30, NetRxBytes: 100, NetTxBytes: 100},
+		},
+	}
+
+	got := metricsquery.Aggregate(byInstance, 0, 60, 60, 0)
+
+	if len(got.NetRx) == 0 || got.NetRx[0].Value != 0 || got.NetTx[0].Value != 0 {
+		t.Errorf("expected reset to clamp to 0, got rx=%+v tx=%+v", got.NetRx, got.NetTx)
+	}
+}

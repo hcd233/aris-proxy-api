@@ -29,7 +29,25 @@ func BuildBuckets(start, end time.Time, granularity enum.Granularity, fallback m
 	return buckets
 }
 
+// fixedStepGranularities 非日历对齐的定宽粒度：桶边界按 Unix 纪元整除（UTC 下与整点 / 零点对齐），
+// 与 SQL 侧 date_bin(..., 纪元原点) 一致。
+var fixedStepGranularities = map[enum.Granularity]time.Duration{
+	enum.GranularityFiveMinutes:   constant.DashboardFiveMinuteBucket,
+	enum.GranularityTenMinutes:    constant.DashboardTenMinuteBucket,
+	enum.GranularityThirtyMinutes: constant.DashboardThirtyMinuteBucket,
+	enum.GranularityFourHours:     constant.DashboardFourHourBucket,
+}
+
+// fixedStepOf 返回定宽粒度的桶宽；minute/hour/day/week 走 date_trunc 日历截断，返回 false。
+func fixedStepOf(granularity enum.Granularity) (time.Duration, bool) {
+	step, ok := fixedStepGranularities[granularity]
+	return step, ok
+}
+
 func bucketStep(granularity enum.Granularity) time.Duration {
+	if step, ok := fixedStepOf(granularity); ok {
+		return step
+	}
 	switch granularity {
 	case enum.GranularityMinute:
 		return time.Minute
@@ -43,6 +61,10 @@ func bucketStep(granularity enum.Granularity) time.Duration {
 }
 
 func truncateBucket(t time.Time, granularity enum.Granularity) time.Time {
+	if step, ok := fixedStepOf(granularity); ok {
+		// Time.Truncate 以零时刻（UTC 零点）为原点，桶宽都整除 24h，故与 Unix 纪元原点等价
+		return t.Truncate(step)
+	}
 	switch granularity {
 	case enum.GranularityMinute:
 		return time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), 0, 0, t.Location())

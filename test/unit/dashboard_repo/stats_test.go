@@ -52,6 +52,33 @@ func TestQueryStatsSeriesSQL(t *testing.T) {
 	assertSQLContains(t, sqls[0], "date_trunc('hour'", "group by", "api_key_id in", "percentile_cont(0.5)")
 }
 
+// 定宽粒度用 date_bin 以 Unix 纪元为原点切桶（与 Go 侧 BuildBuckets 的 Time.Truncate 对齐）
+func TestQueryStatsSeriesSQL_FixedStepGranularity(t *testing.T) {
+	t.Parallel()
+
+	cases := map[string]string{
+		enum.GranularityFiveMinutes:   "date_bin(interval '5 minutes', created_at, timestamptz '1970-01-01 00:00:00+00')",
+		enum.GranularityTenMinutes:    "date_bin(interval '10 minutes', created_at, timestamptz '1970-01-01 00:00:00+00')",
+		enum.GranularityThirtyMinutes: "date_bin(interval '30 minutes', created_at, timestamptz '1970-01-01 00:00:00+00')",
+		enum.GranularityFourHours:     "date_bin(interval '4 hours', created_at, timestamptz '1970-01-01 00:00:00+00')",
+	}
+	for g, want := range cases {
+		t.Run(g, func(t *testing.T) {
+			t.Parallel()
+			db, captured := newDryRunDB(t)
+			repo := repository.NewDashboardRepository(db, nil)
+			if _, err := repo.QueryStatsSeries(t.Context(), []uint{7}, rangeStart, rangeEnd, g); err != nil {
+				t.Fatalf("QueryStatsSeries: %v", err)
+			}
+			sqls := captured.all()
+			if len(sqls) != 1 {
+				t.Fatalf("QueryStatsSeries produced %d queries, want 1: %v", len(sqls), sqls)
+			}
+			assertSQLContains(t, sqls[0], want, "group by")
+		})
+	}
+}
+
 func TestQueryUptimeBucketsSQL(t *testing.T) {
 	t.Parallel()
 

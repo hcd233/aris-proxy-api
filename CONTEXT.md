@@ -216,7 +216,7 @@ _Avoid_: response time, latency, duration
 _Avoid_: response status, call result
 
 **Granularity（聚合粒度）**:
-审计数据按时间窗口聚合的粒度：`minute` / `hour` / `day` / `week`。用于仪表盘的时序图和时间范围选择。
+审计数据按时间窗口聚合的粒度：`minute` / `5minute` / `10minute` / `30minute` / `hour` / `4hour` / `day` / `week`。用于仪表盘的时序图和时间范围选择。前端按「桶数 ≤ 200」取最细档（1h→minute、24h→10minute、7d→hour、30d→4hour），避免长区间只剩个位数个点、曲线被抹平。`minute/hour/day/week` 走 `date_trunc` 日历截断，其余定宽档走 `date_bin` 以 Unix 纪元为原点（UTC 下与整点 / 零点对齐）。
 _Avoid_: interval, time unit, bucket size
 
 ## Trigger Words（触发词）
@@ -332,12 +332,16 @@ _Avoid_: detail cache, session cache, performance cache
 _Avoid_: shutdown sequence, graceful stop, pod termination
 
 **RequestTPS（请求 Token 吞吐）**:
-monitor 面板的 token 速率指标，衡量单位时间内大模型调用的 token 吞吐，输入（input）与输出（output）两条曲线。数据源为每次模型调用收尾（`recordModelCall` seam）的 usage 统计，经 Prometheus counter（`llm_token_usage_total{direction}`）→ Flusher 快照 → 聚合层按桶求正向 delta ÷ 桶宽得 tokens/sec，跨 pod 求和。统计范围覆盖所有模型调用（流式与非流式），与审计 `ModelCallAuditTask`、Token Rate Limiter 口径一致。
+`/metrics/runtime` 的 token 速率指标（2026-11-03 起 Monitor 页不再展示，接口仍输出），衡量单位时间内大模型调用的 token 吞吐，输入（input）与输出（output）两条曲线。数据源为每次模型调用收尾（`recordModelCall` seam）的 usage 统计，经 Prometheus counter（`llm_token_usage_total{direction}`）→ Flusher 快照 → 聚合层按桶求正向 delta ÷ 桶宽得 tokens/sec，跨 pod 求和。统计范围覆盖所有模型调用（流式与非流式），与审计 `ModelCallAuditTask`、Token Rate Limiter 口径一致。
 _Avoid_: token rate, tps
 
 **StatusCodeCounts（状态码数量）**:
-monitor 面板的状态码面板，按时间桶展示各 HTTP 状态码的请求数量（折线，每状态码一条线）。数据源为 `HTTPCollector` 中间件在 `c.Next()` 后按响应状态码计数的 counter（`http_requests_total{status_code}`），与 QPS 图同口径（跳过 health/metrics 探活路径）；聚合层按桶对相邻快照各状态码求正向 delta 后跨 pod 求和，输出窗口内出现过的状态码固定成列，无请求的桶补 0。注意：业务错误按项目约定以 HTTP 200 + `{"error":{...}}` 下发，因此本面板不等于「业务错误数量」；429（限流）、413（BodyLimit）、404/405（路由）、502（上游连接失败）与上游透传状态码会如实体现。审计侧的请求成功率（`dashboard.request_rate`）是另一条口径（审计表 `UpstreamStatusCode`），与本面板无关。
+`/metrics/runtime` 的状态码序列（2026-11-03 起 Monitor 页只保留 QPS / CPU / 内存 / 协程 / 网络收发，本序列不再展示，接口仍输出），按时间桶展示各 HTTP 状态码的请求数量（折线，每状态码一条线）。数据源为 `HTTPCollector` 中间件在 `c.Next()` 后按响应状态码计数的 counter（`http_requests_total{status_code}`），与 QPS 图同口径（跳过 health/metrics 探活路径）；聚合层按桶对相邻快照各状态码求正向 delta 后跨 pod 求和，输出窗口内出现过的状态码固定成列，无请求的桶补 0。注意：业务错误按项目约定以 HTTP 200 + `{"error":{...}}` 下发，因此本面板不等于「业务错误数量」；429（限流）、413（BodyLimit）、404/405（路由）、502（上游连接失败）与上游透传状态码会如实体现。审计侧的请求成功率（`dashboard.request_rate`）是另一条口径（审计表 `UpstreamStatusCode`），与本面板无关。
 _Avoid_: success rate, error rate
+
+**NetworkIO（网络收发）**:
+monitor 面板的网络下行（接收，`netRx`）/ 上行（发送，`netTx`）速率，单位 bytes/s，跨 pod 求和。数据源为 Prometheus `ProcessCollector` 的 `process_network_{receive,transmit}_bytes_total`（Linux 读 `/proc/<pid>/net/netstat` 的 IpExt In/OutOctets，即 pod 网络命名空间的 IP 层总流量，含客户端、上游 LLM、Redis、PG 等全部连接；macOS 不提供，本地恒为 0），经 Flusher 快照 → 聚合层按桶求正向 delta ÷ 桶宽。
+_Avoid_: bandwidth, throughput
 
 ## Agent Runtime（Agent 运行时）
 

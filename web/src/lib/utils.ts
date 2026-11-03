@@ -100,6 +100,31 @@ export function formatDecimal(value: number, maxDigits = 2): string {
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: maxDigits }).format(value);
 }
 
+const BYTE_UNITS = ["B", "KB", "MB", "GB", "TB"] as const;
+
+/**
+ * 字节量拆成「数值 + 单位」：1024 进制，数值不到 1000 就停在当前单位（不出现 `1,010 KB`），
+ * ≥100 取整、否则最多 1 位小数并省略尾零；负数与非有限数渲染 `—`。KPI 卡片需要单位单独渲染。
+ */
+export function splitBytes(value: number | null | undefined): { value: string; unit: string } {
+  if (value === null || value === undefined || !Number.isFinite(value) || value < 0) {
+    return { value: "\u2014", unit: "" };
+  }
+  let n = value;
+  let i = 0;
+  while (n >= 1_000 && i < BYTE_UNITS.length - 1) {
+    n /= 1_024;
+    i++;
+  }
+  return { value: formatDecimal(n, n >= 100 ? 0 : 1), unit: BYTE_UNITS[i] };
+}
+
+/** 字节量展示（`1536 → "1.5 KB"`），规则同 splitBytes；速率在调用处补 `/s`。 */
+export function formatBytes(value: number | null | undefined): string {
+  const { value: v, unit } = splitBytes(value);
+  return unit ? `${v} ${unit}` : v;
+}
+
 /** 时长展示：<1s 用毫秒，≥1s 换算成秒（最多 2 位小数，省略尾零）；空值渲染 `—`。 */
 export function formatDurationMs(ms: number | null | undefined): string {
   if (ms === null || ms === undefined || !Number.isFinite(ms)) return "\u2014";

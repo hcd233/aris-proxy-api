@@ -63,6 +63,24 @@ func TestBuildSnapshot_ExtractsGoThreads(t *testing.T) {
 	}
 }
 
+func TestBuildSnapshot_ExtractsNetworkBytes(t *testing.T) {
+	t.Parallel()
+	registry := prometheus.NewRegistry()
+	rx := prometheus.NewCounter(prometheus.CounterOpts{Name: constant.MetricFullProcessNetRx})
+	tx := prometheus.NewCounter(prometheus.CounterOpts{Name: constant.MetricFullProcessNetTx})
+	registry.MustRegister(rx, tx)
+	rx.Add(4096)
+	tx.Add(1024)
+
+	snap, err := metricspkg.BuildSnapshot(registry, time.Now())
+	if err != nil {
+		t.Fatalf("BuildSnapshot failed: %v", err)
+	}
+	if snap.NetRxBytes != 4096 || snap.NetTxBytes != 1024 {
+		t.Errorf("expected rx 4096 / tx 1024, got rx=%f tx=%f", snap.NetRxBytes, snap.NetTxBytes)
+	}
+}
+
 func TestSSEGauge_IncDec(t *testing.T) {
 	t.Parallel()
 	registry := prometheus.NewRegistry()

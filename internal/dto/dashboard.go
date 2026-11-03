@@ -10,14 +10,14 @@ import (
 type DashboardRangeReq struct {
 	StartTime   time.Time        `query:"startTime" required:"true" doc:"区间起点（RFC3339）"`
 	EndTime     time.Time        `query:"endTime" required:"true" doc:"区间终点（RFC3339）"`
-	Granularity enum.Granularity `query:"granularity" required:"true" enum:"minute,hour,day,week" doc:"时间桶粒度"`
+	Granularity enum.Granularity `query:"granularity" required:"true" enum:"minute,5minute,10minute,30minute,hour,4hour,day,week" doc:"时间桶粒度"`
 }
 
 // DashboardOverviewReq dashboard 总览请求：时间窗 + 图表时间桶粒度 + 可用性状态条桶数
 type DashboardOverviewReq struct {
 	StartTime     time.Time        `query:"startTime" required:"true" doc:"区间起点（RFC3339）"`
 	EndTime       time.Time        `query:"endTime" required:"true" doc:"区间终点（RFC3339）"`
-	Granularity   enum.Granularity `query:"granularity" required:"true" enum:"minute,hour,day,week" doc:"时间桶粒度"`
+	Granularity   enum.Granularity `query:"granularity" required:"true" enum:"minute,5minute,10minute,30minute,hour,4hour,day,week" doc:"时间桶粒度"`
 	UptimeBuckets int              `query:"uptimeBuckets" required:"true" minimum:"1" maximum:"200" doc:"可用性状态条的时间桶数"`
 }
 

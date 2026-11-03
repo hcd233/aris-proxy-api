@@ -50,6 +50,8 @@ func BuildSnapshot(gatherer prometheus.Gatherer, now time.Time) (*port.Snapshot,
 		TokenInput:  labeledCounterValue(byName[constant.MetricFullTokenUsage], constant.MetricLabelDirection, constant.TokenUsageDirectionInput),
 		TokenOutput: labeledCounterValue(byName[constant.MetricFullTokenUsage], constant.MetricLabelDirection, constant.TokenUsageDirectionOutput),
 		ReqStatus:   labeledCounterValues(requests, constant.MetricLabelStatusCode),
+		NetRxBytes:  firstCounterValue(byName[constant.MetricFullProcessNetRx]),
+		NetTxBytes:  firstCounterValue(byName[constant.MetricFullProcessNetTx]),
 	}
 	snap.LatBuckets, snap.LatCount = histogramBuckets(byName[constant.MetricFullRequestDuration])
 	return snap, nil
