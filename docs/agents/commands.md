@@ -12,8 +12,10 @@
 - 规范扫描：`make lint`（conv + static 并发执行，底层使用独立入口 `go run ./cmd/lint`，不编译服务端二进制）；单独跑规范扫描：`make lint-conv`，静态检查：`make lint-static`；lint 与 server/client 平行，同属 `cmd/` 三入口之一
 - 全量测试：`make test`（等价于 `go test -count=1 ./cmd/... ./internal/... ./test/...`，显式排除 `web/node_modules` 中的嵌套 Go 目录）
 - 聚焦测试：`go test -v -count=1 -run TestFunctionName ./test/unit/<topic>/` 或 `./test/e2e/<topic>/`
-- 前端 lint：`cd web && npm run lint`（或 `make web-lint`）；自动修复：`npm run lint:fix`
+- 前端 lint：`cd web && npm run lint`；自动修复：`npm run lint:fix`
+- 前端类型检查：`cd web && npm run typecheck`（`tsc --noEmit`）
 - 前端单测：`cd web && npm run test`（vitest）
+- 前端 CI 门禁全量（lint + format:check + typecheck + test，与 `lint.yml` 的 `web-lint` job 一致）：`make web-lint`
 - 前端格式化：`cd web && npm run format`（Prettier 写入，或 `make web-format`）；格式检查：`npm run format:check`（CI 用，或 `make web-format-check`）
 - 前端构建（同时同步到 `internal/web/dist/`）：`make web-build`；清理产物：`make web-clean`
 - 生产构建会自动包含前端：`make build` 在编译 Go 之前先跑 `web-build`

@@ -39,6 +39,7 @@ import { Field, FieldGroup, FieldLabel, FieldLegend, FieldSet } from "@/componen
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { copyTextToClipboard } from "@/lib/clipboard";
+import { SHARE_PATH, withBasePath } from "@/lib/routes";
 
 export interface ShareDialogProps {
   sessionId: number;
@@ -48,8 +49,9 @@ export interface ShareDialogProps {
 }
 
 /**
- * Build the public-facing share URL. Mirrors the `basePath: "/web"` and
- * `trailingSlash: true` settings in `next.config.ts`, and uses the
+ * Build the public-facing share URL. The path is prefixed with the app's
+ * basePath via `withBasePath` (see `lib/routes.ts`; `trailingSlash: true` is
+ * mirrored by the trailing slash in `SHARE_PATH`), and uses the
  * `?id=<uuid>` query-string convention so the route stays compatible with
  * `output: "export"` (which cannot statically pre-render unknown UUIDs).
  *
@@ -58,7 +60,7 @@ export interface ShareDialogProps {
  */
 export function buildShareURL(shareID: string): string {
   if (typeof window === "undefined") return "";
-  return `${window.location.origin}/web/share/?id=${encodeURIComponent(shareID)}`;
+  return `${window.location.origin}${withBasePath(SHARE_PATH)}?id=${encodeURIComponent(shareID)}`;
 }
 
 type ExpireOption = "1d" | "7d" | "30d" | "never" | "custom";

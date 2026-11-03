@@ -17,13 +17,14 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
+import { withBasePath } from "./routes";
 import type { DemoModule } from "@/lib/types";
 
 /** 仪表盘首页的 Next 路由路径（不含 basePath），用于 <Link> 与导航配置。 */
 export const DASHBOARD_HOME_PATH = "/dashboard/";
 
 /** 仪表盘首页的完整 URL（含 basePath），用于 window.location 整页跳转。 */
-export const DASHBOARD_HOME_URL = "/web/dashboard/";
+export const DASHBOARD_HOME_URL = withBasePath(DASHBOARD_HOME_PATH);
 
 function withTrailingSlash(path: string): string {
   return path.endsWith("/") ? path : `${path}/`;

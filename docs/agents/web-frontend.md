@@ -42,7 +42,7 @@
 - 样式：仅使用 Tailwind v4 + `cn()` 组合 class，禁止内联 `style` 写定值；颜色走 `globals.css` 中 CSS 变量 + `neutral` baseColor，避免硬编码 hex。
 - 图标：统一 `lucide-react`，不要混用其他图标库。
 - Toast：用 `sonner` 的 `toast.*`，禁止 `alert/confirm`。
-- 路径前缀：所有内部跳转链接必须考虑 `basePath=/web`；用 `next/link`、`next/navigation` 即可，框架自动加前缀，**不要手动拼 `/web` 前缀**。
+- 路径前缀：所有内部跳转链接必须考虑 `basePath=/web`；用 `next/link`、`next/navigation` 即可，框架自动加前缀，**不要手动拼 `/web` 前缀**。绕过路由器的场景（`window.location` 整页跳转、原生 `<a href>`、对外展示的分享链接）统一用 `src/lib/routes.ts` 的 `withBasePath(PATH)`，路径常量（`LOGIN_PATH`、`SHARE_PATH`、`SESSION_DETAIL_PATH`）也在该文件；`BASE_PATH` 与 `next.config.ts` 的一致性、以及源码中不得出现以 `/web` 开头的字符串字面量，由 `src/lib/routes.test.ts` 守护。注意被 vitest 覆盖的 `lib/` 文件里值导入要用相对路径（vitest 未配置 `@/` 别名）。
 - **空态要有下一步**：列表空态用 `ListEmptyState` 的 `action` 槽位，别做死胡同。真没数据 → 给创建 / 前往入口；被筛选条件筛空 → 给「清除筛选」（`filterBar.clearTokens`），两者用 `filterBar.tokens.length > 0` 区分，文案也要分开（`xxx.no_match` 与 `xxx.empty`）。已接入：`sessions`、`apikeys`、`upstream`。
 - 数值展示：统一走 `src/lib/utils.ts` 的格式化入口——token 用 `formatTokenCount`（K/M/B 量级缩写）、计数用 `formatInteger`（千分位）、小数用 `formatDecimal`、时长用 `formatDurationMs`、占比用 `formatPct`、金额用 `formatCost`（`src/lib/money.ts`）。禁止在页面/组件里自写 `toLocaleString`、`toFixed` 拼数值文案（日期格式化除外）。
 - 修改前端 DTO 时如发现后端字段缺失，按 `huma-dto-conventions` 流程到 `internal/dto/` 同步更新。
@@ -119,7 +119,7 @@
 
 - 本地完整链路：先后端 `go run ./cmd/server server start ...`，再 `cd web && npm run dev`，浏览器访问 `http://localhost:3000/web`。
 - 生产路径：`make build` → 镜像里 Go 二进制内置 `internal/web/dist/`，浏览器访问 `https://<host>/web/`。
-- CI：`.github/workflows/build-and-publish.yml` 的 push path filter **包含** `web/**`（与 `internal/**`、`go.mod` 等同级），纯前端改动也会触发构建发布：构建前端 → embed 进 Go 镜像 → 推送到 ghcr → 部署到 K8s。推送到 `master` 或合并 PR 到 `master` 即自动发布，无需手工触发。另有 `.github/workflows/lint.yml` 的 `web-lint` job 跑 `npm run lint` + `npm run format:check`（无 `--max-warnings`，warning 不阻塞）。
+- CI：`.github/workflows/build-and-publish.yml` 的 push path filter **包含** `web/**`（与 `internal/**`、`go.mod` 等同级），纯前端改动也会触发构建发布：构建前端 → embed 进 Go 镜像 → 推送到 ghcr → 部署到 K8s。推送到 `master` 或合并 PR 到 `master` 即自动发布，无需手工触发。另有 `.github/workflows/lint.yml` 的 `web-lint` job 跑 `npm run lint` + `npm run format:check` + `npm run typecheck` + `npm test`（无 `--max-warnings`，warning 不阻塞）。
 - 测试：`cd web && npm run test`（vitest，覆盖 `filter-dsl` 等纯函数与自定义 eslint 规则）。改动后至少跑 `npm run lint && npm run test && npm run build`。
 - **本机 `node_modules` 可能比 lock 新**：CI 按 `package-lock.json` 安装，本机依赖会漂移（曾出现 lock 锁 recharts 3.8.0、本机装着 3.10.1，用了 3.9 才有的 `matchByDataKey`，本地 tsc/build 全过、CI 构建失败）。使用依赖的新 API 前先核对 lock 里的版本（`node -p "require('./package-lock.json').packages['node_modules/<pkg>'].version"`），不够就升级 lock；涉及依赖的改动，在临时目录 `rsync` 源码后 `npx npm@10 ci && npm run build` 复现 CI。
 - 提交：前端改动同样遵循 `.worktrees/` + `feature|bugfix|refactor|chore|docs|test|hotfix/...-YYYY-MM-DD` 分支规范；与后端联动的功能尽量在同一个 PR 中提交，避免接口前后不一致。
