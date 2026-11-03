@@ -283,8 +283,10 @@ func (r *auditRepository) BatchGetRelations(ctx context.Context, apiKeyIDs []uin
 		return map[uint]*modelcall.AuditRelation{}, nil
 	}
 
+	// 包含已软删的 Key 与用户：审计记录是历史事实，Key 或用户被删除后仍须回填名称，
+	// 否则 dashboard Top 排行会退化为显示 api_key_id，或把归属聚进 "0" 兜底桶。
 	db := r.db.WithContext(ctx)
-	keys, err := dao.GetProxyAPIKeyDAO().BatchGetByField(db, constant.FieldID, apiKeyIDs, []string{constant.FieldID, constant.FieldName, constant.FieldUserID})
+	keys, err := dao.GetProxyAPIKeyDAO().BatchGetByFieldWithDeleted(db, constant.FieldID, apiKeyIDs, []string{constant.FieldID, constant.FieldName, constant.FieldUserID})
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "batch get proxy api keys")
 	}
@@ -297,7 +299,7 @@ func (r *auditRepository) BatchGetRelations(ctx context.Context, apiKeyIDs []uin
 		return relations, nil
 	}
 
-	users, err := dao.GetUserDAO().BatchGetByField(db, constant.FieldID, userIDs, []string{constant.FieldID, constant.FieldName, constant.FieldEmail})
+	users, err := dao.GetUserDAO().BatchGetByFieldWithDeleted(db, constant.FieldID, userIDs, []string{constant.FieldID, constant.FieldName, constant.FieldEmail})
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "batch get users")
 	}
