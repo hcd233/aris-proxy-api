@@ -64,7 +64,15 @@ func (h *auditHandler) HandleDashboardEndpoints(ctx context.Context, req *dto.Da
 
 // HandleDashboardTop dashboard Top 排行
 func (h *auditHandler) HandleDashboardTop(ctx context.Context, req *dto.DashboardTopReq) (*dto.HTTPResponse[*dto.DashboardTopListRsp], error) {
-	top, err := h.dashboard.TopUsage(ctx, dashboardScope(ctx), req.StartTime, req.EndTime, req.Dimension, req.Limit)
+	top, err := h.dashboard.TopUsage(
+		ctx,
+		dashboardScope(ctx),
+		req.StartTime,
+		req.EndTime,
+		req.Dimension,
+		req.SortBy,
+		req.Limit,
+	)
 	if err != nil {
 		logger.WithCtx(ctx).Error("[AuditHandler] Dashboard top failed", zap.Error(err))
 		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())

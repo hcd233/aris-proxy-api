@@ -19,13 +19,14 @@ var (
 	end   = time.Date(2026, 10, 28, 0, 0, 0, 0, time.UTC)
 )
 
-// fakeDashboard 返回预置结果，并记录收到的 scope
+// fakeDashboard 返回预置结果，并记录收到的 scope 与排序指标
 type fakeDashboard struct {
 	port.DashboardService
 	overview *port.DashboardOverview
 	top      *port.DashboardTop
 	heatmap  []*modelcall.DashboardHeatmapCell
 	scope    port.DashboardScope
+	topSort  enum.DashboardTopSort
 }
 
 func (f *fakeDashboard) Overview(_ context.Context, s port.DashboardScope, _, _ time.Time, _ enum.Granularity, _ int) (*port.DashboardOverview, error) {
@@ -33,8 +34,9 @@ func (f *fakeDashboard) Overview(_ context.Context, s port.DashboardScope, _, _ 
 	return f.overview, nil
 }
 
-func (f *fakeDashboard) TopUsage(_ context.Context, s port.DashboardScope, _, _ time.Time, _ enum.DashboardDimension, _ int) (*port.DashboardTop, error) {
+func (f *fakeDashboard) TopUsage(_ context.Context, s port.DashboardScope, _, _ time.Time, _ enum.DashboardDimension, sortBy enum.DashboardTopSort, _ int) (*port.DashboardTop, error) {
 	f.scope = s
+	f.topSort = sortBy
 	return f.top, nil
 }
 
@@ -121,19 +123,32 @@ func TestDashboardHandler_TopComputesShareAndHitRate(t *testing.T) {
 
 	f := &fakeDashboard{top: &port.DashboardTop{
 		Items: []*port.DashboardTopItem{
-			{Key: "a", Name: "a", Requests: 3, PromptTokens: 100, CacheReadTokens: 40, CostMicro: 750_000},
-			{Key: "b", Name: "b", Requests: 1},
+			{Key: "a", Name: "a", Requests: 6, PromptTokens: 100, CacheReadTokens: 40, CostMicro: 750_000},
+			{Key: "b", Name: "b", Requests: 2},
 		},
-		OtherRequests: 2, TotalCostMicro: 1_000_000,
+		OtherRequests: 2, TotalCostMicro: 1_000_000, TotalRequests: 10,
 	}}
-	req := &dto.DashboardTopReq{StartTime: start, EndTime: end, Limit: 2, Dimension: enum.DashboardDimensionModel}
+	req := &dto.DashboardTopReq{
+		StartTime: start,
+		EndTime:   end,
+		Limit:     2,
+		Dimension: enum.DashboardDimensionModel,
+		SortBy:    enum.DashboardTopSortRequests,
+	}
 	rsp, err := newHandler(f).HandleDashboardTop(adminCtx(t), req)
 	if err != nil {
 		t.Fatalf("HandleDashboardTop: %v", err)
 	}
+	if f.topSort != enum.DashboardTopSortRequests {
+		t.Errorf("sortBy = %q, want requests (must be passed through)", f.topSort)
+	}
 	items := rsp.Body.Data.Items
-	if items[0].CostShare != 0.75 || items[0].CacheHitRate == nil || *items[0].CacheHitRate != 0.4 {
-		t.Errorf("first = %+v, want share 0.75 hit 0.4", items[0])
+	if items[0].CostShare != 0.75 || items[0].RequestShare != 0.6 ||
+		items[0].CacheHitRate == nil || *items[0].CacheHitRate != 0.4 {
+		t.Errorf("first = %+v, want cost share 0.75 request share 0.6 hit 0.4", items[0])
+	}
+	if items[1].CostShare != 0 || items[1].RequestShare != 0.2 {
+		t.Errorf("second = %+v, want cost share 0 request share 0.2", items[1])
 	}
 	if items[1].CacheHitRate != nil {
 		t.Errorf("zero prompt tokens must give nil hit rate, got %v", *items[1].CacheHitRate)
@@ -145,10 +160,10 @@ func TestDashboardHandler_TopComputesShareAndHitRate(t *testing.T) {
 	f.top = &port.DashboardTop{Items: []*port.DashboardTopItem{{Key: "a", Requests: 1}}}
 	rsp, err = newHandler(f).HandleDashboardTop(adminCtx(t), req)
 	if err != nil {
-		t.Fatalf("HandleDashboardTop(zero cost): %v", err)
+		t.Fatalf("HandleDashboardTop(zero totals): %v", err)
 	}
-	if rsp.Body.Data.Items[0].CostShare != 0 {
-		t.Errorf("zero total cost must give share 0, got %v", rsp.Body.Data.Items[0].CostShare)
+	if rsp.Body.Data.Items[0].CostShare != 0 || rsp.Body.Data.Items[0].RequestShare != 0 {
+		t.Errorf("zero totals must give zero shares, got %+v", rsp.Body.Data.Items[0])
 	}
 }
 

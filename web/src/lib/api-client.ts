@@ -67,6 +67,7 @@ import type {
   DashboardModelSeriesRsp,
   DashboardOverviewRsp,
   DashboardTopListRsp,
+  DashboardTopSort,
   ModelListSortField,
   ModelSpecPrefillRsp,
   ListHarnessRulesRsp,
@@ -808,8 +809,12 @@ class ApiClient {
     endTime: string;
     dimension: DashboardDimension;
     limit: number;
+    /** 排序指标，缺省时后端按费用 */
+    sortBy?: DashboardTopSort;
   }): Promise<DashboardTopListRsp> {
-    const sp = new URLSearchParams({ ...params, limit: String(params.limit) });
+    const { startTime, endTime, dimension, limit, sortBy } = params;
+    const sp = new URLSearchParams({ startTime, endTime, dimension, limit: String(limit) });
+    if (sortBy) sp.set("sortBy", sortBy);
     return this.request<DashboardTopListRsp>(`${API_PREFIX}/audit/stats/dashboard/top/list?${sp}`);
   }
 

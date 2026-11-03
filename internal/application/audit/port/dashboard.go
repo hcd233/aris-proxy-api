@@ -39,11 +39,12 @@ type DashboardTopItem struct {
 	CostMicro       int64
 }
 
-// DashboardTop Top 排行结果：前 N 名 + 其余请求合计 + 全部费用合计（算占比用）
+// DashboardTop Top 排行结果：前 N 名 + 其余请求合计 + 全部费用/请求合计（算占比用）
 type DashboardTop struct {
 	Items          []*DashboardTopItem
 	OtherRequests  int64
 	TotalCostMicro int64
+	TotalRequests  int64
 }
 
 // DashboardRelationLookup 按 API Key 批量查归属（Key 名、用户）
@@ -62,6 +63,6 @@ type DashboardService interface {
 	ModelSeries(ctx context.Context, s DashboardScope, start, end time.Time, g enum.Granularity) ([]*modelcall.DashboardModelPoint, error)
 	TopErrors(ctx context.Context, s DashboardScope, start, end time.Time, limit int) ([]*modelcall.DashboardErrorRow, error)
 	EndpointHealth(ctx context.Context, s DashboardScope, start, end time.Time, limit int) ([]*modelcall.DashboardEndpointRow, error)
-	TopUsage(ctx context.Context, s DashboardScope, start, end time.Time, dim enum.DashboardDimension, limit int) (*DashboardTop, error)
+	TopUsage(ctx context.Context, s DashboardScope, start, end time.Time, dim enum.DashboardDimension, sortBy enum.DashboardTopSort, limit int) (*DashboardTop, error)
 	Heatmap(ctx context.Context, s DashboardScope, start, end time.Time, location string) ([]*modelcall.DashboardHeatmapCell, error)
 }

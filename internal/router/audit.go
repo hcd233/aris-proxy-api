@@ -83,7 +83,7 @@ func initAuditRouter(auditGroup huma.API, auditHandler handler.AuditHandler, cro
 		Method:      http.MethodGet,
 		Path:        "/stats/dashboard/top/list",
 		Summary:     "ListDashboardTop",
-		Description: "Dashboard top ranking by model/user/apikey/harness. The user dimension is admin/demo only; demo names are masked.",
+		Description: "Dashboard top ranking by model/user/apikey/harness, ranked by cost or request count (sortBy, descending). The user dimension is admin/demo only; demo names are masked.",
 		Tags:        []string{constant.TagAudit},
 		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
 		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("listDashboardTop", enum.PermissionUser, enum.DemoModuleAudit, demoAccessor, auditSubmitter)},
