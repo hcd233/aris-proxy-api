@@ -20,6 +20,8 @@
   - 厂商与客户端图标都走 `ProviderIcon`；旁边已有文字时传 `decorative`，对读屏器隐藏图标自带的 `<title>`。
 - `src/app/login/`、`src/app/callback/`：OAuth2 登录入口与回调，登录成功落到 `DASHBOARD_HOME_URL`（`/web/dashboard/`，见 `src/lib/nav.ts`）。
 - `src/app/(dashboard)/`：登录后的管理后台路由组，仪表盘首页在 `dashboard/page.tsx`（`/web/dashboard/`），其余子页面（`sessions/`、`apikeys/`、`upstream/` 等）路径不带 `dashboard` 前缀；导航高亮统一用 `isNavItemActive`。
+  - **Dashboard 与 Monitor 分工**：`dashboard/` 只放业务指标（用量、费用、成功率、缓存命中、模型/Top 排行）；`monitor/` 只放后台运维指标（QPS、5xx 错误率、P95、状态码构成、CPU/内存/协程/线程、SSE 连接、实例在线）。新增指标先按这条线归页，token 吞吐、费用这类业务量不要放进 Monitor。
+  - Monitor 与 Dashboard 同构：`app/(dashboard)/monitor/page.tsx` 只做编排，数据层 `components/monitor/use-runtime-metrics.ts`，6 张 KPI `monitor-kpi-row.tsx`，图表 `monitor-chart.tsx`（`line` 逐 pod 对比 / `area` 总量 / `stack` 构成），面板外壳复用 `components/dashboard/panel.tsx`；时序合并、状态码归类、pod 名缩写等纯逻辑在 `src/lib/monitor.ts`（`monitor.test.ts` 守护）。传给 `MonitorChart` 的 `format` / `axisFormat` 必须是模块级函数或 `useCallback`。
 - 导航与 ⌘K：侧栏和页面跳转面板（`src/components/nav-command-palette.tsx`，Dialog + Base UI `Autocomplete inline`）共用 `src/lib/nav.ts` 的 `NAV_GROUPS`；新增页面只改这里，`resolveNavGroups` 统一做按身份裁剪与 demo 锁定（面板不列出被锁模块）。`pinned` 分组（仪表盘）不渲染组头、直接铺在顶层，不参与展开逻辑（`findActiveGroupKey` 会跳过）。入口有三处：侧栏搜索按钮、移动端顶栏图标、`⌘K` / `Ctrl+K`，共用 `DashboardLayout` 里同一个 `paletteOpen`。
 - 主题/语言切换：唯一实现是 `src/components/preference-controls.tsx`（`tone="page" | "sidebar"`），门户、登录、回调、分享、仪表盘侧栏（含折叠态）都挂它，不要再单独拼 `LanguageSwitcher` + `ThemeSwitcher`。
 - `src/app/share/`：会话分享只读页面（公开访问）。
