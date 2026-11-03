@@ -112,7 +112,7 @@ _Avoid_: schedule, time slot
 _Avoid_: context pricing, token bracket
 
 **TokenAccounting（Token 入账口径）**:
-审计行与计费用的四维 token 一律**互斥**：输入（净输入，不含命中缓存的量）/输出/缓存创建/缓存读取，满足「净输入 + 缓存创建 + 缓存读取 = 上游口径的输入总量」。缓存创建总量（`cache_creation_input_tokens`）另带 1h 明细列（`cache_creation_1h_input_tokens`，5m = 总量 − 1h；旧版 usage 无分档时 1h=0 全归 5m）。usage 入账时按上游协议归一化：OpenAI Chat 的 `prompt_tokens` 与 Response 的 `input_tokens` 都含 `cached_tokens`（输入维 = 总量 − 命中量）；Anthropic 官方 `input_tokens` 本身不含缓存两维；DeepSeek 风格 `prompt_cache_hit_tokens` 与 `prompt_cache_miss_tokens` 成对出现时按包含关系扣减。2026-10-08 之前的存量行为未归一化的旧口径（输入维含缓存命中量）。
+审计行与计费用的四维 token 一律**互斥**：输入（净输入，不含命中缓存的量）/输出/缓存创建/缓存读取，满足「净输入 + 缓存创建 + 缓存读取 = 上游口径的输入总量」。缓存创建总量（`cache_creation_input_tokens`）另带 1h 明细列（`cache_creation_1h_input_tokens`，5m = 总量 − 1h；旧版 usage 无分档时 1h=0 全归 5m）。usage 入账时按上游协议归一化：OpenAI Chat 的 `prompt_tokens` 与 Response 的 `input_tokens` 都含 `cached_tokens`（输入维 = 总量 − 命中量）；Anthropic 官方 `input_tokens` 本身不含缓存两维；DeepSeek 风格 `prompt_cache_hit_tokens` 与 `prompt_cache_miss_tokens` 成对出现时按包含关系扣减。2026-10-07 17:05 UTC 之前的存量行已于 2026-11-03 一次性回填为净额口径（48,059 行，仅 OpenAI 系协议含历史枚举 `openai`；Anthropic 协议行本已互斥不动，275 行上游 `prompt_tokens < cached_tokens` 的异口径数据同样钳到 0）；历史成本列保留请求时快照，未重算。
 _Avoid_: token fields, usage mapping
 
 **EstimatedCost（估算费用）**:
