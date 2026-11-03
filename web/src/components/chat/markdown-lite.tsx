@@ -33,6 +33,7 @@ import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
+import { balanceEmphasis } from "@/lib/markdown";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Separator } from "@/components/ui/separator";
@@ -369,7 +370,7 @@ export function MarkdownLite({ text, raw = false, className }: MarkdownProps) {
         ]}
         components={markdownComponents}
       >
-        {text}
+        {balanceEmphasis(text)}
       </ReactMarkdown>
     </div>
   );

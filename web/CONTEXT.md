@@ -49,7 +49,7 @@ _Avoid_: responsive table, auto-width table
 _Avoid_: column width, col size
 
 **Progressive Columns（渐进显示列）**:
-面板宽度不够放下所有列时，不压缩主名列，而是按优先级逐列隐藏次要列（容器查询驱动）；面板变宽再逐列展开。保证主名列始终有足够可见宽度。仪表盘的 Endpoint 与 Top 排行两张表采用。
+面板或表格宽度不够放下所有列时，不压缩主列，而是按优先级逐列隐藏次要列（容器查询驱动）；宽度变大再逐列展开。保证主列始终有足够可见宽度。仪表盘的 Endpoint / Top 排行两张表、会话记录、模型调用审计都采用；阈值是容器可用宽度，不是视口宽度。
 _Avoid_: responsive columns, column hiding
 
 ## Navigation（导航）

@@ -100,7 +100,10 @@
 - **不可截断内容按实测给足**：时间戳这类等宽文本（`2026/10/19 18:09:13` 在 `text-xs` 下约 163px）宽度不足会被单元格裁掉且无提示，必须按 `td.scrollWidth` 实测值给（该值含 `p-2` 内边距）。**操作列同属不可截断内容**：按钮是 `shrink-0`，行内 flex 又是 `justify-end`，宽度不足时溢出部分从**左侧**被裁掉，最左的按钮整颗消失（既无省略号也不出现滚动条）。预算按最宽语言实测（upstream 操作列：编辑/定价两个 `icon-sm` + 带文字 `DeleteButton`，zh 10rem、en 10.5rem）。
 - **可截断内容一律 `truncate` + Tooltip**（lint 强制）；实测「静默裁掉」的方法：遍历 `tbody td`，`td.scrollWidth > td.clientWidth + 1` 且不在 `TooltipTrigger` 子树内即为不合格。**注意 `scrollWidth` 只看得见右侧溢出**，`justify-end` 的 flex 从左侧裁掉时该判据失效，需另比单元格内容盒与子元素包围盒的左右边界（任一侧溢出 > 1px 即不合格）。
 - **窄视口兜底**：容器保留 `overflow-x-auto`，只有预算放不下时才出现横向滚动，属于预期行为。
-- 开启 `fit` 的页面：`upstream`（分组/平铺）、`audit/model`、`audit/demo`、`sessions`、`cron`。
+- 开启 `fit` 的页面：`upstream`（分组/平铺）、`audit/model`、`audit/demo`、`sessions`、`cron`、`apikeys`。
+- **声明宽度必须跟着容器量，不要跟着视口猜**：容器可用宽 = 视口 − 侧栏（256）− 页面内边距，且被 `max-w-6xl` 封顶。实测 `sessions` 表格：1280 视口 902px、1512 视口 1118px；**侧栏在 `lg` 以下收起，1024 视口反而有 ~976px**，所以窄视口不一定更窄，改预算前先量。
+- **列表页也要按容器宽度渐进显示列**：`sessions` 的声明宽度合计曾涨到 924px（> 902），主列「摘要」被压到 41px 并出现横向滚动。现在常驻列合计 692px，`评分` / `工具` / `Agent` 三列分别用 `@min-[64rem]` / `@min-[58rem]` / `@min-[52rem]` 渐进展开（页面里的 `SHOW_*_FROM` 常量），主列稳定在 ~210px。新增列先定优先级与阈值，别直接常驻；预算涨上去之前先跑一遍实测。
+- **`sr-only` 只能包文本，不能写在 `th` 上**：`sr-only` 是绝对定位，写在 `th` 上会让该列宽度不计入 fixed 布局的声明总和，剩余空间既不归主列也不归任何列——实测 902px 容器丢掉 53px，主列从 210px 掉到 157px。要藏表头文字就把 `sr-only` 放到 `th` 内部的 `<span>` 上。
 - **按面板宽度渐进显示列（仪表盘 Endpoint / Top 两张表）**：1280 视口下面板表格只有约 310px，六列常驻的声明宽度就占 280px，主名列被挤到 17px（Top 排行只剩 5px）——名字完全看不见。这两张表的面板主体声明 `@container`，次要列用 `dense-table.tsx` 的 `SHOW_FROM_*`（`hidden @min-[Npx]:table-cell`）按优先级渐进展开；阈值按「主名列可见宽度 ≥ ~110px」反推，数值是表格可用宽度。新增列先定优先级，不要直接常驻。验证按 zh / en / ja × 1280 / 1440 / 1920 三语三宽实测（主名列 `clientWidth ≥ scrollWidth`、无被裁表头）。
 
 ### Font Scale（CJK 字号对齐）

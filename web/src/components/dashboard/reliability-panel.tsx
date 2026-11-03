@@ -178,8 +178,10 @@ export function ReliabilityPanel({ range }: { range: DashboardRange }) {
       onRetry={retry}
       action={
         summary && (
+          /* 只给「分母」：失败数已经由卡内的大字成功率与页脚的「无失败请求 / Top 错误」
+           * 表达两次，再写一个 “0 / 47” 就是同一件事的第三种说法。 */
           <span className="font-mono text-[11px] text-muted-foreground tabular-nums">
-            {formatInteger(summary.requests - summary.success)} / {formatInteger(summary.requests)}
+            {formatInteger(summary.requests)} {t("dashboard.col.requests")}
           </span>
         )
       }

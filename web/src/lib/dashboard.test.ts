@@ -213,6 +213,11 @@ describe("formatDelta", () => {
   it("renders a dash without a delta", () => {
     expect(formatDelta("requests", null)).toBe("—");
   });
+  it("caps runaway percentages from tiny baselines", () => {
+    expect(formatDelta("tokens", 918.149)).toBe("▲ 999%+");
+    expect(formatDelta("cost", -48.525)).toBe("▼ 999%+");
+    expect(formatDelta("requests", 5.5)).toBe("▲ 550%");
+  });
 });
 
 describe("formatCostShort", () => {

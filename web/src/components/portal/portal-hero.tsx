@@ -72,10 +72,16 @@ const NAV_LINKS = [
 export function PortalHeader({ cta }: { cta: Cta }) {
   const t = useT();
   return (
-    <header className="sticky top-3.5 z-30 flex justify-center px-4">
+    <header className="sticky top-0 z-30 px-4 pt-3.5">
+      {/* 渐变遮罩：页面内容是滚动到悬浮胶囊底下的，没有遮罩时卡片标题会在胶囊上下
+       * 同时露面、被胶囊边缘直接切断。渐变把内容淡出到页面底色，胶囊边界不再“割”文字。 */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-24 bg-gradient-to-b from-background via-background/80 to-transparent"
+      />
       <nav
         aria-label={t("portal.nav.primary")}
-        className="flex h-14 w-full max-w-[45rem] items-center gap-5 rounded-full border border-border/60 bg-card/80 pr-2 pl-4 shadow-lg backdrop-blur-md"
+        className="mx-auto flex h-14 w-full max-w-[45rem] items-center gap-5 rounded-full border border-border/60 bg-card/80 pr-2 pl-4 shadow-lg backdrop-blur-md"
       >
         <BrandLink />
         <div className="hidden items-center gap-5 md:flex">
