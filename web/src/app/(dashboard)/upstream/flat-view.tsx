@@ -22,6 +22,7 @@ import { useT } from "@/lib/i18n";
 import { cn, formatDate } from "@/lib/utils";
 import type { ModelListSortField, ModelListItem, UpstreamUser } from "@/lib/types";
 import {
+  DISABLED_ROW_CLASS,
   CapabilityBadges,
   ConfigMissingBadges,
   ModelActionsCell,
@@ -151,17 +152,14 @@ export function FlatView({
         {items.map((m) => (
           <div key={m.id} className="rounded-lg border border-border bg-card p-3">
             <div className="flex items-start justify-between gap-2">
-              <div className={cn("min-w-0", !m.enabled && "opacity-45")}>
+              <div className={cn("min-w-0", !m.enabled && DISABLED_ROW_CLASS)}>
                 <p className="flex items-center gap-1.5 text-sm font-medium">
                   <ProviderIcon protocol={m.alias} size={14} className="shrink-0" />
                   <TooltipRoot>
                     <TooltipTrigger
                       render={
                         <span
-                          className={cn(
-                            "cursor-pointer truncate underline-offset-2 hover:underline",
-                            !m.enabled && "line-through",
-                          )}
+                          className="cursor-pointer truncate underline-offset-2 hover:underline"
                           onClick={() => onCopyAlias(m.alias)}
                         >
                           {m.alias}
@@ -225,7 +223,10 @@ export function FlatView({
               </div>
             </div>
             <div
-              className={cn("mt-2 flex flex-wrap items-center gap-1.5", !m.enabled && "opacity-45")}
+              className={cn(
+                "mt-2 flex flex-wrap items-center gap-1.5",
+                !m.enabled && DISABLED_ROW_CLASS,
+              )}
             >
               {m.endpoint && <EndpointOwnerCell name={m.endpoint.name} user={m.user} />}
               {m.endpoint?.visibility === "public" && (
@@ -298,13 +299,13 @@ export function FlatView({
               enabled={m.enabled}
               onCopyAlias={onCopyAlias}
             />
-            <TableCell className={cn(!m.enabled && "opacity-45")}>
+            <TableCell className={cn(!m.enabled && DISABLED_ROW_CLASS)}>
               <SpecBadges contextLength={m.contextLength} maxOutputTokens={m.maxOutputTokens} />
             </TableCell>
-            <TableCell className={cn(!m.enabled && "opacity-45")}>
+            <TableCell className={cn(!m.enabled && DISABLED_ROW_CLASS)}>
               <CapabilityBadges capabilities={m.capabilities} />
             </TableCell>
-            <TableCell className={cn(!m.enabled && "opacity-45")}>
+            <TableCell className={cn(!m.enabled && DISABLED_ROW_CLASS)}>
               {/* 与兄弟列同形裹一层 flex：价格与徽标才能同行且有固定间距 */}
               <div className="flex items-center gap-1.5">
                 <PricingInline pricing={m.pricing} />

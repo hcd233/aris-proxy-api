@@ -127,9 +127,12 @@ function ItemTitle({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="item-title"
       // 组件内置截断：调用方传入可能超长的文本时须自行用 TooltipTrigger 包裹（业务侧由同一 lint 规则守护）
+      // 不能同时用 flex：flex 容器里的文本是匿名 flex item，`line-clamp` / `text-overflow`
+      // 都不生效，超长标题会被卡片边缘硬切（没有省略号）。这里只用 line-clamp 自带的
+      // -webkit-box，单行超长时正常出省略号；需要换行的调用方传 `line-clamp-none`。
       // eslint-disable-next-line truncate-requires-tooltip/truncate-requires-tooltip
       className={cn(
-        "line-clamp-1 flex w-fit items-center gap-2 text-sm leading-snug font-medium underline-offset-4",
+        "line-clamp-1 w-fit max-w-full min-w-0 text-sm leading-snug font-medium underline-offset-4",
         className,
       )}
       {...props}

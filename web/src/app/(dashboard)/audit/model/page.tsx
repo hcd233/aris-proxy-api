@@ -514,6 +514,7 @@ export default function AuditPage() {
                     {/* 8.5rem 是 token 列的下限：cache 行 "ca: 4.1K / 113.5K" 再窄就被裁掉 */}
                     <TableHead className="w-[8.5rem] text-right">{t("audit.tokens")}</TableHead>
                     <TableHead className="w-[5rem] text-right">{t("audit.latency")}</TableHead>
+                    {/* 5.5rem：`$0.000492` 在 5rem 下溢出 1px 被静默裁掉（列宽预算见 docs/agents/web-frontend.md） */}
                     <TableHead className="w-[5.5rem] text-right">
                       {t("audit.cost.column")}
                     </TableHead>
@@ -706,6 +707,8 @@ export default function AuditPage() {
                           </TooltipProvider>
                         </TableCell>
                         <TableCell className={SHOW_UA_FROM}>
+                          {/* max-w-full 而不是固定宽度：按钮若比单元格宽，
+                              右端的省略号会被单元格裁掉，只剩硬切的文字 */}
                           {log.userAgent ? (
                             <TooltipProvider>
                               <TooltipRoot>
@@ -713,7 +716,7 @@ export default function AuditPage() {
                                   render={
                                     <button
                                       type="button"
-                                      className="max-w-full cursor-default truncate text-xs text-muted-foreground"
+                                      className="block max-w-full cursor-default truncate text-xs text-muted-foreground"
                                     >
                                       {uaShort}
                                     </button>

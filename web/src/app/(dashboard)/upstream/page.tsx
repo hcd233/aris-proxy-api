@@ -951,9 +951,10 @@ export default function UpstreamPage() {
             onSubmitOAuth={() => void handleSubmitOAuth()}
           />
 
-          {/* key 重挂载：每次打开弹窗重置 ModelDialog 本地状态（dirty/提示/折叠） */}
+          {/* key 重挂载：每次打开弹窗重置 ModelDialog 本地状态（dirty/提示/折叠）。
+              key 带组件前缀：两个弹窗同时关闭时都是 `false-0`，同前缀会撞成重复 key。 */}
           <ModelDialog
-            key={`${modelDialogOpen}-${editingModel?.id ?? 0}`}
+            key={`model-${modelDialogOpen}-${editingModel?.id ?? 0}`}
             open={modelDialogOpen}
             onOpenChange={setModelDialogOpen}
             editing={editingModel !== null}
@@ -970,7 +971,7 @@ export default function UpstreamPage() {
 
           {/* 定价弹窗：与「编辑模型配置」平级的独立入口；key 重挂载重置导入提示 */}
           <PricingDialog
-            key={`${pricingDialogOpen}-${pricingTarget?.id ?? 0}`}
+            key={`pricing-${pricingDialogOpen}-${pricingTarget?.id ?? 0}`}
             open={pricingDialogOpen}
             onOpenChange={setPricingDialogOpen}
             alias={pricingTarget?.alias ?? ""}

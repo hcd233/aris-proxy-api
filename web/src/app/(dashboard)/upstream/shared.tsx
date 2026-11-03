@@ -233,6 +233,19 @@ export function PricingInline({ pricing }: { pricing?: PricingDTO }) {
  */
 
 /**
+ * 停用行降权：换成次级墨色，既不加不透明度、也不划掉内容。
+ *
+ * 原先是整格 `opacity-45` + alias `line-through`：
+ * - 45% 叠在 `--foreground` 上只剩约 2.9:1、叠在 `--muted-foreground` 上只剩约 1.9:1，
+ *   低于全站 4.5:1 的底限；提到 70% 也只能把次级文字救到 3.2:1，仍不达标。
+ * - 删除线在列表里读作「已删除」而不是「已停用」。
+ *
+ * 改用 `--muted-foreground`（白底约 6.3:1）做单层降权：与启用行的 `--foreground`
+ * （15.8:1）拉开层级，同时任何一档文字都仍在可读区间。状态由右侧 Switch 表达。
+ */
+export const DISABLED_ROW_CLASS = "text-muted-foreground";
+
+/**
  * 「模型」列：ProviderIcon + 可点击复制的 alias（停用行划线），次行收敛身份信息。
  *
  * 原先独立的「业务模型 ID」「上游真名」两列并到这里：与 alias 同值的项不再重复展示，
@@ -265,7 +278,7 @@ export function ModelIdentityCell({
   );
   const metaText = meta.join(" · ");
   return (
-    <TableCell className={cn(className, !enabled && "opacity-45")}>
+    <TableCell className={cn(className, !enabled && DISABLED_ROW_CLASS)}>
       <div className="flex min-w-0 flex-col gap-0.5">
         <div className="flex min-w-0 items-center gap-1.5">
           <ProviderIcon protocol={alias} size={14} className="shrink-0" />
@@ -273,10 +286,7 @@ export function ModelIdentityCell({
             <TooltipTrigger
               render={
                 <span
-                  className={cn(
-                    "min-w-0 cursor-pointer truncate font-medium underline-offset-2 hover:underline",
-                    !enabled && "line-through",
-                  )}
+                  className="min-w-0 cursor-pointer truncate font-medium underline-offset-2 hover:underline"
                   onClick={() => onCopyAlias(alias)}
                 >
                   {alias}
