@@ -193,7 +193,8 @@ func TestHarnessSessionFilterContract(t *testing.T) {
 	}
 }
 
-// TestHarnessTopContract dashboard 客户端排行契约：按 harness 分组，名称非空、占比在 [0,1]。
+// TestHarnessTopContract dashboard 客户端排行契约：按 harness 分组，名称非空、两种占比都在 [0,1]，
+// 默认与 sortBy=cost 都按费用降序，sortBy=requests 改按请求数降序。
 func TestHarnessTopContract(t *testing.T) {
 	t.Parallel()
 
@@ -202,29 +203,54 @@ func TestHarnessTopContract(t *testing.T) {
 
 	end := time.Now().UTC()
 	start := end.Add(-7 * 24 * time.Hour)
-	target := fmt.Sprintf("%s/api/web/v1/audit/stats/dashboard/top/list?dimension=harness&limit=10&startTime=%s&endTime=%s",
-		baseURL, url.QueryEscape(start.Format(time.RFC3339)), url.QueryEscape(end.Format(time.RFC3339)))
+	window := fmt.Sprintf("dimension=harness&limit=10&startTime=%s&endTime=%s",
+		url.QueryEscape(start.Format(time.RFC3339)), url.QueryEscape(end.Format(time.RFC3339)))
 
-	var rsp struct {
+	type topItem struct {
+		Key          string  `json:"key"`
+		Name         string  `json:"name"`
+		Requests     int64   `json:"requests"`
+		CostShare    float64 `json:"costShare"`
+		RequestShare float64 `json:"requestShare"`
+	}
+	type topRsp struct {
 		Error *apiError `json:"error,omitempty"`
 		Data  struct {
-			Items []struct {
-				Key       string  `json:"key"`
-				Name      string  `json:"name"`
-				Requests  int64   `json:"requests"`
-				CostShare float64 `json:"costShare"`
-			} `json:"items"`
+			Items []topItem `json:"items"`
 		} `json:"data"`
 	}
-	if status := doJSON(t, httpClient, http.MethodGet, target, jwt, "", &rsp); status != http.StatusOK || rsp.Error != nil {
-		t.Fatalf("harness top: status=%d err=%+v", status, rsp.Error)
-	}
-	for _, it := range rsp.Data.Items {
-		if it.Name == "" || it.Key == "" {
-			t.Fatalf("harness ranking row must have key and name, got %+v", it)
+	query := func(sortBy string) []topItem {
+		target := baseURL + "/api/web/v1/audit/stats/dashboard/top/list?" + window
+		if sortBy != "" {
+			target += "&sortBy=" + sortBy
 		}
-		if it.CostShare < 0 || it.CostShare > 1 {
-			t.Fatalf("costShare out of range: %+v", it)
+		var rsp topRsp
+		if status := doJSON(t, httpClient, http.MethodGet, target, jwt, "", &rsp); status != http.StatusOK || rsp.Error != nil {
+			t.Fatalf("harness top(%q): status=%d err=%+v", sortBy, status, rsp.Error)
+		}
+		for _, it := range rsp.Data.Items {
+			if it.Name == "" || it.Key == "" {
+				t.Fatalf("harness ranking row must have key and name, got %+v", it)
+			}
+			if it.CostShare < 0 || it.CostShare > 1 || it.RequestShare < 0 || it.RequestShare > 1 {
+				t.Fatalf("shares out of range: %+v", it)
+			}
+		}
+		return rsp.Data.Items
+	}
+
+	// 不传 sortBy = 旧的费用排序，保持向后兼容
+	query("")
+	costItems := query("cost")
+	for i := 1; i < len(costItems); i++ {
+		if costItems[i].CostShare > costItems[i-1].CostShare {
+			t.Fatalf("cost ranking not descending: %+v", costItems)
+		}
+	}
+	requestItems := query("requests")
+	for i := 1; i < len(requestItems); i++ {
+		if requestItems[i].Requests > requestItems[i-1].Requests {
+			t.Fatalf("request ranking not descending: %+v", requestItems)
 		}
 	}
 }

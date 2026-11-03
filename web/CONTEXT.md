@@ -138,6 +138,16 @@ _Avoid_: availability table, uptime heatmap
 金额展示统一入口：去尾零、小数位上限 6，规避浮点尾差直出（`0.30000000000000004`）；null/undefined 渲染 `—`。
 _Avoid_: money format
 
+## Dashboard（仪表盘）
+
+**Ranking Metric（排行指标）**:
+Top 排行取前 N 名与排列顺序所依据的指标，取值 `cost`（已计价费用，默认）或 `requests`（请求数），均降序。它决定榜单集合本身——后端按该指标全量排序后再截断（`sortBy` 查询参数），不是对费用前 N 名做二次重排。
+_Avoid_: sort direction, order by column
+
+**Share Metric（占比口径）**:
+Top 排行占比列的口径，与 Ranking Metric 相互独立：`cost` 用 `costShare`（费用占比），`requests` 用 `requestShare`（次数占比），两者都由后端按全量合计计算。
+_Avoid_: percentage mode, ratio type
+
 ## Numeric Display（数值展示）
 
 **Compact Token Count（token 量级缩写）**:
