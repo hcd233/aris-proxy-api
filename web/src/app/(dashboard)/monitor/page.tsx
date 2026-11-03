@@ -1,471 +1,395 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Activity, MemoryStick, Radio } from "lucide-react";
+import { useMemo } from "react";
 
-import { api } from "@/lib/api-client";
-import { useT } from "@/lib/i18n";
-import { PermissionGuard } from "@/components/permission-guard";
+import { useI18n } from "@/lib/i18n";
+import { useChartSeriesColors, useStatusColors } from "@/lib/theme";
+import { MONITOR_REFRESH_INTERVALS } from "@/lib/refresh-interval";
+import {
+  RANGE_BUCKET_SEC,
+  RANGE_KEYS,
+  RANGE_LABEL_KEYS,
+  STATUS_CLASSES,
+  groupStatusClasses,
+  lastValue,
+  podChartData,
+  podSumLatest,
+  seriesMapChartData,
+  shortPodNames,
+  statusTotals,
+  toChartData,
+  type RangeKey,
+  type StatusClass,
+} from "@/lib/monitor";
+import { cn, formatDecimal, formatDurationMs, formatInteger, formatTokenCount } from "@/lib/utils";
 import { usePersistentState } from "@/hooks/use-persistent-state";
-import { useAutoRefresh } from "@/hooks/use-auto-refresh";
-import { MONITOR_REFRESH_INTERVALS, normalizeRefreshInterval } from "@/lib/refresh-interval";
-import { replaceEqualDeep } from "@/lib/structural-share";
-import type { RuntimeInstanceSeries, RuntimePoint } from "@/lib/types";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { PermissionGuard } from "@/components/permission-guard";
 import { AutoRefreshButton } from "@/components/shared/auto-refresh-button";
-import { RuntimeGaugeCard } from "@/components/charts/runtime-gauge-card";
-import { RuntimeChart } from "@/components/charts/runtime-chart";
-import { useChartSeriesColors } from "@/lib/theme";
-import { formatDecimal, formatInteger } from "@/lib/utils";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import {
+  TooltipContent,
+  TooltipProvider,
+  TooltipRoot,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Panel } from "@/components/dashboard/panel";
+import { MonitorChart, type MonitorChartSeries } from "@/components/monitor/monitor-chart";
+import { MonitorKpiRow } from "@/components/monitor/monitor-kpi-row";
+import { useRuntimeMetrics } from "@/components/monitor/use-runtime-metrics";
 
-const DEFAULT_REFRESH_MS = 5_000;
+/* 图表数值格式化：模块级函数，引用稳定（内联函数会让 recharts 重算坐标并重放曲线动画） */
+const fmtScalar = (v: number) => formatDecimal(v, v >= 100 ? 0 : v >= 10 ? 1 : 2);
+const fmtQps = (v: number) => `${fmtScalar(v)} req/s`;
+const fmtCount = (v: number) => formatInteger(Math.round(v));
+const fmtPercent = (v: number) => `${formatDecimal(v, 1)}%`;
+const fmtMemory = (v: number) => `${formatDecimal(v, 1)} MB`;
+const fmtMemoryAxis = (v: number) => formatDecimal(v, 0);
+const fmtLatencyAxis = (v: number) =>
+  v >= 1000 ? `${formatDecimal(v / 1000, 1)}s` : `${formatDecimal(v, 0)}ms`;
 
-const RANGE_KEYS = ["15m", "1h", "6h", "24h"] as const;
-type RangeKey = (typeof RANGE_KEYS)[number];
+const RUNTIME_METRICS = ["goroutines", "threads"] as const;
+type RuntimeMetric = (typeof RUNTIME_METRICS)[number];
 
-// 档位文案复用全站 time.* 键，与 TimeRangePicker 的选择器保持同一套 i18n 术语
-const RANGE_LABEL_KEYS: Record<RangeKey, string> = {
-  "15m": "time.last_15m",
-  "1h": "time.last_1h",
-  "6h": "time.last_6h",
-  "24h": "time.last_24h",
-};
-
-const RANGE_WINDOW_SEC: Record<RangeKey, number> = {
-  "15m": 900,
-  "1h": 3600,
-  "6h": 21600,
-  "24h": 86400,
-};
-
-// RANGE_BUCKET_SEC 各 range 档的聚合桶宽（与后端 metrics.ResolveRange 保持一致）。
-const RANGE_BUCKET_SEC: Record<RangeKey, number> = {
-  "15m": 5,
-  "1h": 60,
-  "6h": 300,
-  "24h": 900,
-};
-
-type Pt = RuntimePoint;
-
-interface InstanceState {
-  goroutines: Pt[];
-  heapMB: Pt[];
-  cpuPercent: Pt[];
-  threads: Pt[];
+/** 面板右上角的「当前值」：等宽小字，和 Dashboard 的 Reliability 面板同一写法 */
+function NowValue({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="font-mono text-[11px] text-muted-foreground tabular-nums">{children}</span>
+  );
 }
 
-interface SeriesState {
-  qps: Pt[];
-  p95Ms: Pt[];
-  sseActive: Record<string, Pt[]>;
-  tokenInput: Pt[];
-  tokenOutput: Pt[];
-  statusCodes: Record<string, Pt[]>;
-  instances: Record<string, InstanceState>;
-  latestTime: number; // 后端当前桶起点 unix 秒，用于头部卡片活跃实例判定
+/** 标题旁的实例状态：一眼看出采集是否正常、几个 pod 在线；悬停列出 pod 名 */
+function InstanceStatus({
+  pods,
+  loading,
+  failed,
+}: {
+  pods: string[];
+  loading: boolean;
+  failed: boolean;
+}) {
+  const { t } = useI18n();
+  if (loading) return null;
+  const online = pods.length > 0 && !failed;
+  const label = failed
+    ? t("monitor.fetch_failed")
+    : pods.length === 0
+      ? t("monitor.no_instances")
+      : t("monitor.instances_online").replace("{count}", String(pods.length));
+  const dot = failed ? "bg-negative" : online ? "bg-positive" : "bg-muted-foreground/40";
+  const pill = (
+    <span className="inline-flex cursor-default items-center gap-1.5 rounded-full border border-border/70 px-2 py-0.5 text-[11px] text-muted-foreground">
+      <span aria-hidden className={cn("size-1.5 rounded-full", dot)} />
+      {label}
+    </span>
+  );
+  if (pods.length === 0) return pill;
+  return (
+    <TooltipRoot>
+      <TooltipTrigger render={pill} />
+      <TooltipContent className="max-w-xs text-xs break-all">
+        <ul className="flex flex-col gap-0.5 font-mono">
+          {pods.map((pod) => (
+            <li key={pod}>{pod}</li>
+          ))}
+        </ul>
+      </TooltipContent>
+    </TooltipRoot>
+  );
 }
 
-const EMPTY_INSTANCE: InstanceState = { goroutines: [], heapMB: [], cpuPercent: [], threads: [] };
-
-const EMPTY_STATE: SeriesState = {
-  qps: [],
-  p95Ms: [],
-  sseActive: {},
-  tokenInput: [],
-  tokenOutput: [],
-  statusCodes: {},
-  instances: {},
-  latestTime: 0,
-};
-
-function mergePoints(prev: Pt[], incoming: Pt[], cutoff: number): Pt[] {
-  const map = new Map<number, number>();
-  for (const p of prev) map.set(p.time, p.value);
-  for (const p of incoming) map.set(p.time, p.value);
-  return [...map.entries()]
-    .filter(([t]) => t >= cutoff)
-    .sort((a, b) => a[0] - b[0])
-    .map(([time, value]) => ({ time, value }));
-}
-
-// mergeKeyedSeries 按 key（SSE provider / HTTP 状态码）逐曲线增量合并时序。
-function mergeKeyedSeries(
-  prev: Record<string, Pt[]>,
-  incoming: Record<string, Pt[]>,
-  cutoff: number,
-): Record<string, Pt[]> {
-  const keys = new Set([...Object.keys(prev), ...Object.keys(incoming)]);
-  const out: Record<string, Pt[]> = {};
-  for (const key of keys) {
-    out[key] = mergePoints(prev[key] ?? [], incoming[key] ?? [], cutoff);
-  }
-  return out;
-}
-
-// mergeInstances 按 pod 名逐实例增量合并各指标曲线。
-// 只保留后端返回的实例：后端只输出当前活跃实例（已下线实例不再返回），
-// prev 中不在 incoming 的实例视为已消失，直接移除，避免滚动发布遗留的死实例永久残留。
-function mergeInstances(
-  prev: Record<string, InstanceState>,
-  incoming: Record<string, RuntimeInstanceSeries>,
-  cutoff: number,
-): Record<string, InstanceState> {
-  const out: Record<string, InstanceState> = {};
-  for (const pod of Object.keys(incoming)) {
-    const p = prev[pod] ?? EMPTY_INSTANCE;
-    const inc = incoming[pod] ?? EMPTY_INSTANCE;
-    out[pod] = {
-      goroutines: mergePoints(p.goroutines, inc.goroutines ?? [], cutoff),
-      heapMB: mergePoints(p.heapMB, inc.heapMB ?? [], cutoff),
-      cpuPercent: mergePoints(p.cpuPercent, inc.cpuPercent ?? [], cutoff),
-      threads: mergePoints(p.threads, inc.threads ?? [], cutoff),
-    };
-  }
-  return out;
-}
-
-// podChartData 把各 pod 的同一指标曲线合并为同一时间轴上的多列（列名 = pod 名）。
-function podChartData(
-  instances: Record<string, InstanceState>,
-  metric: keyof InstanceState,
-): Array<Record<string, number>> {
-  const rows = new Map<number, Record<string, number>>();
-  for (const [pod, inst] of Object.entries(instances)) {
-    for (const p of inst[metric]) {
-      const row = rows.get(p.time) ?? { time: p.time };
-      row[pod] = p.value;
-      rows.set(p.time, row);
-    }
-  }
-  return [...rows.values()].sort((a, b) => a.time - b.time);
-}
-
-const THREADS_KEY_PREFIX = "m:";
-
-// gmChartData 把各 pod 的 G/M 曲线合并为同一时间轴多列：列名 pod 为 G，`m:`+pod 为 M。
-function gmChartData(instances: Record<string, InstanceState>): Array<Record<string, number>> {
-  const rows = new Map<number, Record<string, number>>();
-  for (const [pod, inst] of Object.entries(instances)) {
-    for (const p of inst.goroutines) {
-      const row = rows.get(p.time) ?? { time: p.time };
-      row[pod] = p.value;
-      rows.set(p.time, row);
-    }
-    for (const p of inst.threads) {
-      const row = rows.get(p.time) ?? { time: p.time };
-      row[`${THREADS_KEY_PREFIX}${pod}`] = p.value;
-      rows.set(p.time, row);
-    }
-  }
-  return [...rows.values()].sort((a, b) => a.time - b.time);
-}
-
-// podSumLatest 各 pod 最新值求和（用于头部卡片集群总和）。
-// 只统计"最近仍在产出数据"的活跃实例：后端实例注册表保留 24h，已下线 pod 的历史曲线
-// 若全部求和会把死实例计入集群总和（滚动发布后数值虚高）。
-// 最新点落在当前桶起点（latestTime）往前一个桶内的实例视为活跃。
-function podSumLatest(
-  instances: Record<string, InstanceState>,
-  metric: keyof InstanceState,
-  latestTime: number,
-  bucketSec: number,
-): number {
-  let sum = 0;
-  for (const inst of Object.values(instances)) {
-    const last = inst[metric].at(-1);
-    if (last && (latestTime <= 0 || last.time >= latestTime - bucketSec)) {
-      sum += last.value;
-    }
-  }
-  return sum;
-}
-
-function round2(v: number): number {
-  return Math.round(v * 100) / 100;
-}
-
-function lastValue(points: Pt[]): number {
-  return points.at(-1)?.value ?? 0;
-}
-
-function toChartData(points: Pt[]): Array<Record<string, number>> {
-  return points.map((p) => ({ time: p.time, value: p.value }));
-}
-
-// seriesMapChartData 把 map<key, 时序点> 合并为同一时间轴上的多列（列名 = key），用于 SSE provider 与状态码。
-function seriesMapChartData(seriesMap: Record<string, Pt[]>): Array<Record<string, number>> {
-  const rows = new Map<number, Record<string, number>>();
-  for (const [key, points] of Object.entries(seriesMap)) {
-    for (const p of points) {
-      const row = rows.get(p.time) ?? { time: p.time };
-      row[key] = p.value;
-      rows.set(p.time, row);
-    }
-  }
-  return [...rows.values()].sort((a, b) => a.time - b.time);
-}
-
-// tpsChartData 把输入/输出两条 token 速率时序合并为同一时间轴上的两列（input/output）。
-function tpsChartData(input: Pt[], output: Pt[]): Array<Record<string, number>> {
-  const rows = new Map<number, Record<string, number>>();
-  for (const p of input) {
-    const row = rows.get(p.time) ?? { time: p.time };
-    row.input = p.value;
-    rows.set(p.time, row);
-  }
-  for (const p of output) {
-    const row = rows.get(p.time) ?? { time: p.time };
-    row.output = p.value;
-    rows.set(p.time, row);
-  }
-  return [...rows.values()].sort((a, b) => a.time - b.time);
-}
-
+/**
+ * 运维监控（与 Dashboard 的业务指标刻意分工）：页头 → 6 张健康 KPI →
+ * 流量/状态码/延迟（5:3:3）→ 资源与连接（CPU / 内存 / 协程线程 / SSE，等分四栏）。
+ * 版式与 Dashboard 同构：xl 以上锁定视口高度，面板内部自适应撑满；更窄时纵向堆叠滚动。
+ */
 export default function MonitorPage() {
-  const t = useT();
-  const [range, setRange] = usePersistentState<RangeKey>("monitor.range", "1h");
-  const [storedRefreshMs, setRefreshMs] = usePersistentState<number>(
-    "monitor.autoRefreshMs",
-    DEFAULT_REFRESH_MS,
+  const { t, locale } = useI18n();
+  const {
+    range,
+    setRange,
+    refreshMs,
+    setRefreshMs,
+    state,
+    loading,
+    fetching,
+    failed,
+    cycle,
+    refreshNow,
+  } = useRuntimeMetrics();
+  const [storedRuntime, setStoredRuntime] = usePersistentState<string>(
+    "monitor.runtimeMetric",
+    "goroutines",
   );
-  const refreshMs = normalizeRefreshInterval(
-    storedRefreshMs,
-    MONITOR_REFRESH_INTERVALS,
-    DEFAULT_REFRESH_MS,
-  );
-  const [state, setState] = useState<SeriesState>(EMPTY_STATE);
-  const [loading, setLoading] = useState(true);
-  const [fetching, setFetching] = useState(false);
-  const sinceRef = useRef(0);
+  const runtimeMetric: RuntimeMetric = storedRuntime === "threads" ? "threads" : "goroutines";
 
-  const poll = useCallback(async (rangeKey: RangeKey) => {
-    setFetching(true);
-    try {
-      const rsp = await api.getRuntimeMetrics({ range: rangeKey, since: sinceRef.current });
-      const s = rsp.series ?? {};
-      const now = Math.floor(Date.now() / 1000);
-      const cutoff = now - RANGE_WINDOW_SEC[rangeKey];
-
-      // 结构共享：没变的曲线保持原引用，对应图表这一轮完全不动
-      setState((prev) =>
-        replaceEqualDeep(prev, {
-          qps: mergePoints(prev.qps, s.qps ?? [], cutoff),
-          p95Ms: mergePoints(prev.p95Ms, s.p95Ms ?? [], cutoff),
-          sseActive: mergeKeyedSeries(prev.sseActive, s.sseActive ?? {}, cutoff),
-          tokenInput: mergePoints(prev.tokenInput, s.tokenInput ?? [], cutoff),
-          tokenOutput: mergePoints(prev.tokenOutput, s.tokenOutput ?? [], cutoff),
-          statusCodes: mergeKeyedSeries(prev.statusCodes, s.statusCodes ?? {}, cutoff),
-          instances: mergeInstances(prev.instances, s.instances ?? {}, cutoff),
-          latestTime: rsp.latestTime,
-        }),
-      );
-
-      if (rsp.latestTime > 0) sinceRef.current = rsp.latestTime;
-    } catch {
-      // silently ignore polling errors
-    } finally {
-      setLoading(false);
-      setFetching(false);
-    }
-  }, []);
-
-  const pollRange = useCallback(() => void poll(range), [poll, range]);
-  const { cycle, refreshNow } = useAutoRefresh(refreshMs, pollRange);
-
-  /* eslint-disable react-hooks/set-state-in-effect -- range 切换需重置时序状态并立即触发首次拉取 */
-  useEffect(() => {
-    sinceRef.current = 0;
-    setState(EMPTY_STATE);
-    setLoading(true);
-    void poll(range);
-  }, [range, poll]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+  const colors = useChartSeriesColors();
+  const status = useStatusColors();
+  const bucketSec = RANGE_BUCKET_SEC[range];
 
   // 每张图的数据只随它自己的曲线变化而重建：引用不变，recharts 就不会重放动画
   const qpsData = useMemo(() => toChartData(state.qps), [state.qps]);
   const p95Data = useMemo(() => toChartData(state.p95Ms), [state.p95Ms]);
-  const tpsData = useMemo(
-    () => tpsChartData(state.tokenInput, state.tokenOutput),
-    [state.tokenInput, state.tokenOutput],
-  );
   const sseData = useMemo(() => seriesMapChartData(state.sseActive), [state.sseActive]);
-  const statusCodeData = useMemo(() => seriesMapChartData(state.statusCodes), [state.statusCodes]);
   const cpuData = useMemo(() => podChartData(state.instances, "cpuPercent"), [state.instances]);
   const heapData = useMemo(() => podChartData(state.instances, "heapMB"), [state.instances]);
-  const gmData = useMemo(() => gmChartData(state.instances), [state.instances]);
+  const runtimeData = useMemo(
+    () => podChartData(state.instances, runtimeMetric),
+    [state.instances, runtimeMetric],
+  );
+  const grouped = useMemo(() => groupStatusClasses(state.statusCodes), [state.statusCodes]);
+  const statusData = useMemo(() => seriesMapChartData(grouped), [grouped]);
 
-  const sseProviders = Object.keys(state.sseActive).sort();
-  const seriesColors = useChartSeriesColors();
-  const sseSeries = sseProviders.map((prov, i) => ({
-    key: prov,
-    label: prov,
-    color: seriesColors[i % seriesColors.length],
-  }));
-  const sseTotal = Math.round(
-    sseProviders.reduce((sum, prov) => sum + lastValue(state.sseActive[prov]), 0),
-  );
-  const pods = Object.keys(state.instances).sort();
-  const podSeries = pods.map((pod, i) => ({
-    key: pod,
-    label: pod,
-    color: seriesColors[i % seriesColors.length],
-  }));
-  // M 线与所属 pod 的 G 线同色，虚线区分；图例 label 加 (M) 后缀
-  const gmSeries = [
-    ...podSeries,
-    ...pods.map((pod, i) => ({
-      key: `${THREADS_KEY_PREFIX}${pod}`,
-      label: `${pod} (M)`,
-      color: seriesColors[i % seriesColors.length],
-      dashed: true,
-    })),
-  ];
-  const goroutinesTotal = Math.round(
-    podSumLatest(state.instances, "goroutines", state.latestTime, RANGE_BUCKET_SEC[range]),
-  );
-  // heapMB 为各 pod 浮点均值求和，round2 消除 0.30000000000000004 类尾差
-  const heapTotal = round2(
-    podSumLatest(state.instances, "heapMB", state.latestTime, RANGE_BUCKET_SEC[range]),
-  );
-  const tpsSeries = [
-    { key: "input", label: t("monitor.request_tps_input"), color: seriesColors[0] },
-    { key: "output", label: t("monitor.request_tps_output"), color: seriesColors[1] },
-  ];
-  const statusCodeSeries = Object.keys(state.statusCodes)
-    .sort()
-    .map((code, i) => ({
-      key: code,
-      label: code,
-      color: seriesColors[i % seriesColors.length],
+  const pods = useMemo(() => Object.keys(state.instances).sort(), [state.instances]);
+  const podSeries = useMemo<MonitorChartSeries[]>(() => {
+    const short = shortPodNames(pods);
+    return pods.map((pod, i) => ({
+      key: pod,
+      label: short[pod],
+      color: colors[i % colors.length],
     }));
+  }, [pods, colors]);
+
+  const sseSeries = useMemo<MonitorChartSeries[]>(
+    () =>
+      Object.keys(state.sseActive)
+        .sort()
+        .map((prov, i) => ({ key: prov, label: prov, color: colors[i % colors.length] })),
+    [state.sseActive, colors],
+  );
+
+  const statusSeries = useMemo<MonitorChartSeries[]>(() => {
+    const color: Record<StatusClass, string> = {
+      "2xx": status.positive,
+      "3xx": status.muted,
+      "4xx": status.warning,
+      "5xx": status.negative,
+      other: colors[4 % colors.length],
+    };
+    return STATUS_CLASSES.filter((cls) => grouped[cls]).map((cls) => ({
+      key: cls,
+      label: cls === "other" ? t("monitor.status_other") : cls,
+      color: color[cls],
+    }));
+    // locale 驱动「其他」文案刷新（t 引用稳定，见 lib/i18n.tsx）
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [grouped, status, colors, locale]);
+
+  const qpsSeries = useMemo<MonitorChartSeries[]>(
+    () => [{ key: "value", label: t("monitor.request_qps"), color: colors[0] }],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [colors, locale],
+  );
+  const p95Series = useMemo<MonitorChartSeries[]>(
+    () => [{ key: "value", label: t("monitor.latency_p95"), color: colors[2 % colors.length] }],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [colors, locale],
+  );
+
+  const totals = statusTotals(state.statusCodes);
+  const sseNow = Math.round(
+    Object.values(state.sseActive).reduce((sum, pts) => sum + lastValue(pts), 0),
+  );
+  const cpuNow = podSumLatest(state.instances, "cpuPercent", state.latestTime, bucketSec);
+  const heapNow = podSumLatest(state.instances, "heapMB", state.latestTime, bucketSec);
+  const runtimeNow = Math.round(
+    podSumLatest(state.instances, runtimeMetric, state.latestTime, bucketSec),
+  );
+
+  const panelState = {
+    emptyLabel: t("monitor.collecting"),
+    loading,
+    error: failed,
+    onRetry: refreshNow,
+  };
 
   return (
     <PermissionGuard module="monitor">
-      <div className="space-y-8">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
-              {t("monitor.title")}
-            </h1>
-            <p className="mt-1.5 text-sm text-muted-foreground">{t("monitor.subtitle")}</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <ToggleGroup
-              variant="segmented"
-              spacing={0.5}
-              className="no-scrollbar max-w-full overflow-x-auto"
-              value={[range]}
-              onValueChange={(next) => {
-                if (next[0]) setRange(next[0] as RangeKey);
-              }}
-            >
-              {RANGE_KEYS.map((key) => (
-                <ToggleGroupItem key={key} value={key}>
-                  {t(RANGE_LABEL_KEYS[key])}
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
-            <AutoRefreshButton
-              intervalMs={refreshMs}
-              options={MONITOR_REFRESH_INTERVALS}
-              onIntervalChange={setRefreshMs}
-              cycle={cycle}
-              onRefresh={refreshNow}
-              fetching={fetching}
-            />
-          </div>
-        </div>
+      <TooltipProvider>
+        <div
+          data-page-wide
+          className="flex flex-col gap-3 xl:h-[calc(100dvh-5rem)] xl:min-h-[680px]"
+        >
+          <header className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+              <h1 className="motion-title font-display text-2xl tracking-tight text-foreground">
+                {t("monitor.title")}
+              </h1>
+              <InstanceStatus pods={pods} loading={loading} failed={failed} />
+            </div>
+            {/* 窄屏独占一行并撑满：范围条 + 刷新按钮不再把自己挤出视口 */}
+            <div className="flex max-w-full min-w-0 items-center gap-2 max-sm:w-full max-sm:justify-between">
+              <ToggleGroup
+                variant="segmented"
+                spacing={0.5}
+                className="no-scrollbar max-w-full overflow-x-auto"
+                value={[range]}
+                onValueChange={(next) => {
+                  if (next[0]) setRange(next[0] as RangeKey);
+                }}
+              >
+                {RANGE_KEYS.map((key) => (
+                  <ToggleGroupItem key={key} value={key}>
+                    {t(RANGE_LABEL_KEYS[key])}
+                  </ToggleGroupItem>
+                ))}
+              </ToggleGroup>
+              <AutoRefreshButton
+                intervalMs={refreshMs}
+                options={MONITOR_REFRESH_INTERVALS}
+                onIntervalChange={setRefreshMs}
+                cycle={cycle}
+                onRefresh={refreshNow}
+                fetching={fetching}
+              />
+            </div>
+          </header>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <RuntimeGaugeCard
-            label={t("monitor.goroutines")}
-            value={formatInteger(goroutinesTotal)}
-            icon={<Activity className="size-4" />}
-            tone="primary"
-            loading={loading}
-          />
-          <RuntimeGaugeCard
-            label={t("monitor.heap")}
-            value={formatDecimal(heapTotal, 2)}
-            unit="MB"
-            icon={<MemoryStick className="size-4" />}
-            tone="blue"
-            loading={loading}
-          />
-          <RuntimeGaugeCard
-            label={t("monitor.sse_active")}
-            value={formatInteger(sseTotal)}
-            icon={<Radio className="size-4" />}
-            tone="violet"
-            loading={loading}
-          />
-        </div>
+          <MonitorKpiRow state={state} range={range} loading={loading} />
 
-        <div className="grid gap-4 lg:grid-cols-3">
-          <RuntimeChart
-            title={t("monitor.request_qps")}
-            data={qpsData}
-            series={[{ key: "value", label: t("monitor.request_qps"), color: seriesColors[3] }]}
-            unit=" req/s"
-            rangeKey={range}
-            emptyLabel={t("monitor.collecting")}
-          />
-          <RuntimeChart
-            title={t("monitor.request_tps")}
-            data={tpsData}
-            series={tpsSeries}
-            unit=" tok/s"
-            rangeKey={range}
-            emptyLabel={t("monitor.collecting")}
-          />
-          <RuntimeChart
-            title={t("monitor.sse_active")}
-            data={sseData}
-            series={sseSeries}
-            rangeKey={range}
-            emptyLabel={t("monitor.collecting")}
-          />
-          <RuntimeChart
-            title={t("monitor.cpu_usage")}
-            data={cpuData}
-            series={podSeries}
-            unit="%"
-            rangeKey={range}
-            emptyLabel={t("monitor.collecting")}
-          />
-          <RuntimeChart
-            title={t("monitor.heap_memory")}
-            data={heapData}
-            series={podSeries}
-            unit=" MB"
-            rangeKey={range}
-            emptyLabel={t("monitor.collecting")}
-          />
-          <RuntimeChart
-            title={t("monitor.goroutines_chart")}
-            data={gmData}
-            series={gmSeries}
-            rangeKey={range}
-            emptyLabel={t("monitor.collecting")}
-          />
-          <RuntimeChart
-            title={t("monitor.status_code")}
-            data={statusCodeData}
-            series={statusCodeSeries}
-            rangeKey={range}
-            emptyLabel={t("monitor.collecting")}
-          />
-          <RuntimeChart
-            title={t("monitor.latency_p95")}
-            data={p95Data}
-            series={[{ key: "value", label: t("monitor.latency_p95"), color: seriesColors[2] }]}
-            unit=" ms"
-            rangeKey={range}
-            emptyLabel={t("monitor.collecting")}
-          />
+          <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-3 max-xl:grid-rows-none">
+            {/* 流量面：请求速率、状态码构成、尾延迟 */}
+            <div className="stagger-rise grid min-h-0 gap-3 max-xl:auto-rows-[18rem] lg:grid-cols-2 xl:grid-cols-[5fr_3fr_3fr]">
+              <Panel
+                title={t("monitor.request_qps")}
+                empty={qpsData.length === 0}
+                action={<NowValue>{fmtQps(lastValue(state.qps))}</NowValue>}
+                {...panelState}
+              >
+                <MonitorChart
+                  kind="area"
+                  data={qpsData}
+                  series={qpsSeries}
+                  rangeKey={range}
+                  format={fmtQps}
+                  axisFormat={fmtScalar}
+                />
+              </Panel>
+              <Panel
+                title={t("monitor.status_code")}
+                empty={statusData.length === 0}
+                action={
+                  <NowValue>
+                    {formatInteger(Math.round(totals.total))} {t("dashboard.col.requests")}
+                  </NowValue>
+                }
+                {...panelState}
+              >
+                <MonitorChart
+                  kind="stack"
+                  data={statusData}
+                  series={statusSeries}
+                  rangeKey={range}
+                  format={fmtCount}
+                  axisFormat={formatTokenCount}
+                />
+              </Panel>
+              <Panel
+                title={t("monitor.latency_p95")}
+                empty={p95Data.length === 0}
+                action={<NowValue>{formatDurationMs(lastValue(state.p95Ms))}</NowValue>}
+                {...panelState}
+              >
+                <MonitorChart
+                  kind="line"
+                  data={p95Data}
+                  series={p95Series}
+                  rangeKey={range}
+                  format={formatDurationMs}
+                  axisFormat={fmtLatencyAxis}
+                  yAxisWidth={44}
+                />
+              </Panel>
+            </div>
+
+            {/* 资源面：逐 pod 对比 CPU / 内存 / 运行时，外加 SSE 长连接 */}
+            <div className="stagger-rise grid min-h-0 gap-3 max-xl:auto-rows-[16rem] lg:grid-cols-2 xl:grid-cols-4">
+              <Panel
+                title={t("monitor.cpu_usage")}
+                empty={cpuData.length === 0}
+                action={<NowValue>{fmtPercent(cpuNow)}</NowValue>}
+                {...panelState}
+              >
+                <MonitorChart
+                  kind="line"
+                  data={cpuData}
+                  series={podSeries}
+                  rangeKey={range}
+                  format={fmtPercent}
+                  axisFormat={fmtScalar}
+                />
+              </Panel>
+              <Panel
+                title={t("monitor.heap_memory")}
+                empty={heapData.length === 0}
+                action={<NowValue>{fmtMemory(heapNow)}</NowValue>}
+                {...panelState}
+              >
+                <MonitorChart
+                  kind="line"
+                  data={heapData}
+                  series={podSeries}
+                  rangeKey={range}
+                  format={fmtMemory}
+                  axisFormat={fmtMemoryAxis}
+                />
+              </Panel>
+              <Panel
+                title={t("monitor.goroutines_chart")}
+                empty={runtimeData.length === 0}
+                action={
+                  <ToggleGroup
+                    variant="segmented"
+                    size="sm"
+                    spacing={0.5}
+                    value={[runtimeMetric]}
+                    onValueChange={(next) => {
+                      const picked = RUNTIME_METRICS.find((m) => m === next[0]);
+                      if (picked) setStoredRuntime(picked);
+                    }}
+                  >
+                    {RUNTIME_METRICS.map((m) => (
+                      <ToggleGroupItem key={m} value={m} className="h-6 px-2 text-[11px]">
+                        {t(`monitor.${m}`)}
+                      </ToggleGroupItem>
+                    ))}
+                  </ToggleGroup>
+                }
+                footer={
+                  <NowValue>
+                    {t(`monitor.${runtimeMetric}`)} {formatInteger(runtimeNow)}
+                  </NowValue>
+                }
+                {...panelState}
+              >
+                <MonitorChart
+                  key={runtimeMetric}
+                  kind="line"
+                  data={runtimeData}
+                  series={podSeries}
+                  rangeKey={range}
+                  format={fmtCount}
+                  axisFormat={formatTokenCount}
+                />
+              </Panel>
+              <Panel
+                title={t("monitor.sse_active")}
+                empty={sseData.length === 0}
+                action={<NowValue>{formatInteger(sseNow)}</NowValue>}
+                {...panelState}
+              >
+                <MonitorChart
+                  kind="stack"
+                  data={sseData}
+                  series={sseSeries}
+                  rangeKey={range}
+                  format={fmtCount}
+                  axisFormat={formatTokenCount}
+                />
+              </Panel>
+            </div>
+          </div>
         </div>
-      </div>
+      </TooltipProvider>
     </PermissionGuard>
   );
 }

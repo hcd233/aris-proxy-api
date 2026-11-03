@@ -15,6 +15,8 @@ export interface PanelProps {
   loading?: boolean;
   error?: boolean;
   empty?: boolean;
+  /** 空态文案；缺省为「暂无数据」（Monitor 等实时页用「正在采集…」） */
+  emptyLabel?: ReactNode;
   onRetry?: () => void;
   className?: string;
   bodyClassName?: string;
@@ -32,6 +34,7 @@ export function Panel({
   loading,
   error,
   empty,
+  emptyLabel,
   onRetry,
   className,
   bodyClassName,
@@ -62,7 +65,7 @@ export function Panel({
           </div>
         ) : empty ? (
           <div className="flex h-full min-h-24 items-center justify-center text-xs text-muted-foreground">
-            {t("dashboard.no_data")}
+            {emptyLabel ?? t("dashboard.no_data")}
           </div>
         ) : (
           children
