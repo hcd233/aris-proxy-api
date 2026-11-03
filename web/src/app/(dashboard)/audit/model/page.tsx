@@ -41,6 +41,12 @@ import { useFilterBar } from "@/components/filter-bar/use-filter-bar";
 import type { FacetDef, FilterBarQueryParams } from "@/components/filter-bar/types";
 import { copyTextToClipboard } from "@/lib/clipboard";
 
+/* Table-Fit 列宽预算（1280 视口容器实测 902px，1512 视口 1118px）：
+ * 费用列 6rem 是 `formatCost` 最宽输出（$1234.567891）的实测值，5rem 会把
+ * `$0.000916` 静默裁成 `$0.00…`；腾出的空间从「客户端」列拿——它只显示 UA
+ * 前 10 个字符（完整值在 Tooltip），容器窄时整列收起（Progressive Columns）。 */
+const SHOW_UA_FROM = "hidden @min-[62rem]:table-cell";
+
 function formatTokenPair(input: number, output: number): string {
   return `${formatTokenCount(input)} / ${formatTokenCount(output)}`;
 }
@@ -205,7 +211,7 @@ export default function AuditPage() {
           <CardHeader>
             <CardTitle className="font-display">{t("audit.logs_title")}</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="@container">
             {/* Filters — faceted bar */}
             <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center">
               <TimeRangePicker
@@ -506,11 +512,15 @@ export default function AuditPage() {
                     <TableHead className="w-[4rem]">{t("audit.user_name")}</TableHead>
                     <TableHead className="w-[4rem]">{t("audit.filter_status")}</TableHead>
                     {/* 8.5rem 是 token 列的下限：cache 行 "ca: 4.1K / 113.5K" 再窄就被裁掉 */}
-                    <TableHead className="w-[8.5rem]">{t("audit.tokens")}</TableHead>
-                    <TableHead className="w-[5rem]">{t("audit.latency")}</TableHead>
+                    <TableHead className="w-[8.5rem] text-right">{t("audit.tokens")}</TableHead>
+                    <TableHead className="w-[5rem] text-right">{t("audit.latency")}</TableHead>
                     {/* 5.5rem：`$0.000492` 在 5rem 下溢出 1px 被静默裁掉（列宽预算见 docs/agents/web-frontend.md） */}
-                    <TableHead className="w-[5.5rem]">{t("audit.cost.column")}</TableHead>
-                    <TableHead className="w-[5rem]">{t("audit.useragent")}</TableHead>
+                    <TableHead className="w-[5.5rem] text-right">
+                      {t("audit.cost.column")}
+                    </TableHead>
+                    <TableHead className={cn("w-[6rem]", SHOW_UA_FROM)}>
+                      {t("audit.useragent")}
+                    </TableHead>
                     <TableHead className="w-[4.5rem]">{t("audit.copy_traceid")}</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -660,30 +670,45 @@ export default function AuditPage() {
                             </Badge>
                           )}
                         </TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          <div className="text-xs">
+                        <TableCell className="whitespace-nowrap text-right">
+                          <div className="text-xs tabular-nums">
                             {formatTokenPair(log.inputTokens, log.outputTokens)}
                           </div>
                           {cacheInfo && (
-                            <div className="text-xs text-muted-foreground/70">{cacheInfo}</div>
+                            <div className="text-xs text-muted-foreground/70 tabular-nums">
+                              {cacheInfo}
+                            </div>
                           )}
                         </TableCell>
-                        <TableCell className="whitespace-nowrap text-muted-foreground">
-                          <div className="text-xs">
+                        <TableCell className="whitespace-nowrap text-right text-muted-foreground">
+                          <div className="text-xs tabular-nums">
                             I: {formatDurationMs(log.firstTokenLatencyMs)}
                           </div>
                           {log.streamDurationMs > 0 && (
-                            <div className="text-xs">
+                            <div className="text-xs tabular-nums">
                               O: {formatDurationMs(log.streamDurationMs)}
                             </div>
                           )}
                         </TableCell>
-                        <TableCell className="whitespace-nowrap text-xs tabular-nums">
-                          {formatCost(log.cost, log.pricingCurrency)}
+                        <TableCell className="whitespace-nowrap text-right text-xs tabular-nums">
+                          <TooltipProvider>
+                            <TooltipRoot>
+                              <TooltipTrigger
+                                render={
+                                  <span className="block truncate">
+                                    {formatCost(log.cost, log.pricingCurrency)}
+                                  </span>
+                                }
+                              />
+                              <TooltipContent side="top">
+                                {formatCost(log.cost, log.pricingCurrency)}
+                              </TooltipContent>
+                            </TooltipRoot>
+                          </TooltipProvider>
                         </TableCell>
-                        <TableCell>
-                          {/* max-w-full 而不是固定 80px：单元格内容宽只有 ~64px，
-                              按钮若比单元格宽，右端的省略号会被单元格裁掉，只剩硬切的文字 */}
+                        <TableCell className={SHOW_UA_FROM}>
+                          {/* max-w-full 而不是固定宽度：按钮若比单元格宽，
+                              右端的省略号会被单元格裁掉，只剩硬切的文字 */}
                           {log.userAgent ? (
                             <TooltipProvider>
                               <TooltipRoot>

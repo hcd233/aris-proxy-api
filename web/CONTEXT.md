@@ -49,7 +49,7 @@ _Avoid_: responsive table, auto-width table
 _Avoid_: column width, col size
 
 **Progressive Columns（渐进显示列）**:
-面板宽度不够放下所有列时，不压缩主名列，而是按优先级逐列隐藏次要列（容器查询驱动）；面板变宽再逐列展开。保证主名列始终有足够可见宽度。仪表盘的 Endpoint 与 Top 排行两张表采用。
+面板或表格宽度不够放下所有列时，不压缩主列，而是按优先级逐列隐藏次要列（容器查询驱动）；宽度变大再逐列展开。保证主列始终有足够可见宽度。仪表盘的 Endpoint / Top 排行两张表、会话记录、模型调用审计都采用；阈值是容器可用宽度，不是视口宽度。
 _Avoid_: responsive columns, column hiding
 
 ## Navigation（导航）
@@ -137,6 +137,16 @@ _Avoid_: availability table, uptime heatmap
 **formatCost（金额格式化）**:
 金额展示统一入口：去尾零、小数位上限 6，规避浮点尾差直出（`0.30000000000000004`）；null/undefined 渲染 `—`。
 _Avoid_: money format
+
+## Dashboard（仪表盘）
+
+**Ranking Metric（排行指标）**:
+Top 排行取前 N 名与排列顺序所依据的指标，取值 `cost`（已计价费用，默认）或 `requests`（请求数），均降序。它决定榜单集合本身——后端按该指标全量排序后再截断（`sortBy` 查询参数），不是对费用前 N 名做二次重排。
+_Avoid_: sort direction, order by column
+
+**Share Metric（占比口径）**:
+Top 排行占比列的口径，与 Ranking Metric 相互独立：`cost` 用 `costShare`（费用占比），`requests` 用 `requestShare`（次数占比），两者都由后端按全量合计计算。
+_Avoid_: percentage mode, ratio type
 
 ## Numeric Display（数值展示）
 

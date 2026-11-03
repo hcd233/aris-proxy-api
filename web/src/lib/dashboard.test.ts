@@ -14,6 +14,8 @@ import {
   OTHER_KEY,
   peakBucket,
   rangeDays,
+  rankModelsPerPoint,
+  resolveModelMetric,
   successRate,
   topFailures,
   uptimeLevel,
@@ -213,6 +215,11 @@ describe("formatDelta", () => {
   it("renders a dash without a delta", () => {
     expect(formatDelta("requests", null)).toBe("—");
   });
+  it("caps runaway percentages from tiny baselines", () => {
+    expect(formatDelta("tokens", 918.149)).toBe("▲ 999%+");
+    expect(formatDelta("cost", -48.525)).toBe("▼ 999%+");
+    expect(formatDelta("requests", 5.5)).toBe("▲ 550%");
+  });
 });
 
 describe("formatCostShort", () => {
@@ -236,6 +243,69 @@ describe("uptimeLevel", () => {
     expect(uptimeLevel({ requests: 100, success: 99 })).toBe("warn");
     expect(uptimeLevel({ requests: 100, success: 96 })).toBe("warn");
     expect(uptimeLevel({ requests: 100, success: 95 })).toBe("bad");
+  });
+});
+
+describe("rankModelsPerPoint", () => {
+  const t0 = "2026-10-21T00:00:00Z";
+  const t1 = "2026-10-22T00:00:00Z";
+  const row = (modelId: string, time: string, requests: number): DashboardModelPoint => ({
+    modelId,
+    time,
+    requests,
+    tokens: requests * 10,
+    cost: requests,
+  });
+
+  it("ranks each point independently and folds the rest into other last", () => {
+    const rows = [
+      row("a", t0, 1),
+      row("b", t0, 9),
+      row("c", t0, 5),
+      row("d", t0, 3),
+      row("e", t0, 2),
+      row("f", t0, 7),
+      row("g", t0, 4),
+      // 第二个时间点的排序与第一个点不同，验证不是全局排名
+      row("g", t1, 10),
+      row("a", t1, 1),
+    ];
+    const ranked = rankModelsPerPoint(rows, "requests", 3);
+    const p0 = ranked.get(new Date(t0).getTime())!;
+    expect(p0.map((e) => e.key)).toEqual(["b", "f", "c", OTHER_KEY]);
+    expect(p0[3].value).toBe(1 + 3 + 2 + 4);
+    const p1 = ranked.get(new Date(t1).getTime())!;
+    expect(p1.map((e) => e.key)).toEqual(["g", "a"]);
+  });
+
+  it("drops zero values and omits other when models fit", () => {
+    const rows = [row("a", t0, 0), row("b", t0, 4), row("c", t0, 2)];
+    const entries = rankModelsPerPoint(rows, "requests", 5).get(new Date(t0).getTime())!;
+    expect(entries).toEqual([
+      { key: "b", value: 4 },
+      { key: "c", value: 2 },
+    ]);
+  });
+
+  it("uses the selected metric for ordering", () => {
+    const rows = [row("a", t0, 1), row("b", t0, 9)];
+    expect(rankModelsPerPoint(rows, "cost", 5).get(new Date(t0).getTime())![0].key).toBe("b");
+    const byTokens = rankModelsPerPoint(
+      [{ ...row("a", t0, 1), tokens: 500 }, row("b", t0, 9)],
+      "tokens",
+      5,
+    );
+    expect(byTokens.get(new Date(t0).getTime())![0].key).toBe("a");
+  });
+});
+
+describe("resolveModelMetric", () => {
+  it("accepts known metrics and falls back to cost for dirty values", () => {
+    expect(resolveModelMetric("requests")).toBe("requests");
+    expect(resolveModelMetric("tokens")).toBe("tokens");
+    expect(resolveModelMetric("bogus")).toBe("cost");
+    expect(resolveModelMetric(42)).toBe("cost");
+    expect(resolveModelMetric(null)).toBe("cost");
   });
 });
 

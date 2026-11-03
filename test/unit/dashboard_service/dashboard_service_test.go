@@ -207,7 +207,7 @@ func TestDashboardScope_UserWithoutKeysShortCircuits(t *testing.T) {
 	if _, err := svc.EndpointHealth(ctx, user, start, end, 5); err != nil {
 		t.Fatal(err)
 	}
-	top, err := svc.TopUsage(ctx, user, start, end, enum.DashboardDimensionModel, 5)
+	top, err := svc.TopUsage(ctx, user, start, end, enum.DashboardDimensionModel, enum.DashboardTopSortCost, 5)
 	if err != nil || top == nil || len(top.Items) != 0 {
 		t.Errorf("TopUsage = (%+v, %v), want empty", top, err)
 	}
@@ -377,7 +377,7 @@ func TestDashboardTop_UserDimensionAggregatesByOwner(t *testing.T) {
 		3: {APIKeyID: 3, APIKeyName: "k3", UserID: 8, UserName: "bob"},
 	}
 	svc := newService(repo, nil, rel)
-	top, err := svc.TopUsage(t.Context(), admin, start, end, enum.DashboardDimensionUser, 1)
+	top, err := svc.TopUsage(t.Context(), admin, start, end, enum.DashboardDimensionUser, enum.DashboardTopSortCost, 1)
 	if err != nil {
 		t.Fatalf("TopUsage: %v", err)
 	}
@@ -399,12 +399,47 @@ func TestDashboardTop_UserDimensionAggregatesByOwner(t *testing.T) {
 	}
 }
 
+func TestDashboardTop_SortByRequestsReselectsTopN(t *testing.T) {
+	t.Parallel()
+
+	repo := &fakeRepo{groups: []*modelcall.DashboardGroupRow{
+		{Key: "cheap-busy", Requests: 50, CostMicro: 1000},
+		{Key: "pricey-quiet", Requests: 2, CostMicro: 900_000},
+		{Key: "middle", Requests: 10, CostMicro: 3000},
+	}}
+	svc := newService(repo, nil, nil)
+
+	costTop, err := svc.TopUsage(t.Context(), admin, start, end, enum.DashboardDimensionModel, enum.DashboardTopSortCost, 2)
+	if err != nil {
+		t.Fatalf("TopUsage(cost): %v", err)
+	}
+	if costTop.Items[0].Key != "pricey-quiet" || costTop.Items[1].Key != "middle" {
+		t.Errorf("cost ranking = %q/%q, want pricey-quiet/middle", costTop.Items[0].Key, costTop.Items[1].Key)
+	}
+
+	requestTop, err := svc.TopUsage(t.Context(), admin, start, end, enum.DashboardDimensionModel, enum.DashboardTopSortRequests, 2)
+	if err != nil {
+		t.Fatalf("TopUsage(requests): %v", err)
+	}
+	if requestTop.Items[0].Key != "cheap-busy" || requestTop.Items[1].Key != "middle" {
+		t.Errorf("request ranking = %q/%q, want cheap-busy/middle", requestTop.Items[0].Key, requestTop.Items[1].Key)
+	}
+	if requestTop.OtherRequests != 2 || requestTop.TotalRequests != 62 || requestTop.TotalCostMicro != 904_000 {
+		t.Errorf(
+			"totals = other %d / requests %d / cost %d, want 2/62/904000",
+			requestTop.OtherRequests,
+			requestTop.TotalRequests,
+			requestTop.TotalCostMicro,
+		)
+	}
+}
+
 func TestDashboardTop_UserDimensionForbiddenForUser(t *testing.T) {
 	t.Parallel()
 
 	repo := &fakeRepo{}
 	svc := newService(repo, []uint{3}, nil)
-	_, err := svc.TopUsage(t.Context(), user, start, end, enum.DashboardDimensionUser, 5)
+	_, err := svc.TopUsage(t.Context(), user, start, end, enum.DashboardDimensionUser, enum.DashboardTopSortCost, 5)
 	if !errors.Is(err, ierr.ErrNoPermission) {
 		t.Errorf("err = %v, want ErrNoPermission", err)
 	}
@@ -418,7 +453,7 @@ func TestDashboardTop_APIKeyNamesFromRelations(t *testing.T) {
 
 	repo := &fakeRepo{groups: []*modelcall.DashboardGroupRow{{Key: "1", Requests: 2}, {Key: "42", Requests: 1}}}
 	svc := newService(repo, nil, fakeRelations{1: {APIKeyID: 1, APIKeyName: "prod-key"}})
-	top, err := svc.TopUsage(t.Context(), admin, start, end, enum.DashboardDimensionAPIKey, 5)
+	top, err := svc.TopUsage(t.Context(), admin, start, end, enum.DashboardDimensionAPIKey, enum.DashboardTopSortCost, 5)
 	if err != nil {
 		t.Fatalf("TopUsage: %v", err)
 	}
@@ -433,14 +468,14 @@ func TestDashboardTop_DemoMasksNames(t *testing.T) {
 	rel := fakeRelations{1: {APIKeyID: 1, APIKeyName: "secret-production-key", UserID: 9, UserName: "alice@example.com"}}
 	groups := []*modelcall.DashboardGroupRow{{Key: "1", Requests: 3}}
 
-	userTop, err := newService(&fakeRepo{groups: groups}, nil, rel).TopUsage(t.Context(), demo, start, end, enum.DashboardDimensionUser, 5)
+	userTop, err := newService(&fakeRepo{groups: groups}, nil, rel).TopUsage(t.Context(), demo, start, end, enum.DashboardDimensionUser, enum.DashboardTopSortCost, 5)
 	if err != nil {
 		t.Fatalf("user TopUsage: %v", err)
 	}
 	if got, want := userTop.Items[0].Name, commonutil.MaskIdentity("alice@example.com"); got != want {
 		t.Errorf("demo user name = %q, want %q", got, want)
 	}
-	keyTop, err := newService(&fakeRepo{groups: groups}, nil, rel).TopUsage(t.Context(), demo, start, end, enum.DashboardDimensionAPIKey, 5)
+	keyTop, err := newService(&fakeRepo{groups: groups}, nil, rel).TopUsage(t.Context(), demo, start, end, enum.DashboardDimensionAPIKey, enum.DashboardTopSortCost, 5)
 	if err != nil {
 		t.Fatalf("apikey TopUsage: %v", err)
 	}

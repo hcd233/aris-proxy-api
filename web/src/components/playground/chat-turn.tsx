@@ -2,10 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Alert, AlertAction, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { CopyButton } from "@/components/ui/copy-button";
+import { Marker, MarkerContent } from "@/components/ui/marker";
+import { Spinner } from "@/components/ui/spinner";
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
 import { Message, MessageContent, MessageFooter, MessageHeader } from "@/components/ui/message";
-import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { MarkdownLite } from "@/components/chat/markdown-lite";
 import { ProviderIcon } from "@/components/provider-icon";
@@ -92,9 +94,7 @@ function ThinkingBlock({ text, streaming }: { text: string; streaming: boolean }
       <CollapsibleTrigger className="flex w-full items-center gap-1.5 text-[12px] font-medium text-muted-foreground transition-colors hover:text-foreground">
         <Brain className="size-3.5 text-primary/70" />
         <span>{streaming ? t("playground.thinking.streaming") : t("chat.thought_process")}</span>
-        {streaming && (
-          <span className="size-1.5 animate-pulse rounded-full bg-primary/70 motion-reduce:animate-none" />
-        )}
+        {streaming && <Spinner className="size-3 text-primary/70" />}
         <ChevronRight className="ml-auto size-3.5 in-data-panel-open:rotate-90" />
       </CollapsibleTrigger>
       <CollapsibleContent>
@@ -169,12 +169,9 @@ export function ChatTurn({
 
   const actions = !sending && !editing && (
     <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover/turn:opacity-100 group-focus-within/turn:opacity-100">
-      <IconAction
-        label={t("playground.turn.copy")}
-        onClick={() => void copyTextToClipboard(message.content)}
-      >
-        <Copy className="size-3.5" />
-      </IconAction>
+      {isUser && (
+        <CopyButton value={message.content} variant="icon" ariaLabel={t("playground.turn.copy")} />
+      )}
       <IconAction
         label={t("playground.turn.edit")}
         onClick={() => {
@@ -232,7 +229,7 @@ export function ChatTurn({
       className="group/turn turn-enter"
     >
       <MessageContent>
-        {/* 角色标识：assistant 显示模型 icon + 模型名；system 显示角色标签 */}
+        {/* 角色标识：assistant 显示模型 icon + 模型名 + 复制；system 用 Marker 分隔条 */}
         {isAssistant && (
           <MessageHeader className="gap-1.5 px-0">
             {meta?.model ? (
@@ -241,12 +238,20 @@ export function ChatTurn({
               <Sparkles className="size-3.5" />
             )}
             <span>{meta?.model ?? message.role}</span>
+            {message.content && (
+              <CopyButton
+                value={message.content}
+                variant="icon"
+                ariaLabel={t("playground.turn.copy")}
+                className="ml-auto opacity-0 transition-opacity group-hover/turn:opacity-100 focus-visible:opacity-100"
+              />
+            )}
           </MessageHeader>
         )}
         {!isAssistant && !isUser && (
-          <Badge variant="secondary" className="font-mono">
-            {message.role}
-          </Badge>
+          <Marker variant="border" className="text-xs">
+            <MarkerContent className="font-mono">{message.role}</MarkerContent>
+          </Marker>
         )}
 
         {editing ? (

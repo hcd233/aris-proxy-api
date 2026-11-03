@@ -35,10 +35,12 @@ const TRIGGER_TONE_CLASS: Record<PreferenceTone, string> = {
 export function LanguageSwitcher({
   tone = "page",
   compact = false,
+  className,
 }: {
   tone?: PreferenceTone;
   /** 仅显示语言短码（折叠侧栏等窄位） */
   compact?: boolean;
+  className?: string;
 }) {
   const { locale, setLocale } = useI18n();
   const label = LANGUAGE_LABELS[locale];
@@ -51,7 +53,7 @@ export function LanguageSwitcher({
             variant="outline"
             size="xs"
             aria-label={label.native}
-            className={cn("min-w-0", compact && "w-8 px-0", TRIGGER_TONE_CLASS[tone])}
+            className={cn("min-w-0", compact && "w-8 px-0", TRIGGER_TONE_CLASS[tone], className)}
           />
         }
       >

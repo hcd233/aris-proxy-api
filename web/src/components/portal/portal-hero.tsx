@@ -1,12 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, ArrowUpRight } from "lucide-react";
-import type { ReactNode } from "react";
+import { ArrowRight, ArrowUpRight, Menu } from "lucide-react";
+import { useState, type ReactNode } from "react";
 import { SplitText } from "@/components/motion/split-text";
 import { PreferenceControls } from "@/components/preference-controls";
 import { ProviderIcon } from "@/components/provider-icon";
 import { Button } from "@/components/ui/button";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { useT } from "@/lib/i18n";
 import { GITHUB_REPO_URL, PORTAL_SECTION_IDS, type PortalCtaLabelKey } from "@/lib/portal";
 import { cn } from "@/lib/utils";
@@ -52,7 +60,7 @@ export function PortalSectionHead({
 function BrandLink() {
   const t = useT();
   return (
-    <Link href="/" className="flex items-center gap-2" aria-label={t("portal.nav.home")}>
+    <Link href="/" className="flex h-11 items-center gap-2" aria-label={t("portal.nav.home")}>
       <span className="flex size-7 items-center justify-center rounded-full bg-primary font-display text-sm font-semibold text-primary-foreground">
         A
       </span>
@@ -71,11 +79,19 @@ const NAV_LINKS = [
 
 export function PortalHeader({ cta }: { cta: Cta }) {
   const t = useT();
+  const [menuOpen, setMenuOpen] = useState(false);
+
   return (
-    <header className="sticky top-3.5 z-30 flex justify-center px-4">
+    <header className="sticky top-0 z-30 px-4 pt-3.5">
+      {/* 渐变遮罩：页面内容是滚动到悬浮胶囊底下的，没有遮罩时卡片标题会在胶囊上下
+       * 同时露面、被胶囊边缘直接切断。渐变把内容淡出到页面底色，胶囊边界不再“割”文字。 */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-24 bg-gradient-to-b from-background via-background/80 to-transparent"
+      />
       <nav
         aria-label={t("portal.nav.primary")}
-        className="flex h-14 w-full max-w-[45rem] items-center gap-5 rounded-full border border-border/60 bg-card/80 pr-2 pl-4 shadow-lg backdrop-blur-md"
+        className="mx-auto flex h-14 w-full max-w-[45rem] items-center gap-3 rounded-full border border-border/60 bg-card/80 pr-2 pl-4 shadow-lg backdrop-blur-md md:gap-5"
       >
         <BrandLink />
         <div className="hidden items-center gap-5 md:flex">
@@ -90,12 +106,13 @@ export function PortalHeader({ cta }: { cta: Cta }) {
           ))}
         </div>
         <div className="flex-1" />
-        <PreferenceControls compact className="max-sm:gap-1" />
+        {/* max-md:size-11 → 窄屏把语言/主题触发按钮撑到 44px 触控目标 */}
+        <PreferenceControls compact className="max-sm:gap-1" triggerClassName="max-md:size-11" />
         <Button
           variant="ghost"
           size="icon-sm"
           aria-label={t("portal.nav.github")}
-          className="text-foreground/70 hover:text-foreground"
+          className="text-foreground/70 hover:text-foreground max-md:hidden"
           nativeButton={false}
           render={<a href={GITHUB_REPO_URL} target="_blank" rel="noopener noreferrer" />}
         >
@@ -103,13 +120,74 @@ export function PortalHeader({ cta }: { cta: Cta }) {
         </Button>
         <Button
           size="sm"
-          className="rounded-full max-sm:hidden"
+          className="rounded-full max-md:hidden"
           nativeButton={false}
           render={<Link href={cta.href} />}
         >
           {t(cta.labelKey)}
         </Button>
+        <Button
+          variant="ghost"
+          size="icon-lg"
+          aria-label={t("portal.nav.menu")}
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen(true)}
+          className="size-11 text-foreground/70 hover:text-foreground md:hidden"
+        >
+          <Menu className="size-5" />
+        </Button>
       </nav>
+
+      {/* 窄屏没有横向空间放锚点导航和主按钮：收进底部抽屉，保证滚到页面中后段
+       * 仍能跳区块 / 回控制台。md 以上抽屉永不打开（触发按钮已隐藏）。 */}
+      <Drawer open={menuOpen} onOpenChange={setMenuOpen} showSwipeHandle>
+        <DrawerContent className="md:hidden">
+          <DrawerHeader className="pb-1 md:text-left">
+            <DrawerTitle className="text-sm text-muted-foreground">
+              {t("portal.nav.menu")}
+            </DrawerTitle>
+          </DrawerHeader>
+          <nav aria-label={t("portal.nav.primary")} className="flex flex-col gap-0.5 px-3">
+            {NAV_LINKS.map((l) => (
+              <DrawerClose
+                key={l.id}
+                render={
+                  <a
+                    href={`#${l.id}`}
+                    className="flex min-h-12 items-center rounded-lg px-3 text-base font-medium text-foreground transition-colors hover:bg-secondary focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none"
+                  />
+                }
+              >
+                {t(l.key)}
+              </DrawerClose>
+            ))}
+          </nav>
+          <DrawerFooter className="mt-3 gap-2 border-t border-border/60 pt-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+            <Button
+              size="lg"
+              className="w-full rounded-full"
+              nativeButton={false}
+              render={<Link href={cta.href} />}
+            >
+              {t(cta.labelKey)}
+              <ArrowRight data-icon="inline-end" />
+            </Button>
+            <Button
+              variant="outline"
+              size="lg"
+              className="w-full rounded-full"
+              nativeButton={false}
+              render={<a href={GITHUB_REPO_URL} target="_blank" rel="noopener noreferrer" />}
+            >
+              <ProviderIcon decorative protocol="github" size={16} />
+              {t("portal.cta.github")}
+            </Button>
+            <DrawerClose render={<Button variant="ghost" className="w-full" />}>
+              {t("common.close")}
+            </DrawerClose>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
     </header>
   );
 }

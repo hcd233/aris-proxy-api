@@ -11,6 +11,7 @@ import { Check, Copy, ExternalLink, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api-client";
 import { showErrorToast } from "@/lib/api-error-handler";
+import { SESSION_DETAIL_PATH, withBasePath } from "@/lib/routes";
 import type { PageInfo, ShareItem } from "@/lib/types";
 import { buildShareURL } from "@/components/share/share-dialog";
 import { DeleteButton } from "@/components/delete-button";
@@ -190,7 +191,7 @@ export default function SharesPage() {
                           </TableCell>
                           <TableCell>
                             <a
-                              href={`/web/sessions/detail/?id=${share.sessionId}`}
+                              href={withBasePath(`${SESSION_DETAIL_PATH}?id=${share.sessionId}`)}
                               className="inline-flex items-center gap-1 font-mono text-xs text-primary hover:underline"
                             >
                               #{share.sessionId}

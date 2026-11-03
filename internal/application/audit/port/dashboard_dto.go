@@ -127,6 +127,7 @@ func ToDashboardTopDTO(top *DashboardTop) *dto.DashboardTop {
 			CacheHitRate: hitRate,
 			Cost:         dto.PriceDisplayFromMicro(it.CostMicro),
 			CostShare:    ratio(it.CostMicro, top.TotalCostMicro),
+			RequestShare: ratio(it.Requests, top.TotalRequests),
 		}
 	})
 	return &dto.DashboardTop{

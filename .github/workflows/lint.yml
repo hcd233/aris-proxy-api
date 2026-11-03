@@ -90,3 +90,13 @@ jobs:
       - name: Prettier format check
         run: npm run format:check
         working-directory: web
+
+      # 类型检查与单测：此前只有合并后的 build-and-publish 会暴露类型/依赖版本问题，
+      # 这里前移到 PR 阶段。job 名保持 web-lint（master 分支保护的 required check）。
+      - name: Type check
+        run: npm run typecheck
+        working-directory: web
+
+      - name: Unit tests
+        run: npm test
+        working-directory: web

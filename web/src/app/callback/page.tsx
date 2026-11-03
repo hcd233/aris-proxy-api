@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { DASHBOARD_HOME_URL } from "@/lib/nav";
+import { LOGIN_PATH, withBasePath } from "@/lib/routes";
 import { useT } from "@/lib/i18n";
 import { api } from "@/lib/api-client";
 import { parseOAuthCallbackParams, resolveOAuthPlatform } from "@/lib/oauth";
@@ -66,7 +67,7 @@ export default function CallbackPage() {
           </h1>
           <p className="mt-3 text-sm text-muted-foreground">{error}</p>
           <a
-            href="/web/login/"
+            href={withBasePath(LOGIN_PATH)}
             className="mt-6 inline-block text-sm font-medium text-primary hover:text-[var(--primary-hover)] transition-colors"
           >
             {t("callback.back_to_login")}

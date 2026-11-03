@@ -2,8 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupTextarea,
+} from "@/components/ui/input-group";
 import {
   Select,
   SelectContent,
@@ -63,17 +67,15 @@ function InsertRoleButton({ label, onInsert }: { label: string; onInsert: () => 
       <TooltipRoot>
         <TooltipTrigger
           render={
-            <Button
-              type="button"
-              variant="ghost"
+            <InputGroupButton
               size="xs"
               aria-label={label}
-              className="rounded-full px-2 text-muted-foreground hover:text-foreground"
+              className="rounded-full text-muted-foreground hover:text-foreground"
               onClick={onInsert}
             >
               <Plus className="size-3" />
               <span className="font-mono text-[11px]">{label}</span>
-            </Button>
+            </InputGroupButton>
           }
         />
         <TooltipContent>{label}</TooltipContent>
@@ -192,8 +194,9 @@ export function Composer({
     </TooltipProvider>
   );
 
+  // 与对话区正文等宽：滚动条槽 8px + 正文 px-1 4px，见 conversation-view 的 scrollbar-gutter
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 px-3">
       {keysLoaded && keys.length === 0 && (
         <div className="flex items-start gap-2 rounded-xl border border-border bg-muted/40 px-3 py-2 text-[12.5px] text-muted-foreground">
           <KeyRound className="mt-0.5 size-3.5 shrink-0" />
@@ -206,15 +209,15 @@ export function Composer({
         </div>
       )}
 
-      <div className="rounded-[1.5rem] border border-border bg-card px-3 pt-2 pb-2 shadow-sm transition-[border-color,box-shadow] focus-within:border-primary/40 focus-within:shadow-md">
-        <Textarea
+      <InputGroup className="h-auto flex-col items-stretch rounded-[1.5rem] border-input bg-card px-0 pb-0 has-disabled:bg-card has-disabled:opacity-100 dark:bg-card">
+        <InputGroupTextarea
           value={value}
           placeholder={
             isMobile
               ? t("playground.composer.placeholder_mobile")
               : t("playground.composer.placeholder")
           }
-          className="max-h-48 min-h-[3rem] resize-none border-0 bg-transparent px-1 py-1.5 text-[15px] leading-[1.6] shadow-none focus-visible:ring-0 dark:bg-transparent"
+          className="max-h-48 min-h-[3rem] px-4 pt-3 pb-1 text-[15px] leading-[1.6]"
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => {
             // 输入法组词中的 Enter 属于选词，不当作发送
@@ -224,7 +227,7 @@ export function Composer({
             }
           }}
         />
-        <div className="flex flex-wrap items-center justify-between gap-1.5 pt-1">
+        <InputGroupAddon align="block-end" className="flex-wrap justify-between gap-1.5 px-3 pb-2">
           <div className="flex items-center gap-0.5">
             <InsertRoleButton
               label={t("playground.composer.insert_system")}
@@ -236,35 +239,35 @@ export function Composer({
             />
           </div>
 
-          <div className="flex min-w-0 items-center gap-1">
+          {/* ml-auto：页脚换行后右侧控件仍贴右，不左对齐留出大片空白 */}
+          <div className="ml-auto flex min-w-0 items-center gap-1">
             {modelSelect}
             {keySelect}
             {sending ? (
-              <Button
-                type="button"
-                variant="outline"
+              <InputGroupButton
                 size="icon-sm"
+                variant="outline"
                 className="rounded-full"
                 aria-label={t("playground.stop")}
                 onClick={onStop}
               >
                 <Square className="size-3.5" />
-              </Button>
+              </InputGroupButton>
             ) : (
-              <Button
-                type="button"
+              <InputGroupButton
                 size="icon-sm"
+                variant="default"
                 className="rounded-full"
                 aria-label={t("playground.send")}
                 disabled={disabled || value.trim() === ""}
                 onClick={submit}
               >
                 <ArrowUp className="size-4" />
-              </Button>
+              </InputGroupButton>
             )}
           </div>
-        </div>
-      </div>
+        </InputGroupAddon>
+      </InputGroup>
     </div>
   );
 }

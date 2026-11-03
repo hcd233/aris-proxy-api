@@ -143,6 +143,48 @@ export function foldTopModels(
   return { keys, data };
 }
 
+export const MODEL_METRICS: readonly ModelMetric[] = ["cost", "requests", "tokens"];
+
+/** 持久化值可能是脏数据：只接受三种指标，其余回落到费用 */
+export function resolveModelMetric(value: unknown): ModelMetric {
+  return MODEL_METRICS.find((m) => m === value) ?? "cost";
+}
+
+export interface PointModelEntry {
+  key: string;
+  value: number;
+}
+
+/**
+ * 每个时间点独立取 Top n 模型（只计正值，零值不展示）；其余合计为 OTHER_KEY 并恒置末尾，不参与排名。
+ * 供图例 / tooltip 使用：与堆叠图的全局 Top n 互不影响。返回 时间戳(ms) → 有序条目。
+ */
+export function rankModelsPerPoint(
+  rows: DashboardModelPoint[],
+  metric: ModelMetric,
+  n = 5,
+): Map<number, PointModelEntry[]> {
+  const byTime = new Map<number, Map<string, number>>();
+  for (const r of rows) {
+    const t = new Date(r.time).getTime();
+    let models = byTime.get(t);
+    if (!models) {
+      models = new Map();
+      byTime.set(t, models);
+    }
+    models.set(r.modelId, (models.get(r.modelId) ?? 0) + r[metric]);
+  }
+  const out = new Map<number, PointModelEntry[]>();
+  for (const [t, models] of byTime) {
+    const ranked = [...models.entries()].filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+    const entries: PointModelEntry[] = ranked.slice(0, n).map(([key, value]) => ({ key, value }));
+    const rest = ranked.slice(n).reduce((s, [, v]) => s + v, 0);
+    if (rest > 0) entries.push({ key: OTHER_KEY, value: rest });
+    out.set(t, entries);
+  }
+  return out;
+}
+
 /** 状态条分档：失败率 < 1% ok、1–5% warn、≥ 5% bad，无请求 idle（与 Endpoint 健康点同一阈值） */
 export type UptimeLevel = "ok" | "warn" | "bad" | "idle";
 
@@ -166,6 +208,11 @@ export function heatmapMatrix(cells: DashboardHeatmapCell[]): number[][] {
 
 const DASH = "\u2014";
 
+/** 环比百分比上限：上一周期基数极小时比值会失真（3K → 2.9M 读作 ▲91,814.9%），
+ *  超过 999% 一律归并为「999%+」，避免天文数字抢走卡片视线——它已经表达完了
+ *  「涨很多」这个信息，多余位数不提供任何额外判断。 */
+const DELTA_PCT_CAP = 999;
+
 /**
  * 环比文案：用量类为相对百分比，比率类为百分点（pt），延迟为时长差；无环比渲染「—」。
  * 箭头只表达涨跌方向，好坏由 deltaTone 着色。
@@ -178,7 +225,9 @@ export function formatDelta(kind: KpiKind, delta: number | null): string {
   if (kind === "successRate" || kind === "cacheHitRate") {
     return `${arrow} ${formatDecimal(abs * 100, 1)}pt`;
   }
-  return `${arrow} ${formatDecimal(abs * 100, 1)}%`;
+  const pct = abs * 100;
+  if (pct > DELTA_PCT_CAP) return `${arrow} ${DELTA_PCT_CAP}%+`;
+  return `${arrow} ${formatDecimal(pct, 1)}%`;
 }
 
 /** 0-1 比率 → 百分比文案（null 渲染「—」） */

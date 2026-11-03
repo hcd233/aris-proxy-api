@@ -1036,6 +1036,9 @@ export interface DashboardEndpointListRsp extends CommonRsp {
   data?: DashboardEndpointItem[];
 }
 
+/** Top 排行的排序指标 / 占比口径 */
+export type DashboardTopSort = "cost" | "requests";
+
 export interface DashboardTopItem {
   key: string;
   name: string;
@@ -1044,6 +1047,7 @@ export interface DashboardTopItem {
   cacheHitRate?: number;
   cost: number;
   costShare: number;
+  requestShare: number;
 }
 
 export interface DashboardTop {

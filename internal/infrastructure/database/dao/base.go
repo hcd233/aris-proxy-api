@@ -163,6 +163,31 @@ func (dao *baseDAO[ModelT]) BatchGetByField(db *gorm.DB, whereField string, valu
 	return
 }
 
+// BatchGetByFieldWithDeleted 根据指定字段的多个值批量查询数据，包含已软删除记录
+//
+// 仅适用于以 int64 deleted_at 列自管理删除标记的表（如 proxy_api_keys、users）；
+// 使用 gorm.DeletedAt 的表会被 GORM 软删作用域过滤，本方法无法绕过。
+//
+//	@param db *gorm.DB
+//	@param whereField string 字段名
+//	@param values any 字段值列表（切片类型，如 []string、[]uint 等）
+//	@param selectFields []string 查询字段
+//	@return data []*ModelT
+//	@return err error
+//	@author centonhuang
+//	@update 2026-11-03 10:00:00
+func (dao *baseDAO[ModelT]) BatchGetByFieldWithDeleted(db *gorm.DB, whereField string, values any, selectFields []string) (data []*ModelT, err error) {
+	if values == nil {
+		return []*ModelT{}, nil
+	}
+	var batch []*ModelT
+	err = db.Select(selectFields).Where(fmt.Sprintf(constant.DBConditionInTemplate, whereField), values).FindInBatches(&batch, config.SQLBatchSize, func(tx *gorm.DB, n int) error {
+		data = append(data, batch...)
+		return nil
+	}).Error
+	return
+}
+
 // FindAllSoftDeleted 查询所有被软删除的记录
 //
 //	@receiver dao *baseDAO[ModelT]

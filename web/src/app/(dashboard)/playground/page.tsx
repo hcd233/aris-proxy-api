@@ -353,11 +353,14 @@ function PlaygroundPage() {
   const active = sessions.find((s) => s.id === activeId) ?? sessions[0];
   if (!active) return null;
 
+  // 负 margin 抵消 dashboard 内容区的 padding，高度锚定到视口：对话区吃掉剩余空间，输入区因此贴底，
+  // 而不是悬在页面中部（原 h-[calc(100dvh-13rem)] 硬编码标题区高度，误差约 48px）。
+  // < md 时内容区上方还有 3.5rem 的 MobileTopBar，需从视口高度里扣掉。
   return (
-    <LocaleFade>
-      <div className="space-y-4">
+    <LocaleFade className="-mx-4 -mt-4 -mb-4 flex h-[calc(100dvh-3.5rem)] flex-col md:-mx-8 md:-mt-8 md:-mb-8 md:h-[100dvh] lg:-mx-10 lg:-mt-10 lg:-mb-10">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 p-4 md:p-8 lg:p-10">
         <PageHeader title={t("playground.title")} description={t("playground.description")} />
-        <div className="flex h-[calc(100dvh-13rem)] gap-4">
+        <div className="flex min-h-0 flex-1 gap-4">
           {/* 会话侧栏：lg+ 常驻；< lg 走 Sheet 抽屉 */}
           <aside className="hidden w-60 shrink-0 border-r border-border/60 pr-4 lg:block">
             <SessionSidebar
@@ -386,6 +389,8 @@ function PlaygroundPage() {
               <ConversationView
                 messages={active.messages}
                 sending={sending}
+                canSuggest={!sending && !!params.model && params.apiKeyID !== null}
+                onSuggest={handleSend}
                 onEditSave={handleEditSave}
                 onDelete={handleDelete}
                 onRerun={handleRerun}

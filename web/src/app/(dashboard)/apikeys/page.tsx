@@ -336,20 +336,36 @@ export default function APIKeysPage() {
                     ))}
                   </ItemGroup>
                 ) : (
-                  <Table>
+                  <Table fit>
                     <TableHeader>
                       <TableRow>
+                        {/* 名称不声明宽度：fixed 布局把剩余空间全给这一列 */}
                         <TableHead>{t("apikeys.name")}</TableHead>
-                        <TableHead>{t("apikeys.user")}</TableHead>
-                        <TableHead>{t("apikeys.key")}</TableHead>
-                        <TableHead>{t("apikeys.created")}</TableHead>
-                        <TableHead className="text-right">{t("common.actions")}</TableHead>
+                        <TableHead className="w-[10rem]">{t("apikeys.user")}</TableHead>
+                        <TableHead className="w-[7.5rem]">{t("apikeys.key")}</TableHead>
+                        <TableHead className="w-[6.5rem]">{t("apikeys.created")}</TableHead>
+                        <TableHead className="w-[6.5rem] text-right">
+                          {t("common.actions")}
+                        </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {keys.map((key) => (
                         <TableRow key={key.id}>
-                          <TableCell className="font-medium">{key.name}</TableCell>
+                          <TableCell className="font-medium">
+                            <TooltipRoot>
+                              <TooltipTrigger
+                                render={<span className="block truncate">{key.name}</span>}
+                              />
+                              <TooltipContent
+                                side="top"
+                                align="start"
+                                className="max-w-xs break-all"
+                              >
+                                {key.name}
+                              </TooltipContent>
+                            </TooltipRoot>
+                          </TableCell>
                           <TableCell>
                             {key.user ? (
                               <span className="flex items-center gap-2">
@@ -376,10 +392,10 @@ export default function APIKeysPage() {
                               <span className="text-muted-foreground">—</span>
                             )}
                           </TableCell>
-                          <TableCell className="font-mono text-xs text-muted-foreground">
+                          <TableCell className="font-mono text-xs text-muted-foreground tabular-nums">
                             {key.key}
                           </TableCell>
-                          <TableCell className="text-muted-foreground">
+                          <TableCell className="text-muted-foreground tabular-nums">
                             {formatDate(key.createdAt)}
                           </TableCell>
                           <TableCell className="text-right">
