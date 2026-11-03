@@ -166,6 +166,11 @@ export function heatmapMatrix(cells: DashboardHeatmapCell[]): number[][] {
 
 const DASH = "\u2014";
 
+/** 环比百分比上限：上一周期基数极小时比值会失真（3K → 2.9M 读作 ▲91,814.9%），
+ *  超过 999% 一律归并为「999%+」，避免天文数字抢走卡片视线——它已经表达完了
+ *  「涨很多」这个信息，多余位数不提供任何额外判断。 */
+const DELTA_PCT_CAP = 999;
+
 /**
  * 环比文案：用量类为相对百分比，比率类为百分点（pt），延迟为时长差；无环比渲染「—」。
  * 箭头只表达涨跌方向，好坏由 deltaTone 着色。
@@ -178,7 +183,9 @@ export function formatDelta(kind: KpiKind, delta: number | null): string {
   if (kind === "successRate" || kind === "cacheHitRate") {
     return `${arrow} ${formatDecimal(abs * 100, 1)}pt`;
   }
-  return `${arrow} ${formatDecimal(abs * 100, 1)}%`;
+  const pct = abs * 100;
+  if (pct > DELTA_PCT_CAP) return `${arrow} ${DELTA_PCT_CAP}%+`;
+  return `${arrow} ${formatDecimal(pct, 1)}%`;
 }
 
 /** 0-1 比率 → 百分比文案（null 渲染「—」） */

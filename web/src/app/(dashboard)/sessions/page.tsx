@@ -34,7 +34,7 @@ import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth-context";
 import { PermissionGuard } from "@/components/permission-guard";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { formatDateTime, truncateText } from "@/lib/utils";
+import { cn, formatDateTime, truncateText } from "@/lib/utils";
 import { ScoreDots } from "@/components/session-detail/score-dots";
 import { PageHeader } from "@/components/page-header";
 import { ListEmptyState } from "@/components/list-empty-state";
@@ -56,6 +56,15 @@ import { useFilterBar } from "@/components/filter-bar/use-filter-bar";
 import type { FacetDef, FilterBarQueryParams } from "@/components/filter-bar/types";
 
 type SortDir = "asc" | "desc";
+
+/* Table-Fit 列宽预算（1280 视口容器实测 902px，1512 视口 1118px）：
+ * 「摘要」是唯一不声明宽度的主列，吃剩余空间；其余列声明宽度合计必须留够它。
+ * 常驻列合计 708px → 902 下摘要 ~150px，仍不够，于是把两个低价值列按容器宽度
+ * 渐进显示（Progressive Columns）：窄容器先收起评分与工具数，摘要稳定在 ~200px。
+ * 阈值是表格可用宽度，不是视口宽度。 */
+const SHOW_SCORE_FROM = "hidden @min-[64rem]:table-cell";
+const SHOW_TOOL_FROM = "hidden @min-[58rem]:table-cell";
+const SHOW_AGENT_FROM = "hidden @min-[52rem]:table-cell";
 
 const SORTABLE_COLUMNS: Record<string, string> = {
   createdAt: "created_at",
@@ -322,7 +331,7 @@ export default function SessionsPage() {
           <CardHeader>
             <CardTitle className="font-display">{t("sessions.all_sessions")}</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="@container">
             {/* Filters — faceted bar */}
             <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center">
               <TimeRangePicker
@@ -519,11 +528,11 @@ export default function SessionsPage() {
                         </TableHead>
                         {/* 摘要不声明宽度：fixed 布局把剩余空间全给这一列 */}
                         <TableHead>{t("sessions.summary")}</TableHead>
-                        <TableHead className="w-[10rem] text-center">
+                        <TableHead className={cn("w-[10rem] text-center", SHOW_SCORE_FROM)}>
                           {t("sessions.score")}
                         </TableHead>
                         <TableHead
-                          className="w-[4rem] cursor-pointer select-none whitespace-nowrap"
+                          className="w-[3.5rem] cursor-pointer select-none whitespace-nowrap"
                           onClick={() => handleSort(SORTABLE_COLUMNS.messageCount)}
                         >
                           <span className="inline-flex items-center gap-1">
@@ -531,16 +540,26 @@ export default function SessionsPage() {
                           </span>
                         </TableHead>
                         <TableHead
-                          className="w-[4rem] cursor-pointer select-none whitespace-nowrap"
+                          className={cn(
+                            "w-[3.5rem] cursor-pointer select-none whitespace-nowrap",
+                            SHOW_TOOL_FROM,
+                          )}
                           onClick={() => handleSort(SORTABLE_COLUMNS.toolCount)}
                         >
                           <span className="inline-flex items-center gap-1">
                             {t("sessions.tools")} {renderSortIcon(SORTABLE_COLUMNS.toolCount)}
                           </span>
                         </TableHead>
-                        <TableHead className="w-[120px]">{t("sessions.harness")}</TableHead>
+                        <TableHead className={cn("w-[120px]", SHOW_AGENT_FROM)}>
+                          {t("sessions.harness")}
+                        </TableHead>
                         <TableHead className="w-[140px]">{t("sessions.models")}</TableHead>
-                        <TableHead className="w-[104px] sr-only">{t("common.actions")}</TableHead>
+                        <TableHead className="w-[104px]">
+                          {/* sr-only 只能包文字：直接写在 th 上会把它变成绝对定位，
+                              该列宽度因此不计入 fixed 布局的声明总和，剩下一截空白既不归
+                              主列也不归任何列（实测 902px 容器丢 53px） */}
+                          <span className="sr-only">{t("common.actions")}</span>
+                        </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -566,7 +585,7 @@ export default function SessionsPage() {
                             <TableCell className="text-muted-foreground">
                               {formatDateTime(s.createdAt)}
                             </TableCell>
-                            <TableCell className="max-w-[200px]">
+                            <TableCell>
                               <TooltipRoot>
                                 <TooltipTrigger
                                   render={
@@ -580,7 +599,7 @@ export default function SessionsPage() {
                                 </TooltipContent>
                               </TooltipRoot>
                             </TableCell>
-                            <TableCell className="w-[160px]">
+                            <TableCell className={cn("w-[160px]", SHOW_SCORE_FROM)}>
                               <div className="flex justify-center">
                                 <ScoreDots
                                   score={s.score}
@@ -591,9 +610,11 @@ export default function SessionsPage() {
                                 />
                               </div>
                             </TableCell>
-                            <TableCell>{s.messageCount ?? 0}</TableCell>
-                            <TableCell>{s.toolCount ?? 0}</TableCell>
-                            <TableCell>
+                            <TableCell className="tabular-nums">{s.messageCount ?? 0}</TableCell>
+                            <TableCell className={cn("tabular-nums", SHOW_TOOL_FROM)}>
+                              {s.toolCount ?? 0}
+                            </TableCell>
+                            <TableCell className={SHOW_AGENT_FROM}>
                               <Badge
                                 variant={
                                   s.agentHarness && s.agentHarness !== "Other"

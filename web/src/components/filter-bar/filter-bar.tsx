@@ -245,6 +245,8 @@ export function FilterBar({
         <ComboboxPrimitive.Input
           ref={inputRef}
           placeholder={tokens.length === 0 ? placeholder : undefined}
+          /* placeholder 会在输入 token 后消失，不能当可访问名：单独给一个稳定的 aria-label */
+          aria-label={placeholder ?? t("common.search")}
           autoComplete="off"
           spellCheck={false}
           className="min-w-32 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"

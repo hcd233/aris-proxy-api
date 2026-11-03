@@ -259,13 +259,21 @@ const STATES = [
   {
     key: "closed",
     tone: "bg-positive",
+    soft: "bg-positive/10 ring-positive/30",
     label: "CLOSED",
     desc: "portal.cap.resilience.state_closed",
   },
-  { key: "open", tone: "bg-negative", label: "OPEN", desc: "portal.cap.resilience.state_open" },
+  {
+    key: "open",
+    tone: "bg-negative",
+    soft: "bg-negative/10 ring-negative/30",
+    label: "OPEN",
+    desc: "portal.cap.resilience.state_open",
+  },
   {
     key: "half_open",
     tone: "bg-warning",
+    soft: "bg-warning/10 ring-warning/30",
     label: "HALF-OPEN",
     desc: "portal.cap.resilience.state_half_open",
   },
@@ -301,9 +309,11 @@ export function BreakerDemo() {
             <span
               className={cn(
                 "rounded-xl px-1.5 py-3 text-center text-xs font-medium transition-all duration-300",
+                /* 非当前态也带该状态的语义色（淡化到 10%）：否则静止看这张图时
+                 * 三个状态长得一模一样，读者要等动画转到 OPEN 才知道哪个是“熔断” */
                 f.state === s.key
                   ? cn(s.tone, "text-background shadow-md")
-                  : "bg-card text-foreground shadow-sm ring-1 ring-border/60",
+                  : cn(s.soft, "text-foreground shadow-sm ring-1"),
               )}
             >
               {s.label}

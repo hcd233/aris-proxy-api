@@ -298,17 +298,40 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
       )}
 
       <div className="order-last flex w-full min-w-0 shrink-0 flex-col items-center px-1 leading-tight md:order-none md:w-auto md:flex-1 md:shrink">
-        <h1
-          className={[
-            "truncate font-display font-semibold tracking-tight text-foreground",
-            "transition-[font-size] duration-200 ease-out",
-            isMobile && headerCompact ? "text-[14px]" : "text-[15px]",
-          ]
-            .filter(Boolean)
-            .join(" ")}
-        >
-          {t("session_history.session_label").replace("{id}", String(metadata.id))}
-        </h1>
+        <div className="flex max-w-full min-w-0 items-center gap-1.5">
+          <h1
+            className={[
+              "truncate font-display font-semibold tracking-tight text-foreground",
+              "transition-[font-size] duration-200 ease-out",
+              isMobile && headerCompact ? "text-[14px]" : "text-[15px]",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+          >
+            {t("session_history.session_label").replace("{id}", String(metadata.id))}
+          </h1>
+          {/* Agent 徽标跟标题同行：放在副标题下面会单独占一行，把头部塑成三层、
+              还会把两行文字间的行距拉得像空隙。 */}
+          <TooltipRoot>
+            <TooltipTrigger
+              render={
+                <Badge
+                  variant={
+                    metadata.agentHarness && metadata.agentHarness !== "Other"
+                      ? "secondary"
+                      : "outline"
+                  }
+                  className="shrink-0 text-[11px]"
+                >
+                  {metadata.agentHarness || "Other"}
+                </Badge>
+              }
+            />
+            <TooltipContent side="bottom" className="max-w-xs break-all">
+              {metadata.clientUA || t("sessions.ua_missing")}
+            </TooltipContent>
+          </TooltipRoot>
+        </div>
         <p
           className={[
             "truncate text-[11px] text-muted-foreground",
@@ -323,25 +346,6 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
             .replace("{s}", messageCount === 1 ? "" : "s")}
           {metadata.apiKeyName ? ` · ${metadata.apiKeyName}` : ""}
         </p>
-        <TooltipRoot>
-          <TooltipTrigger
-            render={
-              <Badge
-                variant={
-                  metadata.agentHarness && metadata.agentHarness !== "Other"
-                    ? "secondary"
-                    : "outline"
-                }
-                className="mt-1 text-[11px]"
-              >
-                {metadata.agentHarness || "Other"}
-              </Badge>
-            }
-          />
-          <TooltipContent side="bottom" className="max-w-xs break-all">
-            {metadata.clientUA || t("sessions.ua_missing")}
-          </TooltipContent>
-        </TooltipRoot>
         {isMobile && !isDemo() && (
           <div className="mt-1">
             <ScoreDots

@@ -207,9 +207,11 @@ export default function CronPage() {
                 <Table fit>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>{t("cron.name")}</TableHead>
+                      <TableHead className="w-[8rem]">{t("cron.name")}</TableHead>
                       <TableHead className="w-[4.5rem]">{t("cron.type")}</TableHead>
-                      <TableHead className="w-[12rem]">{t("cron.spec")}</TableHead>
+                      <TableHead className="w-[10.5rem]">{t("cron.spec")}</TableHead>
+                      {/* 描述不声明宽度：fixed 布局只允许一列吃剩余空间，两列都留空
+                          会把剩余宽度对半分，描述只剩 ~150px（英文句子只剩三个词） */}
                       <TableHead>{t("cron.description")}</TableHead>
                       <TableHead className="w-[5rem]">{t("cron.enabled")}</TableHead>
                       <TableHead className="w-[10.5rem]">{t("cron.updated_at")}</TableHead>
@@ -235,7 +237,7 @@ export default function CronPage() {
                           </TooltipRoot>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={job.type === "core" ? "default" : "secondary"}>
+                          <Badge variant={job.type === "core" ? "outline" : "secondary"}>
                             {job.type === "core" ? t("cron.core") : t("cron.functional")}
                           </Badge>
                         </TableCell>
@@ -279,7 +281,7 @@ export default function CronPage() {
                           <TooltipRoot>
                             <TooltipTrigger
                               render={
-                                <span className="block max-w-[30ch] truncate">
+                                <span className="block max-w-full truncate">
                                   {job.description || "—"}
                                 </span>
                               }
