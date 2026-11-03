@@ -94,7 +94,8 @@ export function ConversationView({
     <MessageScrollerProvider autoScroll defaultScrollPosition="end">
       {/* h-auto + flex-1：与上方工具行、下方输入区共享父容器高度（组件默认 size-full 会撑满父级） */}
       <MessageScroller className="h-auto min-h-0 flex-1">
-        <MessageScrollerViewport>
+        {/* 两侧对称预留滚动条槽（globals.css 的 8px 滚动条）：正文列宽不随滚动条出现而跳变，并与 Composer 的 px-3 等宽 */}
+        <MessageScrollerViewport className="[scrollbar-gutter:stable_both-edges]">
           <MessageScrollerContent aria-busy={sending} className="px-1 py-6">
             {messages.map((m, i) => (
               <MessageScrollerItem key={m.id} messageId={m.id} scrollAnchor={m.role === "user"}>

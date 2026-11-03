@@ -194,8 +194,9 @@ export function Composer({
     </TooltipProvider>
   );
 
+  // 与对话区正文等宽：滚动条槽 8px + 正文 px-1 4px，见 conversation-view 的 scrollbar-gutter
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 px-3">
       {keysLoaded && keys.length === 0 && (
         <div className="flex items-start gap-2 rounded-xl border border-border bg-muted/40 px-3 py-2 text-[12.5px] text-muted-foreground">
           <KeyRound className="mt-0.5 size-3.5 shrink-0" />
@@ -238,7 +239,8 @@ export function Composer({
             />
           </div>
 
-          <div className="flex min-w-0 items-center gap-1">
+          {/* ml-auto：页脚换行后右侧控件仍贴右，不左对齐留出大片空白 */}
+          <div className="ml-auto flex min-w-0 items-center gap-1">
             {modelSelect}
             {keySelect}
             {sending ? (
