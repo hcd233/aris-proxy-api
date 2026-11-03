@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
+import { usePersistentState } from "@/hooks/use-persistent-state";
 import { api } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
 import { useT } from "@/lib/i18n";
 import { cn, formatInteger, formatTokenCount } from "@/lib/utils";
-import { formatCostShort, formatRate, type ModelMetric } from "@/lib/dashboard";
+import { formatCostShort, formatRate } from "@/lib/dashboard";
 import type { DashboardDimension } from "@/lib/types";
 import {
   Table,
@@ -29,26 +30,28 @@ import { useOverview } from "@/components/dashboard/overview-context";
 import { useDashboardQuery } from "@/components/dashboard/use-dashboard-query";
 import type { DashboardRange } from "@/components/dashboard/use-dashboard-range";
 
-/**
- * Top 排行：维度可切换；普通用户没有「用户」维度（后端同样拒绝）。
- * 排序与占比口径跟随模型用量的指标切换（metric 由页面持有并持久化）。
- */
-export function TopRankingPanel({ range, metric }: { range: DashboardRange; metric: ModelMetric }) {
+/** Top 排行：维度可切换并持久化；普通用户没有「用户」维度（后端同样拒绝） */
+export function TopRankingPanel({ range }: { range: DashboardRange }) {
   const t = useT();
   const { isAdmin, isDemo } = useAuth();
   const dims: DashboardDimension[] =
     isAdmin() || isDemo() ? ["model", "user", "apikey", "harness"] : ["model", "apikey", "harness"];
-  const [dimension, setDimension] = useState<DashboardDimension>("model");
+  const [storedDimension, setStoredDimension] = usePersistentState<string>(
+    "dashboard.topDimension",
+    "model",
+  );
+  // 同一浏览器可能换号登录：存的维度不在当前身份可选范围内（如普通用户读到 user）时回落到模型
+  const dimension = dims.find((d) => d === storedDimension) ?? "model";
   const { data: overview } = useOverview();
   const { startTime, endTime, refreshToken } = range;
 
   const fetcher = useCallback(async () => {
-    const rsp = await api.fetchDashboardTop({ startTime, endTime, dimension, metric, limit: 5 });
+    const rsp = await api.fetchDashboardTop({ startTime, endTime, dimension, limit: 5 });
     if (!rsp.data) throw new Error("empty top");
     return rsp.data;
-  }, [startTime, endTime, dimension, metric]);
+  }, [startTime, endTime, dimension]);
   const { data, loading, error, retry } = useDashboardQuery(
-    `${startTime}|${endTime}|${dimension}|${metric}|${refreshToken}`,
+    `${startTime}|${endTime}|${dimension}|${refreshToken}`,
     fetcher,
   );
   const currency = overview?.currency;
@@ -68,7 +71,7 @@ export function TopRankingPanel({ range, metric }: { range: DashboardRange; metr
           spacing={0.5}
           value={[dimension]}
           onValueChange={(next) => {
-            if (next[0]) setDimension(next[0] as DashboardDimension);
+            if (next[0]) setStoredDimension(String(next[0]));
           }}
         >
           {dims.map((d) => (
@@ -121,11 +124,11 @@ export function TopRankingPanel({ range, metric }: { range: DashboardRange; metr
                   <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
                     <div
                       className="h-full rounded-full bg-primary"
-                      style={{ width: `${Math.min(100, item.metricShare * 100)}%` }}
+                      style={{ width: `${Math.min(100, item.costShare * 100)}%` }}
                     />
                   </div>
                   <span className="w-8 text-right text-[11px] text-muted-foreground">
-                    {formatRate(item.metricShare, 0)}
+                    {formatRate(item.costShare, 0)}
                   </span>
                 </div>
               </TableCell>

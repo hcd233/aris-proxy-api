@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo } from "react";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { usePersistentState } from "@/hooks/use-persistent-state";
 import { api } from "@/lib/api-client";
 import { useI18n } from "@/lib/i18n";
 import { useChartSeriesColors } from "@/lib/theme";
@@ -14,7 +15,7 @@ import {
   MODEL_METRICS,
   OTHER_KEY,
   rankModelsPerPoint,
-  type ModelMetric,
+  resolveModelMetric,
 } from "@/lib/dashboard";
 import { ChartContainer, ChartTooltip, type ChartConfig } from "@/components/ui/chart";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -26,17 +27,14 @@ import type { DashboardRange } from "@/components/dashboard/use-dashboard-range"
 /** 堆叠图与图例（tooltip）每个时间点展示的模型数上限，其余归入「其他」 */
 const TOP_K = 5;
 
-/** 模型用量：全局 Top K 模型堆叠 + 「其他」；图例按每个时间点独立取 Top K；指标由页面持有 */
-export function UsageTrendPanel({
-  range,
-  metric,
-  onMetricChange,
-}: {
-  range: DashboardRange;
-  metric: ModelMetric;
-  onMetricChange: (next: ModelMetric) => void;
-}) {
+/** 模型用量：全局 Top K 模型堆叠 + 「其他」；图例按每个时间点独立取 Top K；指标切换持久化 */
+export function UsageTrendPanel({ range }: { range: DashboardRange }) {
   const { t, locale } = useI18n();
+  const [storedMetric, setStoredMetric] = usePersistentState<string>(
+    "dashboard.usageMetric",
+    "cost",
+  );
+  const metric = resolveModelMetric(storedMetric);
   const colors = useChartSeriesColors();
   const motion = useChartMotion();
   const { data: overview, scope: overviewScope } = useOverview();
@@ -144,7 +142,7 @@ export function UsageTrendPanel({
           value={[metric]}
           onValueChange={(next) => {
             const picked = MODEL_METRICS.find((m) => m === next[0]);
-            if (picked) onMetricChange(picked);
+            if (picked) setStoredMetric(picked);
           }}
         >
           {MODEL_METRICS.map((m) => (

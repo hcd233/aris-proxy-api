@@ -33,7 +33,7 @@ func (f *fakeDashboard) Overview(_ context.Context, s port.DashboardScope, _, _ 
 	return f.overview, nil
 }
 
-func (f *fakeDashboard) TopUsage(_ context.Context, s port.DashboardScope, _, _ time.Time, _ enum.DashboardDimension, _ enum.DashboardMetric, _ int) (*port.DashboardTop, error) {
+func (f *fakeDashboard) TopUsage(_ context.Context, s port.DashboardScope, _, _ time.Time, _ enum.DashboardDimension, _ int) (*port.DashboardTop, error) {
 	f.scope = s
 	return f.top, nil
 }
@@ -124,15 +124,15 @@ func TestDashboardHandler_TopComputesShareAndHitRate(t *testing.T) {
 			{Key: "a", Name: "a", Requests: 3, PromptTokens: 100, CacheReadTokens: 40, CostMicro: 750_000},
 			{Key: "b", Name: "b", Requests: 1},
 		},
-		OtherRequests: 2, TotalCostMicro: 1_000_000, TotalMetric: 1_000_000,
+		OtherRequests: 2, TotalCostMicro: 1_000_000,
 	}}
-	req := &dto.DashboardTopReq{StartTime: start, EndTime: end, Limit: 2, Dimension: enum.DashboardDimensionModel, Metric: enum.DashboardMetricCost}
+	req := &dto.DashboardTopReq{StartTime: start, EndTime: end, Limit: 2, Dimension: enum.DashboardDimensionModel}
 	rsp, err := newHandler(f).HandleDashboardTop(adminCtx(t), req)
 	if err != nil {
 		t.Fatalf("HandleDashboardTop: %v", err)
 	}
 	items := rsp.Body.Data.Items
-	if items[0].CostShare != 0.75 || items[0].MetricShare != 0.75 || items[0].CacheHitRate == nil || *items[0].CacheHitRate != 0.4 {
+	if items[0].CostShare != 0.75 || items[0].CacheHitRate == nil || *items[0].CacheHitRate != 0.4 {
 		t.Errorf("first = %+v, want share 0.75 hit 0.4", items[0])
 	}
 	if items[1].CacheHitRate != nil {
@@ -147,26 +147,8 @@ func TestDashboardHandler_TopComputesShareAndHitRate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("HandleDashboardTop(zero cost): %v", err)
 	}
-	if rsp.Body.Data.Items[0].CostShare != 0 || rsp.Body.Data.Items[0].MetricShare != 0 {
-		t.Errorf("zero total must give share 0, got %v/%v", rsp.Body.Data.Items[0].CostShare, rsp.Body.Data.Items[0].MetricShare)
-	}
-}
-
-func TestDashboardHandler_TopMetricShareFollowsRequests(t *testing.T) {
-	t.Parallel()
-
-	f := &fakeDashboard{top: &port.DashboardTop{
-		Items:          []*port.DashboardTopItem{{Key: "a", Name: "a", Requests: 30, CostMicro: 1_000_000}},
-		TotalCostMicro: 4_000_000, TotalMetric: 40,
-	}}
-	req := &dto.DashboardTopReq{StartTime: start, EndTime: end, Limit: 5, Dimension: enum.DashboardDimensionModel, Metric: enum.DashboardMetricRequests}
-	rsp, err := newHandler(f).HandleDashboardTop(adminCtx(t), req)
-	if err != nil {
-		t.Fatalf("HandleDashboardTop: %v", err)
-	}
-	item := rsp.Body.Data.Items[0]
-	if item.MetricShare != 0.75 || item.CostShare != 0.25 {
-		t.Errorf("metric share = %v (want 0.75 by requests), cost share = %v (want 0.25)", item.MetricShare, item.CostShare)
+	if rsp.Body.Data.Items[0].CostShare != 0 {
+		t.Errorf("zero total cost must give share 0, got %v", rsp.Body.Data.Items[0].CostShare)
 	}
 }
 

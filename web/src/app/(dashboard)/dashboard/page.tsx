@@ -1,9 +1,7 @@
 "use client";
 
 import { useT } from "@/lib/i18n";
-import { resolveModelMetric, type ModelMetric } from "@/lib/dashboard";
 import { DASHBOARD_REFRESH_INTERVALS } from "@/lib/refresh-interval";
-import { usePersistentState } from "@/hooks/use-persistent-state";
 import { PermissionGuard } from "@/components/permission-guard";
 import { AutoRefreshButton } from "@/components/shared/auto-refresh-button";
 import { TimeRangePicker } from "@/components/ui/time-range-picker";
@@ -41,10 +39,6 @@ function RefreshControl({ range }: { range: DashboardRange }) {
 export default function DashboardPage() {
   const t = useT();
   const range = useDashboardRange();
-  // 模型用量与 Top 排行共用同一指标口径，持久化后刷新页面保持上次选择
-  const [storedMetric, setStoredMetric] = usePersistentState<string>("dashboard.metric", "cost");
-  const metric = resolveModelMetric(storedMetric);
-  const setMetric = (next: ModelMetric) => setStoredMetric(next);
 
   return (
     <PermissionGuard module="dashboard">
@@ -76,13 +70,13 @@ export default function DashboardPage() {
 
             <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-3 max-xl:grid-rows-none">
               <div className="stagger-rise grid min-h-0 gap-3 max-xl:auto-rows-[18rem] lg:grid-cols-2 xl:grid-cols-[5fr_3fr_3fr]">
-                <UsageTrendPanel range={range} metric={metric} onMetricChange={setMetric} />
+                <UsageTrendPanel range={range} />
                 <ReliabilityPanel range={range} />
                 <LatencyPanel range={range} />
               </div>
               <div className="stagger-rise grid min-h-0 gap-3 max-xl:auto-rows-[16rem] lg:grid-cols-2 xl:grid-cols-[4fr_4fr_3fr]">
                 <EndpointHealthPanel range={range} />
-                <TopRankingPanel range={range} metric={metric} />
+                <TopRankingPanel range={range} />
                 <ActivityPanel range={range} />
               </div>
             </div>

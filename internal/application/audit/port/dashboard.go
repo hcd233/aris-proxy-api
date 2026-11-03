@@ -39,25 +39,11 @@ type DashboardTopItem struct {
 	CostMicro       int64
 }
 
-// MetricValue 取排行项在指定口径下的数值（未知口径按费用）
-func (it *DashboardTopItem) MetricValue(metric enum.DashboardMetric) int64 {
-	switch metric {
-	case enum.DashboardMetricRequests:
-		return it.Requests
-	case enum.DashboardMetricTokens:
-		return it.Tokens
-	default:
-		return it.CostMicro
-	}
-}
-
 // DashboardTop Top 排行结果：前 N 名 + 其余请求合计 + 全部费用合计（算占比用）
-// TotalMetric 为所选指标的全量合计（请求数 / token / 费用微单位），MetricShare 以它为分母
 type DashboardTop struct {
 	Items          []*DashboardTopItem
 	OtherRequests  int64
 	TotalCostMicro int64
-	TotalMetric    int64
 }
 
 // DashboardRelationLookup 按 API Key 批量查归属（Key 名、用户）
@@ -76,6 +62,6 @@ type DashboardService interface {
 	ModelSeries(ctx context.Context, s DashboardScope, start, end time.Time, g enum.Granularity) ([]*modelcall.DashboardModelPoint, error)
 	TopErrors(ctx context.Context, s DashboardScope, start, end time.Time, limit int) ([]*modelcall.DashboardErrorRow, error)
 	EndpointHealth(ctx context.Context, s DashboardScope, start, end time.Time, limit int) ([]*modelcall.DashboardEndpointRow, error)
-	TopUsage(ctx context.Context, s DashboardScope, start, end time.Time, dim enum.DashboardDimension, metric enum.DashboardMetric, limit int) (*DashboardTop, error)
+	TopUsage(ctx context.Context, s DashboardScope, start, end time.Time, dim enum.DashboardDimension, limit int) (*DashboardTop, error)
 	Heatmap(ctx context.Context, s DashboardScope, start, end time.Time, location string) ([]*modelcall.DashboardHeatmapCell, error)
 }
