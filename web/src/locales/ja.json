@@ -490,8 +490,6 @@
   "tool_sidebar.schema_type": "スキーマタイプ：{type}",
   "reading_layout.available_tools": "利用可能なツール",
   "reading_layout.close_tools": "ツールパネルを閉じる",
-  "permission_guard.loading": "読み込み中",
-  "permission_guard.preparing": "コンソールを準備中...",
   "permission_guard.access_denied": "アクセス拒否",
   "permission_guard.access_denied_desc": "このページにアクセスするには管理者権限が必要です。",
   "permission_guard.access_pending": "アクセス承認待ち",
