@@ -34,6 +34,7 @@ type DashboardTopReq struct {
 	EndTime   time.Time               `query:"endTime" required:"true" doc:"区间终点（RFC3339）"`
 	Limit     int                     `query:"limit" minimum:"1" maximum:"10" default:"5" doc:"返回条数"`
 	Dimension enum.DashboardDimension `query:"dimension" required:"true" enum:"model,user,apikey,harness" doc:"分组维度（user 仅 admin/demo 可用）"`
+	Metric    enum.DashboardMetric    `query:"metric" default:"cost" enum:"cost,requests,tokens" doc:"排序与占比口径"`
 }
 
 // DashboardHeatmapReq dashboard 活跃时段热力图请求
@@ -165,6 +166,7 @@ type DashboardTopItem struct {
 	CacheHitRate *float64 `json:"cacheHitRate,omitempty" doc:"缓存命中率 0-1"`
 	Cost         float64  `json:"cost" doc:"已计价费用"`
 	CostShare    float64  `json:"costShare" doc:"费用占比 0-1"`
+	MetricShare  float64  `json:"metricShare" doc:"所选指标占比 0-1（metric=cost 时等于 costShare）"`
 }
 
 // DashboardTop Top 排行

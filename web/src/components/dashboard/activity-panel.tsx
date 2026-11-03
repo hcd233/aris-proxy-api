@@ -30,7 +30,13 @@ export function ActivityPanel({ range }: { range: DashboardRange }) {
   const heat = useDashboardQuery(`${startTime}|${endTime}|${refreshToken}`, heatFetcher);
 
   const clientFetcher = useCallback(async () => {
-    const rsp = await api.fetchDashboardTop({ startTime, endTime, dimension: "harness", limit: 3 });
+    const rsp = await api.fetchDashboardTop({
+      startTime,
+      endTime,
+      dimension: "harness",
+      metric: "cost",
+      limit: 3,
+    });
     if (!rsp.data) throw new Error("empty top");
     return rsp.data;
   }, [startTime, endTime]);

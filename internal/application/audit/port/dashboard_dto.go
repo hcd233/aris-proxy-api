@@ -112,8 +112,8 @@ func ToDashboardEndpointsDTO(rows []*modelcall.DashboardEndpointRow) []*dto.Dash
 	})
 }
 
-// ToDashboardTopDTO 排行 → DTO（命中率分母为 0 时省略；占比分母为 0 时为 0）
-func ToDashboardTopDTO(top *DashboardTop) *dto.DashboardTop {
+// ToDashboardTopDTO 排行 → DTO（命中率分母为 0 时省略；占比分母为 0 时为 0；metricShare 按 metric 口径）
+func ToDashboardTopDTO(top *DashboardTop, metric enum.DashboardMetric) *dto.DashboardTop {
 	items := lo.Map(top.Items, func(it *DashboardTopItem, _ int) *dto.DashboardTopItem {
 		var hitRate *float64
 		if it.PromptTokens > 0 {
@@ -127,6 +127,7 @@ func ToDashboardTopDTO(top *DashboardTop) *dto.DashboardTop {
 			CacheHitRate: hitRate,
 			Cost:         dto.PriceDisplayFromMicro(it.CostMicro),
 			CostShare:    ratio(it.CostMicro, top.TotalCostMicro),
+			MetricShare:  ratio(it.MetricValue(metric), top.TotalMetric),
 		}
 	})
 	return &dto.DashboardTop{

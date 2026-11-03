@@ -5,7 +5,7 @@ import { api } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
 import { useT } from "@/lib/i18n";
 import { cn, formatInteger, formatTokenCount } from "@/lib/utils";
-import { formatCostShort, formatRate } from "@/lib/dashboard";
+import { formatCostShort, formatRate, type ModelMetric } from "@/lib/dashboard";
 import type { DashboardDimension } from "@/lib/types";
 import {
   Table,
@@ -29,8 +29,11 @@ import { useOverview } from "@/components/dashboard/overview-context";
 import { useDashboardQuery } from "@/components/dashboard/use-dashboard-query";
 import type { DashboardRange } from "@/components/dashboard/use-dashboard-range";
 
-/** Top 排行：维度可切换；普通用户没有「用户」维度（后端同样拒绝） */
-export function TopRankingPanel({ range }: { range: DashboardRange }) {
+/**
+ * Top 排行：维度可切换；普通用户没有「用户」维度（后端同样拒绝）。
+ * 排序与占比口径跟随模型用量的指标切换（metric 由页面持有并持久化）。
+ */
+export function TopRankingPanel({ range, metric }: { range: DashboardRange; metric: ModelMetric }) {
   const t = useT();
   const { isAdmin, isDemo } = useAuth();
   const dims: DashboardDimension[] =
@@ -40,12 +43,12 @@ export function TopRankingPanel({ range }: { range: DashboardRange }) {
   const { startTime, endTime, refreshToken } = range;
 
   const fetcher = useCallback(async () => {
-    const rsp = await api.fetchDashboardTop({ startTime, endTime, dimension, limit: 5 });
+    const rsp = await api.fetchDashboardTop({ startTime, endTime, dimension, metric, limit: 5 });
     if (!rsp.data) throw new Error("empty top");
     return rsp.data;
-  }, [startTime, endTime, dimension]);
+  }, [startTime, endTime, dimension, metric]);
   const { data, loading, error, retry } = useDashboardQuery(
-    `${startTime}|${endTime}|${dimension}|${refreshToken}`,
+    `${startTime}|${endTime}|${dimension}|${metric}|${refreshToken}`,
     fetcher,
   );
   const currency = overview?.currency;
@@ -118,11 +121,11 @@ export function TopRankingPanel({ range }: { range: DashboardRange }) {
                   <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
                     <div
                       className="h-full rounded-full bg-primary"
-                      style={{ width: `${Math.min(100, item.costShare * 100)}%` }}
+                      style={{ width: `${Math.min(100, item.metricShare * 100)}%` }}
                     />
                   </div>
                   <span className="w-8 text-right text-[11px] text-muted-foreground">
-                    {formatRate(item.costShare, 0)}
+                    {formatRate(item.metricShare, 0)}
                   </span>
                 </div>
               </TableCell>

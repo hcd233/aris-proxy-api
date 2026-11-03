@@ -207,7 +207,7 @@ func TestDashboardScope_UserWithoutKeysShortCircuits(t *testing.T) {
 	if _, err := svc.EndpointHealth(ctx, user, start, end, 5); err != nil {
 		t.Fatal(err)
 	}
-	top, err := svc.TopUsage(ctx, user, start, end, enum.DashboardDimensionModel, 5)
+	top, err := svc.TopUsage(ctx, user, start, end, enum.DashboardDimensionModel, enum.DashboardMetricCost, 5)
 	if err != nil || top == nil || len(top.Items) != 0 {
 		t.Errorf("TopUsage = (%+v, %v), want empty", top, err)
 	}
@@ -377,7 +377,7 @@ func TestDashboardTop_UserDimensionAggregatesByOwner(t *testing.T) {
 		3: {APIKeyID: 3, APIKeyName: "k3", UserID: 8, UserName: "bob"},
 	}
 	svc := newService(repo, nil, rel)
-	top, err := svc.TopUsage(t.Context(), admin, start, end, enum.DashboardDimensionUser, 1)
+	top, err := svc.TopUsage(t.Context(), admin, start, end, enum.DashboardDimensionUser, enum.DashboardMetricCost, 1)
 	if err != nil {
 		t.Fatalf("TopUsage: %v", err)
 	}
@@ -404,7 +404,7 @@ func TestDashboardTop_UserDimensionForbiddenForUser(t *testing.T) {
 
 	repo := &fakeRepo{}
 	svc := newService(repo, []uint{3}, nil)
-	_, err := svc.TopUsage(t.Context(), user, start, end, enum.DashboardDimensionUser, 5)
+	_, err := svc.TopUsage(t.Context(), user, start, end, enum.DashboardDimensionUser, enum.DashboardMetricCost, 5)
 	if !errors.Is(err, ierr.ErrNoPermission) {
 		t.Errorf("err = %v, want ErrNoPermission", err)
 	}
@@ -418,7 +418,7 @@ func TestDashboardTop_APIKeyNamesFromRelations(t *testing.T) {
 
 	repo := &fakeRepo{groups: []*modelcall.DashboardGroupRow{{Key: "1", Requests: 2}, {Key: "42", Requests: 1}}}
 	svc := newService(repo, nil, fakeRelations{1: {APIKeyID: 1, APIKeyName: "prod-key"}})
-	top, err := svc.TopUsage(t.Context(), admin, start, end, enum.DashboardDimensionAPIKey, 5)
+	top, err := svc.TopUsage(t.Context(), admin, start, end, enum.DashboardDimensionAPIKey, enum.DashboardMetricCost, 5)
 	if err != nil {
 		t.Fatalf("TopUsage: %v", err)
 	}
@@ -433,19 +433,50 @@ func TestDashboardTop_DemoMasksNames(t *testing.T) {
 	rel := fakeRelations{1: {APIKeyID: 1, APIKeyName: "secret-production-key", UserID: 9, UserName: "alice@example.com"}}
 	groups := []*modelcall.DashboardGroupRow{{Key: "1", Requests: 3}}
 
-	userTop, err := newService(&fakeRepo{groups: groups}, nil, rel).TopUsage(t.Context(), demo, start, end, enum.DashboardDimensionUser, 5)
+	userTop, err := newService(&fakeRepo{groups: groups}, nil, rel).TopUsage(t.Context(), demo, start, end, enum.DashboardDimensionUser, enum.DashboardMetricCost, 5)
 	if err != nil {
 		t.Fatalf("user TopUsage: %v", err)
 	}
 	if got, want := userTop.Items[0].Name, commonutil.MaskIdentity("alice@example.com"); got != want {
 		t.Errorf("demo user name = %q, want %q", got, want)
 	}
-	keyTop, err := newService(&fakeRepo{groups: groups}, nil, rel).TopUsage(t.Context(), demo, start, end, enum.DashboardDimensionAPIKey, 5)
+	keyTop, err := newService(&fakeRepo{groups: groups}, nil, rel).TopUsage(t.Context(), demo, start, end, enum.DashboardDimensionAPIKey, enum.DashboardMetricCost, 5)
 	if err != nil {
 		t.Fatalf("apikey TopUsage: %v", err)
 	}
 	if got, want := keyTop.Items[0].Name, commonutil.MaskSecret("secret-production-key"); got != want {
 		t.Errorf("demo key name = %q, want %q", got, want)
+	}
+}
+
+func TestDashboardTop_MetricReranksItems(t *testing.T) {
+	t.Parallel()
+
+	groups := []*modelcall.DashboardGroupRow{
+		{Key: "expensive", Requests: 2, CostMicro: 9000, InputTokens: 10},
+		{Key: "chatty", Requests: 50, CostMicro: 1000, InputTokens: 100},
+		{Key: "heavy", Requests: 5, CostMicro: 3000, InputTokens: 9000},
+	}
+	cases := []struct {
+		metric enum.DashboardMetric
+		first  string
+		total  int64
+	}{
+		{enum.DashboardMetricCost, "expensive", 13000},
+		{enum.DashboardMetricRequests, "chatty", 57},
+		{enum.DashboardMetricTokens, "heavy", 9110},
+	}
+	for _, tc := range cases {
+		top, err := newService(&fakeRepo{groups: groups}, nil, nil).TopUsage(t.Context(), admin, start, end, enum.DashboardDimensionModel, tc.metric, 5)
+		if err != nil {
+			t.Fatalf("metric %s: %v", tc.metric, err)
+		}
+		if top.Items[0].Key != tc.first {
+			t.Errorf("metric %s: first = %q, want %q", tc.metric, top.Items[0].Key, tc.first)
+		}
+		if top.TotalMetric != tc.total {
+			t.Errorf("metric %s: TotalMetric = %d, want %d", tc.metric, top.TotalMetric, tc.total)
+		}
 	}
 }
 

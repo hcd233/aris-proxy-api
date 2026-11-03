@@ -193,7 +193,7 @@ func (s *dashboardService) EndpointHealth(ctx context.Context, scope port.Dashbo
 	}), nil
 }
 
-func (s *dashboardService) TopUsage(ctx context.Context, scope port.DashboardScope, start, end time.Time, dim enum.DashboardDimension, limit int) (*port.DashboardTop, error) {
+func (s *dashboardService) TopUsage(ctx context.Context, scope port.DashboardScope, start, end time.Time, dim enum.DashboardDimension, metric enum.DashboardMetric, limit int) (*port.DashboardTop, error) {
 	if err := validateWindow(start, end); err != nil {
 		return nil, err
 	}
@@ -221,7 +221,7 @@ func (s *dashboardService) TopUsage(ctx context.Context, scope port.DashboardSco
 	if err != nil {
 		return nil, err
 	}
-	return rankTop(items, limit), nil
+	return rankTop(items, metric, limit), nil
 }
 
 // harnessFingerprint 取规则指纹；失败退化为空串（只影响缓存新鲜度，不影响正确性）
@@ -310,14 +310,19 @@ func mergeByOwner(rows []*modelcall.DashboardGroupRow, relationOf func(string) *
 	return lo.Map(order, func(k string, _ int) *port.DashboardTopItem { return byOwner[k] })
 }
 
-// rankTop 按费用、请求数降序取前 limit，其余请求合计
-func rankTop(items []*port.DashboardTopItem, limit int) *port.DashboardTop {
+// rankTop 按指定口径降序（同值以请求数、费用兜底）取前 limit，其余请求合计
+func rankTop(items []*port.DashboardTopItem, metric enum.DashboardMetric, limit int) *port.DashboardTop {
 	slices.SortStableFunc(items, func(a, b *port.DashboardTopItem) int {
-		return cmp.Or(cmp.Compare(b.CostMicro, a.CostMicro), cmp.Compare(b.Requests, a.Requests))
+		return cmp.Or(
+			cmp.Compare(b.MetricValue(metric), a.MetricValue(metric)),
+			cmp.Compare(b.Requests, a.Requests),
+			cmp.Compare(b.CostMicro, a.CostMicro),
+		)
 	})
 	top := &port.DashboardTop{Items: items[:min(limit, len(items))]}
 	for i, item := range items {
 		top.TotalCostMicro += item.CostMicro
+		top.TotalMetric += item.MetricValue(metric)
 		if i >= limit {
 			top.OtherRequests += item.Requests
 		}

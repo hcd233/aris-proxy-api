@@ -90,6 +90,7 @@ import type {
   UpdateUserReqBody,
 } from "./types";
 import { BusinessErrorCode, type StructuredError, parseError } from "./api-error-handler";
+import type { ModelMetric } from "./dashboard";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
@@ -807,6 +808,7 @@ class ApiClient {
     startTime: string;
     endTime: string;
     dimension: DashboardDimension;
+    metric: ModelMetric;
     limit: number;
   }): Promise<DashboardTopListRsp> {
     const sp = new URLSearchParams({ ...params, limit: String(params.limit) });

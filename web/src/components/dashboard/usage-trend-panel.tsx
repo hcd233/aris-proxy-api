@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { api } from "@/lib/api-client";
 import { useI18n } from "@/lib/i18n";
@@ -8,27 +8,37 @@ import { useChartSeriesColors } from "@/lib/theme";
 import { useChartMotion } from "@/lib/motion/chart-motion";
 import { formatChartTime } from "@/lib/time-range";
 import { formatInteger, formatTokenCount } from "@/lib/utils";
-import { foldTopModels, formatCostShort, OTHER_KEY, type ModelMetric } from "@/lib/dashboard";
 import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
-} from "@/components/ui/chart";
+  foldTopModels,
+  formatCostShort,
+  MODEL_METRICS,
+  OTHER_KEY,
+  rankModelsPerPoint,
+  type ModelMetric,
+} from "@/lib/dashboard";
+import { ChartContainer, ChartTooltip, type ChartConfig } from "@/components/ui/chart";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Panel } from "@/components/dashboard/panel";
 import { useOverview } from "@/components/dashboard/overview-context";
 import { useDashboardQuery } from "@/components/dashboard/use-dashboard-query";
 import type { DashboardRange } from "@/components/dashboard/use-dashboard-range";
 
-const METRICS: ModelMetric[] = ["cost", "requests", "tokens"];
+/** 堆叠图与图例（tooltip）每个时间点展示的模型数上限，其余归入「其他」 */
+const TOP_K = 5;
 
-/** 模型用量：Top 5 模型堆叠 + 「其他」；切换指标不重新请求 */
-export function UsageTrendPanel({ range }: { range: DashboardRange }) {
+/** 模型用量：全局 Top K 模型堆叠 + 「其他」；图例按每个时间点独立取 Top K；指标由页面持有 */
+export function UsageTrendPanel({
+  range,
+  metric,
+  onMetricChange,
+}: {
+  range: DashboardRange;
+  metric: ModelMetric;
+  onMetricChange: (next: ModelMetric) => void;
+}) {
   const { t, locale } = useI18n();
   const colors = useChartSeriesColors();
   const motion = useChartMotion();
-  const [metric, setMetric] = useState<ModelMetric>("cost");
   const { data: overview, scope: overviewScope } = useOverview();
   const { startTime, endTime, granularity, refreshToken, scope } = range;
 
@@ -62,7 +72,7 @@ export function UsageTrendPanel({ range }: { range: DashboardRange }) {
   );
   const timeline = overview?.current.series;
   const { keys, chartData, config } = useMemo(() => {
-    const folded = foldTopModels(rows ?? [], metric, 5);
+    const folded = foldTopModels(rows ?? [], metric, TOP_K);
     const byTime = new Map(folded.data.map((d) => [new Date(d.time).getTime(), d]));
     // 以 overview 已补齐空桶的时间轴为准，模型序列缺失的桶补 0
     const merged = (timeline ?? []).map((p) => {
@@ -81,6 +91,44 @@ export function UsageTrendPanel({ range }: { range: DashboardRange }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows, timeline, metric, colors, locale]);
 
+  // 图例：每个时间点独立取 Top K，其余归「其他」并置尾，不参与排名（与堆叠图的全局 Top K 解耦）
+  const rankedByTime = useMemo(() => rankModelsPerPoint(rows ?? [], metric, TOP_K), [rows, metric]);
+  const renderTooltip = useCallback(
+    ({ active, payload }: { active?: boolean; payload?: ReadonlyArray<{ payload?: unknown }> }) => {
+      if (!active || !payload?.length) return null;
+      const time = String((payload[0]?.payload as { time?: unknown } | undefined)?.time ?? "");
+      const entries = rankedByTime.get(new Date(time).getTime()) ?? [];
+      if (entries.length === 0) return null;
+      const colorOf = (key: string) => config[key]?.color ?? config[OTHER_KEY]?.color;
+      return (
+        <div className="grid min-w-32 gap-1.5 rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-xl">
+          <div className="font-medium">
+            {formatChartTime(time, rangeKey, customStart, customEnd)}
+          </div>
+          <div className="grid gap-1.5">
+            {entries.map((e) => (
+              <div key={e.key} className="flex items-center justify-between gap-3">
+                <span className="flex min-w-0 items-center gap-2">
+                  <span
+                    className="size-2.5 shrink-0 rounded-[2px]"
+                    style={{ backgroundColor: colorOf(e.key) }}
+                  />
+                  <span className="break-all text-muted-foreground">
+                    {e.key === OTHER_KEY ? t("dashboard.other") : e.key}
+                  </span>
+                </span>
+                <span className="font-mono font-medium text-foreground tabular-nums">
+                  {format(e.value)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    },
+    [rankedByTime, config, format, rangeKey, customStart, customEnd, t],
+  );
+
   return (
     <Panel
       title={t("dashboard.panel.usage")}
@@ -95,10 +143,11 @@ export function UsageTrendPanel({ range }: { range: DashboardRange }) {
           spacing={0.5}
           value={[metric]}
           onValueChange={(next) => {
-            if (next[0]) setMetric(next[0] as ModelMetric);
+            const picked = MODEL_METRICS.find((m) => m === next[0]);
+            if (picked) onMetricChange(picked);
           }}
         >
-          {METRICS.map((m) => (
+          {MODEL_METRICS.map((m) => (
             <ToggleGroupItem key={m} value={m} className="h-6 px-2 text-[11px]">
               {t(`dashboard.metric.${m}`)}
             </ToggleGroupItem>
@@ -122,30 +171,7 @@ export function UsageTrendPanel({ range }: { range: DashboardRange }) {
             tickFormatter={xTickFormatter}
           />
           <YAxis tickLine={false} axisLine={false} width={44} tickFormatter={format} />
-          <ChartTooltip
-            content={
-              <ChartTooltipContent
-                labelFormatter={(_, payload) =>
-                  formatChartTime(
-                    String(payload?.[0]?.payload?.time ?? ""),
-                    range.key,
-                    range.customStart,
-                    range.customEnd,
-                  )
-                }
-                formatter={(value, name) => (
-                  <div className="flex flex-1 items-center justify-between gap-3">
-                    <span className="text-muted-foreground">
-                      {config[String(name)]?.label ?? name}
-                    </span>
-                    <span className="font-mono text-foreground tabular-nums">
-                      {format(Number(value))}
-                    </span>
-                  </div>
-                )}
-              />
-            }
-          />
+          <ChartTooltip content={renderTooltip} />
           {keys.map((k) => (
             <Area
               key={k}

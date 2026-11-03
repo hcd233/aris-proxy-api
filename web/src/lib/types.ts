@@ -1043,7 +1043,10 @@ export interface DashboardTopItem {
   tokens: number;
   cacheHitRate?: number;
   cost: number;
+  /** 费用占比 0-1 */
   costShare: number;
+  /** 所选指标（排序口径）占比 0-1 */
+  metricShare: number;
 }
 
 export interface DashboardTop {
