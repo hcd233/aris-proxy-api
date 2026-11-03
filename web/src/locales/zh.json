@@ -1009,6 +1009,7 @@
   "portal.footer.tagline": "MaaS 模型聚合网关",
   "portal.nav.primary": "门户导航",
   "portal.nav.home": "Aris 首页",
+  "portal.nav.menu": "菜单",
   "portal.nav.flow": "链路",
   "portal.nav.capabilities": "能力",
   "portal.nav.get_started": "接入步骤",

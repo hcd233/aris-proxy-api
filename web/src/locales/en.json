@@ -1009,6 +1009,7 @@
   "portal.footer.tagline": "MaaS model aggregation gateway",
   "portal.nav.primary": "Portal navigation",
   "portal.nav.home": "Aris home",
+  "portal.nav.menu": "Menu",
   "portal.nav.flow": "Flow",
   "portal.nav.capabilities": "Capabilities",
   "portal.nav.get_started": "Get started",

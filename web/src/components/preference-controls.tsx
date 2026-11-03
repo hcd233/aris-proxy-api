@@ -13,18 +13,25 @@ export function PreferenceControls({
   orientation = "horizontal",
   compact,
   className,
+  triggerClassName,
 }: {
   tone?: PreferenceTone;
   orientation?: "horizontal" | "vertical";
   /** 语言只显示短码；默认竖排时开启 */
   compact?: boolean;
   className?: string;
+  /** 追加到两个触发按钮上（例如把窄屏触控区放大到 44px） */
+  triggerClassName?: string;
 }) {
   const vertical = orientation === "vertical";
   return (
     <div className={cn("flex items-center gap-1.5", vertical && "flex-col", className)}>
-      <LanguageSwitcher tone={tone} compact={compact ?? vertical} />
-      <ThemeSwitcher tone={tone} tooltipSide={vertical ? "right" : "bottom"} />
+      <LanguageSwitcher tone={tone} compact={compact ?? vertical} className={triggerClassName} />
+      <ThemeSwitcher
+        tone={tone}
+        tooltipSide={vertical ? "right" : "bottom"}
+        className={triggerClassName}
+      />
     </div>
   );
 }

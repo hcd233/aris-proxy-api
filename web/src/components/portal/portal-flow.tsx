@@ -220,7 +220,7 @@ export function PortalFlow() {
               <p className="mb-1 text-center text-xs text-muted-foreground">
                 {t("portal.flow.clients")}
               </p>
-              <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-1">
+              <ul className="grid grid-cols-[repeat(auto-fill,minmax(8.5rem,1fr))] gap-2 sm:grid-cols-3 lg:grid-cols-1">
                 {PORTAL_CLIENTS.map((c, i) => (
                   <FlowNode
                     key={c.id}
@@ -269,7 +269,7 @@ export function PortalFlow() {
               <p className="mb-1 text-center text-xs text-muted-foreground">
                 {t("portal.flow.upstreams")}
               </p>
-              <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-1">
+              <ul className="grid grid-cols-[repeat(auto-fill,minmax(8.5rem,1fr))] gap-2 sm:grid-cols-3 lg:grid-cols-1">
                 {PORTAL_UPSTREAMS.map((u, i) => (
                   <FlowNode
                     key={u.id}

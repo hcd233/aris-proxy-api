@@ -49,41 +49,50 @@ export function RouteDemo() {
   const [step, setStep] = useState(0);
   usePortalLoop(() => setStep((s) => (s + 1) % ROUTE_SEQUENCE.length), 1700);
   const selected = ROUTE_SEQUENCE[step];
+  // 窄屏没有横向余量：别名卡与优先级列表改上下堆叠，端点卡按 basis 自动折行，
+  // 否则两个端点各分半行时只剩十几像素，"Anthropic" 会被切掉。
   return (
-    <div className="grid grid-cols-[5.5rem_1fr] items-center gap-5">
-      <div className="relative rounded-xl bg-foreground px-2 py-3 text-center font-mono text-sm font-medium text-background">
+    <div className="grid grid-cols-1 items-center gap-3 sm:grid-cols-[5.5rem_1fr] sm:gap-5">
+      <div className="relative flex items-center justify-between rounded-xl bg-foreground px-2 py-3 text-center font-mono text-sm font-medium text-background sm:block">
         {PORTAL_ROUTE.alias}
-        <span className="block font-sans text-[0.6875rem] font-normal opacity-70">
+        <span className="font-sans text-[0.6875rem] font-normal opacity-70 sm:block">
           {t("portal.cap.access.alias_caption")}
         </span>
         <span
           aria-hidden="true"
-          className="absolute top-1/2 left-full w-5 border-t-[1.5px] border-dashed border-muted-foreground"
+          className="absolute top-1/2 left-full hidden w-5 border-t-[1.5px] border-dashed border-muted-foreground sm:block"
         />
       </div>
-      <ol className="flex min-w-0 flex-col gap-2 border-l-[1.5px] border-dashed border-muted-foreground pl-3.5">
+      <ol className="flex min-w-0 flex-col gap-2 border-dashed border-muted-foreground sm:border-l-[1.5px] sm:pl-3.5">
         {PORTAL_ROUTE.tiers.map((tier, ti) => (
-          <li key={tier.priority} className="flex min-w-0 items-center gap-2">
-            <span className="w-14 shrink-0 text-[0.6875rem] text-muted-foreground">
+          <li
+            key={tier.priority}
+            className="flex min-w-0 flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2"
+          >
+            <span className="shrink-0 text-[0.6875rem] text-muted-foreground sm:w-14">
               {t("portal.cap.access.priority").replace("{n}", String(tier.priority))}
             </span>
-            {tier.endpoints.map((ep, ei) => (
-              <span
-                key={ep.label}
-                className={cn(
-                  "flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-lg bg-card px-2.5 py-1.5 text-xs shadow-sm ring-1 ring-border/60 transition-shadow duration-300",
-                  ti === 0 && ei === selected && "ring-[1.5px] ring-primary",
-                )}
-              >
-                <ProviderIcon decorative protocol={ep.icon} size={15} />
-                <span className="flex min-w-0 flex-col leading-tight">
-                  <span className="text-foreground">{ep.labelKey ? t(ep.labelKey) : ep.label}</span>
-                  <span className="text-[0.6875rem] text-muted-foreground">
-                    {t("portal.cap.access.weight").replace("{n}", String(ep.weight))}
+            <div className="flex min-w-0 flex-wrap items-stretch gap-1.5 sm:flex-1 sm:flex-nowrap sm:gap-2">
+              {tier.endpoints.map((ep, ei) => (
+                <span
+                  key={ep.label}
+                  className={cn(
+                    "flex min-h-11 min-w-0 flex-1 basis-[12rem] items-center gap-2 rounded-lg bg-card px-2.5 py-1.5 text-xs shadow-sm ring-1 ring-border/60 transition-shadow duration-300",
+                    ti === 0 && ei === selected && "ring-[1.5px] ring-primary",
+                  )}
+                >
+                  <ProviderIcon decorative protocol={ep.icon} size={15} />
+                  <span className="flex min-w-0 flex-col leading-tight">
+                    <span className="text-foreground">
+                      {ep.labelKey ? t(ep.labelKey) : ep.label}
+                    </span>
+                    <span className="text-[0.6875rem] text-muted-foreground">
+                      {t("portal.cap.access.weight").replace("{n}", String(ep.weight))}
+                    </span>
                   </span>
                 </span>
-              </span>
-            ))}
+              ))}
+            </div>
           </li>
         ))}
       </ol>
@@ -122,7 +131,7 @@ export function SessionDemo() {
   const [score, setScore] = useState<number | undefined>(4);
   return (
     <div className="flex flex-col gap-2.5">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <span className="text-sm font-medium text-foreground">
           {t("portal.cap.curation.session_title")}
         </span>

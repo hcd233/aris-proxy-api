@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useT } from "@/lib/i18n";
 import { useTheme } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 
 /** 偏好控件所处底色：普通页面背景，或侧栏（使用 sidebar-* token）。 */
 export type PreferenceTone = "page" | "sidebar";
@@ -28,9 +29,11 @@ function centerOf(el: Element) {
 export function ThemeSwitcher({
   tone = "page",
   tooltipSide = "bottom",
+  className,
 }: {
   tone?: PreferenceTone;
   tooltipSide?: "top" | "bottom" | "right";
+  className?: string;
 }) {
   const t = useT();
   const { theme, setTheme } = useTheme();
@@ -50,7 +53,7 @@ export function ThemeSwitcher({
               size="icon-sm"
               onClick={(e) => setTheme(next, centerOf(e.currentTarget))}
               aria-label={label}
-              className={PREFERENCE_TONE_CLASS[tone]}
+              className={cn(PREFERENCE_TONE_CLASS[tone], className)}
             >
               {icon}
             </Button>
