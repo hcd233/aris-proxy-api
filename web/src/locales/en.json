@@ -495,8 +495,6 @@
   "tool_sidebar.schema_type": "Schema type: {type}",
   "reading_layout.available_tools": "Available Tools",
   "reading_layout.close_tools": "Close tools panel",
-  "permission_guard.loading": "Loading",
-  "permission_guard.preparing": "Preparing your console...",
   "permission_guard.access_denied": "Access Denied",
   "permission_guard.access_denied_desc": "You need administrator privileges to access this page.",
   "permission_guard.access_pending": "Access Pending",

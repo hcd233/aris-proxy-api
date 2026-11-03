@@ -35,6 +35,9 @@ var commonMIME = map[string]string{
 // 兼容未压缩产物：.gz 缺失时回退读取原始文件直接发送（fail-open），
 // 避免因构建流程遗漏 gzip 导致整个 /web/* 路由失效。
 //
+// /web 与 /web/ 一律直接返回门户首页，不再 301 补尾斜杠：静态导出的资源引用都是
+// /web 绝对路径，补斜杠只会让首屏多一跳空屏。
+//
 //	@param app fiber.App
 //	@param webFS fs.FS 嵌入的前端静态文件系统
 //	@author centonhuang
@@ -52,17 +55,27 @@ func RegisterWebRouter(app *fiber.App, webFS fs.FS) {
 		return
 	}
 
+	// 站点根（/web 与 /web/ 归一到同一份内容）直接吐注册时缓存的首页，
+	// 既省掉每次入口请求的文件读取，也不再为补尾斜杠多发一跳 301。
+	sendIndex := func(c fiber.Ctx) error {
+		c.Set("Content-Type", "text/html; charset=utf-8")
+		if indexIsGzip {
+			return sendPrecompressed(c, indexContent)
+		}
+		return c.Send(indexContent)
+	}
+
 	app.Get("/web/*", func(c fiber.Ctx) error {
 		path := c.Path()
-
-		if path == "/web" {
-			return c.Redirect().Status(fiber.StatusMovedPermanently).To("/web/")
-		}
 
 		filePath := strings.TrimPrefix(path, "/web")
 		filePath = strings.TrimPrefix(filePath, "/")
 
-		if filePath == "" || strings.HasSuffix(filePath, "/") {
+		if filePath == "" {
+			return sendIndex(c)
+		}
+
+		if strings.HasSuffix(filePath, "/") {
 			filePath = pathpkg.Join(filePath, "index.html")
 		}
 
@@ -82,11 +95,7 @@ func RegisterWebRouter(app *fiber.App, webFS fs.FS) {
 			return c.Status(fiber.StatusNotFound).SendString("404 Not Found")
 		}
 
-		c.Set("Content-Type", "text/html; charset=utf-8")
-		if indexIsGzip {
-			return sendPrecompressed(c, indexContent)
-		}
-		return c.Send(indexContent)
+		return sendIndex(c)
 	})
 }
 

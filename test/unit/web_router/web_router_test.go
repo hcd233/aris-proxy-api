@@ -14,7 +14,9 @@ import (
 	"github.com/hcd233/aris-mass/internal/router"
 )
 
-func TestRegisterWebRouter_RedirectsWebRootToTrailingSlash(t *testing.T) {
+// TestRegisterWebRouter_ServesWebRootWithoutTrailingSlash /web 不再 301 到 /web/，
+// 直接返回门户首页：静态导出的资源引用都是 /web 绝对路径，补斜杠只会让首屏多一跳空屏。
+func TestRegisterWebRouter_ServesWebRootWithoutTrailingSlash(t *testing.T) {
 	t.Parallel()
 	app := fiber.New()
 	router.RegisterWebRouter(app, testWebFS(t))
@@ -22,15 +24,19 @@ func TestRegisterWebRouter_RedirectsWebRootToTrailingSlash(t *testing.T) {
 	rsp := doRequest(t, app, "/web", "")
 	defer rsp.Body.Close()
 
-	if rsp.StatusCode != http.StatusMovedPermanently {
-		t.Fatalf("GET /web status = %d, want %d", rsp.StatusCode, http.StatusMovedPermanently)
+	if rsp.StatusCode != http.StatusOK {
+		t.Fatalf("GET /web status = %d, want %d", rsp.StatusCode, http.StatusOK)
 	}
-	if location := rsp.Header.Get("Location"); location != "/web/" {
-		t.Fatalf("GET /web Location = %q, want %q", location, "/web/")
+	body, err := io.ReadAll(rsp.Body)
+	if err != nil {
+		t.Fatalf("ReadAll() error = %v", err)
+	}
+	if string(body) != "dashboard" {
+		t.Fatalf("GET /web body = %q, want %q", string(body), "dashboard")
 	}
 }
 
-func TestRegisterWebRouter_RedirectsWithoutOpeningFiles(t *testing.T) {
+func TestRegisterWebRouter_ServesWebRootWithoutOpeningFiles(t *testing.T) {
 	t.Parallel()
 	webFS := &trackingFS{base: testWebFS(t)}
 	app := fiber.New()
@@ -41,15 +47,17 @@ func TestRegisterWebRouter_RedirectsWithoutOpeningFiles(t *testing.T) {
 		t.Fatalf("after registration opened %v, want [dist/index.html.gz]", webFS.opened)
 	}
 
-	rsp := doRequest(t, app, "/web", "")
-	defer rsp.Body.Close()
-
-	if rsp.StatusCode != http.StatusMovedPermanently {
-		t.Fatalf("GET /web status = %d, want %d", rsp.StatusCode, http.StatusMovedPermanently)
+	for _, path := range []string{"/web", "/web/"} {
+		rsp := doRequest(t, app, path, "")
+		if rsp.StatusCode != http.StatusOK {
+			t.Fatalf("GET %s status = %d, want %d", path, rsp.StatusCode, http.StatusOK)
+		}
+		rsp.Body.Close()
 	}
-	// No additional opens during the redirect request
+
+	// 站点根走注册时缓存的首页，请求期不再打开文件
 	if len(webFS.opened) != 1 {
-		t.Fatalf("after redirect request opened %v, want still [dist/index.html.gz]", webFS.opened)
+		t.Fatalf("after root requests opened %v, want still [dist/index.html.gz]", webFS.opened)
 	}
 }
 

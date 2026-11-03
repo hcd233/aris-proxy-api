@@ -56,17 +56,10 @@ export function PermissionGuard({
     }
   }, [isLoading, user, router]);
 
-  if (isLoading) {
-    return (
-      <GuardState
-        title={t("permission_guard.loading")}
-        description={t("permission_guard.preparing")}
-      />
-    );
-  }
-
-  if (!user) {
-    // Redirecting to login
+  // 认证未就绪（引导中 / 未登录已触发跳登录）一律不渲染占位页：
+  // 曾经这里会整屏闪一帧「Preparing your console...」，静态导出后每个控制台
+  // 页面的首屏 HTML 也都是这块占位内容；去掉后直达内容或登录页。
+  if (isLoading || !user) {
     return null;
   }
 

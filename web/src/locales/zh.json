@@ -495,8 +495,6 @@
   "tool_sidebar.schema_type": "Schema 类型：{type}",
   "reading_layout.available_tools": "可用工具",
   "reading_layout.close_tools": "关闭工具面板",
-  "permission_guard.loading": "加载中",
-  "permission_guard.preparing": "正在准备控制台...",
   "permission_guard.access_denied": "拒绝访问",
   "permission_guard.access_denied_desc": "您需要管理员权限才能访问此页面。",
   "permission_guard.access_pending": "待审批",
