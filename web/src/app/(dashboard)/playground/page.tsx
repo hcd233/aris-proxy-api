@@ -386,6 +386,8 @@ function PlaygroundPage() {
               <ConversationView
                 messages={active.messages}
                 sending={sending}
+                canSuggest={!sending && !!params.model && params.apiKeyID !== null}
+                onSuggest={handleSend}
                 onEditSave={handleEditSave}
                 onDelete={handleDelete}
                 onRerun={handleRerun}

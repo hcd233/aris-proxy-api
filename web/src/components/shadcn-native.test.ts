@@ -233,6 +233,25 @@ describe("⑥ 聊天区", () => {
     expect(src).not.toContain("scrollTop");
   });
 
+  it("playground 空态给出可点即发的建议提示词", () => {
+    const src = read("components/playground/conversation-view.tsx");
+    expect(src).toContain("<EmptyContent");
+    expect(src).toContain("onSuggest");
+  });
+
+  it("playground 输入区用 InputGroup 组合", () => {
+    const src = read("components/playground/composer.tsx");
+    expect(src).toContain("<InputGroupTextarea");
+    expect(src).toContain("<InputGroupAddon");
+    expect(src).not.toMatch(/<Textarea[\s>]/);
+  });
+
+  it("playground 系统消息用 Marker、助手复制按钮在消息头", () => {
+    const src = read("components/playground/chat-turn.tsx");
+    expect(src).toMatch(/<Marker[\s>]/);
+    expect(src).toMatch(/<MessageHeader[\s\S]*?<CopyButton[\s\S]*?<\/MessageHeader>/);
+  });
+
   it("chat-turn 保留流式签名动效钩子", () => {
     const src = read("components/playground/chat-turn.tsx");
     expect(src).toContain("stream-body");
