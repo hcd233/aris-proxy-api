@@ -1,5 +1,6 @@
 import { toast } from "sonner";
 import { translate } from "@/lib/i18n";
+import { LOGIN_PATH, withBasePath } from "@/lib/routes";
 import type {
   AddDemoSessionsReqBody,
   AuditOptionListReq,
@@ -234,7 +235,7 @@ class ApiClient {
         label: translate("auth.login"),
         onClick: () => {
           // 凭据失效需要整页重载清空内存态；replace 避免回退到已失效页面
-          window.location.replace("/web/login/");
+          window.location.replace(withBasePath(LOGIN_PATH));
         },
       },
     });

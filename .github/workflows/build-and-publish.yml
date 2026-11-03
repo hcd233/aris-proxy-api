@@ -114,7 +114,7 @@ jobs:
             --build-arg FRONTEND_SOURCE=frontend-prebuilt \
             --build-arg BINARY_SOURCE=binary-prebuilt \
             --label "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
-            --label "org.opencontainers.image.description=Aris Mass - MaaS model aggregation gateway" \
+            --label "org.opencontainers.image.description=Aris MaaS - MaaS model aggregation gateway" \
             "${TAG_ARGS[@]}" --push .
 
           DIGEST="$(docker buildx imagetools inspect "${IMAGE}:${FIRST_TAG}" --format '{{.Manifest.Digest}}')"
