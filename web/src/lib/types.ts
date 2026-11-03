@@ -703,7 +703,8 @@ export interface ListAuditLogsRsp extends CommonRsp {
 
 // ─── Dashboard Stats ──────────────────────────────────────────
 
-export type Granularity = "minute" | "hour" | "day" | "week";
+export type Granularity =
+  "minute" | "5minute" | "10minute" | "30minute" | "hour" | "4hour" | "day" | "week";
 
 export interface HarnessRuleItem {
   id: number;
@@ -854,6 +855,8 @@ export interface RuntimeSeries {
   tokenInput?: RuntimePoint[]; // 输入 token 速率 /s
   tokenOutput?: RuntimePoint[]; // 输出 token 速率 /s
   statusCodes?: Record<string, RuntimePoint[]>; // 状态码 → 该状态码请求数时序（跨 pod 求和）
+  netRx?: RuntimePoint[]; // 网络下行（接收）bytes/s（跨 pod 求和）
+  netTx?: RuntimePoint[]; // 网络上行（发送）bytes/s（跨 pod 求和）
   instances?: Record<string, RuntimeInstanceSeries>; // pod 名 → 该 pod 曲线
 }
 

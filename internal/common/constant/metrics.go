@@ -59,6 +59,10 @@ const (
 	MetricFullSSEActive       = "sse_active_connections"
 	MetricFullTokenUsage      = "llm_token_usage_total"
 	MetricFullHTTPRequests    = "http_requests_total"
+	// MetricFullProcessNetRx / MetricFullProcessNetTx 进程网络收发字节 counter（ProcessCollector 在 Linux 上
+	// 读 /proc/<pid>/net/netstat 的 IpExt In/OutOctets，即 pod 网络命名空间的 IP 层流量；macOS 不提供，恒为 0）
+	MetricFullProcessNetRx = "process_network_receive_bytes_total"
+	MetricFullProcessNetTx = "process_network_transmit_bytes_total"
 )
 
 // —— token 吞吐 counter 的 direction 枚举 ——
@@ -103,16 +107,19 @@ const (
 )
 
 // —— 各 range 档对应的窗口长度与桶宽 ——
+//
+// 桶宽按「每档约 200~360 个点」取，且都是 flush 间隔（5s）的整数倍（每桶快照数恒定，速率不随相位抖动）。
+// 桶越宽曲线越平：24h 曾用 15m 桶（96 点），尖峰被均值抹平，2026-11-03 调细。
 const (
 	RuntimeMetricsWindow15m = 15 * time.Minute
-	// RuntimeMetricsBucket15m 与 flush 间隔（5s）对齐，提供最细的秒级 QPS/速率分辨率
+	// RuntimeMetricsBucket15m 与 flush 间隔（5s）对齐，提供最细的秒级 QPS/速率分辨率（180 点）
 	RuntimeMetricsBucket15m = 5 * time.Second
 	RuntimeMetricsWindow1h  = 1 * time.Hour
-	RuntimeMetricsBucket1h  = 1 * time.Minute
+	RuntimeMetricsBucket1h  = 15 * time.Second // 240 点
 	RuntimeMetricsWindow6h  = 6 * time.Hour
-	RuntimeMetricsBucket6h  = 5 * time.Minute
+	RuntimeMetricsBucket6h  = 1 * time.Minute // 360 点
 	RuntimeMetricsWindow24h = 24 * time.Hour
-	RuntimeMetricsBucket24h = 15 * time.Minute
+	RuntimeMetricsBucket24h = 5 * time.Minute // 288 点
 )
 
 // —— 聚合计算常量 ——

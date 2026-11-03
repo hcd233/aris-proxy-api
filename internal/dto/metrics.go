@@ -30,6 +30,8 @@ type RuntimeSeries struct {
 	TokenInput  []RuntimePoint                   `json:"tokenInput" doc:"输入 token 速率 /s（跨 pod 求和）"`
 	TokenOutput []RuntimePoint                   `json:"tokenOutput" doc:"输出 token 速率 /s（跨 pod 求和）"`
 	StatusCodes map[string][]RuntimePoint        `json:"statusCodes" doc:"各 HTTP 状态码的请求数（跨 pod 求和；key 为状态码）"`
+	NetRx       []RuntimePoint                   `json:"netRx" doc:"网络下行（接收）速率 bytes/s（跨 pod 求和）"`
+	NetTx       []RuntimePoint                   `json:"netTx" doc:"网络上行（发送）速率 bytes/s（跨 pod 求和）"`
 	Instances   map[string]RuntimeInstanceSeries `json:"instances" doc:"各 pod 的运行时曲线（goroutines/heapMB/cpuPercent）"`
 }
 

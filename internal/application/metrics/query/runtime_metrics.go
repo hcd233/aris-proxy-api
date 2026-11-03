@@ -162,7 +162,7 @@ func (h *runtimeMetricsHandler) storeInitial(rangeKey string, series dto.Runtime
 }
 
 // Aggregate 把各 instance 的快照按桶聚合成可展示时序：
-// gauge 取桶内均值后跨 instance 求和；counter 取相邻快照正向 delta（reset 清零）求速率后跨 instance 求和；
+// gauge 取桶内均值后跨 instance 求和；counter（CPU、请求数、token、网络字节）取相邻快照正向 delta（reset 清零）求速率后跨 instance 求和；
 // histogram 取相邻快照各 le 的正向 delta 后跨 instance 合并、求 P95；状态码按 code 求正向 delta 后跨 instance 求和。
 // 只返回时间 >= outputStart 的桶。
 //
@@ -202,6 +202,8 @@ type bucketAgg struct {
 	tokenInput  float64            // 桶内累计输入 token delta（跨实例求和）→ 除以桶宽得速率
 	tokenOutput float64            // 桶内累计输出 token delta（跨实例求和）
 	reqStatus   map[string]float64 // 桶内累计各状态码请求 delta（跨实例求和）
+	netRx       float64            // 桶内累计网络接收字节 delta（跨实例求和）→ 除以桶宽得 bytes/s
+	netTx       float64            // 桶内累计网络发送字节 delta（跨实例求和）
 	samples     float64            // 桶内跨实例累计的快照数；为 0 表示该桶无数据，不应输出
 }
 
@@ -234,6 +236,8 @@ func accumulateInstance(agg []bucketAgg, snaps []port.Snapshot, alignedStart, bu
 		mergeGaugeBucket(&agg[idx], gauges[idx].sse, gauges[idx].count)
 		mergeRateBucket(&agg[idx], deltas[idx].count, deltas[idx].cpu, deltas[idx].hist, bucketSeconds)
 		mergeTokenBucket(&agg[idx], deltas[idx].tokenIn, deltas[idx].tokenOut)
+		agg[idx].netRx += deltas[idx].netRx
+		agg[idx].netTx += deltas[idx].netTx
 		mergeStatusCodeBucket(&agg[idx], deltas[idx].reqStatus)
 	}
 }
@@ -283,6 +287,8 @@ type instanceDelta struct {
 	tokenIn   float64
 	tokenOut  float64
 	reqStatus map[string]float64
+	netRx     float64
+	netTx     float64
 }
 
 // instanceDeltas 按桶累加单实例相邻快照的正向 delta（速率、histogram 与状态码计数），归属到后一个快照所在的桶。
@@ -298,6 +304,8 @@ func instanceDeltas(snaps []port.Snapshot, alignedStart, bucket int64, n int) []
 		deltas[idx].cpu += nonNeg(cur.CPUSeconds - prev.CPUSeconds)
 		deltas[idx].tokenIn += nonNeg(cur.TokenInput - prev.TokenInput)
 		deltas[idx].tokenOut += nonNeg(cur.TokenOutput - prev.TokenOutput)
+		deltas[idx].netRx += nonNeg(cur.NetRxBytes - prev.NetRxBytes)
+		deltas[idx].netTx += nonNeg(cur.NetTxBytes - prev.NetTxBytes)
 		if deltas[idx].hist == nil {
 			deltas[idx].hist = map[string]float64{}
 		}
@@ -369,6 +377,8 @@ func buildSeries(agg []bucketAgg, alignedStart, bucket, outputStart int64) dto.R
 		series.P95Ms = append(series.P95Ms, dto.RuntimePoint{Time: t, Value: round2(percentileP95(agg[idx].histBuckets, agg[idx].histTotal))})
 		series.TokenInput = append(series.TokenInput, dto.RuntimePoint{Time: t, Value: round2(agg[idx].tokenInput / bucketSeconds)})
 		series.TokenOutput = append(series.TokenOutput, dto.RuntimePoint{Time: t, Value: round2(agg[idx].tokenOutput / bucketSeconds)})
+		series.NetRx = append(series.NetRx, dto.RuntimePoint{Time: t, Value: round2(agg[idx].netRx / bucketSeconds)})
+		series.NetTx = append(series.NetTx, dto.RuntimePoint{Time: t, Value: round2(agg[idx].netTx / bucketSeconds)})
 		// 状态码集合在输出窗口内固定，缺失桶补 0（无请求即真空值），保证各曲线列对齐、不断线。
 		for _, code := range statusCodes {
 			series.StatusCodes[code] = append(series.StatusCodes[code], dto.RuntimePoint{Time: t, Value: agg[idx].reqStatus[code]})

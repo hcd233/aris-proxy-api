@@ -11,7 +11,6 @@ import {
   EMPTY_STATE,
   RANGE_WINDOW_SEC,
   mergeInstances,
-  mergeKeyedSeries,
   mergePoints,
   type RangeKey,
   type SeriesState,
@@ -52,9 +51,8 @@ export function useRuntimeMetrics() {
       setState((prev) =>
         replaceEqualDeep(prev, {
           qps: mergePoints(prev.qps, s.qps ?? [], cutoff),
-          p95Ms: mergePoints(prev.p95Ms, s.p95Ms ?? [], cutoff),
-          sseActive: mergeKeyedSeries(prev.sseActive, s.sseActive ?? {}, cutoff),
-          statusCodes: mergeKeyedSeries(prev.statusCodes, s.statusCodes ?? {}, cutoff),
+          netRx: mergePoints(prev.netRx, s.netRx ?? [], cutoff),
+          netTx: mergePoints(prev.netTx, s.netTx ?? [], cutoff),
           instances: mergeInstances(prev.instances, s.instances ?? {}, cutoff),
           latestTime: rsp.latestTime,
         }),

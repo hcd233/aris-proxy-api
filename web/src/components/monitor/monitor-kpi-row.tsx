@@ -3,21 +3,14 @@
 import { useMemo } from "react";
 
 import { useI18n } from "@/lib/i18n";
-import { cn, formatDecimal, formatDurationMs, formatInteger } from "@/lib/utils";
-import { formatRate } from "@/lib/dashboard";
+import { formatBytes, formatDecimal, formatInteger, splitBytes } from "@/lib/utils";
 import {
   RANGE_BUCKET_SEC,
   avgValue,
-  errorLevel,
-  errorRatioSeries,
   lastValue,
   peakValue,
   podSumLatest,
-  serverErrorRatio,
-  statusTotals,
-  sumKeyedSeries,
   sumPodSeries,
-  type ErrorLevel,
   type Pt,
   type RangeKey,
   type SeriesState,
@@ -27,18 +20,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { MetricNumber } from "@/components/motion/metric-number";
 import { Sparkline } from "@/components/dashboard/sparkline";
 
-const LEVEL_TEXT: Record<ErrorLevel, string> = {
-  ok: "text-positive",
-  warn: "text-warning",
-  bad: "text-negative",
-};
-
 interface KpiSpec {
   id: string;
   label: string;
   value: string;
   unit?: string;
-  badge?: { text: string; className: string };
   sub: string[];
   series: number[];
   lineClass: string;
@@ -47,16 +33,9 @@ interface KpiSpec {
 function MonitorKpiCard({ spec, loading }: { spec: KpiSpec; loading: boolean }) {
   return (
     <Card size="sm" className="gap-1 px-3 py-2.5" data-interactive>
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-[11px] font-medium tracking-wider whitespace-nowrap text-muted-foreground uppercase">
-          {spec.label}
-        </span>
-        {!loading && spec.badge && (
-          <span className={cn("text-[11px] font-semibold whitespace-nowrap", spec.badge.className)}>
-            {spec.badge.text}
-          </span>
-        )}
-      </div>
+      <span className="text-[11px] font-medium tracking-wider whitespace-nowrap text-muted-foreground uppercase">
+        {spec.label}
+      </span>
       {loading ? (
         <>
           <Skeleton className="h-7 w-24" />
@@ -86,9 +65,11 @@ function formatRateValue(v: number): string {
   return formatDecimal(v, v >= 100 ? 0 : v >= 10 ? 1 : 2);
 }
 
+const formatByteRate = (v: number) => `${formatBytes(v)}/s`;
+
 /**
- * 6 张运维 KPI：请求速率 / 5xx 错误率 / P95 延迟 / SSE 连接 / CPU / 堆内存。
- * 全部是「系统是否健康」的信号；用量、费用、缓存命中等业务指标留在 Dashboard。
+ * 6 张运维 KPI：请求速率 / CPU / 堆内存 / 协程 / 网络下行 / 网络上行。
+ * 只看「进程是否健康」的资源与流量信号；用量、费用、成功率等业务指标留在 Dashboard。
  */
 export function MonitorKpiRow({
   state,
@@ -108,27 +89,29 @@ export function MonitorKpiRow({
     const avg = t("monitor.kpi.avg");
 
     const qpsNow = lastValue(state.qps);
-    const totals = statusTotals(state.statusCodes);
-    const ratio = serverErrorRatio(totals);
-    const level = errorLevel(ratio);
-
-    const p95Active = state.p95Ms.filter((p) => p.value > 0);
-
-    const sseSeries = sumKeyedSeries(state.sseActive);
-    const topProviders = Object.entries(state.sseActive)
-      .map(([prov, pts]) => [prov, Math.round(lastValue(pts))] as const)
-      .filter(([, n]) => n > 0)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 2)
-      .map(([prov, n]) => `${prov} ${formatInteger(n)}`);
-
     const pods = Object.keys(state.instances).length;
     const cpuSeries = sumPodSeries(state.instances, "cpuPercent");
     const cpuNow = podSumLatest(state.instances, "cpuPercent", state.latestTime, bucketSec);
     const heapSeries = sumPodSeries(state.instances, "heapMB");
     const heapNow = podSumLatest(state.instances, "heapMB", state.latestTime, bucketSec);
-    const goroutines = podSumLatest(state.instances, "goroutines", state.latestTime, bucketSec);
-    const threads = podSumLatest(state.instances, "threads", state.latestTime, bucketSec);
+    const goroutineSeries = sumPodSeries(state.instances, "goroutines");
+    const goroutinesNow = podSumLatest(state.instances, "goroutines", state.latestTime, bucketSec);
+
+    const network = (id: "net_rx" | "net_tx", points: Pt[], lineClass: string): KpiSpec => {
+      const now = splitBytes(lastValue(points));
+      return {
+        id,
+        label: t(`monitor.${id}`),
+        value: now.value,
+        unit: now.unit ? `${now.unit}/s` : undefined,
+        sub: [
+          `${peak} ${formatByteRate(peakValue(points))}`,
+          `${avg} ${formatByteRate(avgValue(points))}`,
+        ],
+        series: values(points),
+        lineClass,
+      };
+    };
 
     return [
       {
@@ -144,40 +127,6 @@ export function MonitorKpiRow({
         lineClass: "text-primary",
       },
       {
-        id: "errors",
-        label: t("monitor.kpi.error_rate"),
-        value: formatRate(ratio, 2),
-        badge: { text: t(`monitor.level.${level}`), className: LEVEL_TEXT[level] },
-        sub: [
-          `5xx ${formatInteger(Math.round(totals.c5xx))}`,
-          `4xx ${formatInteger(Math.round(totals.c4xx))}`,
-        ],
-        series: values(errorRatioSeries(state.statusCodes)),
-        lineClass: LEVEL_TEXT[level],
-      },
-      {
-        id: "p95",
-        label: t("monitor.latency_p95"),
-        value: formatDurationMs(lastValue(state.p95Ms)),
-        sub: [
-          `${peak} ${formatDurationMs(peakValue(state.p95Ms))}`,
-          `${avg} ${formatDurationMs(avgValue(p95Active))}`,
-        ],
-        series: values(state.p95Ms),
-        lineClass: "text-chart-3",
-      },
-      {
-        id: "sse",
-        label: t("monitor.sse_active"),
-        value: formatInteger(Math.round(lastValue(sseSeries))),
-        sub: [
-          `${peak} ${formatInteger(Math.round(peakValue(sseSeries)))}`,
-          topProviders.length > 0 ? topProviders.join(" · ") : "\u2014",
-        ],
-        series: values(sseSeries),
-        lineClass: "text-chart-2",
-      },
-      {
         id: "cpu",
         label: t("monitor.cpu_usage"),
         value: formatDecimal(cpuNow, 1),
@@ -187,7 +136,7 @@ export function MonitorKpiRow({
           `${formatInteger(pods)} ${t("monitor.instances")}`,
         ],
         series: values(cpuSeries),
-        lineClass: "text-primary",
+        lineClass: "text-chart-2",
       },
       {
         id: "heap",
@@ -195,12 +144,25 @@ export function MonitorKpiRow({
         value: formatDecimal(heapNow, 1),
         unit: "MB",
         sub: [
-          `${t("monitor.goroutines")} ${formatInteger(Math.round(goroutines))}`,
-          `${t("monitor.threads")} ${formatInteger(Math.round(threads))}`,
+          `${peak} ${formatDecimal(peakValue(heapSeries), 1)} MB`,
+          `${avg} ${formatDecimal(avgValue(heapSeries), 1)} MB`,
         ],
         series: values(heapSeries),
         lineClass: "text-chart-4",
       },
+      {
+        id: "goroutines",
+        label: t("monitor.goroutines"),
+        value: formatInteger(Math.round(goroutinesNow)),
+        sub: [
+          `${peak} ${formatInteger(Math.round(peakValue(goroutineSeries)))}`,
+          `${avg} ${formatInteger(Math.round(avgValue(goroutineSeries)))}`,
+        ],
+        series: values(goroutineSeries),
+        lineClass: "text-chart-3",
+      },
+      network("net_rx", state.netRx, "text-primary"),
+      network("net_tx", state.netTx, "text-chart-2"),
     ];
     // locale 驱动翻译刷新（t 引用稳定，见 lib/i18n.tsx）
     // eslint-disable-next-line react-hooks/exhaustive-deps

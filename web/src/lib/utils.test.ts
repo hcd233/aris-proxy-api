@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   cronJobLabel,
+  formatBytes,
   formatDecimal,
   formatDurationMs,
   formatInteger,
   formatTokenCount,
+  splitBytes,
 } from "./utils";
 
 /** 模拟 i18n：命中时返回文案，未命中时回退 fallback（与 useI18n().t 同语义）。 */
@@ -101,5 +103,25 @@ describe("formatDurationMs", () => {
   it("renders an em dash for missing values", () => {
     expect(formatDurationMs(undefined)).toBe("\u2014");
     expect(formatDurationMs(null)).toBe("\u2014");
+  });
+});
+
+describe("formatBytes", () => {
+  it("scales by 1024 and keeps the number below 1000", () => {
+    expect(formatBytes(0)).toBe("0 B");
+    expect(formatBytes(512)).toBe("512 B");
+    expect(formatBytes(1_536)).toBe("1.5 KB");
+    expect(formatBytes(1_000)).toBe("1 KB");
+    expect(formatBytes(150 * 1_024)).toBe("150 KB");
+    expect(formatBytes(3.25 * 1_024 * 1_024)).toBe("3.3 MB");
+  });
+
+  it("splits value and unit for KPI cards", () => {
+    expect(splitBytes(2 * 1_024 * 1_024 * 1_024)).toEqual({ value: "2", unit: "GB" });
+  });
+
+  it("renders an em dash for missing or negative values", () => {
+    expect(formatBytes(undefined)).toBe("\u2014");
+    expect(formatBytes(-1)).toBe("\u2014");
   });
 });

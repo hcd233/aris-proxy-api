@@ -338,6 +338,13 @@ var (
 	DateTruncDay    = "date_trunc('day', created_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'"
 	DateTruncWeek   = "date_trunc('week', created_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'"
 
+	// DateBin* 定宽时间桶：以 Unix 纪元为原点切桶（UTC 下与整点 / 零点对齐），
+	// 须与 Go 侧 port.BuildBuckets 的 Time.Truncate 对齐；date_bin 需要 PostgreSQL ≥ 14。
+	DateBinFiveMinutes   = "date_bin(INTERVAL '5 minutes', created_at, TIMESTAMPTZ '1970-01-01 00:00:00+00')"
+	DateBinTenMinutes    = "date_bin(INTERVAL '10 minutes', created_at, TIMESTAMPTZ '1970-01-01 00:00:00+00')"
+	DateBinThirtyMinutes = "date_bin(INTERVAL '30 minutes', created_at, TIMESTAMPTZ '1970-01-01 00:00:00+00')"
+	DateBinFourHours     = "date_bin(INTERVAL '4 hours', created_at, TIMESTAMPTZ '1970-01-01 00:00:00+00')"
+
 	// DateBinUptimeTemplate 可用性状态条的时间桶表达式：%d 为桶宽秒数，? 绑定 date_bin 原点
 	DateBinUptimeTemplate = "date_bin(INTERVAL '%d seconds', created_at, ?) AS time, "
 

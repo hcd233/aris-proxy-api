@@ -22,4 +22,6 @@ type Snapshot struct {
 	TokenInput  float64            `json:"tokenInput"`           // counter 累计输入 token → 聚合层求输入速率
 	TokenOutput float64            `json:"tokenOutput"`          // counter 累计输出 token → 聚合层求输出速率
 	ReqStatus   map[string]float64 `json:"reqStatus,omitempty"`  // status code -> counter 累计业务请求数 → 聚合层求各状态码数量
+	NetRxBytes  float64            `json:"netRxBytes"`           // counter 累计网络接收字节 → 聚合层求下行速率
+	NetTxBytes  float64            `json:"netTxBytes"`           // counter 累计网络发送字节 → 聚合层求上行速率
 }

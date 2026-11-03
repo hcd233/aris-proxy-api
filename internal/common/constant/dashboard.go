@@ -1,5 +1,15 @@
 package constant
 
+import "time"
+
+// —— dashboard 定宽时间桶（非日历对齐粒度的桶宽，见 enum.Granularity）——
+const (
+	DashboardFiveMinuteBucket   = 5 * time.Minute
+	DashboardTenMinuteBucket    = 10 * time.Minute
+	DashboardThirtyMinuteBucket = 30 * time.Minute
+	DashboardFourHourBucket     = 4 * time.Hour
+)
+
 // Dashboard 聚合查询常量（spec: docs/superpowers/specs/2026-10-28-dashboard-redesign-design.md §4）。
 //
 // 口径：成功 = upstream_status_code = 200；Token/费用/延迟/速度只统计成功调用；
