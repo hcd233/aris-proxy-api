@@ -51,6 +51,10 @@ func (r *fakeSessionReadRepo) FindToolsByIDs(ctx context.Context, ids []uint) ([
 	return nil, nil
 }
 
+func (r *fakeSessionReadRepo) SearchToolsByName(ctx context.Context, ids []uint, keyword string, page, pageSize int) ([]*session.ToolDetailProjection, int64, error) {
+	return nil, 0, nil
+}
+
 func (r *fakeSessionReadRepo) ListDistinctScores(ctx context.Context, ownerIDs []uint, startTime, endTime time.Time, sessionIDs []uint) ([]int, error) {
 	r.listDistinctScoresCalled = true
 	r.lastSessionIDs = sessionIDs

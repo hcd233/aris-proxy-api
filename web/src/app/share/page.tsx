@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Share2, Wrench } from "lucide-react";
 
 import { api, ApiError } from "@/lib/api-client";
-import type { ShareSessionMetadata, MessageItem, ToolItem } from "@/lib/types";
+import type { ShareSessionMetadata, MessageItem } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,7 +17,7 @@ import {
   TooltipContent,
 } from "@/components/ui/tooltip";
 import { SessionTranscript } from "@/components/session-detail/session-transcript";
-import { ToolsRail } from "@/components/session-detail/tools-rail";
+import { ToolsRail, type FetchToolsPage } from "@/components/session-detail/tools-rail";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useInfiniteList } from "@/hooks/use-infinite-list";
 import { formatRelativeTime } from "@/lib/utils";
@@ -102,9 +102,7 @@ function SharedSessionView() {
   const [headerCompact, setHeaderCompact] = useState(false);
   const headerSentinelRef = useRef<HTMLDivElement | null>(null);
   const messagesSentinelRef = useRef<HTMLDivElement | null>(null);
-  const toolsSentinelRef = useRef<HTMLDivElement | null>(null);
   const messagesScrollRootRef = useRef<HTMLDivElement | null>(null);
-  const toolsScrollRootRef = useRef<HTMLDivElement | null>(null);
 
   const fetchMetadata = useCallback(async () => {
     if (!shareID) {
@@ -168,21 +166,13 @@ function SharedSessionView() {
     enabled: listEnabled,
   });
 
-  const toolsList = useInfiniteList<ToolItem>({
-    fetcher: useCallback(
-      async (offset, limit) => {
-        const page = Math.floor(offset / limit) + 1;
-        const rsp = await api.listShareTools(shareID, page, limit);
-        return {
-          items: rsp.tools ?? [],
-          total: Number(rsp.pageInfo?.total ?? 0),
-        };
-      },
-      [shareID],
-    ),
-    pageSize: 20,
-    enabled: toolsListEnabled,
-  });
+  const fetchToolsPage = useCallback<FetchToolsPage>(
+    async (page, pageSize, query) => {
+      const rsp = await api.listShareTools(shareID, page, pageSize, query);
+      return { items: rsp.tools ?? [], total: Number(rsp.pageInfo?.total ?? 0) };
+    },
+    [shareID],
+  );
 
   /* eslint-disable react-hooks/set-state-in-effect -- IntersectionObserver callback inherently sets state on visibility changes */
   useEffect(() => {
@@ -221,31 +211,7 @@ function SharedSessionView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMobile, messagesList.hasMore, messagesList.loadMore]);
 
-  useEffect(() => {
-    const sentinel = toolsSentinelRef.current;
-    if (!sentinel || !toolsList.hasMore) return;
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting) {
-          void toolsList.loadMore();
-        }
-      },
-      {
-        root: toolsScrollRootRef.current,
-        rootMargin: "200px",
-      },
-    );
-    io.observe(sentinel);
-    return () => io.disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [toolsOpen, isMobile, toolsList.hasMore, toolsList.loadMore]);
-
   const messages = messagesList.items;
-  const tools = toolsList.items;
-
-  const setToolsScrollRoot = useCallback((node: HTMLDivElement | null) => {
-    toolsScrollRootRef.current = node;
-  }, []);
 
   if (error) return <ShareErrorView error={error} />;
   if (loading) return <ShareLoading />;
@@ -330,16 +296,7 @@ function SharedSessionView() {
     />
   );
 
-  const toolsPanelContent = (
-    <ToolsRail
-      tools={tools}
-      hasMore={toolsList.hasMore}
-      loading={toolsList.loading}
-      loadMore={toolsList.loadMore}
-      sentinelRef={toolsSentinelRef}
-      scrollRootRef={setToolsScrollRoot}
-    />
-  );
+  const toolsPanelContent = <ToolsRail fetchPage={fetchToolsPage} enabled={toolsListEnabled} />;
 
   return (
     <ReadingLayout

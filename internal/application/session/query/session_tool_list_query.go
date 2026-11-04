@@ -2,6 +2,7 @@ package query
 
 import (
 	"context"
+	"strings"
 
 	"github.com/samber/lo"
 	"go.uber.org/zap"
@@ -48,6 +49,10 @@ func (h *listSessionToolsHandler) Handle(ctx context.Context, q sessionport.List
 	total := int64(len(meta.ToolIDs))
 	if total == 0 {
 		return &sessionport.ListSessionToolsResult{Tools: []*sessionport.ToolView{}, Total: 0}, nil
+	}
+
+	if keyword := strings.TrimSpace(q.Keyword); keyword != "" {
+		return h.searchByName(ctx, meta.ToolIDs, keyword, q.Page, q.PageSize)
 	}
 
 	start := (q.Page - 1) * q.PageSize
@@ -99,6 +104,19 @@ func (h *listSessionToolsHandler) Handle(ctx context.Context, q sessionport.List
 			Tool:      rec.Tool,
 			CreatedAt: rec.CreatedAt,
 		}, true
+	})
+	return &sessionport.ListSessionToolsResult{Tools: views, Total: total}, nil
+}
+
+// searchByName 按工具名搜索：过滤与分页都在数据库完成，不经工具缓存
+func (h *listSessionToolsHandler) searchByName(ctx context.Context, toolIDs []uint, keyword string, page, pageSize int) (*sessionport.ListSessionToolsResult, error) {
+	records, total, err := h.readRepo.SearchToolsByName(ctx, toolIDs, keyword, page, pageSize)
+	if err != nil {
+		logger.WithCtx(ctx).Error("[SessionQuery] SearchToolsByName failed", zap.Error(err))
+		return nil, ierr.Wrap(ierr.ErrDBQuery, err, "search tools by name")
+	}
+	views := lo.Map(records, func(t *session.ToolDetailProjection, _ int) *sessionport.ToolView {
+		return &sessionport.ToolView{ID: t.ID, Tool: t.Tool, CreatedAt: t.CreatedAt}
 	})
 	return &sessionport.ListSessionToolsResult{Tools: views, Total: total}, nil
 }

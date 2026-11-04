@@ -128,11 +128,12 @@ type ListShareMessagesRsp struct {
 // ListShareToolsReq 分页获取分享 Session 工具请求
 //
 //	@author centonhuang
-//	@update 2026-05-29 16:00:00
+//	@update 2026-11-04 16:00:00
 type ListShareToolsReq struct {
 	ShareID  string `query:"id" required:"true" doc:"分享ID (6-8 位大小写字母+数字短码)"`
 	Page     int    `query:"page" required:"true" minimum:"1" doc:"页码"`
 	PageSize int    `query:"pageSize" required:"true" minimum:"1" maximum:"500" default:"20" doc:"每页条数"`
+	Query    string `query:"query" maxLength:"100" doc:"按工具名搜索（不区分大小写的子串匹配）"`
 }
 
 // ListShareToolsRsp 分页获取分享 Session 工具响应

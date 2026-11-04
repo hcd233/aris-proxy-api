@@ -158,6 +158,8 @@ type ListSessionToolsQuery struct {
 	SessionID uint
 	Page      int
 	PageSize  int
+	// Keyword 按工具名搜索（空串表示不过滤）
+	Keyword string
 	// IsDemo demo 视角标记；AllowedSessionIDs 为 demo 白名单 sessionID 集合
 	IsDemo            bool
 	AllowedSessionIDs []uint

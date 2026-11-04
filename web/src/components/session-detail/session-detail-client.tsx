@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, History, Share2, Wrench } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { showErrorToast } from "@/lib/api-error-handler";
-import type { SessionMetadata, MessageItem, ToolItem } from "@/lib/types";
+import type { SessionMetadata, MessageItem } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -26,7 +26,7 @@ import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { SessionHistoryList } from "./session-history-list";
 import { SessionTranscript } from "./session-transcript";
 import { ScoreDots } from "./score-dots";
-import { ToolsRail } from "./tools-rail";
+import { ToolsRail, type FetchToolsPage } from "./tools-rail";
 import { ReadingLayout } from "@/components/shared/reading-layout";
 import { DemoAddButton } from "@/components/demo-add-button";
 import { useDemoWhitelist } from "@/hooks/use-demo-whitelist";
@@ -50,8 +50,6 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
   const headerSentinelRef = useRef<HTMLDivElement | null>(null);
   const messagesScrollRootRef = useRef<HTMLDivElement | null>(null);
   const messagesSentinelRef = useRef<HTMLDivElement | null>(null);
-  const toolsSentinelRef = useRef<HTMLDivElement | null>(null);
-  const toolsScrollRootRef = useRef<HTMLDivElement | null>(null);
 
   /* eslint-disable react-hooks/set-state-in-effect -- IntersectionObserver callback inherently sets state on visibility changes */
   useEffect(() => {
@@ -157,21 +155,13 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
     enabled: listEnabled,
   });
 
-  const toolsList = useInfiniteList<ToolItem>({
-    fetcher: useCallback(
-      async (offset, limit) => {
-        const page = Math.floor(offset / limit) + 1;
-        const rsp = await api.listSessionTools(sessionId, page, limit);
-        return {
-          items: rsp.tools ?? [],
-          total: Number(rsp.pageInfo?.total ?? 0),
-        };
-      },
-      [sessionId],
-    ),
-    pageSize: 20,
-    enabled: toolsListEnabled,
-  });
+  const fetchToolsPage = useCallback<FetchToolsPage>(
+    async (page, pageSize, query) => {
+      const rsp = await api.listSessionTools(sessionId, page, pageSize, query);
+      return { items: rsp.tools ?? [], total: Number(rsp.pageInfo?.total ?? 0) };
+    },
+    [sessionId],
+  );
 
   useEffect(() => {
     const root = messagesScrollRootRef.current;
@@ -190,28 +180,7 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMobile, messagesList.hasMore, messagesList.loadMore]);
 
-  useEffect(() => {
-    const sentinel = toolsSentinelRef.current;
-    if (!sentinel || !toolsList.hasMore) return;
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting) {
-          void toolsList.loadMore();
-        }
-      },
-      { root: toolsScrollRootRef.current, rootMargin: "200px" },
-    );
-    io.observe(sentinel);
-    return () => io.disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [toolsOpen, isMobile, toolsList.hasMore, toolsList.loadMore]);
-
   const messages = messagesList.items;
-  const tools = toolsList.items;
-
-  const setToolsScrollRoot = useCallback((node: HTMLDivElement | null) => {
-    toolsScrollRootRef.current = node;
-  }, []);
 
   if (!sessionId || Number.isNaN(sessionId)) {
     return (
@@ -474,16 +443,7 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
     />
   );
 
-  const toolsPanelContent = (
-    <ToolsRail
-      tools={tools}
-      hasMore={toolsList.hasMore}
-      loading={toolsList.loading}
-      loadMore={toolsList.loadMore}
-      sentinelRef={toolsSentinelRef}
-      scrollRootRef={setToolsScrollRoot}
-    />
-  );
+  const toolsPanelContent = <ToolsRail fetchPage={fetchToolsPage} enabled={toolsListEnabled} />;
 
   return (
     <>

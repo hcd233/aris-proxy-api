@@ -515,6 +515,7 @@ func (h *sessionHandler) HandleListSessionTools(ctx context.Context, req *dto.Li
 		SessionID:         req.SessionID,
 		Page:              req.Page,
 		PageSize:          req.PageSize,
+		Keyword:           req.Query,
 	})
 	if err != nil {
 		logger.WithCtx(ctx).Error("[SessionHandler] List session tools failed",
@@ -639,6 +640,7 @@ func (h *sessionHandler) HandleListShareTools(ctx context.Context, req *dto.List
 		SessionID: sessionID,
 		Page:      req.Page,
 		PageSize:  req.PageSize,
+		Keyword:   req.Query,
 	})
 	if resultErr != nil {
 		logger.WithCtx(ctx).Error("[SessionHandler] List share tools failed",

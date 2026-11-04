@@ -333,6 +333,16 @@ var (
 	//     原生数组，会触发 SQLSTATE 42809。
 	SessionKeywordFilterSQL = "EXISTS (SELECT 1 FROM jsonb_array_elements_text(sessions.questions::jsonb) AS arr(mid) WHERE arr.mid::bigint = ANY(?::bigint[]))"
 
+	// ToolIDsAnyCondition 工具 id 限定在会话的 tool_ids 内（"{1,2,3}" 字符串传入，单个占位符）
+	ToolIDsAnyCondition = "id = ANY(?::bigint[])"
+	// ToolNameILikeCondition 按工具名不区分大小写子串匹配（tool 为 text 列 + serializer:json，
+	// PG 专有 ::jsonb 强转；->> 取出的是反转义后的原文，模式只需转义 LIKE 通配符）。
+	// ponytail: 无表达式索引，ToolIDsAnyCondition 先把扫描面收窄到单会话的工具（数百行），
+	// upgrade path: 跨会话搜索时再建 ((tool::jsonb->>'name')) gin_trgm_ops 索引。
+	ToolNameILikeCondition = "tool::jsonb->>'name' ILIKE ? ESCAPE '\\'"
+	// ToolOrderBySessionPosition 搜索结果保持会话 tool_ids 原序（与无搜索时的分页顺序一致）
+	ToolOrderBySessionPosition = "array_position(?::bigint[], id::bigint)"
+
 	DateTruncMinute = "date_trunc('minute', created_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'"
 	DateTruncHour   = "date_trunc('hour', created_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'"
 	DateTruncDay    = "date_trunc('day', created_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'"

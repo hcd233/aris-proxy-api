@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type Ref } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, ChevronRight, Search, Wrench, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,48 +11,80 @@ import {
 } from "@/components/ui/input-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useInfiniteList } from "@/hooks/use-infinite-list";
 import type { ToolItem } from "@/lib/types";
 import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-import { filterToolsByName } from "./tool-filter";
 import { ToolDetail } from "./tool-detail";
 
+export type FetchToolsPage = (
+  page: number,
+  pageSize: number,
+  query: string,
+) => Promise<{ items: ToolItem[]; total: number }>;
+
 export interface ToolsRailProps {
-  tools: ToolItem[];
-  hasMore: boolean;
-  loading: boolean;
-  loadMore: () => Promise<void>;
-  /** 无限加载哨兵（IntersectionObserver 的 root 是 scrollRootRef 指向的列表 viewport） */
-  sentinelRef?: Ref<HTMLDivElement>;
-  scrollRootRef?: (node: HTMLDivElement | null) => void;
+  /** 按页拉取工具；query 非空时由后端按工具名过滤 */
+  fetchPage: FetchToolsPage;
+  /** 抽屉打开后才开始加载 */
+  enabled: boolean;
 }
 
+const PAGE_SIZE = 20;
+const SEARCH_DEBOUNCE_MS = 250;
 const BOTTOM_SAFE = "pb-[calc(env(safe-area-inset-bottom)+0.75rem)]";
 
 /**
- * 工具抽屉（会话详情与分享页共用）：列表只列工具名，点击进入详情页。
+ * 工具抽屉（会话详情与分享页共用）：列表只列工具名，点击进入详情页；
+ * 搜索交给后端，输入停顿后从第一页重新拉取。
  * 详情页叠在列表之上，列表保持挂载（visibility 隐藏），返回时滚动位置不丢。
  */
-export function ToolsRail({
-  tools,
-  hasMore,
-  loading,
-  loadMore,
-  sentinelRef,
-  scrollRootRef,
-}: ToolsRailProps) {
+export function ToolsRail({ fetchPage, enabled }: ToolsRailProps) {
   const t = useT();
   const [query, setQuery] = useState("");
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [selected, setSelected] = useState<ToolItem | null>(null);
+  const [viewport, setViewport] = useState<HTMLDivElement | null>(null);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
-  const searching = query.trim() !== "";
-  const filtered = useMemo(() => filterToolsByName(tools, query), [tools, query]);
-  const selected = selectedId === null ? undefined : tools.find((x) => x.id === selectedId);
+  const fetcher = useCallback(
+    (offset: number, limit: number) =>
+      fetchPage(Math.floor(offset / limit) + 1, limit, debouncedQuery),
+    [fetchPage, debouncedQuery],
+  );
+  const { items, loading, hasMore, loadMore, reset } = useInfiniteList<ToolItem>({
+    fetcher,
+    pageSize: PAGE_SIZE,
+    enabled,
+  });
 
-  // 搜索要覆盖全部工具：有查询时把剩余分页一次拉完（单会话工具数量级为百）
   useEffect(() => {
-    if (searching && hasMore && !loading) void loadMore();
-  }, [searching, hasMore, loading, loadMore]);
+    const timer = setTimeout(() => setDebouncedQuery(query.trim()), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  // 只在查询真正变化时重拉；挂载时不 reset，避免首屏请求被作废重发
+  const appliedQueryRef = useRef(debouncedQuery);
+  useEffect(() => {
+    if (appliedQueryRef.current === debouncedQuery) return;
+    appliedQueryRef.current = debouncedQuery;
+    reset();
+  }, [debouncedQuery, reset]);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel || !hasMore) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) void loadMore();
+      },
+      { root: viewport, rootMargin: "200px" },
+    );
+    io.observe(sentinel);
+    return () => io.disconnect();
+  }, [viewport, hasMore, loadMore]);
+
+  const searching = debouncedQuery !== "";
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col">
@@ -68,6 +100,7 @@ export function ToolsRail({
             <InputGroupInput
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              maxLength={100}
               placeholder={t("tool_sidebar.search_placeholder")}
               aria-label={t("tool_sidebar.search_placeholder")}
             />
@@ -84,14 +117,14 @@ export function ToolsRail({
             )}
           </InputGroup>
         </div>
-        <ScrollArea className="min-h-0 flex-1" viewportRef={scrollRootRef}>
+        <ScrollArea className="min-h-0 flex-1" viewportRef={setViewport}>
           <div className={cn("px-1.5", BOTTOM_SAFE)}>
             <ul className="divide-y divide-border/40">
-              {filtered.map((item) => (
+              {items.map((item) => (
                 <li key={item.id}>
                   <Button
                     variant="ghost"
-                    onClick={() => setSelectedId(item.id)}
+                    onClick={() => setSelected(item)}
                     className="group/tool h-auto w-full justify-start gap-2 px-2 py-2 text-left font-normal whitespace-normal active:not-aria-[haspopup]:scale-100"
                   >
                     <Wrench className="size-3.5 text-muted-foreground" />
@@ -103,7 +136,7 @@ export function ToolsRail({
                 </li>
               ))}
             </ul>
-            {searching && filtered.length === 0 && !hasMore && (
+            {searching && items.length === 0 && !hasMore && !loading && (
               <p className="px-2 py-6 text-center text-[12px] text-muted-foreground">
                 {t("tool_sidebar.no_match")}
               </p>
@@ -124,7 +157,7 @@ export function ToolsRail({
               variant="ghost"
               size="icon-sm"
               className="shrink-0"
-              onClick={() => setSelectedId(null)}
+              onClick={() => setSelected(null)}
               aria-label={t("tool_sidebar.back_to_list")}
             >
               <ArrowLeft />

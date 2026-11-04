@@ -422,9 +422,11 @@ class ApiClient {
     sessionId: number,
     page: number = 1,
     pageSize: number = 20,
+    query: string = "",
   ): Promise<ListSessionToolsRsp> {
+    const q = query ? `&query=${encodeURIComponent(query)}` : "";
     return this.request<ListSessionToolsRsp>(
-      `${API_PREFIX}/session/tool/list?id=${sessionId}&page=${page}&pageSize=${pageSize}`,
+      `${API_PREFIX}/session/tool/list?id=${sessionId}&page=${page}&pageSize=${pageSize}${q}`,
     );
   }
 
@@ -523,9 +525,11 @@ class ApiClient {
     shareId: string,
     page: number = 1,
     pageSize: number = 20,
+    query: string = "",
   ): Promise<ListShareToolsRsp> {
+    const q = query ? `&query=${encodeURIComponent(query)}` : "";
     return this.publicGet<ListShareToolsRsp>(
-      `${API_PREFIX}/session/share/tool/list?id=${encodeURIComponent(shareId)}&page=${page}&pageSize=${pageSize}`,
+      `${API_PREFIX}/session/share/tool/list?id=${encodeURIComponent(shareId)}&page=${page}&pageSize=${pageSize}${q}`,
     );
   }
 

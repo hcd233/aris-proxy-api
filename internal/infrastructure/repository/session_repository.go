@@ -538,6 +538,38 @@ func (r *sessionReadRepository) FindToolsByIDs(ctx context.Context, ids []uint) 
 	return out, nil
 }
 
+// SearchToolsByName 在会话工具范围内按名称搜索并分页（COUNT 与分页分离，同 paginateSessions）
+func (r *sessionReadRepository) SearchToolsByName(ctx context.Context, ids []uint, keyword string, page, pageSize int) ([]*session.ToolDetailProjection, int64, error) {
+	if len(ids) == 0 {
+		return []*session.ToolDetailProjection{}, 0, nil
+	}
+	scope := FormatBigIntArray(ids)
+	base := r.db.WithContext(ctx).Model(&dbmodel.Tool{}).
+		Where(constant.DBConditionDeletedAtZero).
+		Where(constant.ToolIDsAnyCondition, scope).
+		Where(constant.ToolNameILikeCondition, "%"+util.EscapeLikePattern(keyword)+"%")
+
+	var total int64
+	if err := base.Session(&gorm.Session{}).Count(&total).Error; err != nil {
+		return nil, 0, ierr.Wrap(ierr.ErrDBQuery, err, "count tools by name")
+	}
+
+	// Order(clause.Expr) 会被 GORM 静默丢弃，带参数的排序表达式必须走 clause.OrderBy
+	var records []*dbmodel.Tool
+	err := base.Session(&gorm.Session{}).
+		Select(constant.ToolRepoFieldsDetail).
+		Clauses(clause.OrderBy{Expression: clause.Expr{SQL: constant.ToolOrderBySessionPosition, Vars: []any{scope}, WithoutParentheses: true}}).
+		Limit(pageSize).Offset((page - 1) * pageSize).
+		Find(&records).Error
+	if err != nil {
+		return nil, 0, ierr.Wrap(ierr.ErrDBQuery, err, "search tools by name")
+	}
+	out := lo.Map(records, func(t *dbmodel.Tool, _ int) *session.ToolDetailProjection {
+		return &session.ToolDetailProjection{ID: t.ID, Tool: t.Tool, CreatedAt: t.CreatedAt}
+	})
+	return out, total, nil
+}
+
 func (r *sessionReadRepository) GetSessionMeta(ctx context.Context, id uint) (*session.SessionMetaProjection, error) {
 	db := r.db.WithContext(ctx)
 	sessionRecord, err := r.sessionDAO.Get(db, &dbmodel.Session{ID: id}, constant.SessionRepoFieldsReadDetail)

@@ -165,11 +165,12 @@ type ListSessionMessagesRsp struct {
 // ListSessionToolsReq 分页获取 Session 工具请求
 //
 //	@author centonhuang
-//	@update 2026-05-29 14:00:00
+//	@update 2026-11-04 16:00:00
 type ListSessionToolsReq struct {
-	SessionID uint `query:"id" required:"true" minimum:"1" doc:"Session ID"`
-	Page      int  `query:"page" required:"true" minimum:"1" doc:"页码"`
-	PageSize  int  `query:"pageSize" required:"true" minimum:"1" maximum:"500" default:"20" doc:"每页条数"`
+	SessionID uint   `query:"id" required:"true" minimum:"1" doc:"Session ID"`
+	Page      int    `query:"page" required:"true" minimum:"1" doc:"页码"`
+	PageSize  int    `query:"pageSize" required:"true" minimum:"1" maximum:"500" default:"20" doc:"每页条数"`
+	Query     string `query:"query" maxLength:"100" doc:"按工具名搜索（不区分大小写的子串匹配）"`
 }
 
 // ListSessionToolsRsp 分页获取 Session 工具响应

@@ -165,6 +165,8 @@ type SessionReadRepository interface {
 	FindMessagesByIDs(ctx context.Context, ids []uint) ([]*MessageDetailProjection, error)
 	// FindToolsByIDs 批量查询工具投影
 	FindToolsByIDs(ctx context.Context, ids []uint) ([]*ToolDetailProjection, error)
+	// SearchToolsByName 在 ids 范围内按工具名不区分大小写子串匹配并分页，结果保持 ids 原序；返回当前页与匹配总数
+	SearchToolsByName(ctx context.Context, ids []uint, keyword string, page, pageSize int) ([]*ToolDetailProjection, int64, error)
 	// ListDistinctScores 查询去重的评分列表。ownerIDs 为 nil 表示不过滤（admin/demo 白名单路径），非 nil 时按归属 ID 过滤（空列表返回空结果，名下无 Key 不得越权查全量）；sessionIDs 非 nil 时按会话 ID 集合过滤（demo 白名单）。
 	ListDistinctScores(ctx context.Context, ownerIDs []uint, startTime, endTime time.Time, sessionIDs []uint) ([]int, error)
 	// ListDistinctModels 查询去重的模型列表。ownerIDs 为 nil 表示不过滤（admin/demo 白名单路径），非 nil 时按归属 ID 过滤（空列表返回空结果，名下无 Key 不得越权查全量）；sessionIDs 非 nil 时按会话 ID 集合过滤（demo 白名单）。
