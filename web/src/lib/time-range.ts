@@ -1,4 +1,3 @@
-import { addMilliseconds, isAfter } from "date-fns";
 import type { Granularity } from "@/lib/types";
 
 export type TimeRangeKey = "1h" | "24h" | "7d" | "30d" | "custom";
@@ -66,26 +65,6 @@ export function formatChartTime(
     minute: "2-digit",
     hour12: false,
   });
-}
-
-// 生成 startTime 到 endTime 之间按 granularity 等间隔的时间点（含起点，最多 200 点，防自定义超长区间爆炸）。
-// 用于后端无数据时仍渲染空坐标轴。
-export function generateEmptyTimeline(
-  startTime: string,
-  endTime: string,
-  granularity: Granularity,
-): string[] {
-  const start = new Date(startTime);
-  const end = new Date(endTime);
-  const stepMs = GRANULARITY_STEP_MS[granularity];
-  const points: string[] = [];
-  const limit = 200;
-  let cur = start;
-  while (!isAfter(cur, end) && points.length < limit) {
-    points.push(cur.toISOString());
-    cur = addMilliseconds(cur, stepMs);
-  }
-  return points;
 }
 
 export function computeRange(

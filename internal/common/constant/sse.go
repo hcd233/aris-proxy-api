@@ -17,15 +17,13 @@ const (
 	// ResponseObjectValue Response API 响应对象的 object 字段值
 	ResponseObjectValue = "response"
 
-	SSEDataFrameTemplate        = "data: %s\n\n"
-	SSEEventFrameTemplate       = "event: %s\ndata: %s\n\n"
-	SSEEventLineTemplate        = "event: %s\n"
-	SSEDataLineTemplate         = "data: %s\n\n"
-	SSEOpenAIUpstreamErrorFrame = "data: {\"error\":{\"message\":\"upstream returned status %d\",\"type\":\"server_error\",\"code\":\"upstream_error\"}}\n\n"
-	SSEOpenAIInternalErrorFrame = "data: {\"error\":{\"message\":\"internal server error\",\"type\":\"server_error\",\"code\":\"internal_error\"}}\n\n"
-	SSEOpenAIUpstreamErrorData  = `{"error":{"message":"upstream returned status %d","type":"server_error","code":"upstream_error"}}`
-	SSEOpenAIInternalErrorData  = `{"error":{"message":"internal server error","type":"server_error","code":"internal_error"}}`
-	SSEOpenAIShuttingDownData   = `{"error":{"message":"server is restarting, please retry","type":"server_error","code":"server_shutting_down"}}`
+	SSEDataFrameTemplate       = "data: %s\n\n"
+	SSEEventFrameTemplate      = "event: %s\ndata: %s\n\n"
+	SSEEventLineTemplate       = "event: %s\n"
+	SSEDataLineTemplate        = "data: %s\n\n"
+	SSEOpenAIUpstreamErrorData = `{"error":{"message":"upstream returned status %d","type":"server_error","code":"upstream_error"}}`
+	SSEOpenAIInternalErrorData = `{"error":{"message":"internal server error","type":"server_error","code":"internal_error"}}`
+	SSEOpenAIShuttingDownData  = `{"error":{"message":"server is restarting, please retry","type":"server_error","code":"server_shutting_down"}}`
 	// SSEAnthropicShuttingDownData Anthropic error 帧 data：overloaded_error 语义
 	// 提示客户端服务发布中可重试（与 OpenAI 版 server_shutting_down 对应）。
 	SSEAnthropicShuttingDownData = `{"type":"error","error":{"type":"overloaded_error","message":"server is restarting, please retry"}}`

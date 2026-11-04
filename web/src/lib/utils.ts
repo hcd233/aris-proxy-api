@@ -47,14 +47,6 @@ export function truncateText(text: string, maxLen: number): string {
   return chars.slice(0, maxLen).join("") + "…";
 }
 
-/**
- * 占比格式化：value / total → "32.4%"（1 位小数）。total <= 0 返回 "0%"。
- */
-export function formatPct(value: number, total: number): string {
-  if (total <= 0) return "0%";
-  return `${((value / total) * 100).toFixed(1)}%`;
-}
-
 /** 量级缩写档位：从大到小，满千进一级。 */
 const COMPACT_UNITS = [
   { base: 1_000_000_000, suffix: "B" },

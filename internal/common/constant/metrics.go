@@ -3,8 +3,6 @@ package constant
 import "time"
 
 const (
-	MetricServiceName = "aris-mass"
-
 	// MetricNamespaceHTTP HTTP 指标命名空间（最终指标名形如 http_request_duration_seconds）
 	MetricNamespaceHTTP = "http"
 	// MetricNamespaceLLM LLM 指标命名空间（最终指标名形如 llm_token_usage_total）

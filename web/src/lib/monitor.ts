@@ -102,10 +102,6 @@ export function mergeInstances(
   return out;
 }
 
-export function round2(v: number): number {
-  return Math.round(v * 100) / 100;
-}
-
 export function lastValue(points: Pt[]): number {
   return points.at(-1)?.value ?? 0;
 }
