@@ -44,10 +44,11 @@ function ToolLineBody({ call }: { call: UnifiedToolCall }) {
         </TooltipRoot>
       </TraceTitle>
       {preview && (
+        // shrink 权重远大于标题：空间不足时先截断预览，工具名保持完整
         <TruncatedText
           render={<TraceDescription />}
           side="top"
-          className="min-w-0 shrink font-mono text-xs"
+          className="min-w-0 shrink-[1000] font-mono text-xs"
         >
           {preview}
         </TruncatedText>

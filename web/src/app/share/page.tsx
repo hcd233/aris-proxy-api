@@ -17,7 +17,7 @@ import {
   TooltipContent,
 } from "@/components/ui/tooltip";
 import { SessionTranscript } from "@/components/session-detail/session-transcript";
-import { ToolSidebarItem } from "@/components/session-detail/tool-sidebar-item";
+import { ToolsRail } from "@/components/session-detail/tools-rail";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useInfiniteList } from "@/hooks/use-infinite-list";
 import { formatRelativeTime } from "@/lib/utils";
@@ -331,16 +331,14 @@ function SharedSessionView() {
   );
 
   const toolsPanelContent = (
-    <div className="space-y-2">
-      {tools.map((t) => (
-        <ToolSidebarItem key={t.id} tool={t} />
-      ))}
-      {toolsList.hasMore && (
-        <div ref={toolsSentinelRef} className="flex justify-center py-3">
-          <Skeleton className="h-4 w-24" />
-        </div>
-      )}
-    </div>
+    <ToolsRail
+      tools={tools}
+      hasMore={toolsList.hasMore}
+      loading={toolsList.loading}
+      loadMore={toolsList.loadMore}
+      sentinelRef={toolsSentinelRef}
+      scrollRootRef={setToolsScrollRoot}
+    />
   );
 
   return (
@@ -354,7 +352,6 @@ function SharedSessionView() {
       headerCompact={isMobile && headerCompact}
       headerSentinelRef={headerSentinelRef}
       messagesScrollRootRef={messagesScrollRootRef}
-      onToolsScrollRootChange={setToolsScrollRoot}
     >
       {readingContent}
     </ReadingLayout>

@@ -475,7 +475,14 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
   );
 
   const toolsPanelContent = (
-    <ToolsRail tools={tools} hasMore={toolsList.hasMore} sentinelRef={toolsSentinelRef} />
+    <ToolsRail
+      tools={tools}
+      hasMore={toolsList.hasMore}
+      loading={toolsList.loading}
+      loadMore={toolsList.loadMore}
+      sentinelRef={toolsSentinelRef}
+      scrollRootRef={setToolsScrollRoot}
+    />
   );
 
   return (
@@ -489,7 +496,6 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
         headerCompact={isMobile && headerCompact}
         headerSentinelRef={headerSentinelRef}
         messagesScrollRootRef={messagesScrollRootRef}
-        onToolsScrollRootChange={setToolsScrollRoot}
       >
         {readingContent}
       </ReadingLayout>

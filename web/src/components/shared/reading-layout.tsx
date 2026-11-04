@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, type Ref, type UIEvent } from "react";
+import { type ReactNode, type Ref } from "react";
 import { ArrowDown, Wrench, X } from "lucide-react";
 import {
   Drawer,
@@ -18,7 +18,6 @@ import {
   MessageScrollerProvider,
   MessageScrollerViewport,
 } from "@/components/ui/message-scroller";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
@@ -36,8 +35,6 @@ export interface ReadingLayoutProps {
   headerSentinelRef?: Ref<HTMLDivElement>;
   /** 指向 MessageScrollerViewport（无限加载 / 标题收缩的 IntersectionObserver root） */
   messagesScrollRootRef?: Ref<HTMLDivElement>;
-  onToolsScroll?: (e: UIEvent<HTMLDivElement>) => void;
-  onToolsScrollRootChange?: (node: HTMLDivElement | null) => void;
   /** 独立页面（分享页）：不在控制台内容区内，不抵消其 padding，高度占满视口 */
   standalone?: boolean;
 }
@@ -93,8 +90,6 @@ export function ReadingLayout({
   headerCompact,
   headerSentinelRef,
   messagesScrollRootRef,
-  onToolsScroll,
-  onToolsScrollRootChange,
   standalone = false,
 }: ReadingLayoutProps) {
   const t = useT();
@@ -147,15 +142,7 @@ export function ReadingLayout({
                   {t("common.done")}
                 </DrawerClose>
               </DrawerHeader>
-              <ScrollArea
-                className="min-h-0 flex-1"
-                viewportRef={(node) => onToolsScrollRootChange?.(node)}
-                onViewportScroll={onToolsScroll}
-              >
-                <div className="flex flex-col gap-2 px-3 pt-1 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
-                  {toolsPanel}
-                </div>
-              </ScrollArea>
+              <div className="flex min-h-0 flex-1 flex-col">{toolsPanel}</div>
             </DrawerContent>
           </Drawer>
         )}
@@ -225,13 +212,7 @@ export function ReadingLayout({
                 <X />
               </Button>
             </div>
-            <ScrollArea
-              className="min-h-0 flex-1"
-              viewportRef={(node) => onToolsScrollRootChange?.(node)}
-              onViewportScroll={onToolsScroll}
-            >
-              <div className="flex flex-col gap-2 p-4">{toolsPanel}</div>
-            </ScrollArea>
+            <div className="flex min-h-0 flex-1 flex-col">{toolsPanel}</div>
           </div>
         </aside>
       )}

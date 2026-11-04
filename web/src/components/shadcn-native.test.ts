@@ -236,7 +236,7 @@ describe("⑥ 聊天区", () => {
   });
 
   it("工具定义参数 schema 用 Code Block 展示", () => {
-    expect(read("components/session-detail/tool-sidebar-item.tsx")).toContain("<HighlightedCode");
+    expect(read("components/session-detail/tool-detail.tsx")).toContain("<HighlightedCode");
   });
 
   it("会话详情与分享页共用 SessionTranscript，阅读区用 MessageScroller", () => {
