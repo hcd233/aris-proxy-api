@@ -26,7 +26,11 @@ interface ToolCallsProps {
   resultsByID: Record<string, ToolResultInfo>;
 }
 
-/** 单行内容：图标 + 工具名 + 首参数预览（两者截断均可悬停看全） */
+/**
+ * 单行内容：图标 + 工具名 + 首参数预览。
+ * 工具名不参与收缩（shrink-0），只在比整行还长时按 max-w 截断（扣掉图标 size-4 + gap-2）；
+ * 剩余空间全部给预览截断。不依赖 flex-shrink 权重分配，各浏览器表现一致。
+ */
 function ToolLineBody({ call }: { call: UnifiedToolCall }) {
   const name = call.name || "tool";
   const preview = previewFirstArg(call.arguments);
@@ -35,7 +39,7 @@ function ToolLineBody({ call }: { call: UnifiedToolCall }) {
       <TraceIcon>
         <Wrench />
       </TraceIcon>
-      <TraceTitle className="font-mono">
+      <TraceTitle className="max-w-[calc(100%-1.5rem)] shrink-0 font-mono">
         <TooltipRoot>
           <TooltipTrigger render={<span />}>{name}</TooltipTrigger>
           <TooltipContent side="top" className="max-w-xs break-all">
@@ -44,11 +48,10 @@ function ToolLineBody({ call }: { call: UnifiedToolCall }) {
         </TooltipRoot>
       </TraceTitle>
       {preview && (
-        // shrink 权重远大于标题：空间不足时先截断预览，工具名保持完整
         <TruncatedText
           render={<TraceDescription />}
           side="top"
-          className="min-w-0 shrink-[1000] font-mono text-xs"
+          className="min-w-0 shrink font-mono text-xs"
         >
           {preview}
         </TruncatedText>
