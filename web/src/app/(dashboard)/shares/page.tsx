@@ -35,7 +35,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useT } from "@/lib/i18n";
-import { copyTextToClipboard } from "@/lib/clipboard";
+import { useCopyFeedback } from "@/hooks/use-copy-feedback";
 import { TruncatedText } from "@/components/truncated-text";
 
 export default function SharesPage() {
@@ -53,7 +53,7 @@ export default function SharesPage() {
       return { items: rsp.shares, pageInfo: rsp.pageInfo, error: rsp.error };
     },
   });
-  const [copiedID, setCopiedID] = useState<string | null>(null);
+  const { copiedKey: copiedID, copy } = useCopyFeedback();
   // Snapshot of "now" taken at fetch time so the expired-check during render
   // stays pure (react-hooks/purity forbids `Date.now()` inside render).
   const [refreshedAt, setRefreshedAt] = useState<number>(0);
@@ -74,16 +74,13 @@ export default function SharesPage() {
   const handleCopy = useCallback(
     async (share: ShareItem) => {
       const url = buildShareURL(share.shareId);
-      const ok = await copyTextToClipboard(url);
-      if (ok) {
-        setCopiedID(share.shareId);
+      if (await copy(url, share.shareId)) {
         toast.success(t("common.copied_to_clipboard"));
-        window.setTimeout(() => setCopiedID(null), 2000);
       } else {
         toast.error(t("shares.copy_error"));
       }
     },
-    [t],
+    [copy, t],
   );
 
   const deleteConfirm = useDeleteConfirm<ShareItem>({

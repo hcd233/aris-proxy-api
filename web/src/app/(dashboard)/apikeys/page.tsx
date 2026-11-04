@@ -51,7 +51,7 @@ import { useFilterBar } from "@/components/filter-bar/use-filter-bar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useT } from "@/lib/i18n";
 import { formatDate } from "@/lib/utils";
-import { copyTextToClipboard } from "@/lib/clipboard";
+import { useCopyFeedback } from "@/hooks/use-copy-feedback";
 import { TruncatedText } from "@/components/truncated-text";
 
 export default function APIKeysPage() {
@@ -61,7 +61,8 @@ export default function APIKeysPage() {
   const [newKeyName, setNewKeyName] = useState("");
   const [creating, setCreating] = useState(false);
   const [createdKey, setCreatedKey] = useState<APIKeyDetail | null>(null);
-  const [copied, setCopied] = useState(false);
+  const { copiedKey, copy } = useCopyFeedback();
+  const copied = copiedKey !== null;
 
   const filterBar = useFilterBar({
     persistKey: "dashboard.apikeys",
@@ -122,10 +123,8 @@ export default function APIKeysPage() {
   });
 
   const handleCopy = (key: string) => {
-    void copyTextToClipboard(key).then((ok) => {
+    void copy(key).then((ok) => {
       if (ok) {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
         toast.success(t("common.copied_to_clipboard"));
       } else {
         toast.error(t("common.copy_failed"));
