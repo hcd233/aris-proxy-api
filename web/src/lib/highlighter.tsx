@@ -1,6 +1,5 @@
 import * as React from "react";
-import { createHighlighterCore, type GrammarState, type HighlighterCore } from "shiki/core";
-import { createJavaScriptRegexEngine } from "shiki/engine/javascript";
+import type { GrammarState, HighlighterCore } from "shiki/core";
 
 /** 超过该长度的代码不做高亮：shiki 同步分词，超大工具输出会卡死主线程 */
 export const MAX_HIGHLIGHT_CHARS = 200_000;
@@ -46,12 +45,16 @@ const aliases: Record<string, LanguageName> = {
 
 let highlighter: Promise<HighlighterCore> | undefined;
 
+// shiki core 与正则引擎同样动态加载：静态 import 会把 ~52KB(gz) 打进所有含代码块页面的首屏 chunk
 function getHighlighter() {
-  highlighter ??= createHighlighterCore({
-    themes: [import("shiki/themes/github-light.mjs"), import("shiki/themes/github-dark.mjs")],
-    langs: [],
-    engine: createJavaScriptRegexEngine({ forgiving: true }),
-  });
+  highlighter ??= Promise.all([import("shiki/core"), import("shiki/engine/javascript")]).then(
+    ([{ createHighlighterCore }, { createJavaScriptRegexEngine }]) =>
+      createHighlighterCore({
+        themes: [import("shiki/themes/github-light.mjs"), import("shiki/themes/github-dark.mjs")],
+        langs: [],
+        engine: createJavaScriptRegexEngine({ forgiving: true }),
+      }),
+  );
 
   return highlighter;
 }

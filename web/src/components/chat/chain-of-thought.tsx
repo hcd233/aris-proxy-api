@@ -45,10 +45,12 @@ export function ChainOfThought({ entry, toolResultsByID }: ChainOfThoughtProps) 
             <TraceIcon>
               <ListTree />
             </TraceIcon>
-            <TooltipRoot>
-              <TooltipTrigger render={<TraceTitle>{title}</TraceTitle>} />
-              <TooltipContent side="top">{title}</TooltipContent>
-            </TooltipRoot>
+            <TraceTitle>
+              <TooltipRoot>
+                <TooltipTrigger render={<span />}>{title}</TooltipTrigger>
+                <TooltipContent side="top">{title}</TooltipContent>
+              </TooltipRoot>
+            </TraceTitle>
             {description && (
               <TooltipRoot>
                 <TooltipTrigger

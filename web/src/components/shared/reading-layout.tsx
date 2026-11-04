@@ -64,11 +64,12 @@ function TranscriptScroller({
             {children}
           </MessageScrollerContent>
         </MessageScrollerViewport>
-        <MessageScrollerButton direction="start">
+        {/* 瞬时跳转：Item 的 content-visibility:auto 按估高占位，平滑滚动途中内容增高会停在旧终点 */}
+        <MessageScrollerButton direction="start" behavior="instant">
           <ArrowDown />
           <span className="sr-only">{t("reading_layout.jump_start")}</span>
         </MessageScrollerButton>
-        <MessageScrollerButton direction="end">
+        <MessageScrollerButton direction="end" behavior="instant">
           <ArrowDown />
           <span className="sr-only">{t("reading_layout.jump_end")}</span>
         </MessageScrollerButton>

@@ -5,7 +5,6 @@ import { Alert, AlertAction, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Marker, MarkerContent } from "@/components/ui/marker";
-import { Spinner } from "@/components/ui/spinner";
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
 import { Message, MessageContent, MessageFooter, MessageHeader } from "@/components/ui/message";
 import { Textarea } from "@/components/ui/textarea";

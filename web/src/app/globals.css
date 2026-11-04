@@ -515,6 +515,13 @@ html.theme-transition *::after {
   background-clip: text;
   -webkit-text-fill-color: transparent;
   animation: trace-shimmer 2s linear infinite;
+
+  /* 写在 utility 内：TraceLine 的父级状态选择器优先级高于 motion-reduce:shimmer-none */
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+    background-image: none;
+    -webkit-text-fill-color: currentColor;
+  }
 }
 
 @utility shimmer-none {

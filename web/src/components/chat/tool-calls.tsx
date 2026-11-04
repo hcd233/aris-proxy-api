@@ -34,12 +34,14 @@ function ToolLineBody({ call }: { call: UnifiedToolCall }) {
       <TraceIcon>
         <Wrench />
       </TraceIcon>
-      <TooltipRoot>
-        <TooltipTrigger render={<TraceTitle className="font-mono">{name}</TraceTitle>} />
-        <TooltipContent side="top" className="max-w-xs break-all">
-          {name}
-        </TooltipContent>
-      </TooltipRoot>
+      <TraceTitle className="font-mono">
+        <TooltipRoot>
+          <TooltipTrigger render={<span />}>{name}</TooltipTrigger>
+          <TooltipContent side="top" className="max-w-xs break-all">
+            {name}
+          </TooltipContent>
+        </TooltipRoot>
+      </TraceTitle>
       {preview && (
         <TooltipRoot>
           <TooltipTrigger

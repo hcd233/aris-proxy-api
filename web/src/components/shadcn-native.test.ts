@@ -226,6 +226,15 @@ describe("⑥ 聊天区", () => {
     expect(src).toContain("<HighlightedCode");
   });
 
+  it("TraceTitle 不作为 TooltipTrigger 的 render 目标（会被覆盖 data-slot，丢失 Trace 状态样式）", () => {
+    expect(
+      offenders(/render=\{\s*<TraceTitle/, [
+        join(SRC, "components/chat/tool-calls.tsx"),
+        join(SRC, "components/chat/chain-of-thought.tsx"),
+      ]),
+    ).toEqual([]);
+  });
+
   it("工具定义参数 schema 用 Code Block 展示", () => {
     expect(read("components/session-detail/tool-sidebar-item.tsx")).toContain("<HighlightedCode");
   });
@@ -238,6 +247,8 @@ describe("⑥ 聊天区", () => {
     const layout = read("components/shared/reading-layout.tsx");
     expect(layout).toContain("<MessageScrollerViewport");
     expect(layout).toContain('direction="start"');
+    // Item 的 content-visibility:auto 按估高占位，平滑滚动途中内容增高会停在旧终点；必须瞬时跳转
+    expect(layout.match(/behavior="instant"/g)).toHaveLength(2);
     const transcript = read("components/session-detail/session-transcript.tsx");
     expect(transcript).toContain("<Marker");
     expect(transcript).toContain("<ChainOfThought");
@@ -309,11 +320,25 @@ describe("⑦ AI Elements", () => {
     expect(css).toContain("@utility shimmer-none {");
   });
 
+  it("shimmer 自带 reduced-motion 静止态（父级状态选择器优先级高于 motion-reduce:shimmer-none）", () => {
+    const css = read("app/globals.css");
+    const body = css.slice(
+      css.indexOf("@utility shimmer {"),
+      css.indexOf("@utility shimmer-none {"),
+    );
+    expect(body).toContain("@media (prefers-reduced-motion: reduce)");
+  });
+
   describe("Code Block + shiki", () => {
     expectGenerated(["code-block"]);
 
     it("代码块复制复用 CopyButton", () => {
       expect(read("components/ui/code-block.tsx")).toContain("<CopyButton");
+    });
+
+    it("shiki 只以类型或动态 import 引入，不进首屏 chunk", () => {
+      const src = readFileSync(join(SRC, "lib/highlighter.tsx"), "utf8");
+      expect(src).not.toMatch(/^import (?!type )[^;]*from "shiki/m);
     });
 
     it("markdown 代码块用 HighlightedCode，不再用 hljs", () => {
