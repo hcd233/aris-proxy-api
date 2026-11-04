@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   buildChatBody,
   buildCurl,
+  contextSummary,
   deriveTitle,
   estimateCost,
   fetchAllPages,
@@ -352,6 +353,42 @@ describe("parseSSELine", () => {
   it("delta.content 为空串时为 skip", () => {
     expect(parseSSELine('data: {"choices":[{"delta":{"content":""}}]}')).toEqual({
       type: "skip",
+    });
+  });
+});
+
+describe("contextSummary", () => {
+  const u = (promptTokens: number, completionTokens: number): ChatUsage => ({
+    promptTokens,
+    completionTokens,
+    cachedTokens: 0,
+  });
+
+  it("流中断无 usage 时不产出百分比（不出现 NaN%）", () => {
+    expect(contextSummary(undefined, 128000)).toEqual({
+      used: null,
+      percent: null,
+      percentLabel: null,
+    });
+  });
+
+  it("有上限时按 prompt+completion 计算四舍五入百分比", () => {
+    expect(contextSummary(u(8420, 2240), 128000)).toEqual({
+      used: 10660,
+      percent: 8,
+      percentLabel: "8%",
+    });
+  });
+
+  it("用量不足 1% 显示 <1%", () => {
+    expect(contextSummary(u(60, 40), 128000).percentLabel).toBe("<1%");
+  });
+
+  it("上限未知（<=0）时只给用量", () => {
+    expect(contextSummary(u(8420, 2240), 0)).toEqual({
+      used: 10660,
+      percent: null,
+      percentLabel: null,
     });
   });
 });

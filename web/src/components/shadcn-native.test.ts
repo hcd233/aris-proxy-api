@@ -278,6 +278,15 @@ describe("⑥ 聊天区", () => {
     expect(src).toContain("reasoningEffort");
   });
 
+  it("playground 指标为 Context 悬停卡片", () => {
+    const turn = read("components/playground/chat-turn.tsx");
+    expect(turn).toContain("<ContextCard");
+    expect(turn).not.toContain("DetailCopyButton");
+    const card = read("components/playground/context-card.tsx");
+    expect(card).toContain("<HoverCardTrigger");
+    expect(card).toContain("<Progress");
+  });
+
   it("playground 系统消息用 Marker、助手复制按钮在消息头", () => {
     const src = read("components/playground/chat-turn.tsx");
     expect(src).toMatch(/<Marker[\s>]/);

@@ -300,3 +300,18 @@ export function newMessage(role: PlaygroundMessage["role"], content: string): Pl
 export function truncateAfter(messages: PlaygroundMessage[], index: number): PlaygroundMessage[] {
   return messages.slice(0, index + 1);
 }
+
+/**
+ * Context 占用摘要：used = prompt + completion（OpenAI 的 completion 已含 reasoning token，不重复加）；
+ * limit<=0 视为上限未知只给用量；usage 缺失（流中断）全部为 null。
+ */
+export function contextSummary(
+  usage: ChatUsage | undefined,
+  limit: number,
+): { used: number | null; percent: number | null; percentLabel: string | null } {
+  if (!usage) return { used: null, percent: null, percentLabel: null };
+  const used = usage.promptTokens + usage.completionTokens;
+  if (limit <= 0) return { used, percent: null, percentLabel: null };
+  const percent = Math.round((used / limit) * 100);
+  return { used, percent, percentLabel: percent === 0 && used > 0 ? "<1%" : `${percent}%` };
+}

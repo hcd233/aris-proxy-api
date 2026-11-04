@@ -1175,5 +1175,9 @@
   "playground.effort.low": "低",
   "playground.effort.medium": "中",
   "playground.effort.high": "高",
-  "playground.model.group_other": "其他"
+  "playground.model.group_other": "其他",
+  "playground.context": "上下文",
+  "playground.context.title": "上下文",
+  "playground.context.used": "已用上下文",
+  "playground.context.cost": "预估费用"
 }
