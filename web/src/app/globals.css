@@ -495,3 +495,35 @@ html.theme-transition *::after {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Trace 运行态文字扫光（shadcn 官方 shimmer / shimmer-none 工具类的项目实现：
+ * CI 锁定的 shadcn tailwind.css 不含这两个 utility）。基于 currentColor，
+ * 两套主题自适应；prefers-reduced-motion 由 motion-reduce:shimmer-none 关闭。 */
+@keyframes trace-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+@utility shimmer {
+  background-image: linear-gradient(
+    90deg,
+    currentColor 35%,
+    color-mix(in oklab, currentColor 30%, transparent) 50%,
+    currentColor 65%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: trace-shimmer 2s linear infinite;
+}
+
+@utility shimmer-none {
+  animation: none;
+  background-image: none;
+  -webkit-text-fill-color: currentColor;
+}

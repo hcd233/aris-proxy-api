@@ -259,6 +259,22 @@ describe("⑥ 聊天区", () => {
   });
 });
 
+describe("⑦ AI Elements", () => {
+  expectGenerated(["trace", "hover-card"]);
+
+  it("自定义 shimmer 工具类（CI 锁定的 shadcn tailwind.css 不含）", () => {
+    const css = read("app/globals.css");
+    expect(css).toContain("@utility shimmer {");
+    expect(css).toContain("@utility shimmer-none {");
+  });
+
+  it("HoverCard 浮层动效接入 motion 语法层", () => {
+    expect(readFileSync(join(SRC, "styles/motion-base.css"), "utf8")).toContain(
+      "hover-card-content",
+    );
+  });
+});
+
 describe("agent harness 展示", () => {
   it("会话列表提供 harness 筛选维度与来源徽标", () => {
     const src = read("app/(dashboard)/sessions/page.tsx");
