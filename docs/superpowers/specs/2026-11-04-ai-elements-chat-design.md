@@ -226,3 +226,16 @@ DropdownMenu
 9. 模型分组按 `providerGroupOf`（在 `findProviderKey` 之上归并厂商），组按模型数降序、「其他」最后。
 10. 工具长输出 >200 行时提供 Sheet 查看全文（官方 Long output 模式）。
 11. 「对话结束」标记改用 `Marker`。
+
+## 10. 实施偏差（2026-11-04）
+
+1. **shiki 版本 4.2.0（非 4.6.0）**：4.2.0 已作为 `@lobehub/ui` 的 peer 在 lock 中并已安装，直接声明避免双版本。
+2. **shiki core 与正则引擎也走动态 import**：静态 import 会把约 52KB(gz) 打进所有含代码块页面的首屏；改后四个对话类页面首屏 JS 均下降（移除 hljs 的收益），全站 chunk 总量 +154KB 均为按需加载的语言/主题。
+3. **无语言围栏不再自动检测语言**：shiki 无自动检测，按纯文本渲染（原 rehype-highlight `detect: true`）。
+4. **`HighlightedCode` 区分 `containerClassName`（外框）与 `className`（滚动区）**；`CodeBlockCopyButton` 内部复用项目 `CopyButton`（降级复制 + 失败 toast）。
+5. **跳到开头/结尾用 `behavior="instant"`**：`MessageScrollerItem` 的 `content-visibility:auto` 按 10rem 估高占位，平滑滚动途中内容增高会停在旧终点（实测 5680/6689）；瞬时跳转实测到底。
+6. **Trace 标题的 Tooltip 嵌在 `TraceTitle` 内部**：`TooltipTrigger render={<TraceTitle/>}` 会用 `tooltip-trigger` 覆盖 `data-slot="trace-title"`，导致 Trace 的 running shimmer、图标间距等按 slot 匹配的样式失效。
+7. **`shimmer` utility 内置 reduced-motion 静止态**：父级 `data-[status=running]:*:data-[slot=trace-title]:shimmer` 优先级高于 `motion-reduce:shimmer-none`。
+8. **`groupModels` 放在 `lib/provider-key.ts`**（playground-logic 约定无运行时项目内 import）；归并表补齐 whisper/gemma/palm/command/zai/codex 等前缀。
+9. **`contextSummary` 不含 token 文案**，由 `ContextCard` 用 `formatTokenCount` 拼接（同上约定）。
+10. **`ReadingLayout`**：删除未使用的 `onMessagesScroll`；滚动 viewport 改为整列宽、内容列 768px 居中；移动端 header 由 sticky 改为固定行；新增 `standalone`（分享页）。
