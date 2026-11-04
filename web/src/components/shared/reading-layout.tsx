@@ -1,7 +1,7 @@
 "use client";
 
 import { type ReactNode, type Ref, type UIEvent } from "react";
-import { Wrench, X } from "lucide-react";
+import { ArrowDown, Wrench, X } from "lucide-react";
 import {
   Drawer,
   DrawerClose,
@@ -11,6 +11,13 @@ import {
 } from "@/components/ui/drawer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  MessageScroller,
+  MessageScrollerButton,
+  MessageScrollerContent,
+  MessageScrollerProvider,
+  MessageScrollerViewport,
+} from "@/components/ui/message-scroller";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
@@ -18,17 +25,62 @@ import { useT } from "@/lib/i18n";
 
 export interface ReadingLayoutProps {
   header: ReactNode;
+  /** 转录条目（MessageScrollerItem 序列），渲染在 MessageScrollerContent 内 */
   children: ReactNode;
   toolsPanel: ReactNode;
   toolsOpen: boolean;
   onToolsOpenChange: (open: boolean) => void;
   toolsCount: number;
   headerCompact: boolean;
+  /** 移动端标题收缩哨兵：位于滚动内容顶部，滚出 viewport 即收缩 */
   headerSentinelRef?: Ref<HTMLDivElement>;
+  /** 指向 MessageScrollerViewport（无限加载 / 标题收缩的 IntersectionObserver root） */
   messagesScrollRootRef?: Ref<HTMLDivElement>;
-  onMessagesScroll?: (e: UIEvent<HTMLDivElement>) => void;
   onToolsScroll?: (e: UIEvent<HTMLDivElement>) => void;
   onToolsScrollRootChange?: (node: HTMLDivElement | null) => void;
+  /** 独立页面（分享页）：不在控制台内容区内，不抵消其 padding，高度占满视口 */
+  standalone?: boolean;
+}
+
+/** 阅读区：MessageScroller 从头阅读（不自动跟随），提供跳到开头 / 结尾 */
+function TranscriptScroller({
+  children,
+  contentClassName,
+  viewportClassName,
+  sentinel,
+  scrollRootRef,
+}: {
+  children: ReactNode;
+  contentClassName: string;
+  viewportClassName?: string;
+  sentinel?: ReactNode;
+  scrollRootRef?: Ref<HTMLDivElement>;
+}) {
+  const t = useT();
+  return (
+    <MessageScrollerProvider autoScroll={false} defaultScrollPosition="start">
+      <MessageScroller className="h-auto min-h-0 flex-1">
+        <MessageScrollerViewport
+          ref={scrollRootRef}
+          className={cn("[-webkit-overflow-scrolling:touch]", viewportClassName)}
+        >
+          <MessageScrollerContent className={contentClassName}>
+            {sentinel}
+            {children}
+          </MessageScrollerContent>
+        </MessageScrollerViewport>
+        {/* 瞬时跳转：Item 的 content-visibility:auto 按估高占位，平滑滚动途中内容增高会停在旧终点 */}
+        <MessageScrollerButton direction="start" behavior="instant">
+          <ArrowDown />
+          <span className="sr-only">{t("reading_layout.jump_start")}</span>
+        </MessageScrollerButton>
+        <MessageScrollerButton direction="end" behavior="instant">
+          <ArrowDown />
+          <span className="sr-only">{t("reading_layout.jump_end")}</span>
+        </MessageScrollerButton>
+      </MessageScroller>
+    </MessageScrollerProvider>
+  );
 }
 
 export function ReadingLayout({
@@ -41,31 +93,33 @@ export function ReadingLayout({
   headerCompact,
   headerSentinelRef,
   messagesScrollRootRef,
-  onMessagesScroll,
   onToolsScroll,
   onToolsScrollRootChange,
+  standalone = false,
 }: ReadingLayoutProps) {
   const t = useT();
   const isMobile = useIsMobile();
 
   if (isMobile) {
     return (
-      <div className="page-surface -mx-4 -mt-4 flex min-h-[calc(100dvh-3.5rem)] flex-col bg-background pb-[calc(env(safe-area-inset-bottom)+1rem)]">
-        <div ref={headerSentinelRef} aria-hidden className="h-px w-full" />
-
+      <div
+        className={cn(
+          "page-surface flex flex-col overflow-hidden bg-background",
+          standalone ? "h-[100dvh]" : "-mx-4 -mt-4 -mb-4 h-[calc(100dvh-3.5rem)]",
+        )}
+      >
         <header
           className={cn(
-            "sticky top-[-1rem] z-30 -mt-px",
+            "relative z-30 shrink-0",
             "transition-[border-color,background-color,box-shadow] duration-200 ease-out",
-            "supports-[backdrop-filter]:backdrop-blur",
             headerCompact
-              ? "border-b border-border bg-background/92 supports-[backdrop-filter]:bg-background/75 shadow-[0_1px_0_rgba(0,0,0,0.04)]"
-              : "border-b border-border/60 bg-background/85 supports-[backdrop-filter]:bg-background/70",
+              ? "border-b border-border bg-background shadow-[0_1px_0_rgba(0,0,0,0.04)]"
+              : "border-b border-border/60 bg-background",
           )}
         >
           <div
             className={cn(
-              "flex flex-wrap items-center gap-1 gap-y-1 px-2 pt-[calc(1rem+0.25rem)]",
+              "flex flex-wrap items-center gap-1 gap-y-1 px-2 pt-2",
               "transition-[padding] duration-200 ease-out",
               headerCompact ? "pb-1.5" : "pb-2",
             )}
@@ -74,16 +128,13 @@ export function ReadingLayout({
           </div>
         </header>
 
-        <div
-          ref={messagesScrollRootRef}
-          onScroll={onMessagesScroll}
-          className={cn(
-            "flex-1 overflow-y-auto px-4 pt-5 pb-[calc(env(safe-area-inset-bottom)+2.5rem)]",
-            "[-webkit-overflow-scrolling:touch] overscroll-contain",
-          )}
+        <TranscriptScroller
+          scrollRootRef={messagesScrollRootRef}
+          sentinel={<div ref={headerSentinelRef} aria-hidden className="h-px w-full shrink-0" />}
+          contentClassName="gap-5 px-4 pt-5 pb-[calc(env(safe-area-inset-bottom)+2.5rem)]"
         >
           {children}
-        </div>
+        </TranscriptScroller>
 
         {toolsCount > 0 && (
           <Drawer open={toolsOpen} onOpenChange={onToolsOpenChange} showSwipeHandle>
@@ -113,21 +164,34 @@ export function ReadingLayout({
   }
 
   return (
-    <div className="page-surface -mx-4 -mt-4 -mb-4 flex h-[100dvh] overflow-hidden bg-background md:-mx-8 md:-mt-8 md:-mb-8 lg:-mx-10 lg:-mt-10 lg:-mb-10">
+    <div
+      className={cn(
+        "page-surface flex h-[100dvh] overflow-hidden bg-background",
+        !standalone && "-mx-4 -mt-4 -mb-4 md:-mx-8 md:-mt-8 md:-mb-8 lg:-mx-10 lg:-mt-10 lg:-mb-10",
+      )}
+    >
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="relative z-30 shrink-0 border-b border-border/70 bg-background/95 supports-[backdrop-filter]:backdrop-blur">
-          <div className="mx-auto flex max-w-[768px] items-center gap-3 px-4 pt-[calc(1rem+0.25rem)] pb-3 md:pt-[calc(2rem+0.25rem)] lg:pt-[calc(2.5rem+0.25rem)]">
+          <div
+            className={cn(
+              "mx-auto flex max-w-[768px] items-center gap-3 px-4 pb-3",
+              standalone
+                ? "pt-4"
+                : "pt-[calc(1rem+0.25rem)] md:pt-[calc(2rem+0.25rem)] lg:pt-[calc(2.5rem+0.25rem)]",
+            )}
+          >
             {header}
           </div>
         </header>
 
-        <div
-          ref={messagesScrollRootRef}
-          onScroll={onMessagesScroll}
-          className="mx-auto w-full max-w-[768px] min-w-0 flex-1 overflow-y-auto overflow-x-hidden [scrollbar-gutter:stable] px-4 py-6 sm:px-6"
+        <TranscriptScroller
+          scrollRootRef={messagesScrollRootRef}
+          // scrollbar-gutter：滚动条出现与否不改变内容列宽（语言切换布局不变约定）
+          viewportClassName="overflow-x-hidden [scrollbar-gutter:stable]"
+          contentClassName="mx-auto w-full max-w-[768px] min-w-0 gap-5 px-4 py-6 sm:px-6"
         >
           {children}
-        </div>
+        </TranscriptScroller>
       </div>
 
       {toolsCount > 0 && (

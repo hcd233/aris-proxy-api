@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError } from "@/lib/api-client";
 import { PermissionGuard } from "@/components/permission-guard";
 import { useAuth } from "@/lib/auth-context";
@@ -41,6 +41,7 @@ import { SessionSidebar } from "@/components/playground/session-sidebar";
 const DEFAULT_PARAMS: PlaygroundParams = {
   model: "",
   apiKeyID: null,
+  reasoningEffort: "",
 };
 
 function PlaygroundPage() {
@@ -59,6 +60,10 @@ function PlaygroundPage() {
   const [sending, setSending] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  const contextLengths = useMemo(
+    () => Object.fromEntries(models.map((m) => [m.alias, m.contextLength])),
+    [models],
+  );
 
   // 本地会话/参数初始化（一次）
   /* eslint-disable react-hooks/set-state-in-effect -- Reading localStorage requires setting state in effect on mount */
@@ -95,7 +100,12 @@ function PlaygroundPage() {
         if (cancelled) return;
         setModels(
           selectableModels(
-            modelItems.map((m) => ({ alias: m.alias, enabled: m.enabled, pricing: m.pricing })),
+            modelItems.map((m) => ({
+              alias: m.alias,
+              enabled: m.enabled,
+              pricing: m.pricing,
+              contextLength: m.contextLength,
+            })),
           ),
         );
         const mine = ownedKeys(keyItems, userId);
@@ -146,7 +156,7 @@ function PlaygroundPage() {
       if (!params.model || params.apiKeyID === null) return;
       const pricing = models.find((m) => m.alias === params.model)?.pricing;
       const body = {
-        ...buildChatBody(context, params.model),
+        ...buildChatBody(context, params.model, params.reasoningEffort),
         stream_options: { include_usage: true },
       };
 
@@ -387,6 +397,7 @@ function PlaygroundPage() {
               </div>
               <ConversationView
                 messages={active.messages}
+                contextLengths={contextLengths}
                 sending={sending}
                 canSuggest={!sending && !!params.model && params.apiKeyID !== null}
                 onSuggest={handleSend}

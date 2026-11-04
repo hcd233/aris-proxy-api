@@ -5,51 +5,28 @@ import { Alert, AlertAction, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Marker, MarkerContent } from "@/components/ui/marker";
-import { Spinner } from "@/components/ui/spinner";
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
 import { Message, MessageContent, MessageFooter, MessageHeader } from "@/components/ui/message";
 import { Textarea } from "@/components/ui/textarea";
 import { MarkdownLite } from "@/components/chat/markdown-lite";
+import { Reasoning } from "@/components/chat/reasoning";
 import { ProviderIcon } from "@/components/provider-icon";
-import { copyTextToClipboard } from "@/lib/clipboard";
-import { formatCost } from "@/lib/money";
 import { useT } from "@/lib/i18n";
-import { cn, formatDurationMs, formatTokenCount } from "@/lib/utils";
-import { buildCurl, type PlaygroundMessage } from "@/app/(dashboard)/playground/playground-logic";
-import {
-  AlertTriangle,
-  Brain,
-  ChevronRight,
-  Copy,
-  Pencil,
-  RefreshCw,
-  Sparkles,
-  Trash2,
-} from "lucide-react";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { cn } from "@/lib/utils";
+import { type PlaygroundMessage } from "@/app/(dashboard)/playground/playground-logic";
+import { ContextCard } from "./context-card";
+import { AlertTriangle, Pencil, RefreshCw, Sparkles, Trash2 } from "lucide-react";
 
 interface ChatTurnProps {
   message: PlaygroundMessage;
   index: number;
+  /** 该轮模型的上下文窗口（tokens），<=0 表示未知 */
+  contextLength: number;
   sending: boolean;
   onEditSave: (index: number, content: string) => void;
   onDelete: (index: number) => void;
   onRerun: (index: number) => void;
   onRetry: (index: number) => void;
-}
-
-function DetailCopyButton({ label, value }: { label: string; value: string }) {
-  return (
-    <Button
-      type="button"
-      variant="outline"
-      size="sm"
-      onClick={() => void copyTextToClipboard(value)}
-    >
-      <Copy className="size-3.5" />
-      {label}
-    </Button>
-  );
 }
 
 /** 消息级 hover 操作（图标按钮，操作条默认透明，hover/focus 浮现） */
@@ -73,36 +50,6 @@ function IconAction({
     >
       {children}
     </Button>
-  );
-}
-
-/**
- * 思考内容（reasoning_content）：流式期间默认展开，接收结束后自动收起；
- * 用户手动切换过就固定住不再跟随（userOpen 为 null 表示跟随流式态）。
- */
-function ThinkingBlock({ text, streaming }: { text: string; streaming: boolean }) {
-  const t = useT();
-  const [userOpen, setUserOpen] = useState<boolean | null>(null);
-  const open = userOpen ?? streaming;
-
-  return (
-    <Collapsible
-      open={open}
-      onOpenChange={setUserOpen}
-      className="rounded-xl border border-border/70 bg-muted/30 px-3 py-2"
-    >
-      <CollapsibleTrigger className="flex w-full items-center gap-1.5 text-[12px] font-medium text-muted-foreground transition-colors hover:text-foreground">
-        <Brain className="size-3.5 text-primary/70" />
-        <span>{streaming ? t("playground.thinking.streaming") : t("chat.thought_process")}</span>
-        {streaming && <Spinner className="size-3 text-primary/70" />}
-        <ChevronRight className="ml-auto size-3.5 in-data-panel-open:rotate-90" />
-      </CollapsibleTrigger>
-      <CollapsibleContent>
-        <p className="mt-2 border-l-2 border-border pl-3 text-[13px] italic leading-[1.6] break-words whitespace-pre-wrap text-muted-foreground">
-          {text}
-        </p>
-      </CollapsibleContent>
-    </Collapsible>
   );
 }
 
@@ -131,6 +78,7 @@ const STREAM_SETTLE_MS = 900;
 export function ChatTurn({
   message,
   index,
+  contextLength,
   sending,
   onEditSave,
   onDelete,
@@ -140,12 +88,10 @@ export function ChatTurn({
   const t = useT();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(message.content);
-  const [detailsOpen, setDetailsOpen] = useState(false);
 
   const isAssistant = message.role === "assistant";
   const isUser = message.role === "user";
   const meta = message.meta;
-  const usage = meta?.usage;
   const reasoning = message.reasoning ?? "";
   const showPending = isAssistant && sending && !message.content && !meta?.error;
   const streaming = isAssistant && sending && !!message.content;
@@ -262,7 +208,7 @@ export function ChatTurn({
           </Bubble>
         ) : isAssistant ? (
           <>
-            {reasoning && <ThinkingBlock text={reasoning} streaming={sending} />}
+            {reasoning && <Reasoning text={reasoning} streaming={sending} />}
             <Bubble variant="ghost">
               <BubbleContent>
                 {/* stream-body + data-streaming/data-settling：motion-signature.css 的流式签名动效
@@ -311,52 +257,7 @@ export function ChatTurn({
         {/* 页脚：指标（可展开详情）+ hover 操作条 */}
         {!editing && (
           <MessageFooter className="min-h-7 gap-2 px-0">
-            {isAssistant && meta && (
-              <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen}>
-                <CollapsibleTrigger className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground">
-                  <ChevronRight className="size-3 in-data-panel-open:rotate-90" />
-                  <span>
-                    {usage
-                      ? `${formatTokenCount(usage.promptTokens + usage.completionTokens)} tok`
-                      : "—"}{" "}
-                    · {formatDurationMs(meta.totalMs)} · {formatCost(meta.cost)}
-                    {meta.interrupted ? ` · ${t("playground.metrics.interrupted")}` : ""}
-                  </span>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <div className="mt-1.5 rounded-xl border bg-background p-2.5 text-[11px] text-muted-foreground">
-                    <div>
-                      {t("playground.metrics.tokens_in")}{" "}
-                      <strong>{formatTokenCount(usage?.promptTokens)}</strong>
-                      {" · "}
-                      {t("playground.metrics.tokens_cached")}{" "}
-                      <strong>{formatTokenCount(usage?.cachedTokens)}</strong>
-                      {" · "}
-                      {t("playground.metrics.tokens_out")}{" "}
-                      <strong>{formatTokenCount(usage?.completionTokens)}</strong>
-                    </div>
-                    <div>
-                      {t("playground.metrics.first_token")}{" "}
-                      <strong>{formatDurationMs(meta.firstTokenMs)}</strong>
-                      {" · "}
-                      {t("playground.metrics.total_time")}{" "}
-                      <strong>{formatDurationMs(meta.totalMs)}</strong>
-                    </div>
-                    <div className="mt-1">{t("playground.metrics.estimate_hint")}</div>
-                    <div className="mt-1.5 flex flex-wrap gap-1.5">
-                      <DetailCopyButton
-                        label={t("playground.metrics.request_json")}
-                        value={JSON.stringify(meta.requestSnapshot ?? {}, null, 2)}
-                      />
-                      <DetailCopyButton
-                        label={t("playground.metrics.copy_curl")}
-                        value={buildCurl(meta.requestSnapshot ?? {}, window.location.origin)}
-                      />
-                    </div>
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
-            )}
+            {isAssistant && meta && <ContextCard meta={meta} contextLength={contextLength} />}
             {actions && <div className={cn(isAssistant && "ml-auto")}>{actions}</div>}
           </MessageFooter>
         )}

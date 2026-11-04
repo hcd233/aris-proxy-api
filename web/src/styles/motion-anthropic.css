@@ -158,6 +158,7 @@
 [data-theme="anthropic"]
   :is(
     [data-slot="popover-content"],
+    [data-slot="hover-card-content"],
     [data-slot="dropdown-menu-content"],
     [data-slot="dropdown-menu-sub-content"],
     [data-slot="select-content"],

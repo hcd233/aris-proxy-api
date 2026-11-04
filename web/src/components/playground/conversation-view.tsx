@@ -24,6 +24,8 @@ import type { PlaygroundMessage } from "@/app/(dashboard)/playground/playground-
 
 interface ConversationViewProps {
   messages: PlaygroundMessage[];
+  /** 模型别名 → 上下文窗口（tokens），用于 Context 卡片 */
+  contextLengths: Record<string, number>;
   sending: boolean;
   /** 空态一键发送示例提示词；模型/Key 未就绪时由调用方关掉 */
   canSuggest: boolean;
@@ -48,6 +50,7 @@ const SUGGESTION_KEYS = [
  */
 export function ConversationView({
   messages,
+  contextLengths,
   sending,
   canSuggest,
   onSuggest,
@@ -102,6 +105,7 @@ export function ConversationView({
                 <ChatTurn
                   message={m}
                   index={i}
+                  contextLength={m.meta?.model ? (contextLengths[m.meta.model] ?? 0) : 0}
                   sending={sending && i === messages.length - 1}
                   onEditSave={onEditSave}
                   onDelete={onDelete}

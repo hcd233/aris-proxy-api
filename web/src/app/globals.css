@@ -7,11 +7,6 @@
 @import "../styles/motion-signature.css";
 @import "../styles/portal.css";
 
-/* highlight.js 主题走全局样式：留在组件里会被 Next 拆成独立 chunk，首屏
- * 没有消息的页面（playground / sessions/detail）只发 preload 不发
- * stylesheet，浏览器会报 "preloaded but not used" 警告。 */
-@import "highlight.js/styles/atom-one-dark.css";
-
 @custom-variant dark (&:is(.dark *));
 @custom-variant moonshot (&:is([data-theme="moonshot"] *));
 
@@ -451,4 +446,43 @@ html.theme-transition *::after {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* Trace 运行态文字扫光（shadcn 官方 shimmer / shimmer-none 工具类的项目实现：
+ * CI 锁定的 shadcn tailwind.css 不含这两个 utility）。基于 currentColor，
+ * 两套主题自适应；prefers-reduced-motion 由 motion-reduce:shimmer-none 关闭。 */
+@keyframes trace-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+@utility shimmer {
+  background-image: linear-gradient(
+    90deg,
+    currentColor 35%,
+    color-mix(in oklab, currentColor 30%, transparent) 50%,
+    currentColor 65%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: trace-shimmer 2s linear infinite;
+
+  /* 写在 utility 内：TraceLine 的父级状态选择器优先级高于 motion-reduce:shimmer-none */
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+    background-image: none;
+    -webkit-text-fill-color: currentColor;
+  }
+}
+
+@utility shimmer-none {
+  animation: none;
+  background-image: none;
+  -webkit-text-fill-color: currentColor;
 }

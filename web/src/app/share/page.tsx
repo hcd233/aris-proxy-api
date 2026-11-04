@@ -1,9 +1,9 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { MessagesSquare, Share2, Wrench } from "lucide-react";
+import { Share2, Wrench } from "lucide-react";
 
 import { api, ApiError } from "@/lib/api-client";
 import type { ShareSessionMetadata, MessageItem, ToolItem } from "@/lib/types";
@@ -16,7 +16,7 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip";
-import { ChatMessage, buildToolResultsByID } from "@/components/chat/chat-message";
+import { SessionTranscript } from "@/components/session-detail/session-transcript";
 import { ToolSidebarItem } from "@/components/session-detail/tool-sidebar-item";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useInfiniteList } from "@/hooks/use-infinite-list";
@@ -193,6 +193,7 @@ function SharedSessionView() {
     const sentinel = headerSentinelRef.current;
     if (!sentinel) return;
     const io = new IntersectionObserver(([entry]) => setHeaderCompact(!entry.isIntersecting), {
+      root: messagesScrollRootRef.current,
       threshold: 0,
       rootMargin: "0px",
     });
@@ -241,7 +242,6 @@ function SharedSessionView() {
 
   const messages = messagesList.items;
   const tools = toolsList.items;
-  const toolResultsByID = useMemo(() => buildToolResultsByID(messages), [messages]);
 
   const setToolsScrollRoot = useCallback((node: HTMLDivElement | null) => {
     toolsScrollRootRef.current = node;
@@ -321,32 +321,13 @@ function SharedSessionView() {
   );
 
   const readingContent = (
-    <>
-      {messages.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <MessagesSquare className="mb-3 size-10 text-muted-foreground/40" />
-          <p className="text-sm text-muted-foreground">{t("share.no_messages")}</p>
-        </div>
-      ) : (
-        <div className="space-y-5">
-          {messages.map((msg, idx) => (
-            <ChatMessage key={msg.id} message={msg} index={idx} toolResultsByID={toolResultsByID} />
-          ))}
-          {messagesList.hasMore && (
-            <div ref={messagesSentinelRef} className="flex justify-center py-3">
-              <Skeleton className="h-4 w-32" />
-            </div>
-          )}
-          {!messagesList.hasMore && messages.length > 0 && (
-            <div className="pt-3 pb-1 text-center">
-              <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground/50">
-                {t("share.end_of_conversation")}
-              </span>
-            </div>
-          )}
-        </div>
-      )}
-    </>
+    <SessionTranscript
+      messages={messages}
+      hasMore={messagesList.hasMore}
+      sentinelRef={messagesSentinelRef}
+      emptyText={t("share.no_messages")}
+      endText={t("share.end_of_conversation")}
+    />
   );
 
   const toolsPanelContent = (
@@ -364,6 +345,7 @@ function SharedSessionView() {
 
   return (
     <ReadingLayout
+      standalone
       header={headerContent}
       toolsPanel={toolsPanelContent}
       toolsOpen={toolsOpen}

@@ -21,14 +21,27 @@ import {
   TooltipRoot,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ProviderIcon } from "@/components/provider-icon";
+import { groupModels } from "@/lib/provider-key";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { ArrowUp, KeyRound, Plus, Square } from "lucide-react";
+import { ArrowUp, ChevronDown, KeyRound, Plus, Square } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import type { APIKeyItem } from "@/lib/types";
-import type {
-  PlaygroundModelOption,
-  PlaygroundParams,
+import {
+  REASONING_EFFORTS,
+  type PlaygroundModelOption,
+  type PlaygroundParams,
+  type ReasoningEffort,
 } from "@/app/(dashboard)/playground/playground-logic";
 import { TruncatedText } from "@/components/truncated-text";
 
@@ -105,38 +118,90 @@ export function Composer({
     setValue("");
   };
 
+  const modelGroups = groupModels(models);
+  const effortLabel = (e: ReasoningEffort) =>
+    t(e ? `playground.effort.${e}` : "playground.effort.default");
+
+  // Model Selector：DropdownMenu + RadioGroup，按厂商分组（shadcn AI Elements）
   const modelSelect = (
-    <span className="flex w-fit max-w-[13rem] min-w-0">
-      <Select
-        value={params.model}
-        onValueChange={(v) => onParamsChange({ model: String(v ?? "") })}
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <InputGroupButton
+            size="xs"
+            aria-label={`${t("playground.model")}: ${params.model || t("playground.model.placeholder")}`}
+            className={`${PILL_CLASS} max-w-[13rem]`}
+          />
+        }
       >
-        <SelectTrigger size="sm" aria-label={t("playground.model")} className={PILL_CLASS}>
-          <SelectValue className="min-w-0" placeholder={t("playground.model.placeholder")}>
-            {(selected) =>
-              selected ? (
-                <span className="flex min-w-0 items-center gap-1.5">
-                  <ProviderIcon protocol={String(selected)} size={13} />
-                  <TruncatedLabel text={String(selected)} />
-                </span>
-              ) : (
-                <span>{t("playground.model.placeholder")}</span>
-              )
-            }
-          </SelectValue>
-        </SelectTrigger>
-        <SelectContent className="w-auto max-w-[22rem] min-w-(--anchor-width)">
-          {models.map((m) => (
-            <SelectItem key={m.alias} value={m.alias}>
-              <span className="flex items-center gap-2">
-                <ProviderIcon protocol={m.alias} size={14} />
-                {m.alias}
-              </span>
-            </SelectItem>
+        {params.model ? (
+          <span className="flex min-w-0 items-center gap-1.5">
+            <ProviderIcon protocol={params.model} size={13} />
+            <TruncatedLabel text={params.model} />
+          </span>
+        ) : (
+          <span>{t("playground.model.placeholder")}</span>
+        )}
+        <ChevronDown className="size-3 shrink-0 opacity-60" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="max-h-80 w-auto max-w-[22rem] min-w-56">
+        <DropdownMenuRadioGroup
+          value={params.model}
+          onValueChange={(v) => onParamsChange({ model: String(v ?? "") })}
+        >
+          {modelGroups.map((group, i) => (
+            <DropdownMenuGroup key={group.key}>
+              {i > 0 && <DropdownMenuSeparator />}
+              <DropdownMenuLabel>
+                {group.key === "other" ? t("playground.model.group_other") : group.label}
+              </DropdownMenuLabel>
+              {group.items.map((m) => (
+                <DropdownMenuRadioItem key={m.alias} value={m.alias} closeOnClick>
+                  <span className="flex min-w-0 items-center gap-2">
+                    <ProviderIcon protocol={m.alias} size={14} />
+                    {m.alias}
+                  </span>
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuGroup>
           ))}
-        </SelectContent>
-      </Select>
-    </span>
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
+  // 思考强度：默认不传 reasoning_effort
+  const effortSelect = (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <InputGroupButton
+            size="xs"
+            aria-label={`${t("playground.effort.title")}: ${effortLabel(params.reasoningEffort)}`}
+            className={PILL_CLASS}
+          />
+        }
+      >
+        <span className="text-muted-foreground/70">{t("playground.effort")}</span>
+        <span>{effortLabel(params.reasoningEffort)}</span>
+        <ChevronDown className="size-3 shrink-0 opacity-60" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-40">
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>{t("playground.effort.title")}</DropdownMenuLabel>
+          <DropdownMenuRadioGroup
+            value={params.reasoningEffort}
+            onValueChange={(v) => onParamsChange({ reasoningEffort: v as ReasoningEffort })}
+          >
+            {REASONING_EFFORTS.map((e) => (
+              <DropdownMenuRadioItem key={e || "default"} value={e} closeOnClick>
+                {effortLabel(e)}
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+        </DropdownMenuGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 
   // 悬停解释计费归属：调试用量计入所选 Key 的审计与限流配额
@@ -240,6 +305,7 @@ export function Composer({
           {/* ml-auto：页脚换行后右侧控件仍贴右，不左对齐留出大片空白 */}
           <div className="ml-auto flex min-w-0 items-center gap-1">
             {modelSelect}
+            {effortSelect}
             {keySelect}
             {sending ? (
               <InputGroupButton

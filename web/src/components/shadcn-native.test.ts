@@ -128,13 +128,10 @@ describe("③ 组合修正", () => {
     expect(read("app/(dashboard)/layout.tsx")).toContain("<SidebarGroupLabel");
   });
 
-  it.each(["components/chat/markdown-lite.tsx", "app/(dashboard)/upstream/grouped-view.tsx"])(
-    "%s 复用 CopyButton",
-    (p) => {
-      expect(read(p)).toContain("<CopyButton");
-      expect(read(p)).not.toContain("copyTextToClipboard");
-    },
-  );
+  it.each(["app/(dashboard)/upstream/grouped-view.tsx"])("%s 复用 CopyButton", (p) => {
+    expect(read(p)).toContain("<CopyButton");
+    expect(read(p)).not.toContain("copyTextToClipboard");
+  });
 
   it("CopyButton 基于 Button", () => {
     expect(read("components/ui/copy-button.tsx")).toContain("<Button");
@@ -219,12 +216,51 @@ describe("⑥ 聊天区", () => {
     expect(src).toMatch(/<MessageHeader[\s\S]*?<CopyButton[\s\S]*?<\/MessageHeader>/);
   });
 
-  it("思考块与工具卡之间只保留列表 gap，不叠加 margin", () => {
-    expect(read("components/chat/reasoning-block.tsx")).not.toContain("mb-3");
-    expect(read("components/chat/tool-call-card.tsx")).not.toContain("mt-3");
-    expect(read("components/chat/assistant-message.tsx")).toContain(
-      '<div className="flex flex-col gap-3">',
+  it("工具调用改为 Trace Tool", () => {
+    expect(existsSync(join(SRC, "components/chat/tool-call-card.tsx"))).toBe(false);
+    expect(read("components/chat/assistant-message.tsx")).toContain("<ToolCalls");
+    const src = read("components/chat/tool-calls.tsx");
+    expect(src).toContain("<TraceCollapsible");
+    expect(src).toContain('status="pending"');
+    expect(src).toContain("<SheetTrigger");
+    expect(src).toContain("<HighlightedCode");
+  });
+
+  it("TraceTitle 不作为 TooltipTrigger 的 render 目标（会被覆盖 data-slot，丢失 Trace 状态样式）", () => {
+    expect(
+      offenders(/render=\{\s*<TraceTitle/, [
+        join(SRC, "components/chat/tool-calls.tsx"),
+        join(SRC, "components/chat/chain-of-thought.tsx"),
+      ]),
+    ).toEqual([]);
+  });
+
+  it("工具定义参数 schema 用 Code Block 展示", () => {
+    expect(read("components/session-detail/tool-sidebar-item.tsx")).toContain("<HighlightedCode");
+  });
+
+  it("会话详情与分享页共用 SessionTranscript，阅读区用 MessageScroller", () => {
+    expect(read("components/session-detail/session-detail-client.tsx")).toContain(
+      "<SessionTranscript",
     );
+    expect(read("app/share/page.tsx")).toContain("<SessionTranscript");
+    const layout = read("components/shared/reading-layout.tsx");
+    expect(layout).toContain("<MessageScrollerViewport");
+    expect(layout).toContain('direction="start"');
+    // Item 的 content-visibility:auto 按估高占位，平滑滚动途中内容增高会停在旧终点；必须瞬时跳转
+    expect(layout.match(/behavior="instant"/g)).toHaveLength(2);
+    const transcript = read("components/session-detail/session-transcript.tsx");
+    expect(transcript).toContain("<Marker");
+    expect(transcript).toContain("<ChainOfThought");
+  });
+
+  it("思考过程统一为 Trace Reasoning", () => {
+    expect(existsSync(join(SRC, "components/chat/reasoning-block.tsx"))).toBe(false);
+    expect(read("components/chat/assistant-message.tsx")).toContain("<Reasoning");
+    const turn = read("components/playground/chat-turn.tsx");
+    expect(turn).toContain("<Reasoning");
+    expect(turn).not.toContain("ThinkingBlock");
+    expect(read("components/chat/reasoning.tsx")).toContain("<TraceCollapsible");
   });
 
   it("playground 对话区用 MessageScroller", () => {
@@ -246,6 +282,22 @@ describe("⑥ 聊天区", () => {
     expect(src).not.toMatch(/<Textarea[\s>]/);
   });
 
+  it("playground 模型选择为 Model Selector，带思考强度菜单", () => {
+    const src = read("components/playground/composer.tsx");
+    expect(src).toContain("DropdownMenuRadioGroup");
+    expect(src).toContain("groupModels(");
+    expect(src).toContain("reasoningEffort");
+  });
+
+  it("playground 指标为 Context 悬停卡片", () => {
+    const turn = read("components/playground/chat-turn.tsx");
+    expect(turn).toContain("<ContextCard");
+    expect(turn).not.toContain("DetailCopyButton");
+    const card = read("components/playground/context-card.tsx");
+    expect(card).toContain("<HoverCardTrigger");
+    expect(card).toContain("<Progress");
+  });
+
   it("playground 系统消息用 Marker、助手复制按钮在消息头", () => {
     const src = read("components/playground/chat-turn.tsx");
     expect(src).toMatch(/<Marker[\s>]/);
@@ -256,6 +308,65 @@ describe("⑥ 聊天区", () => {
     const src = read("components/playground/chat-turn.tsx");
     expect(src).toContain("stream-body");
     expect(src).toContain("data-streaming");
+  });
+});
+
+describe("⑦ AI Elements", () => {
+  expectGenerated(["trace", "hover-card"]);
+
+  it("自定义 shimmer 工具类（CI 锁定的 shadcn tailwind.css 不含）", () => {
+    const css = read("app/globals.css");
+    expect(css).toContain("@utility shimmer {");
+    expect(css).toContain("@utility shimmer-none {");
+  });
+
+  it("shimmer 自带 reduced-motion 静止态（父级状态选择器优先级高于 motion-reduce:shimmer-none）", () => {
+    const css = read("app/globals.css");
+    const body = css.slice(
+      css.indexOf("@utility shimmer {"),
+      css.indexOf("@utility shimmer-none {"),
+    );
+    expect(body).toContain("@media (prefers-reduced-motion: reduce)");
+  });
+
+  describe("Code Block + shiki", () => {
+    expectGenerated(["code-block"]);
+
+    it("代码块复制复用 CopyButton", () => {
+      expect(read("components/ui/code-block.tsx")).toContain("<CopyButton");
+    });
+
+    it("shiki 只以类型或动态 import 引入，不进首屏 chunk", () => {
+      const src = readFileSync(join(SRC, "lib/highlighter.tsx"), "utf8");
+      expect(src).not.toMatch(/^import (?!type )[^;]*from "shiki/m);
+    });
+
+    it("markdown 代码块用 HighlightedCode，不再用 hljs", () => {
+      const src = read("components/chat/markdown-lite.tsx");
+      expect(src).toContain("<HighlightedCode");
+      expect(src).not.toContain("rehype-highlight");
+      expect(src).not.toContain("hljs");
+    });
+
+    it("dataset JSON 预览用 HighlightedCode，不再注入 HTML", () => {
+      const src = read("app/(dashboard)/dataset/page.tsx");
+      expect(src).toContain("<HighlightedCode");
+      expect(src).not.toContain("highlight.js");
+      expect(src).not.toContain("dangerouslySetInnerHTML");
+    });
+
+    it("移除 highlight.js 依赖", () => {
+      const pkg = readFileSync(join(SRC, "../package.json"), "utf8");
+      expect(pkg).not.toContain('"highlight.js"');
+      expect(pkg).not.toContain('"rehype-highlight"');
+      expect(read("app/globals.css")).not.toContain("highlight.js");
+    });
+  });
+
+  it("HoverCard 浮层动效接入 motion 语法层", () => {
+    expect(readFileSync(join(SRC, "styles/motion-base.css"), "utf8")).toContain(
+      "hover-card-content",
+    );
   });
 });
 

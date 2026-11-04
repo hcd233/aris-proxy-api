@@ -285,6 +285,7 @@ html[data-theme="moonshot"][data-motion-tier="lite"] {
 [data-theme="moonshot"]
   :is(
     [data-slot="popover-content"],
+    [data-slot="hover-card-content"],
     [data-slot="dropdown-menu-content"],
     [data-slot="dropdown-menu-sub-content"],
     [data-slot="select-content"],

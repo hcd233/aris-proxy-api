@@ -9,12 +9,13 @@
  *  - system-message.tsx    (retains "System" label, no avatar)
  *
  * Tool-result messages (role="tool" or role="user" with tool_call_id)
- * are skipped here — they're inlined into the matched ToolCallCard.
+ * are skipped here — they're inlined into the matched ToolCalls row.
  */
 
 import type { MessageItem } from "@/lib/types";
 import { formatClockTime } from "@/lib/utils";
 import { extractContent, type ToolResultInfo } from "./content-extract";
+import { isToolResultMessage } from "./transcript-groups";
 import { UserMessage } from "./user-message";
 import { AssistantMessage } from "./assistant-message";
 import { SystemMessage } from "./system-message";
@@ -30,8 +31,7 @@ interface ChatMessageProps {
 export function ChatMessage({ message, index, toolResultsByID }: ChatMessageProps) {
   const { role } = message.message;
 
-  const isToolResult = role === "tool" || (role === "user" && !!message.message.tool_call_id);
-  if (isToolResult) return null;
+  if (isToolResultMessage(message)) return null;
 
   if (role === "user") {
     return <UserMessage message={message} index={index} />;
