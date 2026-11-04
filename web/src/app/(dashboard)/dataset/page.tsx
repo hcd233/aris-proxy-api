@@ -593,7 +593,8 @@ export default function DatasetPage() {
           </CardHeader>
           <Separator className="mx-4" />
           <CardContent>
-            <div className="grid gap-5 pt-2 lg:grid-cols-[1fr_auto] lg:items-end">
+            {/* 操作列定宽：auto 列会随译文长度伸缩，连带挤压左侧摘要列 */}
+            <div className="grid gap-5 pt-2 lg:grid-cols-[1fr_22rem] lg:items-end">
               {/* Export summary */}
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <StatPill label={t("dataset.export_filter_score")} value={String(minScore)} />

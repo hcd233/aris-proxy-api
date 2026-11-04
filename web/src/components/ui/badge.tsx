@@ -3,6 +3,7 @@ import { useRender } from "@base-ui/react/use-render";
 import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "@/lib/utils";
+import { stabilizeLabels } from "@/components/locale-stable-text";
 
 const badgeVariants = cva(
   "group/badge inline-flex h-6 w-fit shrink-0 items-center justify-center gap-1.5 overflow-hidden rounded-full border border-transparent px-3 py-0 text-xs font-medium whitespace-nowrap transition-all duration-150 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&>svg]:pointer-events-none [&>svg]:size-3",
@@ -30,6 +31,7 @@ function Badge({
   className,
   variant = "default",
   render,
+  children,
   ...props
 }: useRender.ComponentProps<"span"> & VariantProps<typeof badgeVariants>) {
   return useRender({
@@ -37,6 +39,9 @@ function Badge({
     props: mergeProps<"span">(
       {
         className: cn(badgeVariants({ variant }), className),
+        // Locale-Stable: text labels reserve their widest translation. Only
+        // set when given, so a `render` element keeps its own children.
+        ...(children !== undefined && { children: stabilizeLabels(children) }),
       },
       props,
     ),

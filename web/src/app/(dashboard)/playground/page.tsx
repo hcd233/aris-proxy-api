@@ -5,7 +5,6 @@ import { api, ApiError } from "@/lib/api-client";
 import { PermissionGuard } from "@/components/permission-guard";
 import { useAuth } from "@/lib/auth-context";
 import type { APIKeyItem } from "@/lib/types";
-import { LocaleFade } from "@/components/locale-fade";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -357,7 +356,7 @@ function PlaygroundPage() {
   // 而不是悬在页面中部（原 h-[calc(100dvh-13rem)] 硬编码标题区高度，误差约 48px）。
   // < md 时内容区上方还有 3.5rem 的 MobileTopBar，需从视口高度里扣掉。
   return (
-    <LocaleFade className="-mx-4 -mt-4 -mb-4 flex h-[calc(100dvh-3.5rem)] flex-col md:-mx-8 md:-mt-8 md:-mb-8 md:h-[100dvh] lg:-mx-10 lg:-mt-10 lg:-mb-10">
+    <div className="-mx-4 -mt-4 -mb-4 flex h-[calc(100dvh-3.5rem)] flex-col md:-mx-8 md:-mt-8 md:-mb-8 md:h-[100dvh] lg:-mx-10 lg:-mt-10 lg:-mb-10">
       <div className="flex min-h-0 flex-1 flex-col gap-4 p-4 md:p-8 lg:p-10">
         <PageHeader title={t("playground.title")} description={t("playground.description")} />
         <div className="flex min-h-0 flex-1 gap-4">
@@ -428,7 +427,7 @@ function PlaygroundPage() {
           </SheetContent>
         </Sheet>
       </div>
-    </LocaleFade>
+    </div>
   );
 }
 

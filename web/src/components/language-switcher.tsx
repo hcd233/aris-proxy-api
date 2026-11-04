@@ -53,7 +53,13 @@ export function LanguageSwitcher({
             variant="outline"
             size="xs"
             aria-label={label.native}
-            className={cn("min-w-0", compact && "w-8 px-0", TRIGGER_TONE_CLASS[tone], className)}
+            // 定宽：三种语言名长度不同（English / 中文 / 日本語），自适应宽度会让
+            // 触发器在切换后伸缩，连带挤动同一行的主题、登出按钮。
+            className={cn(
+              compact ? "w-8 min-w-0 px-0" : "w-22 justify-between",
+              TRIGGER_TONE_CLASS[tone],
+              className,
+            )}
           />
         }
       >
