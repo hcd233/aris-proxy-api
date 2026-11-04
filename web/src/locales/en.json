@@ -1168,5 +1168,12 @@
   "reading_layout.jump_start": "Jump to start",
   "reading_layout.jump_end": "Jump to end",
   "chat.steps_title": "Ran {count} tool calls",
-  "chat.steps_more": ", …"
+  "chat.steps_more": ", …",
+  "playground.effort": "Effort",
+  "playground.effort.title": "Reasoning effort",
+  "playground.effort.default": "Default",
+  "playground.effort.low": "Low",
+  "playground.effort.medium": "Medium",
+  "playground.effort.high": "High",
+  "playground.model.group_other": "Other"
 }

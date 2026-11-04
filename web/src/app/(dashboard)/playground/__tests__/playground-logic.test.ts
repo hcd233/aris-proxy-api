@@ -174,7 +174,7 @@ describe("参数存储", () => {
   it("写读回环；无数据或损坏返回 null", () => {
     const store = stubStorage();
     expect(loadParams()).toBeNull();
-    const params = { model: "gpt-4o", apiKeyID: 7 };
+    const params = { model: "gpt-4o", apiKeyID: 7, reasoningEffort: "low" as const };
     saveParams(params);
     expect(loadParams()).toEqual(params);
     store.set(PARAMS_STORAGE_KEY, "{broken");
@@ -194,8 +194,36 @@ describe("参数存储", () => {
         stream: false,
       }),
     );
-    expect(loadParams()).toEqual({ model: "claude-sonnet-4-5", apiKeyID: 3 });
+    expect(loadParams()).toEqual({ model: "claude-sonnet-4-5", apiKeyID: 3, reasoningEffort: "" });
     vi.unstubAllGlobals();
+  });
+
+  it("非法或缺失的 reasoningEffort 回落为默认（不传）", () => {
+    const store = stubStorage();
+    store.set(
+      PARAMS_STORAGE_KEY,
+      JSON.stringify({ model: "m", apiKeyID: 1, reasoningEffort: "max" }),
+    );
+    expect(loadParams()?.reasoningEffort).toBe("");
+    store.set(
+      PARAMS_STORAGE_KEY,
+      JSON.stringify({ model: "m", apiKeyID: 1, reasoningEffort: "high" }),
+    );
+    expect(loadParams()?.reasoningEffort).toBe("high");
+    vi.unstubAllGlobals();
+  });
+});
+
+describe("buildChatBody reasoning_effort", () => {
+  const msgs = [{ role: "user" as const, content: "hi" }];
+
+  it("非空时写入 reasoning_effort", () => {
+    expect(buildChatBody(msgs, "m", "high")).toMatchObject({ reasoning_effort: "high" });
+  });
+
+  it("默认不带该字段", () => {
+    expect(buildChatBody(msgs, "m")).not.toHaveProperty("reasoning_effort");
+    expect(buildChatBody(msgs, "m", "")).not.toHaveProperty("reasoning_effort");
   });
 });
 
@@ -230,10 +258,10 @@ describe("buildChatBody", () => {
 describe("selectableModels", () => {
   it("仅保留 enabled 项并按 alias 去重", () => {
     const got = selectableModels([
-      { alias: "a", enabled: true },
-      { alias: "b", enabled: false },
-      { alias: "a", enabled: true },
-      { alias: "c", enabled: true },
+      { alias: "a", enabled: true, contextLength: 0 },
+      { alias: "b", enabled: false, contextLength: 0 },
+      { alias: "a", enabled: true, contextLength: 0 },
+      { alias: "c", enabled: true, contextLength: 0 },
     ]);
     expect(got.map((m) => m.alias)).toEqual(["a", "c"]);
   });

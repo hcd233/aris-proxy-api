@@ -271,6 +271,13 @@ describe("⑥ 聊天区", () => {
     expect(src).not.toMatch(/<Textarea[\s>]/);
   });
 
+  it("playground 模型选择为 Model Selector，带思考强度菜单", () => {
+    const src = read("components/playground/composer.tsx");
+    expect(src).toContain("DropdownMenuRadioGroup");
+    expect(src).toContain("groupModels(");
+    expect(src).toContain("reasoningEffort");
+  });
+
   it("playground 系统消息用 Marker、助手复制按钮在消息头", () => {
     const src = read("components/playground/chat-turn.tsx");
     expect(src).toMatch(/<Marker[\s>]/);

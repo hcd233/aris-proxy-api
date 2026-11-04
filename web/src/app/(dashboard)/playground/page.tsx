@@ -42,6 +42,7 @@ import { SessionSidebar } from "@/components/playground/session-sidebar";
 const DEFAULT_PARAMS: PlaygroundParams = {
   model: "",
   apiKeyID: null,
+  reasoningEffort: "",
 };
 
 function PlaygroundPage() {
@@ -96,7 +97,12 @@ function PlaygroundPage() {
         if (cancelled) return;
         setModels(
           selectableModels(
-            modelItems.map((m) => ({ alias: m.alias, enabled: m.enabled, pricing: m.pricing })),
+            modelItems.map((m) => ({
+              alias: m.alias,
+              enabled: m.enabled,
+              pricing: m.pricing,
+              contextLength: m.contextLength,
+            })),
           ),
         );
         const mine = ownedKeys(keyItems, userId);
@@ -147,7 +153,7 @@ function PlaygroundPage() {
       if (!params.model || params.apiKeyID === null) return;
       const pricing = models.find((m) => m.alias === params.model)?.pricing;
       const body = {
-        ...buildChatBody(context, params.model),
+        ...buildChatBody(context, params.model, params.reasoningEffort),
         stream_options: { include_usage: true },
       };
 

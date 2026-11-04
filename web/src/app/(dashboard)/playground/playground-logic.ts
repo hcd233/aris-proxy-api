@@ -35,27 +35,38 @@ export interface PlaygroundSession {
   messages: PlaygroundMessage[];
 }
 
-/** 调试参数（UI 状态，跨会话记忆）：采样参数固定，只记忆模型与计费 Key */
+/** 思考强度：空串 = 不传 reasoning_effort（上游默认，避免不支持推理的模型被拒） */
+export type ReasoningEffort = "" | "low" | "medium" | "high";
+export const REASONING_EFFORTS: readonly ReasoningEffort[] = ["", "low", "medium", "high"];
+
+function isReasoningEffort(v: unknown): v is ReasoningEffort {
+  return typeof v === "string" && (REASONING_EFFORTS as readonly string[]).includes(v);
+}
+
+/** 调试参数（UI 状态，跨会话记忆）：采样参数固定，记忆模型、计费 Key 与思考强度 */
 export interface PlaygroundParams {
   model: string;
   apiKeyID: number | null;
+  reasoningEffort: ReasoningEffort;
 }
 
 /** 固定采样参数（UI 不暴露；max_tokens 取上游默认上限口径） */
 export const FIXED_TEMPERATURE = 0.7;
 export const FIXED_MAX_TOKENS = 64834;
 
-/** 模型列表项（只需要别名、启用态与定价） */
+/** 模型列表项（别名、启用态、定价与上下文窗口；contextLength<=0 表示未知） */
 export interface PlaygroundModelOption {
   alias: string;
   enabled: boolean;
   pricing?: PricingDTO;
+  contextLength: number;
 }
 
 /** 组装 OpenAI Chat 请求体（空消息行剔除；采样参数与流式开关均为固定值） */
 export function buildChatBody(
   messages: Pick<PlaygroundMessage, "role" | "content">[],
   model: string,
+  reasoningEffort: ReasoningEffort = "",
 ): Record<string, unknown> {
   const kept = messages
     .filter((m) => m.content.trim() !== "")
@@ -66,6 +77,7 @@ export function buildChatBody(
     stream: true,
     temperature: FIXED_TEMPERATURE,
     max_tokens: FIXED_MAX_TOKENS,
+    ...(reasoningEffort ? { reasoning_effort: reasoningEffort } : {}),
   };
 }
 
@@ -258,6 +270,7 @@ export function loadParams(): PlaygroundParams | null {
   return {
     model: typeof raw.model === "string" ? raw.model : "",
     apiKeyID: typeof raw.apiKeyID === "number" ? raw.apiKeyID : null,
+    reasoningEffort: isReasoningEffort(raw.reasoningEffort) ? raw.reasoningEffort : "",
   };
 }
 

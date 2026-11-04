@@ -1168,5 +1168,12 @@
   "reading_layout.jump_start": "先頭へ移動",
   "reading_layout.jump_end": "末尾へ移動",
   "chat.steps_title": "{count} 回のツール呼び出し",
-  "chat.steps_more": " など"
+  "chat.steps_more": " など",
+  "playground.effort": "思考",
+  "playground.effort.title": "思考の強さ",
+  "playground.effort.default": "既定",
+  "playground.effort.low": "低",
+  "playground.effort.medium": "中",
+  "playground.effort.high": "高",
+  "playground.model.group_other": "その他"
 }
