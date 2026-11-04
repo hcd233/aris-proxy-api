@@ -13,6 +13,7 @@
  */
 
 import type { MessageItem } from "@/lib/types";
+import { formatClockTime } from "@/lib/utils";
 import { extractContent, type ToolResultInfo } from "./content-extract";
 import { UserMessage } from "./user-message";
 import { AssistantMessage } from "./assistant-message";
@@ -38,13 +39,7 @@ export function ChatMessage({ message, index, toolResultsByID }: ChatMessageProp
 
   if (role === "system") {
     const { text } = extractContent(message.message.content);
-    const time = message.createdAt
-      ? new Date(message.createdAt).toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-        })
-      : undefined;
+    const time = formatClockTime(message.createdAt);
     return <SystemMessage text={text} time={time} index={index} />;
   }
 

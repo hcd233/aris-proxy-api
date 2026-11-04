@@ -1,9 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import cronstrue from "cronstrue";
-import "cronstrue/locales/zh_CN";
 import type { CronJobItem } from "@/lib/types";
+import { isValidCronSpec, specToHuman } from "@/lib/cron";
 import {
   Dialog,
   DialogContent,
@@ -111,25 +110,6 @@ function parsedToSpec(parsed: ParsedSpec): string {
       return `${parsed.minute} ${parsed.hour} ${parsed.dayOfMonth} * *`;
     case "advanced":
       return parsed.advancedSpec;
-  }
-}
-
-function specToHuman(spec: string, locale: string): string {
-  try {
-    const cronLocale = locale === "zh" ? "zh_CN" : "en";
-    return cronstrue.toString(spec, { locale: cronLocale });
-  } catch {
-    return spec;
-  }
-}
-
-function isValidCronSpec(spec: string): boolean {
-  if (!spec || spec.trim().split(/\s+/).length !== 5) return false;
-  try {
-    cronstrue.toString(spec);
-    return true;
-  } catch {
-    return false;
   }
 }
 

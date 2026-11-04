@@ -157,6 +157,21 @@ export function formatDateTime(dateStr: string): string {
   return `${formatDate(d)} ${hours}:${minutes}:${seconds}`;
 }
 
+/** 消息气泡时间 `HH:mm:ss`（跟随浏览器 locale）；空值返回 undefined 便于直接作可选 prop。 */
+export function formatClockTime(dateInput: string | undefined): string | undefined {
+  if (!dateInput) return undefined;
+  return new Date(dateInput).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
+/** 仅放行 http/https 链接，挡住 javascript:、data: 等可执行协议。 */
+export function isSafeUrl(url: unknown): url is string {
+  return typeof url === "string" && (url.startsWith("http://") || url.startsWith("https://"));
+}
+
 /**
  * 分享过期时间：后端对「永久」使用 ~100 年后的哨兵值，直接显示 2126 年
  * 会让用户以为数据坏了；超过 50 年一律渲染 neverLabel。

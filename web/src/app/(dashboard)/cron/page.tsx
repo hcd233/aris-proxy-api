@@ -4,8 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { useOptimisticUpdate } from "@/hooks/use-optimistic-update";
 import { useRequestSeq } from "@/hooks/use-request-seq";
-import cronstrue from "cronstrue";
-import "cronstrue/locales/zh_CN";
+import { specToHuman } from "@/lib/cron";
 import { api } from "@/lib/api-client";
 import type { CronJobItem, PageInfo } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,15 +43,6 @@ import type { ApiError } from "@/lib/api-client";
 import { ScheduleEditorDialog } from "@/components/cron/schedule-editor";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { formatDateTime } from "@/lib/utils";
-
-function specToHuman(spec: string, locale: string): string {
-  try {
-    const cronLocale = locale === "zh" ? "zh_CN" : "en";
-    return cronstrue.toString(spec, { locale: cronLocale });
-  } catch {
-    return spec;
-  }
-}
 
 export default function CronPage() {
   const { t, locale } = useI18n();

@@ -31,7 +31,7 @@ import type { Options as SanitizeOptions } from "rehype-sanitize";
 
 import type { ReactNode } from "react";
 
-import { cn } from "@/lib/utils";
+import { cn, isSafeUrl } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
 import { balanceEmphasis } from "@/lib/markdown";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -61,10 +61,6 @@ const SANITIZE_SCHEMA: SanitizeOptions = {
     input: ["disabled", "type", "checked"],
   },
 };
-
-function isSafeUrl(url: unknown): url is string {
-  return typeof url === "string" && (url.startsWith("http://") || url.startsWith("https://"));
-}
 
 function reactChildrenToText(children: ReactNode): string {
   if (typeof children === "string") return children;
