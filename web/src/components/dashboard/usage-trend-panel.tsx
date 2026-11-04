@@ -99,7 +99,7 @@ export function UsageTrendPanel({ range }: { range: DashboardRange }) {
       if (entries.length === 0) return null;
       const colorOf = (key: string) => config[key]?.color ?? config[OTHER_KEY]?.color;
       return (
-        <div className="grid min-w-32 gap-1.5 rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-xl">
+        <div className="grid min-w-32 gap-1.5 rounded-lg border border-border/50 bg-background px-3 py-2 text-xs shadow-xl">
           <div className="font-medium">
             {formatChartTime(time, rangeKey, customStart, customEnd)}
           </div>
@@ -108,7 +108,7 @@ export function UsageTrendPanel({ range }: { range: DashboardRange }) {
               <div key={e.key} className="flex items-center justify-between gap-3">
                 <span className="flex min-w-0 items-center gap-2">
                   <span
-                    className="size-2.5 shrink-0 rounded-[2px]"
+                    className="size-2 shrink-0 rounded-[2px]"
                     style={{ backgroundColor: colorOf(e.key) }}
                   />
                   <span className="break-all text-muted-foreground">

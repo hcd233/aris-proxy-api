@@ -208,7 +208,7 @@ export function ReliabilityPanel({ range }: { range: DashboardRange }) {
         )
       }
     >
-      <div className="flex h-full min-h-0 flex-col gap-2.5 overflow-hidden text-[11px]">
+      <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden text-[11px]">
         <div className="flex shrink-0 items-baseline justify-end gap-1.5">
           <span className="font-display text-base text-foreground tabular-nums">
             {summary ? formatRate(successRate(summary), 2) : "\u2014"}
@@ -282,7 +282,7 @@ export function ReliabilityPanel({ range }: { range: DashboardRange }) {
 
         {summary && summary.failures.length > 0 && (
           <div className="flex min-h-0 flex-[2_1_0] flex-col gap-1.5 border-t border-border/60 pt-2">
-            <span className="shrink-0 text-[11px] tracking-wide text-muted-foreground">
+            <span className="shrink-0 text-[11px] text-muted-foreground">
               {t("dashboard.failure.title")}
             </span>
             <FailureBreakdown failures={summary.failures} />

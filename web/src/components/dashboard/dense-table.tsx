@@ -16,8 +16,7 @@ export function TruncatedName({ text, className }: { text: string; className?: s
 }
 
 /** 紧凑表格的通用 class（行高 28px、11px 字号、数字等宽） */
-export const DENSE_HEAD =
-  "h-7 px-1 text-[11px] font-medium tracking-wide text-muted-foreground uppercase";
+export const DENSE_HEAD = "h-7 px-1 text-[11px] font-medium text-muted-foreground";
 export const DENSE_CELL = "h-7 px-1 py-0 text-[11px] tabular-nums";
 
 /**

@@ -50,15 +50,15 @@ interface KpiSpec {
 function KpiCard({ spec, loading }: { spec: KpiSpec; loading: boolean }) {
   const tone = deltaTone(spec.kind, spec.delta);
   return (
-    <Card size="sm" className="gap-1 px-3 py-2.5" data-interactive>
+    <Card size="sm" className="gap-1 px-3 py-3" data-interactive>
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[11px] font-medium tracking-wider whitespace-nowrap text-muted-foreground uppercase">
+        <span className="text-xs font-medium whitespace-nowrap text-muted-foreground">
           {spec.label}
         </span>
         {!loading && (
           <span
             className={cn(
-              "font-mono text-[11px] font-semibold whitespace-nowrap tabular-nums",
+              "font-mono text-[11px] font-medium whitespace-nowrap tabular-nums",
               TONE_CLASS[tone],
             )}
           >

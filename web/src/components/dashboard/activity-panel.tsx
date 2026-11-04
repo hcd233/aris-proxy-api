@@ -116,9 +116,7 @@ export function ActivityPanel({ range }: { range: DashboardRange }) {
       </div>
 
       <div className="space-y-1">
-        <div className="text-[11px] tracking-wide text-muted-foreground uppercase">
-          {t("dashboard.panel.clients")}
-        </div>
+        <div className="text-[11px] text-muted-foreground">{t("dashboard.panel.clients")}</div>
         <div className="flex h-1.5 overflow-hidden rounded-full bg-muted">
           {segments.map((s) => (
             <div
@@ -128,7 +126,7 @@ export function ActivityPanel({ range }: { range: DashboardRange }) {
             />
           ))}
         </div>
-        <div className="flex flex-wrap gap-x-2.5 gap-y-0.5 text-[11px] text-muted-foreground">
+        <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
           {segments.map((s) => (
             <span key={s.key} className="inline-flex items-center gap-1">
               <span className="size-1.5 rounded-[2px]" style={{ backgroundColor: s.color }} />

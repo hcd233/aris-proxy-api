@@ -45,9 +45,7 @@ export function Panel({
   return (
     <Card size="sm" className={cn("min-h-0 gap-2", className)}>
       <div className="flex min-h-7 items-center justify-between gap-2 px-3">
-        <h2 className="text-[11px] leading-tight font-medium tracking-wider text-muted-foreground uppercase">
-          {title}
-        </h2>
+        <h2 className="text-xs leading-tight font-medium text-muted-foreground">{title}</h2>
         {action}
       </div>
       <div className={cn("relative min-h-0 flex-1 px-3", bodyClassName)}>

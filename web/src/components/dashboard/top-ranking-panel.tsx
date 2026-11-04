@@ -174,7 +174,7 @@ export function TopRankingPanel({ range }: { range: DashboardRange }) {
                     <button
                       type="button"
                       onClick={() => setStoredShareBy(shareBy === "cost" ? "requests" : "cost")}
-                      className="inline-flex h-[18px] items-center rounded-full bg-muted px-1.5 text-[11px] leading-none normal-case text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                      className="inline-flex h-5 items-center rounded-full bg-muted px-2 text-[11px] leading-none text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                     >
                       {t(
                         shareBy === "cost"
