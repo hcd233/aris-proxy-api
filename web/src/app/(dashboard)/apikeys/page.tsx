@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { usePersistentState } from "@/hooks/use-persistent-state";
+import { useEffect, useState } from "react";
+import { usePaginatedList } from "@/hooks/use-paginated-list";
 import { api } from "@/lib/api-client";
 import { showErrorToast } from "@/lib/api-error-handler";
-import type { APIKeyItem, APIKeyDetail, PageInfo } from "@/lib/types";
+import type { APIKeyItem, APIKeyDetail } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -47,7 +47,6 @@ import { PageHeader } from "@/components/page-header";
 import { ListEmptyState } from "@/components/list-empty-state";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { useDeleteConfirm } from "@/hooks/use-delete-confirm";
-import { useRequestSeq } from "@/hooks/use-request-seq";
 import { FilterBar } from "@/components/filter-bar/filter-bar";
 import { useFilterBar } from "@/components/filter-bar/use-filter-bar";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -58,18 +57,6 @@ import { copyTextToClipboard } from "@/lib/clipboard";
 export default function APIKeysPage() {
   const t = useT();
   const isMobile = useIsMobile();
-  const [keys, setKeys] = useState<APIKeyItem[]>([]);
-  const [persistedPage, setPersistedPage] = usePersistentState("dashboard.apikeys.page", 1);
-  const [persistedPageSize, setPersistedPageSize] = usePersistentState(
-    "dashboard.apikeys.pageSize",
-    20,
-  );
-  const [pageInfo, setPageInfo] = useState<PageInfo>({
-    page: persistedPage,
-    pageSize: persistedPageSize,
-    total: 0,
-  });
-  const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
   const [newKeyName, setNewKeyName] = useState("");
   const [creating, setCreating] = useState(false);
@@ -83,36 +70,25 @@ export default function APIKeysPage() {
   });
   const { queryParams } = filterBar;
 
-  // 竞态守卫：关键词/筛选连点时慢响应不得覆盖新响应
-  const requestSeq = useRequestSeq();
-  const fetchKeys = useCallback(
-    async (page: number, pageSize: number, query?: string) => {
-      const seq = requestSeq.begin();
-      setLoading(true);
-      try {
-        const rsp = await api.listAPIKeys(page, pageSize, query);
-        if (!requestSeq.isCurrent(seq)) return;
-        setKeys(rsp.keys ?? []);
-        if (rsp.pageInfo) {
-          setPageInfo(rsp.pageInfo);
-          setPersistedPage(rsp.pageInfo.page);
-          setPersistedPageSize(rsp.pageInfo.pageSize);
-        }
-      } catch (err) {
-        if (!requestSeq.isCurrent(seq)) return;
-        showErrorToast(err, { title: t("apikeys.load_error") });
-      } finally {
-        if (requestSeq.isCurrent(seq)) setLoading(false);
-      }
+  const {
+    items: keys,
+    pageInfo,
+    loading,
+    load: fetchKeys,
+  } = usePaginatedList({
+    persistKey: "dashboard.apikeys",
+    errorTitle: t("apikeys.load_error"),
+    fetchPage: async (page, pageSize, query: string | undefined) => {
+      const rsp = await api.listAPIKeys(page, pageSize, query);
+      return { items: rsp.keys, pageInfo: rsp.pageInfo };
     },
-    [t, setPersistedPage, setPersistedPageSize, requestSeq],
-  );
+  });
 
-  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- 关键词 token 变化回到第 1 页查询；挂载时以持久化关键词发起首次查询 */
+  /* eslint-disable react-hooks/exhaustive-deps -- 关键词 token 变化回到第 1 页查询；挂载时以持久化关键词发起首次查询 */
   useEffect(() => {
     fetchKeys(1, pageInfo.pageSize, queryParams.freeText || undefined);
   }, [queryParams]);
-  /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   const handleCreate = async () => {
     if (!newKeyName.trim()) return;

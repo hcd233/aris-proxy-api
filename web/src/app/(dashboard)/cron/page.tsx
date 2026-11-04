@@ -1,12 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { usePersistentState } from "@/hooks/use-persistent-state";
+import { usePaginatedList } from "@/hooks/use-paginated-list";
 import { useOptimisticUpdate } from "@/hooks/use-optimistic-update";
-import { useRequestSeq } from "@/hooks/use-request-seq";
 import { specToHuman } from "@/lib/cron";
 import { api } from "@/lib/api-client";
-import type { CronJobItem, PageInfo } from "@/lib/types";
+import type { CronJobItem } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
@@ -46,18 +45,6 @@ import { formatDateTime } from "@/lib/utils";
 
 export default function CronPage() {
   const { t, locale } = useI18n();
-  const [persistedPage, setPersistedPage] = usePersistentState("dashboard.cron.page", 1);
-  const [persistedPageSize, setPersistedPageSize] = usePersistentState(
-    "dashboard.cron.pageSize",
-    20,
-  );
-  const [jobs, setJobs] = useState<CronJobItem[]>([]);
-  const [pageInfo, setPageInfo] = useState<PageInfo>({
-    page: persistedPage,
-    pageSize: persistedPageSize,
-    total: 0,
-  });
-  const [loading, setLoading] = useState(true);
   const [editingJob, setEditingJob] = useState<CronJobItem | null>(null);
   const [triggeringJob, setTriggeringJob] = useState<CronJobItem | null>(null);
   const [triggering, setTriggering] = useState(false);
@@ -69,40 +56,26 @@ export default function CronPage() {
   });
   const { queryParams } = filterBar;
 
-  // 竞态守卫：关键词/筛选连点时慢响应不得覆盖新响应
-  const requestSeq = useRequestSeq();
-  const fetchJobs = useCallback(
-    async (page: number, pageSize: number, query: string) => {
-      const seq = requestSeq.begin();
-      setLoading(true);
-      try {
-        const rsp = await api.listCronJobs({ page, pageSize, query: query || undefined });
-        if (!requestSeq.isCurrent(seq)) return;
-        if (rsp.error) {
-          showErrorToast(rsp.error, { title: t("cron.load_error") });
-          return;
-        }
-        setJobs(rsp.jobs ?? []);
-        if (rsp.pageInfo) {
-          setPageInfo(rsp.pageInfo);
-          setPersistedPage(rsp.pageInfo.page);
-          setPersistedPageSize(rsp.pageInfo.pageSize);
-        }
-      } catch (err) {
-        if (!requestSeq.isCurrent(seq)) return;
-        showErrorToast(err, { title: t("cron.load_error") });
-      } finally {
-        if (requestSeq.isCurrent(seq)) setLoading(false);
-      }
+  const {
+    items: jobs,
+    setItems: setJobs,
+    pageInfo,
+    loading,
+    load: fetchJobs,
+  } = usePaginatedList({
+    persistKey: "dashboard.cron",
+    errorTitle: t("cron.load_error"),
+    fetchPage: async (page, pageSize, query: string) => {
+      const rsp = await api.listCronJobs({ page, pageSize, query: query || undefined });
+      return { items: rsp.jobs, pageInfo: rsp.pageInfo, error: rsp.error };
     },
-    [setPersistedPage, setPersistedPageSize, t, requestSeq],
-  );
+  });
 
-  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- 关键词 token 变化回到第 1 页查询；挂载时以持久化关键词发起首次查询 */
+  /* eslint-disable react-hooks/exhaustive-deps -- 关键词 token 变化回到第 1 页查询；挂载时以持久化关键词发起首次查询 */
   useEffect(() => {
     fetchJobs(1, pageInfo.pageSize, queryParams.freeText);
   }, [queryParams]);
-  /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   // enabled 开关：乐观更新 + 失败回滚，避免整表重拉导致闪烁
   const toggleEnabled = useOptimisticUpdate<CronJobItem>({
@@ -136,7 +109,7 @@ export default function CronPage() {
       setJobs((prev) => prev.map((j) => (j.name === editingJob.name ? { ...j, spec } : j)));
       toast.success(`${editingJob.name} ${t("cron.schedule_updated")}`);
     },
-    [editingJob, t],
+    [editingJob, setJobs, t],
   );
 
   const handleTrigger = async () => {

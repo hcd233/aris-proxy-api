@@ -5,7 +5,7 @@ import { api } from "@/lib/api-client";
 import { showErrorToast } from "@/lib/api-error-handler";
 import { useAuth } from "@/lib/auth-context";
 import { PermissionGuard } from "@/components/permission-guard";
-import type { TriggerAction, TriggerItem, PageInfo } from "@/lib/types";
+import type { TriggerAction, TriggerItem } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,10 +44,9 @@ import { PaginationBar } from "@/components/pagination-bar";
 import { FilterBar } from "@/components/filter-bar/filter-bar";
 import { useFilterBar } from "@/components/filter-bar/use-filter-bar";
 import { toast } from "sonner";
-import { usePersistentState } from "@/hooks/use-persistent-state";
+import { usePaginatedList } from "@/hooks/use-paginated-list";
 import { useOptimisticUpdate } from "@/hooks/use-optimistic-update";
 import { useDeleteConfirm } from "@/hooks/use-delete-confirm";
-import { useRequestSeq } from "@/hooks/use-request-seq";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useT } from "@/lib/i18n";
 import { cn, formatDate, formatInteger } from "@/lib/utils";
@@ -96,18 +95,6 @@ function ActionBadge({
 }
 
 export default function TriggerPage() {
-  const [items, setItems] = useState<TriggerItem[]>([]);
-  const [persistedPage, setPersistedPage] = usePersistentState("dashboard.trigger.page", 1);
-  const [persistedPageSize, setPersistedPageSize] = usePersistentState(
-    "dashboard.trigger.pageSize",
-    20,
-  );
-  const [pageInfo, setPageInfo] = useState<PageInfo>({
-    page: persistedPage,
-    pageSize: persistedPageSize,
-    total: 0,
-  });
-  const [loading, setLoading] = useState(true);
   const [inlineWord, setInlineWord] = useState("");
   const [adding, setAdding] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -124,36 +111,25 @@ export default function TriggerPage() {
   });
   const { queryParams } = filterBar;
 
-  // 竞态守卫：关键词/翻页连点时慢响应不得覆盖新响应
-  const requestSeq = useRequestSeq();
+  const { items, setItems, pageInfo, loading, load } = usePaginatedList({
+    persistKey: "dashboard.trigger",
+    errorTitle: t("trigger.load_error"),
+    fetchPage: async (page, pageSize, query: string | undefined) => {
+      const rsp = await api.listTrigger(page, pageSize > 0 ? pageSize : 20, query);
+      return { items: rsp.trigger, pageInfo: rsp.pageInfo };
+    },
+  });
   const fetchItems = useCallback(
     async (page: number, pageSize: number, query?: string) => {
-      const seq = requestSeq.begin();
-      setLoading(true);
-      try {
-        const safeSize = pageSize > 0 ? pageSize : 20;
-        const rsp = await api.listTrigger(page, safeSize, query);
-        if (!requestSeq.isCurrent(seq)) return;
-        setItems(rsp.trigger ?? []);
-        if (rsp.pageInfo) {
-          setPageInfo(rsp.pageInfo);
-          setPersistedPage(rsp.pageInfo.page);
-          setPersistedPageSize(rsp.pageInfo.pageSize);
-        }
-        setSelected(new Set()); // 翻页/刷新清空选中（对齐 sessions）
-      } catch (err) {
-        if (!requestSeq.isCurrent(seq)) return;
-        showErrorToast(err, { title: t("trigger.load_error") });
-      } finally {
-        if (requestSeq.isCurrent(seq)) setLoading(false);
-      }
+      // 翻页/刷新清空选中（对齐 sessions）
+      if (await load(page, pageSize, query)) setSelected(new Set());
     },
-    [setPersistedPage, setPersistedPageSize, t, requestSeq],
+    [load],
   );
 
   /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- 关键词 token 变化回到第 1 页查询；挂载时以持久化关键词发起首次查询 */
   useEffect(() => {
-    fetchItems(1, persistedPageSize, queryParams.freeText || undefined);
+    fetchItems(1, pageInfo.pageSize, queryParams.freeText || undefined);
   }, [queryParams]);
   /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
@@ -165,13 +141,13 @@ export default function TriggerPage() {
       await api.createTrigger({ word, action: "deny" });
       toast.success(t("trigger.created_success"));
       setInlineWord("");
-      fetchItems(persistedPage, persistedPageSize);
+      fetchItems(pageInfo.page, pageInfo.pageSize);
     } catch (err) {
       showErrorToast(err, { title: t("trigger.create_error") });
     } finally {
       setAdding(false);
     }
-  }, [inlineWord, adding, fetchItems, persistedPage, persistedPageSize, t]);
+  }, [inlineWord, adding, fetchItems, pageInfo.page, pageInfo.pageSize, t]);
 
   // action 徽章切换：乐观更新 + 失败回滚，避免整表重拉导致闪烁
   const toggleAction = useOptimisticUpdate<TriggerItem>({
@@ -188,7 +164,7 @@ export default function TriggerPage() {
     onConfirm: async (item) => {
       await api.deleteTrigger(item.id);
       toast.success(t("trigger.deleted_success"));
-      fetchItems(persistedPage, persistedPageSize);
+      fetchItems(pageInfo.page, pageInfo.pageSize);
     },
     onError: (err) => showErrorToast(err, { title: t("trigger.delete_error") }),
     closeOnError: false,
@@ -233,14 +209,14 @@ export default function TriggerPage() {
           String(rsp.deletedCount ?? ids.length),
         ),
       );
-      fetchItems(persistedPage, persistedPageSize);
+      fetchItems(pageInfo.page, pageInfo.pageSize);
     } catch (err) {
       showErrorToast(err, { title: t("trigger.batch_delete_error") });
     } finally {
       setBatchDeleting(false);
       setBatchDeleteConfirmOpen(false);
     }
-  }, [selected, fetchItems, persistedPage, persistedPageSize, t]);
+  }, [selected, fetchItems, pageInfo.page, pageInfo.pageSize, t]);
 
   return (
     <PermissionGuard adminOnly module="trigger">

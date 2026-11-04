@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { useOptimisticUpdate } from "@/hooks/use-optimistic-update";
+import { usePaginatedList } from "@/hooks/use-paginated-list";
 import { api } from "@/lib/api-client";
 import { showErrorToast } from "@/lib/api-error-handler";
 import { useAuth } from "@/lib/auth-context";
@@ -12,7 +13,6 @@ import type {
   UpstreamModelItem,
   UpstreamEndpointItem,
   ModelListItem,
-  PageInfo,
 } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,7 +25,7 @@ import { TableSkeleton } from "@/components/table-skeleton";
 import { useDeleteConfirm } from "@/hooks/use-delete-confirm";
 import { FilterBar } from "@/components/filter-bar/filter-bar";
 import { useFilterBar } from "@/components/filter-bar/use-filter-bar";
-import type { FacetDef } from "@/components/filter-bar/types";
+import type { FacetDef, FilterBarQueryParams } from "@/components/filter-bar/types";
 import { Plus, Layers, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -74,19 +74,28 @@ export default function UpstreamPage() {
   const { t, locale } = useI18n();
   const { isDemo, isAdmin, user: currentUser } = useAuth();
   const isMobile = useIsMobile();
-  const [groups, setGroups] = useState<UpstreamGroupItem[]>([]);
-  const [modelTotal, setModelTotal] = useState(0);
-  const [persistedPage, setPersistedPage] = usePersistentState("dashboard.upstream.page", 1);
-  const [persistedPageSize, setPersistedPageSize] = usePersistentState(
-    "dashboard.upstream.pageSize",
-    DEFAULT_PAGE_SIZE,
-  );
-  const [pageInfo, setPageInfo] = useState<PageInfo>({
-    page: persistedPage,
-    pageSize: persistedPageSize,
-    total: 0,
+  const {
+    items: groups,
+    setItems: setGroups,
+    pageInfo,
+    loading,
+    load,
+  } = usePaginatedList({
+    persistKey: "dashboard.upstream",
+    defaultPageSize: DEFAULT_PAGE_SIZE,
+    errorTitle: t("upstream.load_error"),
+    fetchPage: async (page, pageSize, qp: FilterBarQueryParams) => {
+      const safeSize = VALID_PAGE_SIZES.includes(pageSize) ? pageSize : DEFAULT_PAGE_SIZE;
+      const rsp = await api.listUpstream(
+        page,
+        safeSize,
+        qp.freeText || undefined,
+        qp.params.username,
+      );
+      return { items: rsp.groups, pageInfo: rsp.pageInfo, extra: rsp.modelTotal };
+    },
   });
-  const [loading, setLoading] = useState(true);
+  const [modelTotal, setModelTotal] = useState(0);
 
   // 端点弹窗状态
   const [endpointDialogOpen, setEndpointDialogOpen] = useState(false);
@@ -254,50 +263,22 @@ export default function UpstreamPage() {
     enabled: view === "flat",
   });
 
-  // 竞态守卫：关键词/筛选连点时慢响应不得覆盖新响应
-  const fetchSeqRef = useRef(0);
   const fetchUpstream = useCallback(
-    async (page: number, pageSize: number, query?: string) => {
-      const safeSize = VALID_PAGE_SIZES.includes(pageSize) ? pageSize : DEFAULT_PAGE_SIZE;
-      const seq = ++fetchSeqRef.current;
-      setLoading(true);
-      try {
-        const rsp = await api.listUpstream(
-          page,
-          safeSize,
-          query,
-          groupedQueryParams.params.username,
-        );
-        if (seq !== fetchSeqRef.current) return;
-        setGroups(rsp.groups ?? []);
-        if (rsp.modelTotal !== undefined) {
-          setModelTotal(rsp.modelTotal);
-        }
-        if (rsp.pageInfo) {
-          setPageInfo(rsp.pageInfo);
-          setPersistedPage(rsp.pageInfo.page);
-          if (VALID_PAGE_SIZES.includes(rsp.pageInfo.pageSize)) {
-            setPersistedPageSize(rsp.pageInfo.pageSize);
-          }
-        }
-      } catch (err) {
-        if (seq !== fetchSeqRef.current) return;
-        showErrorToast(err, { title: t("upstream.load_error") });
-      } finally {
-        if (seq === fetchSeqRef.current) setLoading(false);
-      }
+    async (page: number, pageSize: number, qp: FilterBarQueryParams) => {
+      const total = (await load(page, pageSize, qp))?.extra;
+      if (total !== undefined) setModelTotal(total);
     },
-    [t, setPersistedPage, setPersistedPageSize, groupedQueryParams.params.username],
+    [load],
   );
 
   /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- 关键词 token 变化回到第 1 页查询；挂载时以持久化关键词发起首次查询 */
   useEffect(() => {
-    fetchUpstream(1, pageInfo.pageSize, groupedQueryParams.freeText || undefined);
+    fetchUpstream(1, pageInfo.pageSize, groupedQueryParams);
   }, [groupedQueryParams]);
   /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
   const refresh = (page: number, pageSize?: number) =>
-    fetchUpstream(page, pageSize ?? pageInfo.pageSize, groupedQueryParams.freeText || undefined);
+    fetchUpstream(page, pageSize ?? pageInfo.pageSize, groupedQueryParams);
 
   // 删除末页最后一条后按当前页刷新会取回空页：本页行数为 1 且不在第 1 页时回退一页
   const pageAfterRemoval = (rowsOnPage: number, page: number) =>

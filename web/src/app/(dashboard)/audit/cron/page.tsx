@@ -1,11 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { usePersistentState } from "@/hooks/use-persistent-state";
-import { useRequestSeq } from "@/hooks/use-request-seq";
+import { usePaginatedList } from "@/hooks/use-paginated-list";
 import { api } from "@/lib/api-client";
-import { showErrorToast } from "@/lib/api-error-handler";
-import type { CronCallAuditItem, PageInfo } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -61,18 +58,6 @@ export default function CronAuditPage() {
     if (entries.length === 0) return "—";
     return entries.map(([key, val]) => `${metadataLabelMap[key] ?? key}: ${val}`).join(" | ");
   }
-  const [persistedPage, setPersistedPage] = usePersistentState("dashboard.cronAudit.page", 1);
-  const [persistedPageSize, setPersistedPageSize] = usePersistentState(
-    "dashboard.cronAudit.pageSize",
-    20,
-  );
-  const [logs, setLogs] = useState<CronCallAuditItem[]>([]);
-  const [pageInfo, setPageInfo] = useState<PageInfo>({
-    page: persistedPage,
-    pageSize: persistedPageSize,
-    total: 0,
-  });
-  const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<TimeRangeKey>("24h");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
@@ -124,44 +109,30 @@ export default function CronAuditPage() {
     qp: FilterBarQueryParams;
   }
 
-  // 竞态守卫：筛选/翻页连点时慢响应不得覆盖新响应
-  const requestSeq = useRequestSeq();
-  const fetchLogs = useCallback(
-    async (q: CronAuditQuery) => {
-      const seq = requestSeq.begin();
-      setLoading(true);
-      try {
-        const { startTime, endTime } = computeRange(q.range, q.cs, q.ce);
-        const rsp = await api.listCronCallAudits({
-          page: q.page,
-          pageSize: q.pageSize,
-          query: q.qp.freeText || undefined,
-          sort: "desc",
-          sortField: "created_at",
-          startTime,
-          endTime,
-          filter: q.qp.filter,
-        });
-        if (!requestSeq.isCurrent(seq)) return;
-        if (rsp.error) {
-          showErrorToast(rsp.error, { title: t("common.error") });
-          return;
-        }
-        setLogs(rsp.logs ?? []);
-        if (rsp.pageInfo) {
-          setPageInfo(rsp.pageInfo);
-          setPersistedPage(rsp.pageInfo.page);
-          setPersistedPageSize(rsp.pageInfo.pageSize);
-        }
-      } catch (err) {
-        if (!requestSeq.isCurrent(seq)) return;
-        showErrorToast(err, { title: t("common.error") });
-      } finally {
-        if (requestSeq.isCurrent(seq)) setLoading(false);
-      }
+  const {
+    items: logs,
+    pageInfo,
+    loading,
+    load,
+  } = usePaginatedList({
+    persistKey: "dashboard.cronAudit",
+    errorTitle: t("common.error"),
+    fetchPage: async (page, pageSize, q: Omit<CronAuditQuery, "page" | "pageSize">) => {
+      const { startTime, endTime } = computeRange(q.range, q.cs, q.ce);
+      const rsp = await api.listCronCallAudits({
+        page,
+        pageSize,
+        query: q.qp.freeText || undefined,
+        sort: "desc",
+        sortField: "created_at",
+        startTime,
+        endTime,
+        filter: q.qp.filter,
+      });
+      return { items: rsp.logs, pageInfo: rsp.pageInfo, error: rsp.error };
     },
-    [setPersistedPage, setPersistedPageSize, t, requestSeq],
-  );
+  });
+  const fetchLogs = ({ page, pageSize, ...q }: CronAuditQuery) => load(page, pageSize, q);
 
   const currentQuery = (): Omit<CronAuditQuery, "page" | "pageSize"> => ({
     range: timeRange,
@@ -170,11 +141,11 @@ export default function CronAuditPage() {
     qp: queryParams,
   });
 
-  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- token 变化回到第 1 页查询；挂载时以持久化筛选发起首次查询 */
+  /* eslint-disable react-hooks/exhaustive-deps -- token 变化回到第 1 页查询；挂载时以持久化筛选发起首次查询 */
   useEffect(() => {
     fetchLogs({ page: 1, pageSize: pageInfo.pageSize, ...currentQuery() });
   }, [queryParams]);
-  /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   const refresh = (page: number, pageSize?: number) =>
     fetchLogs({ page, pageSize: pageSize ?? pageInfo.pageSize, ...currentQuery() });
