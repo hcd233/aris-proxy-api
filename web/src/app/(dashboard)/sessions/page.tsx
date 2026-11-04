@@ -59,7 +59,7 @@ type SortDir = "asc" | "desc";
 
 /* Table-Fit 列宽预算（1280 视口容器实测 902px，1512 视口 1118px）：
  * 「摘要」是唯一不声明宽度的主列，吃剩余空间；其余列声明宽度合计必须留够它。
- * 常驻列合计 708px → 902 下摘要 ~150px，仍不够，于是把两个低价值列按容器宽度
+ * 常驻列合计 680px → 902 下摘要 ~150px，仍不够，于是把两个低价值列按容器宽度
  * 渐进显示（Progressive Columns）：窄容器先收起评分与工具数，摘要稳定在 ~200px。
  * 阈值是表格可用宽度，不是视口宽度。 */
 const SHOW_SCORE_FROM = "hidden @min-[64rem]:table-cell";
@@ -454,7 +454,7 @@ export default function SessionsPage() {
                                 scoring={scoring === s.id}
                                 onScore={(v) => handleScoreSession(s.id, v)}
                                 onClear={() => handleDeleteScore(s.id)}
-                                size={16}
+                                size={13}
                               />
                             )}
                             <Badge variant="secondary" className="text-xs">
@@ -528,7 +528,7 @@ export default function SessionsPage() {
                         </TableHead>
                         {/* 摘要不声明宽度：fixed 布局把剩余空间全给这一列 */}
                         <TableHead>{t("sessions.summary")}</TableHead>
-                        <TableHead className={cn("w-[10rem] text-center", SHOW_SCORE_FROM)}>
+                        <TableHead className={cn("w-[132px] text-center", SHOW_SCORE_FROM)}>
                           {t("sessions.score")}
                         </TableHead>
                         <TableHead
@@ -599,14 +599,14 @@ export default function SessionsPage() {
                                 </TooltipContent>
                               </TooltipRoot>
                             </TableCell>
-                            <TableCell className={cn("w-[160px]", SHOW_SCORE_FROM)}>
+                            <TableCell className={cn("w-[132px]", SHOW_SCORE_FROM)}>
                               <div className="flex justify-center">
                                 <ScoreDots
                                   score={s.score}
                                   scoring={scoring === s.id}
                                   onScore={(v) => handleScoreSession(s.id, v)}
                                   onClear={() => handleDeleteScore(s.id)}
-                                  size={16}
+                                  size={13}
                                 />
                               </div>
                             </TableCell>
