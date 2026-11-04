@@ -39,6 +39,7 @@ import { FilterBar } from "@/components/filter-bar/filter-bar";
 import { useFilterBar } from "@/components/filter-bar/use-filter-bar";
 import type { FacetDef, FilterBarQueryParams } from "@/components/filter-bar/types";
 import { copyTextToClipboard } from "@/lib/clipboard";
+import { TruncatedText } from "@/components/truncated-text";
 
 /* Table-Fit 列宽预算（1280 视口容器实测 902px，1512 视口 1118px）：
  * 费用列 6rem 是 `formatCost` 最宽输出（$1234.567891）的实测值，5rem 会把
@@ -267,35 +268,24 @@ export default function AuditPage() {
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0 flex-1">
                             <TooltipProvider>
-                              <TooltipRoot>
-                                <TooltipTrigger
-                                  render={
-                                    <p className="truncate text-sm font-medium">
-                                      <span className="inline-flex items-center gap-1.5">
-                                        <ProviderIcon protocol={log.modelId} size={14} />
-                                        {log.modelId || "—"}
-                                      </span>
-                                    </p>
-                                  }
-                                />
-                                <TooltipContent side="top" className="max-w-xs break-all">
+                              <TruncatedText
+                                render={<p />}
+                                className="text-sm font-medium"
+                                tooltip={log.modelId || "—"}
+                              >
+                                <span className="inline-flex items-center gap-1.5">
+                                  <ProviderIcon protocol={log.modelId} size={14} />
                                   {log.modelId || "—"}
-                                </TooltipContent>
-                              </TooltipRoot>
+                                </span>
+                              </TruncatedText>
                             </TooltipProvider>
                             <TooltipProvider>
-                              <TooltipRoot>
-                                <TooltipTrigger
-                                  render={
-                                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                                      {log.userName || "—"} · {log.apiKeyName || "—"}
-                                    </p>
-                                  }
-                                />
-                                <TooltipContent side="top" className="max-w-xs break-all">
-                                  {log.userName || "—"} · {log.apiKeyName || "—"}
-                                </TooltipContent>
-                              </TooltipRoot>
+                              <TruncatedText
+                                render={<p />}
+                                className="mt-0.5 text-xs text-muted-foreground"
+                              >
+                                {log.userName || "—"} · {log.apiKeyName || "—"}
+                              </TruncatedText>
                             </TooltipProvider>
                           </div>
                           <div className="shrink-0 text-right">
@@ -304,23 +294,15 @@ export default function AuditPage() {
                             </Badge>
                             {log.errorMessage && (
                               <TooltipProvider>
-                                <TooltipRoot>
-                                  <TooltipTrigger
-                                    render={
-                                      <p
-                                        className={cn(
-                                          "mt-1 max-w-[200px] truncate text-xs",
-                                          hasError ? "text-destructive" : "text-muted-foreground",
-                                        )}
-                                      >
-                                        {log.errorMessage}
-                                      </p>
-                                    }
-                                  />
-                                  <TooltipContent side="top" className="max-w-xs break-all">
-                                    {log.errorMessage}
-                                  </TooltipContent>
-                                </TooltipRoot>
+                                <TruncatedText
+                                  render={<p />}
+                                  className={cn(
+                                    "mt-1 max-w-[200px] text-xs",
+                                    hasError ? "text-destructive" : "text-muted-foreground",
+                                  )}
+                                >
+                                  {log.errorMessage}
+                                </TruncatedText>
                               </TooltipProvider>
                             )}
                           </div>
@@ -560,18 +542,9 @@ export default function AuditPage() {
                             </TooltipProvider>
                             {metaText && (
                               <TooltipProvider>
-                                <TooltipRoot>
-                                  <TooltipTrigger
-                                    render={
-                                      <span className="min-w-0 truncate text-xs text-muted-foreground">
-                                        {metaText}
-                                      </span>
-                                    }
-                                  />
-                                  <TooltipContent side="top" className="max-w-xs break-all">
-                                    {metaText}
-                                  </TooltipContent>
-                                </TooltipRoot>
+                                <TruncatedText className="min-w-0 text-xs text-muted-foreground">
+                                  {metaText}
+                                </TruncatedText>
                               </TooltipProvider>
                             )}
                           </div>
@@ -580,22 +553,9 @@ export default function AuditPage() {
                           <div className="text-sm">
                             {log.userName ? (
                               <TooltipProvider>
-                                <TooltipRoot>
-                                  <TooltipTrigger
-                                    render={
-                                      <span className="block max-w-[14ch] truncate">
-                                        {log.userName}
-                                      </span>
-                                    }
-                                  />
-                                  <TooltipContent
-                                    side="top"
-                                    align="start"
-                                    className="max-w-xs break-all"
-                                  >
-                                    {log.userName}
-                                  </TooltipContent>
-                                </TooltipRoot>
+                                <TruncatedText className="block max-w-[14ch]" align="start">
+                                  {log.userName}
+                                </TruncatedText>
                               </TooltipProvider>
                             ) : (
                               "—"
@@ -604,22 +564,9 @@ export default function AuditPage() {
                           <div className="text-xs text-muted-foreground">
                             {log.apiKeyName ? (
                               <TooltipProvider>
-                                <TooltipRoot>
-                                  <TooltipTrigger
-                                    render={
-                                      <span className="block max-w-[14ch] truncate">
-                                        {log.apiKeyName}
-                                      </span>
-                                    }
-                                  />
-                                  <TooltipContent
-                                    side="top"
-                                    align="start"
-                                    className="max-w-xs break-all"
-                                  >
-                                    {log.apiKeyName}
-                                  </TooltipContent>
-                                </TooltipRoot>
+                                <TruncatedText className="block max-w-[14ch]" align="start">
+                                  {log.apiKeyName}
+                                </TruncatedText>
                               </TooltipProvider>
                             ) : (
                               "—"
@@ -675,18 +622,9 @@ export default function AuditPage() {
                         </TableCell>
                         <TableCell className="whitespace-nowrap text-right text-xs tabular-nums">
                           <TooltipProvider>
-                            <TooltipRoot>
-                              <TooltipTrigger
-                                render={
-                                  <span className="block truncate">
-                                    {formatCost(log.cost, log.pricingCurrency)}
-                                  </span>
-                                }
-                              />
-                              <TooltipContent side="top">
-                                {formatCost(log.cost, log.pricingCurrency)}
-                              </TooltipContent>
-                            </TooltipRoot>
+                            <TruncatedText className="block">
+                              {formatCost(log.cost, log.pricingCurrency)}
+                            </TruncatedText>
                           </TooltipProvider>
                         </TableCell>
                         <TableCell className={SHOW_UA_FROM}>
@@ -694,21 +632,13 @@ export default function AuditPage() {
                               右端的省略号会被单元格裁掉，只剩硬切的文字 */}
                           {log.userAgent ? (
                             <TooltipProvider>
-                              <TooltipRoot>
-                                <TooltipTrigger
-                                  render={
-                                    <button
-                                      type="button"
-                                      className="block max-w-full cursor-default truncate text-xs text-muted-foreground"
-                                    >
-                                      {uaShort}
-                                    </button>
-                                  }
-                                />
-                                <TooltipContent side="top" className="max-w-xs">
-                                  <span className="break-all">{log.userAgent}</span>
-                                </TooltipContent>
-                              </TooltipRoot>
+                              <TruncatedText
+                                render={<button type="button" />}
+                                className="block max-w-full cursor-default text-xs text-muted-foreground"
+                                tooltip={log.userAgent}
+                              >
+                                {uaShort}
+                              </TruncatedText>
                             </TooltipProvider>
                           ) : (
                             <span className="text-xs text-muted-foreground">—</span>

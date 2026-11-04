@@ -54,6 +54,7 @@ import { useDemoWhitelist } from "@/hooks/use-demo-whitelist";
 import { FilterBar } from "@/components/filter-bar/filter-bar";
 import { useFilterBar } from "@/components/filter-bar/use-filter-bar";
 import type { FacetDef, FilterBarQueryParams } from "@/components/filter-bar/types";
+import { TruncatedText } from "@/components/truncated-text";
 
 type SortDir = "asc" | "desc";
 
@@ -413,20 +414,10 @@ export default function SessionsPage() {
                             />
                           </ItemMedia>
                           <ItemContent className="min-w-0">
-                            <TooltipRoot>
-                              <TooltipTrigger
-                                render={
-                                  <ItemTitle className="w-full truncate">
-                                    {s.summary ||
-                                      t("sessions.untitled_session").replace("{id}", String(s.id))}
-                                  </ItemTitle>
-                                }
-                              />
-                              <TooltipContent side="top" className="max-w-xs break-all">
-                                {s.summary ||
-                                  t("sessions.untitled_session").replace("{id}", String(s.id))}
-                              </TooltipContent>
-                            </TooltipRoot>
+                            <TruncatedText render={<ItemTitle />} className="w-full">
+                              {s.summary ||
+                                t("sessions.untitled_session").replace("{id}", String(s.id))}
+                            </TruncatedText>
                           </ItemContent>
                           <ItemActions>
                             {!isDemo() && (
@@ -567,18 +558,9 @@ export default function SessionsPage() {
                               {formatDateTime(s.createdAt)}
                             </TableCell>
                             <TableCell>
-                              <TooltipRoot>
-                                <TooltipTrigger
-                                  render={
-                                    <span className="block truncate text-left">
-                                      {s.summary || "—"}
-                                    </span>
-                                  }
-                                />
-                                <TooltipContent side="top" className="max-w-xs break-all">
-                                  {s.summary || "—"}
-                                </TooltipContent>
-                              </TooltipRoot>
+                              <TruncatedText className="block text-left">
+                                {s.summary || "—"}
+                              </TruncatedText>
                             </TableCell>
                             <TableCell className={cn("w-[120px]", SHOW_SCORE_FROM)}>
                               <div className="flex justify-center">

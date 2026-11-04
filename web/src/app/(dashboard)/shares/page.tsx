@@ -34,9 +34,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { useT } from "@/lib/i18n";
 import { copyTextToClipboard } from "@/lib/clipboard";
+import { TruncatedText } from "@/components/truncated-text";
 
 export default function SharesPage() {
   const t = useT();
@@ -140,30 +140,21 @@ export default function SharesPage() {
                           className={expired ? "bg-muted/30 text-muted-foreground" : undefined}
                         >
                           <TableCell className="max-w-[220px] font-mono text-xs">
-                            <TooltipRoot>
-                              <TooltipTrigger
-                                render={
-                                  <span className="block truncate text-left">
-                                    {expired ? (
-                                      <span>{share.shareId}</span>
-                                    ) : (
-                                      <a
-                                        href={buildShareURL(share.shareId)}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="inline-flex items-center gap-1 text-primary hover:underline"
-                                      >
-                                        {share.shareId}
-                                        <ExternalLink className="size-3" />
-                                      </a>
-                                    )}
-                                  </span>
-                                }
-                              />
-                              <TooltipContent side="top" className="max-w-xs break-all">
-                                {share.shareId}
-                              </TooltipContent>
-                            </TooltipRoot>
+                            <TruncatedText className="block text-left" tooltip={share.shareId}>
+                              {expired ? (
+                                <span>{share.shareId}</span>
+                              ) : (
+                                <a
+                                  href={buildShareURL(share.shareId)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-primary hover:underline"
+                                >
+                                  {share.shareId}
+                                  <ExternalLink className="size-3" />
+                                </a>
+                              )}
+                            </TruncatedText>
                           </TableCell>
                           <TableCell>
                             <a

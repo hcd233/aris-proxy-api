@@ -15,7 +15,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { ListEmptyState } from "@/components/list-empty-state";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { PaginationBar } from "@/components/pagination-bar";
@@ -25,6 +24,7 @@ import { usePaginatedList } from "@/hooks/use-paginated-list";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import { cn, formatDateTime } from "@/lib/utils";
+import { TruncatedText } from "@/components/truncated-text";
 
 /** 已选列表共用的行结构（DemoSession 可赋值） */
 interface SessionRow {
@@ -94,14 +94,9 @@ function SessionListTable({
               <div className="flex items-start gap-2">
                 <SelectCheckbox checked={isSelected} onToggle={() => onToggle(item.id)} />
                 <div className="min-w-0 flex-1">
-                  <TooltipRoot>
-                    <TooltipTrigger
-                      render={<p className="truncate text-sm font-medium">{summary(item)}</p>}
-                    />
-                    <TooltipContent side="top" className="max-w-xs break-all">
-                      {summary(item)}
-                    </TooltipContent>
-                  </TooltipRoot>
+                  <TruncatedText render={<p />} className="text-sm font-medium">
+                    {summary(item)}
+                  </TruncatedText>
                   <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
                     <span>
                       {t("common.id")}: {item.id}
@@ -166,14 +161,7 @@ function SessionListTable({
                 {item.createdAt ? formatDateTime(item.createdAt) : "—"}
               </TableCell>
               <TableCell className="max-w-[200px]">
-                <TooltipRoot>
-                  <TooltipTrigger
-                    render={<span className="block truncate text-left">{summary(item)}</span>}
-                  />
-                  <TooltipContent side="top" className="max-w-xs break-all">
-                    {summary(item)}
-                  </TooltipContent>
-                </TooltipRoot>
+                <TruncatedText className="block text-left">{summary(item)}</TruncatedText>
               </TableCell>
               <TableCell className="w-[160px]">
                 <div className="flex justify-center">

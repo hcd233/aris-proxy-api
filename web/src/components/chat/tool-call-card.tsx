@@ -2,10 +2,10 @@ import { useState } from "react";
 import { ChevronRight, Wrench } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { CopyButton } from "@/components/ui/copy-button";
-import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import type { UnifiedToolCall } from "@/lib/types";
 import type { ToolResultInfo } from "./content-extract";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { TruncatedText } from "@/components/truncated-text";
 
 function prettyJSON(s: string): string {
   if (!s) return "";
@@ -58,18 +58,9 @@ export function ToolCallCard({ call, result }: ToolCallCardProps) {
               {call.name || "tool"}
             </span>
             {!open && preview && (
-              <TooltipRoot>
-                <TooltipTrigger
-                  render={
-                    <span className="ml-1 flex-1 truncate font-mono text-[11px] text-muted-foreground">
-                      {preview}
-                    </span>
-                  }
-                />
-                <TooltipContent side="top" className="max-w-xs break-all">
-                  {preview}
-                </TooltipContent>
-              </TooltipRoot>
+              <TruncatedText className="ml-1 flex-1 font-mono text-[11px] text-muted-foreground">
+                {preview}
+              </TruncatedText>
             )}
           </div>
         </div>

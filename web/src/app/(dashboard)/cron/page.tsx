@@ -19,12 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Timer, Pencil, Lock, Play } from "lucide-react";
-import {
-  TooltipProvider,
-  TooltipRoot,
-  TooltipTrigger,
-  TooltipContent,
-} from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 import { useI18n } from "@/lib/i18n";
 import { cronJobLabel } from "@/lib/utils";
@@ -42,6 +37,7 @@ import type { ApiError } from "@/lib/api-client";
 import { ScheduleEditorDialog } from "@/components/cron/schedule-editor";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { formatDateTime } from "@/lib/utils";
+import { TruncatedText } from "@/components/truncated-text";
 
 export default function CronPage() {
   const { t, locale } = useI18n();
@@ -185,19 +181,14 @@ export default function CronPage() {
                     {jobs.map((job) => (
                       <TableRow key={job.name}>
                         <TableCell className="font-medium">
-                          <TooltipRoot>
-                            <TooltipTrigger
-                              render={
-                                <span className="block max-w-[16ch] truncate">
-                                  {cronJobLabel(job.name, t)}
-                                </span>
-                              }
-                            />
-                            <TooltipContent side="top" align="start" className="max-w-xs break-all">
-                              {/* 悬停给原始模块名：界面看中文，排查时仍能拿到后端标识 */}
-                              {job.name}
-                            </TooltipContent>
-                          </TooltipRoot>
+                          {/* 悬停给原始模块名：界面看中文，排查时仍能拿到后端标识 */}
+                          <TruncatedText
+                            className="block max-w-[16ch]"
+                            align="start"
+                            tooltip={job.name}
+                          >
+                            {cronJobLabel(job.name, t)}
+                          </TruncatedText>
                         </TableCell>
                         <TableCell>
                           <Badge variant={job.type === "core" ? "outline" : "secondary"}>
@@ -206,53 +197,26 @@ export default function CronPage() {
                         </TableCell>
                         <TableCell>
                           <div className="min-w-0">
-                            <TooltipRoot>
-                              <TooltipTrigger
-                                render={
-                                  <p className="max-w-[24ch] truncate text-sm">
-                                    {specToHuman(job.spec, locale)}
-                                  </p>
-                                }
-                              />
-                              <TooltipContent
-                                side="top"
-                                align="start"
-                                className="max-w-xs break-all"
-                              >
-                                {specToHuman(job.spec, locale)}
-                              </TooltipContent>
-                            </TooltipRoot>
-                            <TooltipRoot>
-                              <TooltipTrigger
-                                render={
-                                  <p className="max-w-[20ch] truncate font-mono text-xs text-muted-foreground">
-                                    {job.spec}
-                                  </p>
-                                }
-                              />
-                              <TooltipContent
-                                side="top"
-                                align="start"
-                                className="max-w-xs break-all"
-                              >
-                                {job.spec}
-                              </TooltipContent>
-                            </TooltipRoot>
+                            <TruncatedText
+                              render={<p />}
+                              className="max-w-[24ch] text-sm"
+                              align="start"
+                            >
+                              {specToHuman(job.spec, locale)}
+                            </TruncatedText>
+                            <TruncatedText
+                              render={<p />}
+                              className="max-w-[20ch] font-mono text-xs text-muted-foreground"
+                              align="start"
+                            >
+                              {job.spec}
+                            </TruncatedText>
                           </div>
                         </TableCell>
                         <TableCell className="text-muted-foreground">
-                          <TooltipRoot>
-                            <TooltipTrigger
-                              render={
-                                <span className="block max-w-full truncate">
-                                  {job.description || "—"}
-                                </span>
-                              }
-                            />
-                            <TooltipContent side="top" align="start" className="max-w-xs break-all">
-                              {job.description || "—"}
-                            </TooltipContent>
-                          </TooltipRoot>
+                          <TruncatedText className="block max-w-full" align="start">
+                            {job.description || "—"}
+                          </TruncatedText>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1.5">

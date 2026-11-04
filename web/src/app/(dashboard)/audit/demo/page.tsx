@@ -14,7 +14,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Footprints } from "lucide-react";
 import { PaginationBar } from "@/components/pagination-bar";
 import { useI18n } from "@/lib/i18n";
@@ -27,6 +26,7 @@ import { FilterBar } from "@/components/filter-bar/filter-bar";
 import { useFilterBar } from "@/components/filter-bar/use-filter-bar";
 import type { FacetDef, FilterBarQueryParams } from "@/components/filter-bar/types";
 import { formatDateTime } from "@/lib/utils";
+import { TruncatedText } from "@/components/truncated-text";
 
 export default function DemoAccessAuditPage() {
   const { t, locale } = useI18n();
@@ -238,33 +238,15 @@ export default function DemoAccessAuditPage() {
                         {moduleLabel(log.module)}
                       </TableCell>
                       <TableCell className="max-w-[220px] font-mono text-xs">
-                        <TooltipRoot>
-                          <TooltipTrigger
-                            render={
-                              <span className="block truncate text-left">{log.path || "—"}</span>
-                            }
-                          />
-                          <TooltipContent side="top" className="max-w-xs break-all">
-                            {log.path || "—"}
-                          </TooltipContent>
-                        </TooltipRoot>
+                        <TruncatedText className="block text-left">{log.path || "—"}</TruncatedText>
                       </TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">
                         {log.ip || "—"}
                       </TableCell>
                       <TableCell className="max-w-[180px] text-xs text-muted-foreground">
-                        <TooltipRoot>
-                          <TooltipTrigger
-                            render={
-                              <span className="block truncate text-left">
-                                {log.userAgent || "—"}
-                              </span>
-                            }
-                          />
-                          <TooltipContent side="top" className="max-w-xs break-all">
-                            {log.userAgent || "—"}
-                          </TooltipContent>
-                        </TooltipRoot>
+                        <TruncatedText className="block text-left">
+                          {log.userAgent || "—"}
+                        </TruncatedText>
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {log.reason ? (reasonLabelMap[log.reason] ?? log.reason) : "—"}

@@ -26,8 +26,8 @@ import {
   SHOW_FROM_360,
   SHOW_FROM_440,
   SHOW_FROM_520,
-  TruncatedName,
 } from "@/components/dashboard/dense-table";
+import { TruncatedText } from "@/components/truncated-text";
 import { useOverview } from "@/components/dashboard/overview-context";
 import { useDashboardQuery } from "@/components/dashboard/use-dashboard-query";
 import type { DashboardRange } from "@/components/dashboard/use-dashboard-range";
@@ -195,7 +195,9 @@ export function TopRankingPanel({ range }: { range: DashboardRange }) {
             return (
               <TableRow key={item.key}>
                 <TableCell className={DENSE_CELL}>
-                  <TruncatedName text={item.name || item.key} className="font-medium" />
+                  <TruncatedText className="block min-w-0 font-medium">
+                    {item.name || item.key}
+                  </TruncatedText>
                 </TableCell>
                 <TableCell className={cn(DENSE_CELL, "text-right", SHOW_FROM_360)}>
                   {formatInteger(item.requests)}

@@ -31,6 +31,7 @@ import type {
   UpstreamUser,
 } from "@/lib/types";
 import { isDefaultRule } from "./pricing-rule";
+import { TruncatedText } from "@/components/truncated-text";
 
 // 模型表单默认规格：新建表单初值、编辑回填空值兜底、输入框占位共用同一口径
 export const DEFAULT_CONTEXT_LENGTH = 256000;
@@ -282,35 +283,19 @@ export function ModelIdentityCell({
       <div className="flex min-w-0 flex-col gap-0.5">
         <div className="flex min-w-0 items-center gap-1.5">
           <ProviderIcon protocol={alias} size={14} className="shrink-0" />
-          <TooltipRoot>
-            <TooltipTrigger
-              render={
-                <span
-                  className="min-w-0 cursor-pointer truncate font-medium underline-offset-2 hover:underline"
-                  onClick={() => onCopyAlias(alias)}
-                >
-                  {alias}
-                </span>
-              }
-            />
-            <TooltipContent side="top" align="start" className="max-w-xs break-all">
-              {`${t("models.click_to_copy")}: ${alias}`}
-            </TooltipContent>
-          </TooltipRoot>
+          <TruncatedText
+            render={<span onClick={() => onCopyAlias(alias)} />}
+            className="min-w-0 cursor-pointer font-medium underline-offset-2 hover:underline"
+            align="start"
+            tooltip={`${t("models.click_to_copy")}: ${alias}`}
+          >
+            {alias}
+          </TruncatedText>
         </div>
         {metaText && (
-          <TooltipRoot>
-            <TooltipTrigger
-              render={
-                <span className="min-w-0 truncate font-mono text-xs text-muted-foreground">
-                  {metaText}
-                </span>
-              }
-            />
-            <TooltipContent side="top" align="start" className="max-w-xs break-all">
-              {metaText}
-            </TooltipContent>
-          </TooltipRoot>
+          <TruncatedText className="min-w-0 font-mono text-xs text-muted-foreground" align="start">
+            {metaText}
+          </TruncatedText>
         )}
       </div>
     </TableCell>

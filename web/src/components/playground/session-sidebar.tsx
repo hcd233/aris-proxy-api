@@ -5,15 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Item, ItemActions, ItemContent, ItemGroup, ItemTitle } from "@/components/ui/item";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  TooltipContent,
-  TooltipProvider,
-  TooltipRoot,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { MessageSquarePlus, Pencil, Trash2 } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import type { PlaygroundSession } from "@/app/(dashboard)/playground/playground-logic";
+import { TruncatedText } from "@/components/truncated-text";
 
 interface SessionSidebarProps {
   sessions: PlaygroundSession[];
@@ -77,12 +73,9 @@ export function SessionSidebar({
                   <>
                     <ItemContent className="min-w-0">
                       <TooltipProvider>
-                        <TooltipRoot>
-                          <TooltipTrigger
-                            render={<ItemTitle className="w-full truncate">{title}</ItemTitle>}
-                          />
-                          <TooltipContent className="max-w-xs break-all">{title}</TooltipContent>
-                        </TooltipRoot>
+                        <TruncatedText render={<ItemTitle />} className="w-full">
+                          {title}
+                        </TruncatedText>
                       </TooltipProvider>
                     </ItemContent>
                     <ItemActions className="gap-0.5 opacity-0 transition-opacity group-hover/item:opacity-100">

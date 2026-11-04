@@ -36,7 +36,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Key, Plus, Copy, Check } from "lucide-react";
 import { PaginationBar } from "@/components/pagination-bar";
 import { PermissionGuard } from "@/components/permission-guard";
@@ -53,6 +52,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useT } from "@/lib/i18n";
 import { formatDate } from "@/lib/utils";
 import { copyTextToClipboard } from "@/lib/clipboard";
+import { TruncatedText } from "@/components/truncated-text";
 
 export default function APIKeysPage() {
   const t = useT();
@@ -257,26 +257,12 @@ export default function APIKeysPage() {
                     {keys.map((key) => (
                       <Item key={key.id} variant="outline" role="listitem" className="items-start">
                         <ItemContent className="min-w-0">
-                          <TooltipRoot>
-                            <TooltipTrigger
-                              render={<ItemTitle className="w-full truncate">{key.name}</ItemTitle>}
-                            />
-                            <TooltipContent className="max-w-xs break-all">
-                              {key.name}
-                            </TooltipContent>
-                          </TooltipRoot>
-                          <TooltipRoot>
-                            <TooltipTrigger
-                              render={
-                                <ItemDescription className="truncate font-mono text-xs">
-                                  {key.key}
-                                </ItemDescription>
-                              }
-                            />
-                            <TooltipContent className="max-w-xs break-all">
-                              {key.key}
-                            </TooltipContent>
-                          </TooltipRoot>
+                          <TruncatedText render={<ItemTitle />} className="w-full">
+                            {key.name}
+                          </TruncatedText>
+                          <TruncatedText render={<ItemDescription />} className="font-mono text-xs">
+                            {key.key}
+                          </TruncatedText>
                           {key.user && (
                             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                               <Avatar size="sm">
@@ -287,14 +273,7 @@ export default function APIKeysPage() {
                                   {key.user.name.charAt(0).toUpperCase() || "?"}
                                 </AvatarFallback>
                               </Avatar>
-                              <TooltipRoot>
-                                <TooltipTrigger
-                                  render={<span className="truncate">{key.user.name}</span>}
-                                />
-                                <TooltipContent className="max-w-xs break-all">
-                                  {key.user.name}
-                                </TooltipContent>
-                              </TooltipRoot>
+                              <TruncatedText>{key.user.name}</TruncatedText>
                             </div>
                           )}
                         </ItemContent>
@@ -329,18 +308,9 @@ export default function APIKeysPage() {
                       {keys.map((key) => (
                         <TableRow key={key.id}>
                           <TableCell className="font-medium">
-                            <TooltipRoot>
-                              <TooltipTrigger
-                                render={<span className="block truncate">{key.name}</span>}
-                              />
-                              <TooltipContent
-                                side="top"
-                                align="start"
-                                className="max-w-xs break-all"
-                              >
-                                {key.name}
-                              </TooltipContent>
-                            </TooltipRoot>
+                            <TruncatedText className="block" align="start">
+                              {key.name}
+                            </TruncatedText>
                           </TableCell>
                           <TableCell>
                             {key.user ? (
@@ -353,16 +323,9 @@ export default function APIKeysPage() {
                                     {key.user.name.charAt(0).toUpperCase() || "?"}
                                   </AvatarFallback>
                                 </Avatar>
-                                <TooltipRoot>
-                                  <TooltipTrigger
-                                    render={
-                                      <span className="max-w-[14ch] truncate">{key.user.name}</span>
-                                    }
-                                  />
-                                  <TooltipContent className="max-w-xs break-all">
-                                    {key.user.name}
-                                  </TooltipContent>
-                                </TooltipRoot>
+                                <TruncatedText className="max-w-[14ch]">
+                                  {key.user.name}
+                                </TruncatedText>
                               </span>
                             ) : (
                               <span className="text-muted-foreground">—</span>

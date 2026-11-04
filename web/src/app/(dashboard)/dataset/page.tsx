@@ -35,16 +35,12 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
 import { Progress } from "@/components/ui/progress";
-import {
-  TooltipProvider,
-  TooltipRoot,
-  TooltipTrigger,
-  TooltipContent,
-} from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { PermissionGuard } from "@/components/permission-guard";
 import { PageHeader } from "@/components/page-header";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { formatInteger } from "@/lib/utils";
+import { TruncatedText } from "@/components/truncated-text";
 
 hljs.registerLanguage("json", json);
 
@@ -185,16 +181,9 @@ function DistributionList({
             <div key={item.label} className="space-y-1.5">
               <div className="flex items-center justify-between gap-3 text-xs">
                 <TooltipProvider>
-                  <TooltipRoot>
-                    <TooltipTrigger
-                      render={
-                        <span className="max-w-[24ch] truncate text-foreground">{item.label}</span>
-                      }
-                    />
-                    <TooltipContent side="top" align="start" className="max-w-xs break-all">
-                      {item.label}
-                    </TooltipContent>
-                  </TooltipRoot>
+                  <TruncatedText className="max-w-[24ch] text-foreground" align="start">
+                    {item.label}
+                  </TruncatedText>
                 </TooltipProvider>
                 <span className="font-mono tabular-nums text-muted-foreground">
                   {formatInteger(item.value)}

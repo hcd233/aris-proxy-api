@@ -3,10 +3,10 @@
 import { Braces, ChevronRight, FileText, Hash, Wrench } from "lucide-react";
 import type { ToolItem, UnifiedTool } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
-import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { CollapsibleText } from "./collapsible-text";
 import { useT } from "@/lib/i18n";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { TruncatedText } from "@/components/truncated-text";
 
 export function ToolSidebarItem({ tool }: { tool: ToolItem }) {
   const t = useT();
@@ -23,30 +23,15 @@ export function ToolSidebarItem({ tool }: { tool: ToolItem }) {
           <Wrench className="size-4" />
         </div>
         <div className="min-w-0 flex-1">
-          <TooltipRoot>
-            <TooltipTrigger
-              render={
-                <p className="truncate font-mono text-[13.5px] font-medium text-foreground">
-                  {toolData.name}
-                </p>
-              }
-            />
-            <TooltipContent side="top" className="max-w-xs break-all">
-              {toolData.name}
-            </TooltipContent>
-          </TooltipRoot>
-          <TooltipRoot>
-            <TooltipTrigger
-              render={
-                <p className="truncate text-[12px] leading-snug text-muted-foreground">
-                  {toolData.description || t("tool_sidebar.no_description")}
-                </p>
-              }
-            />
-            <TooltipContent side="top" className="max-w-xs break-all">
-              {toolData.description || t("tool_sidebar.no_description")}
-            </TooltipContent>
-          </TooltipRoot>
+          <TruncatedText
+            render={<p />}
+            className="font-mono text-[13.5px] font-medium text-foreground"
+          >
+            {toolData.name}
+          </TruncatedText>
+          <TruncatedText render={<p />} className="text-[12px] leading-snug text-muted-foreground">
+            {toolData.description || t("tool_sidebar.no_description")}
+          </TruncatedText>
         </div>
         <ChevronRight className="size-4 shrink-0 text-muted-foreground in-data-panel-open:rotate-90" />
       </CollapsibleTrigger>
