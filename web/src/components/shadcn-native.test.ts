@@ -230,6 +230,19 @@ describe("⑥ 聊天区", () => {
     expect(read("components/session-detail/tool-sidebar-item.tsx")).toContain("<HighlightedCode");
   });
 
+  it("会话详情与分享页共用 SessionTranscript，阅读区用 MessageScroller", () => {
+    expect(read("components/session-detail/session-detail-client.tsx")).toContain(
+      "<SessionTranscript",
+    );
+    expect(read("app/share/page.tsx")).toContain("<SessionTranscript");
+    const layout = read("components/shared/reading-layout.tsx");
+    expect(layout).toContain("<MessageScrollerViewport");
+    expect(layout).toContain('direction="start"');
+    const transcript = read("components/session-detail/session-transcript.tsx");
+    expect(transcript).toContain("<Marker");
+    expect(transcript).toContain("<ChainOfThought");
+  });
+
   it("思考过程统一为 Trace Reasoning", () => {
     expect(existsSync(join(SRC, "components/chat/reasoning-block.tsx"))).toBe(false);
     expect(read("components/chat/assistant-message.tsx")).toContain("<Reasoning");

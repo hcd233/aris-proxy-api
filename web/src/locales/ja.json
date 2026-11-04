@@ -1164,5 +1164,9 @@
   "portal.footer.console": "コンソール",
   "chat.reasoning_chars": "{count} 文字",
   "tool_call.empty_output": "（出力なし）",
-  "tool_call.view_full": "出力全体を表示"
+  "tool_call.view_full": "出力全体を表示",
+  "reading_layout.jump_start": "先頭へ移動",
+  "reading_layout.jump_end": "末尾へ移動",
+  "chat.steps_title": "{count} 回のツール呼び出し",
+  "chat.steps_more": " など"
 }

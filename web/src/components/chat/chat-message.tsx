@@ -14,6 +14,7 @@
 
 import type { MessageItem } from "@/lib/types";
 import { extractContent, type ToolResultInfo } from "./content-extract";
+import { isToolResultMessage } from "./transcript-groups";
 import { UserMessage } from "./user-message";
 import { AssistantMessage } from "./assistant-message";
 import { SystemMessage } from "./system-message";
@@ -29,8 +30,7 @@ interface ChatMessageProps {
 export function ChatMessage({ message, index, toolResultsByID }: ChatMessageProps) {
   const { role } = message.message;
 
-  const isToolResult = role === "tool" || (role === "user" && !!message.message.tool_call_id);
-  if (isToolResult) return null;
+  if (isToolResultMessage(message)) return null;
 
   if (role === "user") {
     return <UserMessage message={message} index={index} />;

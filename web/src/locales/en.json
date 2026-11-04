@@ -1164,5 +1164,9 @@
   "portal.footer.console": "Console",
   "chat.reasoning_chars": "{count} chars",
   "tool_call.empty_output": "(no output)",
-  "tool_call.view_full": "View full output"
+  "tool_call.view_full": "View full output",
+  "reading_layout.jump_start": "Jump to start",
+  "reading_layout.jump_end": "Jump to end",
+  "chat.steps_title": "Ran {count} tool calls",
+  "chat.steps_more": ", …"
 }
