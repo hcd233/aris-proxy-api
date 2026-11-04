@@ -509,8 +509,6 @@
   "chat.thought_process": "Thought process",
   "chat.open_image": "Open image",
   "system_message.system": "System",
-  "system_message.show_less": "Show less",
-  "system_message.show_more": "Show more",
   "multi_select.no_options": "No options in current range",
   "multi_select.filter": "Filter",
   "multi_select.clear": "Clear selection",

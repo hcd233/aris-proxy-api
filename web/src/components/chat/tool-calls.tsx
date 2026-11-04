@@ -2,6 +2,7 @@
 
 import { Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { TooltipContent, TooltipRoot, TooltipTrigger } from "@/components/ui/tooltip";
 import { TruncatedText } from "@/components/truncated-text";
@@ -20,6 +21,18 @@ import type { UnifiedToolCall } from "@/lib/types";
 import { lookupToolResult, type ToolResultInfo } from "./content-extract";
 import { HighlightedCode } from "./highlighted-code";
 import { LONG_OUTPUT_LINES, countLines, formatToolPayload, previewFirstArg } from "./tool-payload";
+
+/**
+ * 输入 / 输出合成一块面板，中间一道分隔线，不再是两个各自描边的代码框。
+ * Moonshot 下用近黑代码底 + 9% 白发丝边 + 顶部 5% 白月光内高光，
+ * 取代默认 Code Block 的 40% 白粗边与灰色填充；段标题降为次要色无衬线。
+ * （shadow-xs 工具类在构建期烘焙了 anthropic 的值，不会随主题变量切换，故写字面量。）
+ */
+const TOOL_IO_PANEL =
+  "flex min-w-0 flex-col overflow-hidden rounded-lg border border-input moonshot:border-border moonshot:bg-(--code-bg) moonshot:shadow-[inset_0_1px_0_0_rgb(255_255_255/0.05)] [&_[data-slot=code-block-title]]:font-sans [&_[data-slot=code-block-title]]:text-muted-foreground";
+
+/** 段落本身不再描边、不铺底，交给外层面板 */
+const TOOL_IO_SECTION = "rounded-none border-0 moonshot:bg-transparent";
 
 interface ToolCallsProps {
   calls: UnifiedToolCall[];
@@ -84,24 +97,33 @@ function ToolCallRow({ call, result }: { call: UnifiedToolCall; result?: ToolRes
         </TraceLine>
       </TraceCollapsibleTrigger>
       <TraceCollapsibleContent className="flex flex-col gap-2 text-foreground">
-        <HighlightedCode
-          code={input.code}
-          language={input.language}
-          title={t("tool_call.input")}
-          size="sm"
-          className="max-h-64"
-        />
-        {output.code ? (
+        <div data-slot="tool-io" className={TOOL_IO_PANEL}>
           <HighlightedCode
-            code={output.code}
-            language={output.language}
-            title={t("tool_call.output")}
+            code={input.code}
+            language={input.language}
+            title={t("tool_call.input")}
             size="sm"
+            wrap
             className="max-h-64"
+            containerClassName={TOOL_IO_SECTION}
           />
-        ) : (
-          <p className="text-xs text-muted-foreground">{t("tool_call.empty_output")}</p>
-        )}
+          <Separator className="bg-input moonshot:bg-border" />
+          {output.code ? (
+            <HighlightedCode
+              code={output.code}
+              language={output.language}
+              title={t("tool_call.output")}
+              size="sm"
+              wrap
+              className="max-h-64"
+              containerClassName={TOOL_IO_SECTION}
+            />
+          ) : (
+            <p className="px-2.5 py-2 text-xs text-muted-foreground">
+              {t("tool_call.empty_output")}
+            </p>
+          )}
+        </div>
         {long && (
           <Sheet>
             <SheetTrigger

@@ -8,6 +8,7 @@ import { Message, MessageAvatar, MessageContent, MessageHeader } from "@/compone
 import { useT } from "@/lib/i18n";
 import { formatClockTime } from "@/lib/utils";
 import { extractContent, type ToolResultInfo } from "./content-extract";
+import { FoldedContent, MESSAGE_FOLD_LINES } from "./folded-content";
 import { MultimodalParts } from "./multimodal-parts";
 import { Reasoning } from "./reasoning";
 import { ToolCalls } from "./tool-calls";
@@ -89,9 +90,11 @@ export function AssistantMessage({ message, index, toolResultsByID }: AssistantM
         {(parts.length > 0 || text || (!tool_calls?.length && !refusal)) && (
           <Bubble variant="ghost">
             <BubbleContent>
-              {parts.length > 0 && <MultimodalParts parts={parts} />}
-              {text && <MarkdownLite text={text} />}
-              {!text && parts.length === 0 && <span className="text-muted-foreground">—</span>}
+              <FoldedContent lines={MESSAGE_FOLD_LINES}>
+                {parts.length > 0 && <MultimodalParts parts={parts} />}
+                {text && <MarkdownLite text={text} />}
+                {!text && parts.length === 0 && <span className="text-muted-foreground">—</span>}
+              </FoldedContent>
             </BubbleContent>
           </Bubble>
         )}

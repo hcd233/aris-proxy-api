@@ -509,8 +509,6 @@
   "chat.thought_process": "思考プロセス",
   "chat.open_image": "元の画像を開く",
   "system_message.system": "システム",
-  "system_message.show_less": "折りたたむ",
-  "system_message.show_more": "もっと見る",
   "multi_select.no_options": "現在の範囲にオプションがありません",
   "multi_select.filter": "フィルター",
   "multi_select.clear": "選択をクリア",

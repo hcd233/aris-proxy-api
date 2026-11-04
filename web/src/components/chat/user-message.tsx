@@ -4,6 +4,7 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { Message, MessageContent, MessageFooter } from "@/components/ui/message";
 import { useT } from "@/lib/i18n";
 import { extractContent } from "./content-extract";
+import { FoldedContent, MESSAGE_FOLD_LINES } from "./folded-content";
 import { MultimodalParts } from "./multimodal-parts";
 import { MarkdownLite } from "./markdown-lite";
 
@@ -28,9 +29,11 @@ export function UserMessage({ message, index }: UserMessageProps) {
       <MessageContent>
         <Bubble variant="secondary" align="end">
           <BubbleContent>
-            {parts.length > 0 && <MultimodalParts parts={parts} />}
-            {text && <MarkdownLite text={text} raw />}
-            {!text && parts.length === 0 && <span className="text-muted-foreground">—</span>}
+            <FoldedContent lines={MESSAGE_FOLD_LINES}>
+              {parts.length > 0 && <MultimodalParts parts={parts} />}
+              {text && <MarkdownLite text={text} raw />}
+              {!text && parts.length === 0 && <span className="text-muted-foreground">—</span>}
+            </FoldedContent>
           </BubbleContent>
         </Bubble>
         {text && (

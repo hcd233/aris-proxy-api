@@ -509,8 +509,6 @@
   "chat.thought_process": "思考过程",
   "chat.open_image": "查看原图",
   "system_message.system": "系统",
-  "system_message.show_less": "收起",
-  "system_message.show_more": "展开更多",
   "multi_select.no_options": "当前范围无可用选项",
   "multi_select.filter": "筛选",
   "multi_select.clear": "清除选择",

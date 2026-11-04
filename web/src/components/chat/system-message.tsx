@@ -1,14 +1,9 @@
-import { useState } from "react";
-import { ChevronRight } from "lucide-react";
 import { MarkdownLite } from "./markdown-lite";
+import { FoldedContent, SYSTEM_FOLD_LINES } from "./folded-content";
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
-import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Marker, MarkerContent } from "@/components/ui/marker";
 import { useT } from "@/lib/i18n";
-import { Collapsible, CollapsibleTrigger } from "@/components/ui/collapsible";
-
-const SYSTEM_MSG_PREVIEW_CHARS = 200;
 
 interface SystemMessageProps {
   text: string;
@@ -18,11 +13,7 @@ interface SystemMessageProps {
 
 export function SystemMessage({ text, time, index }: SystemMessageProps) {
   const t = useT();
-  const [open, setOpen] = useState(false);
   const trimmed = text.trim();
-  const isLong = trimmed.length > SYSTEM_MSG_PREVIEW_CHARS;
-  const display =
-    !isLong || open ? trimmed : `${trimmed.slice(0, SYSTEM_MSG_PREVIEW_CHARS).trimEnd()}…`;
 
   const style = { animationDelay: `${Math.min(index, 12) * 40}ms` };
 
@@ -47,17 +38,9 @@ export function SystemMessage({ text, time, index }: SystemMessageProps) {
       </div>
       <Bubble variant="muted" className="max-w-full">
         <BubbleContent>
-          <Collapsible open={open} onOpenChange={setOpen}>
-            <MarkdownLite text={display} />
-            {isLong && (
-              <CollapsibleTrigger
-                render={<Button variant="link" size="xs" className="mt-1 h-auto min-w-0 px-0" />}
-              >
-                {open ? t("system_message.show_less") : t("system_message.show_more")}
-                <ChevronRight data-icon="inline-end" className="in-data-panel-open:rotate-90" />
-              </CollapsibleTrigger>
-            )}
-          </Collapsible>
+          <FoldedContent lines={SYSTEM_FOLD_LINES}>
+            <MarkdownLite text={trimmed} />
+          </FoldedContent>
         </BubbleContent>
       </Bubble>
     </div>
