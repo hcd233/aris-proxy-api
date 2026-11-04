@@ -23,10 +23,17 @@ func NewFiberApp() *fiber.App {
 		BodyLimit:   config.HTTPBodyLimit,
 		JSONEncoder: sonic.Marshal,
 		JSONDecoder: sonic.Unmarshal,
-		TrustProxy:  true,
+		// TrustProxy + Proxies：只有来自可信代理（openresty / k3s ServiceLB）的请求才采信 XFF，
+		// 否则 c.IP() 回退 RemoteIP。k3s 的 svclb 会对 LoadBalancer 流量做 MASQUERADE，
+		// 应用看到的 RemoteIP 恒为 svclb pod IP（10.42.x.x）；若不信任该网段，所有客户端
+		// 都会退化成同一个网关 IP，扫描封禁/按 IP 限流/审计会集体失真。
+		TrustProxy: true,
 		TrustProxyConfig: fiber.TrustProxyConfig{
 			Proxies: config.TrustedProxies,
 		},
 		ProxyHeader: fiber.HeaderXForwardedFor,
+		// EnableIPValidation：采信 XFF 时取第一个合法 IP，避免把整串 header（可被伪造）
+		// 原样作为 IP 使用，污染 scanner:ban / tb 等以 IP 为维度的 key。
+		EnableIPValidation: true,
 	})
 }

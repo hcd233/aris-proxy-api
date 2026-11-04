@@ -327,7 +327,9 @@ func InitEnvironment() {
 
 	config.SetDefault("postgres.sslmode", "disable")
 
-	config.SetDefault("trusted.proxies", "172.18.0.1")
+	// 172.18.0.1 为 Docker 网桥默认网关；10.42.0.0/16 为 k3s 默认 pod CIDR，
+	// 生产 LoadBalancer 的 svclb 会把源 IP SNAT 成该网段的 pod IP，必须信任才能取到 XFF。
+	config.SetDefault("trusted.proxies", "172.18.0.1,10.42.0.0/16")
 	config.SetDefault("cron.session.terminal_cleanup.enabled", true)
 	config.SetDefault("cron.soft.delete.purge.enabled", true)
 	config.SetDefault("cron.oauth.maintenance.enabled", true)
