@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { usePersistentState } from "@/hooks/use-persistent-state";
+import { useEffect, useState } from "react";
+import { usePaginatedList } from "@/hooks/use-paginated-list";
 import { api } from "@/lib/api-client";
 import { showErrorToast } from "@/lib/api-error-handler";
-import type { APIKeyItem, APIKeyDetail, PageInfo } from "@/lib/types";
+import type { APIKeyItem, APIKeyDetail } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -36,7 +36,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Key, Plus, Copy, Check } from "lucide-react";
 import { PaginationBar } from "@/components/pagination-bar";
 import { PermissionGuard } from "@/components/permission-guard";
@@ -47,34 +46,23 @@ import { PageHeader } from "@/components/page-header";
 import { ListEmptyState } from "@/components/list-empty-state";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { useDeleteConfirm } from "@/hooks/use-delete-confirm";
-import { useRequestSeq } from "@/hooks/use-request-seq";
 import { FilterBar } from "@/components/filter-bar/filter-bar";
 import { useFilterBar } from "@/components/filter-bar/use-filter-bar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useT } from "@/lib/i18n";
 import { formatDate } from "@/lib/utils";
-import { copyTextToClipboard } from "@/lib/clipboard";
+import { useCopyFeedback } from "@/hooks/use-copy-feedback";
+import { TruncatedText } from "@/components/truncated-text";
 
 export default function APIKeysPage() {
   const t = useT();
   const isMobile = useIsMobile();
-  const [keys, setKeys] = useState<APIKeyItem[]>([]);
-  const [persistedPage, setPersistedPage] = usePersistentState("dashboard.apikeys.page", 1);
-  const [persistedPageSize, setPersistedPageSize] = usePersistentState(
-    "dashboard.apikeys.pageSize",
-    20,
-  );
-  const [pageInfo, setPageInfo] = useState<PageInfo>({
-    page: persistedPage,
-    pageSize: persistedPageSize,
-    total: 0,
-  });
-  const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
   const [newKeyName, setNewKeyName] = useState("");
   const [creating, setCreating] = useState(false);
   const [createdKey, setCreatedKey] = useState<APIKeyDetail | null>(null);
-  const [copied, setCopied] = useState(false);
+  const { copiedKey, copy } = useCopyFeedback();
+  const copied = copiedKey !== null;
 
   const filterBar = useFilterBar({
     persistKey: "dashboard.apikeys",
@@ -83,36 +71,25 @@ export default function APIKeysPage() {
   });
   const { queryParams } = filterBar;
 
-  // 竞态守卫：关键词/筛选连点时慢响应不得覆盖新响应
-  const requestSeq = useRequestSeq();
-  const fetchKeys = useCallback(
-    async (page: number, pageSize: number, query?: string) => {
-      const seq = requestSeq.begin();
-      setLoading(true);
-      try {
-        const rsp = await api.listAPIKeys(page, pageSize, query);
-        if (!requestSeq.isCurrent(seq)) return;
-        setKeys(rsp.keys ?? []);
-        if (rsp.pageInfo) {
-          setPageInfo(rsp.pageInfo);
-          setPersistedPage(rsp.pageInfo.page);
-          setPersistedPageSize(rsp.pageInfo.pageSize);
-        }
-      } catch (err) {
-        if (!requestSeq.isCurrent(seq)) return;
-        showErrorToast(err, { title: t("apikeys.load_error") });
-      } finally {
-        if (requestSeq.isCurrent(seq)) setLoading(false);
-      }
+  const {
+    items: keys,
+    pageInfo,
+    loading,
+    load: fetchKeys,
+  } = usePaginatedList({
+    persistKey: "dashboard.apikeys",
+    errorTitle: t("apikeys.load_error"),
+    fetchPage: async (page, pageSize, query: string | undefined) => {
+      const rsp = await api.listAPIKeys(page, pageSize, query);
+      return { items: rsp.keys, pageInfo: rsp.pageInfo };
     },
-    [t, setPersistedPage, setPersistedPageSize, requestSeq],
-  );
+  });
 
-  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- 关键词 token 变化回到第 1 页查询；挂载时以持久化关键词发起首次查询 */
+  /* eslint-disable react-hooks/exhaustive-deps -- 关键词 token 变化回到第 1 页查询；挂载时以持久化关键词发起首次查询 */
   useEffect(() => {
     fetchKeys(1, pageInfo.pageSize, queryParams.freeText || undefined);
   }, [queryParams]);
-  /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   const handleCreate = async () => {
     if (!newKeyName.trim()) return;
@@ -146,10 +123,8 @@ export default function APIKeysPage() {
   });
 
   const handleCopy = (key: string) => {
-    void copyTextToClipboard(key).then((ok) => {
+    void copy(key).then((ok) => {
       if (ok) {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
         toast.success(t("common.copied_to_clipboard"));
       } else {
         toast.error(t("common.copy_failed"));
@@ -281,26 +256,12 @@ export default function APIKeysPage() {
                     {keys.map((key) => (
                       <Item key={key.id} variant="outline" role="listitem" className="items-start">
                         <ItemContent className="min-w-0">
-                          <TooltipRoot>
-                            <TooltipTrigger
-                              render={<ItemTitle className="w-full truncate">{key.name}</ItemTitle>}
-                            />
-                            <TooltipContent className="max-w-xs break-all">
-                              {key.name}
-                            </TooltipContent>
-                          </TooltipRoot>
-                          <TooltipRoot>
-                            <TooltipTrigger
-                              render={
-                                <ItemDescription className="truncate font-mono text-xs">
-                                  {key.key}
-                                </ItemDescription>
-                              }
-                            />
-                            <TooltipContent className="max-w-xs break-all">
-                              {key.key}
-                            </TooltipContent>
-                          </TooltipRoot>
+                          <TruncatedText render={<ItemTitle />} className="w-full">
+                            {key.name}
+                          </TruncatedText>
+                          <TruncatedText render={<ItemDescription />} className="font-mono text-xs">
+                            {key.key}
+                          </TruncatedText>
                           {key.user && (
                             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                               <Avatar size="sm">
@@ -311,14 +272,7 @@ export default function APIKeysPage() {
                                   {key.user.name.charAt(0).toUpperCase() || "?"}
                                 </AvatarFallback>
                               </Avatar>
-                              <TooltipRoot>
-                                <TooltipTrigger
-                                  render={<span className="truncate">{key.user.name}</span>}
-                                />
-                                <TooltipContent className="max-w-xs break-all">
-                                  {key.user.name}
-                                </TooltipContent>
-                              </TooltipRoot>
+                              <TruncatedText>{key.user.name}</TruncatedText>
                             </div>
                           )}
                         </ItemContent>
@@ -353,18 +307,9 @@ export default function APIKeysPage() {
                       {keys.map((key) => (
                         <TableRow key={key.id}>
                           <TableCell className="font-medium">
-                            <TooltipRoot>
-                              <TooltipTrigger
-                                render={<span className="block truncate">{key.name}</span>}
-                              />
-                              <TooltipContent
-                                side="top"
-                                align="start"
-                                className="max-w-xs break-all"
-                              >
-                                {key.name}
-                              </TooltipContent>
-                            </TooltipRoot>
+                            <TruncatedText className="block" align="start">
+                              {key.name}
+                            </TruncatedText>
                           </TableCell>
                           <TableCell>
                             {key.user ? (
@@ -377,16 +322,9 @@ export default function APIKeysPage() {
                                     {key.user.name.charAt(0).toUpperCase() || "?"}
                                   </AvatarFallback>
                                 </Avatar>
-                                <TooltipRoot>
-                                  <TooltipTrigger
-                                    render={
-                                      <span className="max-w-[14ch] truncate">{key.user.name}</span>
-                                    }
-                                  />
-                                  <TooltipContent className="max-w-xs break-all">
-                                    {key.user.name}
-                                  </TooltipContent>
-                                </TooltipRoot>
+                                <TruncatedText className="max-w-[14ch]">
+                                  {key.user.name}
+                                </TruncatedText>
                               </span>
                             ) : (
                               <span className="text-muted-foreground">—</span>

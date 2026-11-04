@@ -22,7 +22,6 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useInfiniteList } from "@/hooks/use-infinite-list";
 import { formatRelativeTime } from "@/lib/utils";
 import { ReadingLayout } from "@/components/shared/reading-layout";
-import { LocaleFade } from "@/components/locale-fade";
 import { PreferenceControls } from "@/components/preference-controls";
 import { useI18n } from "@/lib/i18n";
 
@@ -345,22 +344,20 @@ function SharedSessionView() {
   );
 
   return (
-    <LocaleFade>
-      <ReadingLayout
-        standalone
-        header={headerContent}
-        toolsPanel={toolsPanelContent}
-        toolsOpen={toolsOpen}
-        onToolsOpenChange={setToolsOpen}
-        toolsCount={metadata.toolCount}
-        headerCompact={isMobile && headerCompact}
-        headerSentinelRef={headerSentinelRef}
-        messagesScrollRootRef={messagesScrollRootRef}
-        onToolsScrollRootChange={setToolsScrollRoot}
-      >
-        {readingContent}
-      </ReadingLayout>
-    </LocaleFade>
+    <ReadingLayout
+      standalone
+      header={headerContent}
+      toolsPanel={toolsPanelContent}
+      toolsOpen={toolsOpen}
+      onToolsOpenChange={setToolsOpen}
+      toolsCount={metadata.toolCount}
+      headerCompact={isMobile && headerCompact}
+      headerSentinelRef={headerSentinelRef}
+      messagesScrollRootRef={messagesScrollRootRef}
+      onToolsScrollRootChange={setToolsScrollRoot}
+    >
+      {readingContent}
+    </ReadingLayout>
   );
 }
 

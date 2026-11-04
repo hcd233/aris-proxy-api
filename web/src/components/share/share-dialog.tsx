@@ -38,7 +38,7 @@ import {
 import { Field, FieldGroup, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { copyTextToClipboard } from "@/lib/clipboard";
+import { useCopyFeedback } from "@/hooks/use-copy-feedback";
 import { SHARE_PATH, withBasePath } from "@/lib/routes";
 
 export interface ShareDialogProps {
@@ -71,7 +71,8 @@ export function ShareDialog({ sessionId, existingShareID, open, onOpenChange }: 
     existingShareID ? buildShareURL(existingShareID) : null,
   );
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const { copiedKey, copy, reset: resetCopied } = useCopyFeedback();
+  const copied = copiedKey !== null;
   const [expireOption, setExpireOption] = useState<ExpireOption>("1d");
   const [customDate, setCustomDate] = useState<Date | undefined>(undefined);
 
@@ -80,8 +81,8 @@ export function ShareDialog({ sessionId, existingShareID, open, onOpenChange }: 
   const reset = useCallback(() => {
     setShareURL(existingShareID ? buildShareURL(existingShareID) : null);
     setExpiresAt(null);
-    setCopied(false);
-  }, [existingShareID]);
+    resetCopied();
+  }, [existingShareID, resetCopied]);
 
   const handleOpenChange = useCallback(
     (next: boolean) => {
@@ -122,14 +123,12 @@ export function ShareDialog({ sessionId, existingShareID, open, onOpenChange }: 
 
   const handleCopy = useCallback(async () => {
     if (!shareURL) return;
-    if (await copyTextToClipboard(shareURL)) {
-      setCopied(true);
+    if (await copy(shareURL)) {
       toast.success(t("share_dialog.copied_to_clipboard"));
-      window.setTimeout(() => setCopied(false), 2000);
     } else {
       toast.error(t("share_dialog.copy_failed"));
     }
-  }, [shareURL, t]);
+  }, [copy, shareURL, t]);
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>

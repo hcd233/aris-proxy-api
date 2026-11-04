@@ -6,6 +6,7 @@ import { Bubble, BubbleContent } from "@/components/ui/bubble";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Message, MessageAvatar, MessageContent, MessageHeader } from "@/components/ui/message";
 import { useT } from "@/lib/i18n";
+import { formatClockTime } from "@/lib/utils";
 import { extractContent, type ToolResultInfo } from "./content-extract";
 import { MultimodalParts } from "./multimodal-parts";
 import { Reasoning } from "./reasoning";
@@ -38,13 +39,7 @@ export function AssistantMessage({ message, index, toolResultsByID }: AssistantM
   const { text, parts } = extractContent(content);
   const isAssistant = role === "assistant";
 
-  const time = message.createdAt
-    ? new Date(message.createdAt).toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-      })
-    : undefined;
+  const time = formatClockTime(message.createdAt);
 
   const style = { animationDelay: `${Math.min(index, 12) * 40}ms` };
 

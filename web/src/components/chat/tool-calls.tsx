@@ -4,6 +4,7 @@ import { Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { TooltipContent, TooltipRoot, TooltipTrigger } from "@/components/ui/tooltip";
+import { TruncatedText } from "@/components/truncated-text";
 import {
   Trace,
   TraceCollapsible,
@@ -43,18 +44,13 @@ function ToolLineBody({ call }: { call: UnifiedToolCall }) {
         </TooltipRoot>
       </TraceTitle>
       {preview && (
-        <TooltipRoot>
-          <TooltipTrigger
-            render={
-              <TraceDescription className="min-w-0 shrink truncate font-mono text-xs">
-                {preview}
-              </TraceDescription>
-            }
-          />
-          <TooltipContent side="top" className="max-w-xs break-all">
-            {preview}
-          </TooltipContent>
-        </TooltipRoot>
+        <TruncatedText
+          render={<TraceDescription />}
+          side="top"
+          className="min-w-0 shrink font-mono text-xs"
+        >
+          {preview}
+        </TruncatedText>
       )}
     </>
   );

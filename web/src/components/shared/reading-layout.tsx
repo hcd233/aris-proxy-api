@@ -46,11 +46,13 @@ export interface ReadingLayoutProps {
 function TranscriptScroller({
   children,
   contentClassName,
+  viewportClassName,
   sentinel,
   scrollRootRef,
 }: {
   children: ReactNode;
   contentClassName: string;
+  viewportClassName?: string;
   sentinel?: ReactNode;
   scrollRootRef?: Ref<HTMLDivElement>;
 }) {
@@ -58,7 +60,10 @@ function TranscriptScroller({
   return (
     <MessageScrollerProvider autoScroll={false} defaultScrollPosition="start">
       <MessageScroller className="h-auto min-h-0 flex-1">
-        <MessageScrollerViewport ref={scrollRootRef} className="[-webkit-overflow-scrolling:touch]">
+        <MessageScrollerViewport
+          ref={scrollRootRef}
+          className={cn("[-webkit-overflow-scrolling:touch]", viewportClassName)}
+        >
           <MessageScrollerContent className={contentClassName}>
             {sentinel}
             {children}
@@ -181,6 +186,8 @@ export function ReadingLayout({
 
         <TranscriptScroller
           scrollRootRef={messagesScrollRootRef}
+          // scrollbar-gutter：滚动条出现与否不改变内容列宽（语言切换布局不变约定）
+          viewportClassName="overflow-x-hidden [scrollbar-gutter:stable]"
           contentClassName="mx-auto w-full max-w-[768px] min-w-0 gap-5 px-4 py-6 sm:px-6"
         >
           {children}

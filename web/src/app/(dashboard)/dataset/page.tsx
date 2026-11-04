@@ -32,17 +32,13 @@ import { TimeRangePicker } from "@/components/ui/time-range-picker";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
 import { Progress } from "@/components/ui/progress";
-import {
-  TooltipProvider,
-  TooltipRoot,
-  TooltipTrigger,
-  TooltipContent,
-} from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { PermissionGuard } from "@/components/permission-guard";
 import { PageHeader } from "@/components/page-header";
 import { HighlightedCode } from "@/components/chat/highlighted-code";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { formatInteger } from "@/lib/utils";
+import { TruncatedText } from "@/components/truncated-text";
 
 /** 预览 JSON 美化：可解析则 2 空格缩进，否则原样展示（纯文本渲染，无 HTML 注入面） */
 function prettyJSON(jsonStr: string): string {
@@ -169,16 +165,9 @@ function DistributionList({
             <div key={item.label} className="space-y-1.5">
               <div className="flex items-center justify-between gap-3 text-xs">
                 <TooltipProvider>
-                  <TooltipRoot>
-                    <TooltipTrigger
-                      render={
-                        <span className="max-w-[24ch] truncate text-foreground">{item.label}</span>
-                      }
-                    />
-                    <TooltipContent side="top" align="start" className="max-w-xs break-all">
-                      {item.label}
-                    </TooltipContent>
-                  </TooltipRoot>
+                  <TruncatedText className="max-w-[24ch] text-foreground" align="start">
+                    {item.label}
+                  </TruncatedText>
                 </TooltipProvider>
                 <span className="font-mono tabular-nums text-muted-foreground">
                   {formatInteger(item.value)}
@@ -584,7 +573,8 @@ export default function DatasetPage() {
           </CardHeader>
           <Separator className="mx-4" />
           <CardContent>
-            <div className="grid gap-5 pt-2 lg:grid-cols-[1fr_auto] lg:items-end">
+            {/* 操作列定宽：auto 列会随译文长度伸缩，连带挤压左侧摘要列 */}
+            <div className="grid gap-5 pt-2 lg:grid-cols-[1fr_22rem] lg:items-end">
               {/* Export summary */}
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <StatPill label={t("dataset.export_filter_score")} value={String(minScore)} />

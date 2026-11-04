@@ -12,6 +12,7 @@ import {
   TraceTitle,
 } from "@/components/ui/trace";
 import { TooltipContent, TooltipRoot, TooltipTrigger } from "@/components/ui/tooltip";
+import { TruncatedText } from "@/components/truncated-text";
 import { useI18n } from "@/lib/i18n";
 import { AssistantMessage } from "./assistant-message";
 import type { ToolResultInfo } from "./content-extract";
@@ -52,18 +53,14 @@ export function ChainOfThought({ entry, toolResultsByID }: ChainOfThoughtProps) 
               </TooltipRoot>
             </TraceTitle>
             {description && (
-              <TooltipRoot>
-                <TooltipTrigger
-                  render={
-                    <TraceDescription className="min-w-0 shrink truncate">
-                      {description}
-                    </TraceDescription>
-                  }
-                />
-                <TooltipContent side="top" className="max-w-xs break-all">
-                  {entry.toolNames.join(sep)}
-                </TooltipContent>
-              </TooltipRoot>
+              <TruncatedText
+                render={<TraceDescription />}
+                tooltip={entry.toolNames.join(sep)}
+                side="top"
+                className="min-w-0 shrink"
+              >
+                {description}
+              </TruncatedText>
             )}
           </TraceLine>
         </TraceCollapsibleTrigger>

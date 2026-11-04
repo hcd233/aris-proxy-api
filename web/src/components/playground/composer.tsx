@@ -43,6 +43,7 @@ import {
   type PlaygroundParams,
   type ReasoningEffort,
 } from "@/app/(dashboard)/playground/playground-logic";
+import { TruncatedText } from "@/components/truncated-text";
 
 interface ComposerProps {
   models: PlaygroundModelOption[];
@@ -65,10 +66,7 @@ const PILL_CLASS =
 function TruncatedLabel({ text }: { text: string }) {
   return (
     <TooltipProvider>
-      <TooltipRoot>
-        <TooltipTrigger render={<span className="truncate">{text}</span>} />
-        <TooltipContent className="max-w-xs break-all">{text}</TooltipContent>
-      </TooltipRoot>
+      <TruncatedText>{text}</TruncatedText>
     </TooltipProvider>
   );
 }

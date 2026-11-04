@@ -42,12 +42,12 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { PreferenceControls } from "@/components/preference-controls";
 import { ThemeSwitcher } from "@/components/theme/theme-switcher";
-import { LocaleFade } from "@/components/locale-fade";
 import { NavIndicator } from "@/components/motion/nav-indicator";
 import { SessionHistorySidebar } from "@/components/session-detail/session-history-sidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { NavCommandPalette, NavSearchButton } from "@/components/nav-command-palette";
 import { ChevronDown, Lock, LogOut, Menu, Search } from "lucide-react";
+import { TruncatedText } from "@/components/truncated-text";
 
 const OPEN_GROUPS_STORAGE_KEY = "sidebar-nav-open-groups";
 
@@ -176,16 +176,9 @@ function SidebarNav({
                   render={<CollapsibleTrigger />}
                   className="w-full cursor-pointer gap-2 hover:text-sidebar-foreground"
                 >
-                  <TooltipRoot>
-                    <TooltipTrigger
-                      render={
-                        <span className="min-w-0 flex-1 truncate text-left">
-                          {t(group.labelKey)}
-                        </span>
-                      }
-                    />
-                    <TooltipContent side="right">{t(group.labelKey)}</TooltipContent>
-                  </TooltipRoot>
+                  <TruncatedText className="min-w-0 flex-1 text-left" side="right">
+                    {t(group.labelKey)}
+                  </TruncatedText>
                   <ChevronDown className="-rotate-90 in-data-panel-open:rotate-0" />
                 </SidebarGroupLabel>
               )}
@@ -228,18 +221,9 @@ function UserBar({ collapsed = false }: { collapsed?: boolean }) {
         </Avatar>
         {!collapsed && (
           <div className="hidden min-w-0 flex-1 md:block">
-            <TooltipRoot>
-              <TooltipTrigger
-                render={
-                  <p className="truncate text-sm font-medium leading-none">
-                    {user.name ?? user.email ?? t("layout.user")}
-                  </p>
-                }
-              />
-              <TooltipContent side="right" className="max-w-xs break-all">
-                {user.name ?? user.email ?? t("layout.user")}
-              </TooltipContent>
-            </TooltipRoot>
+            <TruncatedText render={<p />} className="text-sm font-medium leading-none" side="right">
+              {user.name ?? user.email ?? t("layout.user")}
+            </TruncatedText>
             <div className="mt-1 flex items-center gap-1.5">
               <Badge variant="secondary" className="px-1.5 py-0 text-[11px] font-medium">
                 {t(`permission.${user.permission}`)}
@@ -460,11 +444,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         {/* Main content */}
         <SidebarInset className="overflow-hidden">
           <MobileTopBar onSearch={() => setPaletteOpen(true)} />
-          <div className="flex-1 overflow-y-auto p-4 md:p-8 lg:p-10">
-            <LocaleFade>
-              {/* 所有控制台页面共用同一主体宽度，不要在页面里自行加宽或收窄 */}
-              <div className="mx-auto max-w-[1600px]">{children}</div>
-            </LocaleFade>
+          {/* 预留滚动条槽：页面随翻译变长/变短时滚动条出现与消失不改变主体宽度 */}
+          <div className="flex-1 overflow-y-auto [scrollbar-gutter:stable] p-4 md:p-8 lg:p-10">
+            {/* 所有控制台页面共用同一主体宽度，不要在页面里自行加宽或收窄 */}
+            <div className="mx-auto max-w-[1600px]">{children}</div>
           </div>
         </SidebarInset>
         <NavCommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />

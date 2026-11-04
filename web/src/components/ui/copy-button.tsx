@@ -8,12 +8,12 @@
  *  - "icon": icon-only (ghost icon-xs), for hover-reveal actions on chat bubbles.
  */
 
-import { useState, type MouseEvent } from "react";
+import type { MouseEvent } from "react";
 import { Check, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { copyTextToClipboard } from "@/lib/clipboard";
+import { useCopyFeedback } from "@/hooks/use-copy-feedback";
 import { useT } from "@/lib/i18n";
 
 interface CopyButtonProps {
@@ -25,19 +25,15 @@ interface CopyButtonProps {
 }
 
 export function CopyButton({ value, ariaLabel, variant = "label", className }: CopyButtonProps) {
-  const [copied, setCopied] = useState(false);
+  const { copiedKey, copy } = useCopyFeedback(1400);
+  const copied = copiedKey !== null;
   const t = useT();
 
   const onCopy = (e: MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
     if (!value) return;
-    void copyTextToClipboard(value).then((ok) => {
-      if (ok) {
-        setCopied(true);
-        window.setTimeout(() => setCopied(false), 1400);
-      } else {
-        toast.error(t("common.copy_failed"));
-      }
+    void copy(value).then((ok) => {
+      if (!ok) toast.error(t("common.copy_failed"));
     });
   };
 

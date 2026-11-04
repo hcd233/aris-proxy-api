@@ -20,8 +20,8 @@ import {
   SHOW_FROM_310,
   SHOW_FROM_360,
   SHOW_FROM_440,
-  TruncatedName,
 } from "@/components/dashboard/dense-table";
+import { TruncatedText } from "@/components/truncated-text";
 import { useOverview } from "@/components/dashboard/overview-context";
 import { useDashboardQuery } from "@/components/dashboard/use-dashboard-query";
 import type { DashboardRange } from "@/components/dashboard/use-dashboard-range";
@@ -86,7 +86,9 @@ export function EndpointHealthPanel({ range }: { range: DashboardRange }) {
                   <span
                     className={cn("size-1.5 shrink-0 rounded-full", healthDot(row.errorRate))}
                   />
-                  <TruncatedName text={row.endpoint} className="font-medium" />
+                  <TruncatedText className="block min-w-0 font-medium">
+                    {row.endpoint}
+                  </TruncatedText>
                 </div>
               </TableCell>
               <TableCell className={cn(DENSE_CELL, "text-right")}>

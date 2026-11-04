@@ -6,7 +6,7 @@ import { api } from "@/lib/api-client";
 import { showErrorToast } from "@/lib/api-error-handler";
 import { useAuth } from "@/lib/auth-context";
 import { PermissionGuard } from "@/components/permission-guard";
-import type { PageInfo, UserItem } from "@/lib/types";
+import type { UserItem } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -37,9 +37,8 @@ import { TableSkeleton } from "@/components/table-skeleton";
 import { PaginationBar } from "@/components/pagination-bar";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { toast } from "sonner";
-import { usePersistentState } from "@/hooks/use-persistent-state";
+import { usePaginatedList } from "@/hooks/use-paginated-list";
 import { useOptimisticUpdate } from "@/hooks/use-optimistic-update";
-import { useRequestSeq } from "@/hooks/use-request-seq";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useI18n } from "@/lib/i18n";
 import { formatDate } from "@/lib/utils";
@@ -113,18 +112,6 @@ function UserRowActions({ user, currentUserId, onAction }: UserRowActionsProps) 
 
 export default function UsersPage() {
   const { user: currentUser } = useAuth();
-  const [items, setItems] = useState<UserItem[]>([]);
-  const [persistedPage, setPersistedPage] = usePersistentState("dashboard.users.page", 1);
-  const [persistedPageSize, setPersistedPageSize] = usePersistentState(
-    "dashboard.users.pageSize",
-    20,
-  );
-  const [pageInfo, setPageInfo] = useState<PageInfo>({
-    page: persistedPage,
-    pageSize: persistedPageSize,
-    total: 0,
-  });
-  const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState<UserAction | null>(null);
   const [confirmAction, setConfirmAction] = useState<UserAction | null>(null);
   const [confirmUser, setConfirmUser] = useState<UserItem | null>(null);
@@ -154,39 +141,29 @@ export default function UsersPage() {
   });
   const { queryParams } = filterBar;
 
-  // 竞态守卫：关键词/筛选连点时慢响应不得覆盖新响应
-  const requestSeq = useRequestSeq();
-  const fetchUsers = useCallback(
-    async (page: number, pageSize: number, qp: FilterBarQueryParams) => {
-      const seq = requestSeq.begin();
-      setLoading(true);
-      try {
-        const rsp = await api.listUsers(page, pageSize, {
-          query: qp.freeText || undefined,
-          permission: qp.params.permission,
-        });
-        if (!requestSeq.isCurrent(seq)) return;
-        setItems(rsp.items ?? []);
-        if (rsp.pageInfo) {
-          setPageInfo(rsp.pageInfo);
-          setPersistedPage(rsp.pageInfo.page);
-          setPersistedPageSize(rsp.pageInfo.pageSize);
-        }
-      } catch (err) {
-        if (!requestSeq.isCurrent(seq)) return;
-        showErrorToast(err, { title: t("users.load_error") });
-      } finally {
-        if (requestSeq.isCurrent(seq)) setLoading(false);
-      }
+  const {
+    items,
+    setItems,
+    pageInfo,
+    loading,
+    load: fetchUsers,
+  } = usePaginatedList({
+    persistKey: "dashboard.users",
+    errorTitle: t("users.load_error"),
+    fetchPage: async (page, pageSize, qp: FilterBarQueryParams) => {
+      const rsp = await api.listUsers(page, pageSize, {
+        query: qp.freeText || undefined,
+        permission: qp.params.permission,
+      });
+      return { items: rsp.items, pageInfo: rsp.pageInfo };
     },
-    [setPersistedPage, setPersistedPageSize, t, requestSeq],
-  );
+  });
 
-  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- token 变化回到第 1 页查询；挂载时以持久化筛选发起首次查询 */
+  /* eslint-disable react-hooks/exhaustive-deps -- token 变化回到第 1 页查询；挂载时以持久化筛选发起首次查询 */
   useEffect(() => {
-    fetchUsers(1, persistedPageSize, queryParams);
+    fetchUsers(1, pageInfo.pageSize, queryParams);
   }, [queryParams]);
-  /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   // 批准（pending→user）：乐观更新 + 失败回滚，避免整表重拉导致闪烁
   const promoteUser = useOptimisticUpdate<UserItem>({
