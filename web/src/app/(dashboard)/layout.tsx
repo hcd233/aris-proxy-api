@@ -42,7 +42,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { PreferenceControls } from "@/components/preference-controls";
 import { ThemeSwitcher } from "@/components/theme/theme-switcher";
-import { LocaleFade } from "@/components/locale-fade";
 import { NavIndicator } from "@/components/motion/nav-indicator";
 import { SessionHistorySidebar } from "@/components/session-detail/session-history-sidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -445,11 +444,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         {/* Main content */}
         <SidebarInset className="overflow-hidden">
           <MobileTopBar onSearch={() => setPaletteOpen(true)} />
-          <div className="flex-1 overflow-y-auto p-4 md:p-8 lg:p-10">
-            <LocaleFade>
-              {/* 所有控制台页面共用同一主体宽度，不要在页面里自行加宽或收窄 */}
-              <div className="mx-auto max-w-[1600px]">{children}</div>
-            </LocaleFade>
+          {/* 预留滚动条槽：页面随翻译变长/变短时滚动条出现与消失不改变主体宽度 */}
+          <div className="flex-1 overflow-y-auto [scrollbar-gutter:stable] p-4 md:p-8 lg:p-10">
+            {/* 所有控制台页面共用同一主体宽度，不要在页面里自行加宽或收窄 */}
+            <div className="mx-auto max-w-[1600px]">{children}</div>
           </div>
         </SidebarInset>
         <NavCommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />

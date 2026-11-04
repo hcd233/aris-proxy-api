@@ -9,7 +9,7 @@
 _Avoid_: language, lang code
 
 **Switch Flicker（切换闪烁）**:
-用户主动切换语言时感知到的布局跳变。根因是元素盒模型尺寸随翻译变化，而非文字内容本身替换。本工作的目标是消除它。
+用户主动切换语言时感知到的布局跳变。根因是元素盒模型尺寸随翻译变化（字号缩放、标签长短、滚动条出没、`auto` 网格列伸缩），而非文字内容本身替换。本工作的目标是消除它。
 _Avoid_: language flash, transition glitch
 
 **Locale-Stable（语言切换稳定）**:
@@ -25,15 +25,19 @@ _Avoid_: fixed element, locked component
 _Avoid_: fluid element, auto-size block
 
 **Category Reserve（分类预留）**:
-按组件类别统一预留尺寸（如「主操作按钮」「徽章」各一档），而非按每条翻译键单独预留。代价是短翻译语言下出现少量空白，收益是零构建工具、可预测、易维护。
+按组件类别统一预留最小尺寸（如「主操作按钮」「徽章」各一档 `min-w`）。是 Label Reserve 之外的兜底：保证短标签也不会窄到难点。
 _Avoid_: per-key reservation, dynamic min-width
 
-**Font Scale（字号缩放）**:
-对 CJK Locale 等比下调字号，使中/日文字形在相同 utility 下的视觉高度对齐拉丁字母。仅作用于字号，不影响 rem 基准与间距。下调有下限：`text-xs` 在 CJK 下不低于 12px。
-_Avoid_: font zoom, cjk shrink
+**Label Reserve（标签预留）**:
+按钮、徽章的文字标签按「三种语言里最长的译文」占宽：所有译文叠在同一格、只显示当前语言，切换语言时元素宽度不变。共享同一译文的 key 并为一组，组内预留同一宽度。插值拼接出的文本（如「38 条消息」）查不到译文，不受保护。代价是短译文语言下标签两侧留白。
+_Avoid_: max-width label, ghost text
+
+**Locale Cross-fade（语言切换过渡）**:
+切换语言时整页新旧快照的 240ms 交叉淡化，字形原地替换、没有空白帧。前提是布局 Locale-Stable——尺寸若会变，快照对不齐，就成了两张页面叠影。动效档位为 `still` 时直接切换。与主题转场（日蚀 / 墨染）是两条独立路径。
+_Avoid_: locale fade, language flash
 
 **Text Floor（字号下限）**:
-全站任何文字不小于 11px：密集数据标签（表头、环比、坐标轴）用 11px，正文与说明不小于 12px。与 Font Scale 配合——缩放只能把字号压到这条线为止。
+全站任何文字不小于 11px：密集数据标签（表头、环比、坐标轴）用 11px，正文与说明不小于 12px。三种语言共用同一套字号，不按语言缩放（缩放会让切换语言时整页重排）。
 _Avoid_: min font size, readable size
 
 **Layout-Pattern Height Fix（布局高度约定）**:

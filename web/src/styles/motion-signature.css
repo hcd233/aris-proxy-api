@@ -617,3 +617,17 @@ html[data-login-seen] .login-stage {
 [data-theme="moonshot"] .turn-enter {
   animation: lunar-focus-in 520ms var(--ease-drift) backwards;
 }
+
+/* ---------------------------------------------------------------------
+ * ⑥ Locale switch — lib/motion/locale-transition.ts sets
+ *    html[data-locale-vt]. A plain cross-fade of the root snapshot: layout
+ *    is Locale-Stable, so the old and new glyphs overlap in place. The UA
+ *    plus-lighter blend is kept so the mid-point never dips in brightness.
+ *    :not([data-vt]) yields to a theme transition started on top of it.
+ * ------------------------------------------------------------------- */
+html[data-locale-vt]:not([data-vt])::view-transition-group(root),
+html[data-locale-vt]:not([data-vt])::view-transition-old(root),
+html[data-locale-vt]:not([data-vt])::view-transition-new(root) {
+  animation-duration: 240ms;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}

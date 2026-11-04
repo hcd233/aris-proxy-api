@@ -13,6 +13,7 @@ import React, {
 import en from "@/locales/en.json";
 import zh from "@/locales/zh.json";
 import ja from "@/locales/ja.json";
+import { startLocaleTransition } from "@/lib/motion/locale-transition";
 
 export type Locale = "en" | "zh" | "ja";
 
@@ -57,9 +58,14 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const setLocale = useCallback((next: Locale) => {
-    activeLocaleRef.current = next;
-    setLocaleState(next);
+    const apply = () => {
+      activeLocaleRef.current = next;
+      document.documentElement.lang = next;
+      setLocaleState(next);
+    };
     localStorage.setItem("locale", next);
+    // 整页交叉淡化；不支持 View Transitions 或 still 档时直接切换
+    if (!startLocaleTransition(apply)) apply();
   }, []);
 
   const t = useCallback((key: string, fallback?: string): string => {

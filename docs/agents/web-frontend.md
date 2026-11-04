@@ -65,7 +65,7 @@
 - **新增 shadcn 组件不要直接 `shadcn add`**：CLI 会顺带 `npm install` 依赖清单（含 npm 包 `cn`、无版本号的 `@base-ui/react`），并可能覆盖已定制的 `button.tsx` 等文件。做法是 `shadcn add <name> --dry-run --view src/components/ui/<name>.tsx` 取源码落盘，把 `from "cn"` 改为 `@/lib/utils`，删掉 tw-animate 进出场类，再按需 `npm install --package-lock-only` 单独加真正需要的依赖。CI 按 lock 安装的 `shadcn` 是 4.8.0，其 `tailwind.css` 只提供 `no-scrollbar`；生成代码里的 `scroll-fade-*`、`shimmer`、`scrollbar-*` 在 CI 构建中是空操作，落盘时一并删掉。`src/components/shadcn-native.test.ts` 守护这些规范。
 - **能用 CSS 就不用 JS**：只有需要逐帧物理的效果（磁吸弹簧、倾斜跟随）才进 `InteractionLayer`；弹簧参数在 `lib/motion/tokens.ts`，CSS 侧的 `--ease-orbit` 由 `lib/motion/spring.ts` 采样生成，`spring.test.ts` 保证两者一致——改弹簧参数要同步重新生成 CSS。
 - **入场动画用 `backwards` 填充**：动画结束后不残留 `transform/filter/clip-path`，否则会覆盖元素自身的 transform（如卡片倾斜）或形成 containing block。moonshot 下不要在包含玻璃卡片的祖先元素上做 `filter` 动画（祖先会成为 backdrop root，入场期间玻璃失效）；页面包裹层只用 `--animate-page`（透明度 + 缩放），blur 放在内部块上。
-- **主题切换走 `setTheme(next, origin)`**：`lib/motion/theme-transition.ts` 用 View Transitions 做日蚀 / 墨染转场（边缘层 `.vt-edge` 只存在于新状态、实时渲染）；`still` 档或浏览器不支持时回退到颜色渐变。语言切换仍只用 `LocaleFade`，不得复用这条路径。
+- **主题切换走 `setTheme(next, origin)`**：`lib/motion/theme-transition.ts` 用 View Transitions 做日蚀 / 墨染转场（边缘层 `.vt-edge` 只存在于新状态、实时渲染）；`still` 档或浏览器不支持时回退到颜色渐变。语言切换走自己的交叉淡化（见下文「切换过渡」），不得复用这条路径。
 - **侧栏激活态由 `NavIndicator` 承担**：导航项只输出 `data-nav-item` / `data-active`，激活背景是那个随弹簧移动的指示器；新增导航项不要再给激活项加背景色。
 - **recharts 系列要展开 `useChartMotion()`**：`<Line>` / `<Area>` 的 `isAnimationActive` / 时长 / 缓动 / `animationMatchBy`（按 `time` 配对）统一来自 `@/lib/motion/chart-motion`，数据行必须带 `time` 字段。recharts 在 JS 里做动画，CSS 的 reduced-motion 守卫管不到，`still` 档只能靠这个 hook 关掉。
 - **刷新不重绘没变的图**：recharts 只要 points 换引用就重放动画，而 points 依赖 data 与坐标轴配置。① 图表 data 用 `useMemo` 按各自的源曲线派生，源数据经 `replaceEqualDeep`（`@/lib/structural-share`）结构共享，内容不变则引用不变；② `XAxis`/`YAxis` 的 `tickFormatter`、`domain` 不要写内联函数/数组（每次渲染新引用会让坐标轴选择器失效、整图重放），用 `useCallback` 或模块级常量；③ 换时间范围属于换视图，用 scope 作 `ChartContainer` 的 key 整图重新入场。
@@ -82,7 +82,9 @@
 
 新增/修改以下组件类别时，必须按类别预留 `min-w`，使跨语言不位移：
 
-- **按钮**（`Button` 文本尺寸）：`default` → `min-w-20`、`sm` → `min-w-16`、`lg` → `min-w-24`、`xs` → `min-w-14`。已在 `button.tsx` size variants 内置，新增 size 沿用。
+- **按钮 / 徽章的文字标签**：`Button`、`Badge` 会把直接的字符串子节点交给 `LocaleStableText`（`components/locale-stable-text.tsx`），三种语言的译文叠在同一个 grid 格子里、只显示当前语言，宽度恒等于最长译文。译文查找在 `lib/locale-variants.ts`：任一文案出现在多个 key 下时，按「共享译文」把这些 key 并成一组，组内所有文案预留同一宽度（否则如 `Create Key` 与 `创建密钥` 会落到不同组、切换时仍伸缩）。所以标签直接写 `{t("key")}` 即可，**不要先拼接再传入**——`` `${n} ${t("x")}` `` 这类插值文本反查不到译文，会退化为自适应宽度；需要稳定就把数字与译文拆成两个子节点（`{n} {t("x")}`）。
+- **按钮最小宽度**：`default` → `min-w-20`、`sm` → `min-w-16`、`lg` → `min-w-24`、`xs` → `min-w-14`。已在 `button.tsx` size variants 内置，新增 size 沿用。
+- **语言切换触发器**：语言名不是译文（English / 中文 / 日本語），`LanguageSwitcher` 直接定宽 `w-22`。
 - **分页触发器**：显示动态文本（如 `{n} per_page`）的 `DropdownMenuTrigger` 按钮加 `min-w-[7.5rem]`。
 - **侧边栏导航项**：不需要 `min-w`（侧边栏容器 `w-64` 已定宽，吸收位移）。
 
@@ -110,17 +112,22 @@
 - **`sr-only` 只能包文本，不能写在 `th` 上**：`sr-only` 是绝对定位，写在 `th` 上会让该列宽度不计入 fixed 布局的声明总和，剩余空间既不归主列也不归任何列——实测 902px 容器丢掉 53px，主列从 210px 掉到 157px。要藏表头文字就把 `sr-only` 放到 `th` 内部的 `<span>` 上。
 - **按面板宽度渐进显示列（仪表盘 Endpoint / Top 两张表）**：1280 视口下面板表格只有约 310px，六列常驻的声明宽度就占 280px，主名列被挤到 17px（Top 排行只剩 5px）——名字完全看不见。这两张表的面板主体声明 `@container`，次要列用 `dense-table.tsx` 的 `SHOW_FROM_*`（`hidden @min-[Npx]:table-cell`）按优先级渐进展开；阈值按「主名列可见宽度 ≥ ~110px」反推，数值是表格可用宽度。新增列先定优先级，不要直接常驻。验证按 zh / en / ja × 1280 / 1440 / 1920 三语三宽实测（主名列 `clientWidth ≥ scrollWidth`、无被裁表头）。
 
-### Font Scale（CJK 字号对齐）
+### 字号（三语同一套）
 
-`globals.css` 的 `:lang(zh)/:lang(ja)` 块覆盖 Tailwind v4 `--text-*` 主题变量，等比下调 CJK 字号（zh 0.92、ja 0.88），仅动字号不动 rem 间距。新增 text utility 档位时同步在两个 `:lang()` 块补对应 `--text-*` 覆盖。预留 `min-w` 应以缩放后的 CJK 宽度为准核定。
+三种语言共用 Tailwind 默认的 `--text-*` 字号，**不要按 `:lang()` 缩放字号**：缩放会让切换语言时整页换行重排、页面高度跳变（曾经的 CJK 0.92 / 0.88 等比缩放已移除）。
 
-- **字号下限**：`--text-xs` 在 zh / ja 钉在 `0.75rem`（12px），不再等比下调——CJK 笔画密，11px 以下读不清。业务里的字面量字号不得小于 `text-[11px]`（`text-[10px]`、`text-[9px]`、`text-[0.625rem]` 一律不允许）：表头、环比、热力图坐标这类密集数据标签用 11px，正文与说明 ≥ 12px。
+- **字号下限**：业务里的字面量字号不得小于 `text-[11px]`（`text-[10px]`、`text-[9px]`、`text-[0.625rem]` 一律不允许）：表头、环比、热力图坐标这类密集数据标签用 11px，正文与说明 ≥ 12px。
 - **小字品牌色用 `text-primary-ink`**：`--primary` / `--chart-2` 在 `#faf8f5`、`#f5f0eb` 上只有 3.96–4.3:1，eyebrow、类别标签这类 ≤13px 的品牌色文字改用 `--primary-ink`（≥ 4.5:1）。`--positive` / `--warning` 会直接当文字色，浅色主题下已调到白卡上 ≥ 4.5:1，别再调浅。
 - 验证：无头浏览器遍历文本节点，按「字号 < 11px」与「前景色 alpha 合成到真实背景后的对比度 < 4.5:1」两个判据统计，目标均为 0。
 
-### 切换闪烁
+### 切换过渡
 
-`<LocaleFade>` 包裹 dashboard `<main>` 内 `max-w-[1600px]` 容器与 share 页根，监听 `locale` 变化做 ~120ms opacity 淡入。新增会因切换语言而 reflow 的页面根容器时，用 `<LocaleFade>` 包裹。不要在 `width`/`height` 上加 CSS transition，不要引入 View Transitions API。
+`setLocale` 经 `lib/motion/locale-transition.ts` 包进一次 View Transition：整页根快照交叉淡化 240ms（`styles/motion-signature.css` 的 `html[data-locale-vt]` 段，保留 UA 的 plus-lighter 混合，中途不变暗）。布局是 Locale-Stable 的，新旧快照对得齐，看到的只是字形原地替换。`still` 档或浏览器不支持时直接切换。标记用 `data-locale-vt`，与主题转场的 `data-vt` 分开，两边清理互不误删；样式带 `:not([data-vt])`，主题转场叠上来时让位。
+
+- 页面无需任何接线，**不要再给页面根包淡入组件**，也不要在 `width`/`height` 上加 CSS transition。
+- **滚动条槽要预留**：页面随译文变长/变短时，滚动条出现或消失会让整列宽度跳 ~15px。控制台主体滚动区与分享页阅读列已加 `[scrollbar-gutter:stable]`，门户 / 登录 / 回调这类文档滚动页由 `globals.css` 给 `html` 统一预留（控制台页面用 `:has(sidebar-wrapper)` 排除）。新增独立滚动容器照此处理。
+- **网格里的 `auto` 列会随译文伸缩并挤压相邻列**（dataset 导出区曾因此整页高度跳 500px+）：放文字的列用定宽（如 `lg:grid-cols-[1fr_22rem]`）。
+- 验证：构建产物 + chrome-headless-shell CDP，三语循环切换，比对侧栏 / 主体容器 / 滚动区 `clientWidth` / 全部 `[data-slot=button|badge|tabs-trigger]` 宽度，前后应完全一致；切换后 40ms 内 `document.getAnimations()` 应含 `::view-transition-*(root)` 且 240ms，结束后 `data-locale-vt` 已清除。
 
 ## 联调与发布
 

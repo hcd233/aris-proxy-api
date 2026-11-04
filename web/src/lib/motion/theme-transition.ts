@@ -6,7 +6,7 @@ import { flushSync } from "react-dom";
  * styles/motion-signature.css) only exists in the new state and carries its
  * own view-transition-name; since the new view is rendered live, its CSS
  * animation drives the corona / wet-ink ring frame by frame. Locale
- * switching never goes through here (LocaleFade only). */
+ * switching has its own plain cross-fade (locale-transition.ts). */
 
 export interface Point {
   x: number;

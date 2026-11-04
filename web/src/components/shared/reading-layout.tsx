@@ -124,7 +124,7 @@ export function ReadingLayout({
         <div
           ref={messagesScrollRootRef}
           onScroll={onMessagesScroll}
-          className="mx-auto w-full max-w-[768px] min-w-0 flex-1 overflow-y-auto overflow-x-hidden px-4 py-6 sm:px-6"
+          className="mx-auto w-full max-w-[768px] min-w-0 flex-1 overflow-y-auto overflow-x-hidden [scrollbar-gutter:stable] px-4 py-6 sm:px-6"
         >
           {children}
         </div>
