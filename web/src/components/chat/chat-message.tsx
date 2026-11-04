@@ -9,7 +9,7 @@
  *  - system-message.tsx    (retains "System" label, no avatar)
  *
  * Tool-result messages (role="tool" or role="user" with tool_call_id)
- * are skipped here — they're inlined into the matched ToolCallCard.
+ * are skipped here — they're inlined into the matched ToolCalls row.
  */
 
 import type { MessageItem } from "@/lib/types";

@@ -5,6 +5,7 @@ import type { ToolItem, UnifiedTool } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { CollapsibleText } from "./collapsible-text";
+import { HighlightedCode } from "@/components/chat/highlighted-code";
 import { useT } from "@/lib/i18n";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
@@ -103,6 +104,15 @@ export function ToolSidebarItem({ tool }: { tool: ToolItem }) {
                 ))}
               </div>
             </div>
+          )}
+          {params && Object.keys(params).length > 0 && (
+            <HighlightedCode
+              code={JSON.stringify(params, null, 2)}
+              language="json"
+              title="schema"
+              size="sm"
+              className="max-h-64"
+            />
           )}
           {params?.type !== undefined && (
             <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground/60">

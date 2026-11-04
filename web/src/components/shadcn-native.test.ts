@@ -216,11 +216,18 @@ describe("⑥ 聊天区", () => {
     expect(src).toMatch(/<MessageHeader[\s\S]*?<CopyButton[\s\S]*?<\/MessageHeader>/);
   });
 
-  it("思考块与工具卡之间只保留列表 gap，不叠加 margin", () => {
-    expect(read("components/chat/tool-call-card.tsx")).not.toContain("mt-3");
-    expect(read("components/chat/assistant-message.tsx")).toContain(
-      '<div className="flex flex-col gap-3">',
-    );
+  it("工具调用改为 Trace Tool", () => {
+    expect(existsSync(join(SRC, "components/chat/tool-call-card.tsx"))).toBe(false);
+    expect(read("components/chat/assistant-message.tsx")).toContain("<ToolCalls");
+    const src = read("components/chat/tool-calls.tsx");
+    expect(src).toContain("<TraceCollapsible");
+    expect(src).toContain('status="pending"');
+    expect(src).toContain("<SheetTrigger");
+    expect(src).toContain("<HighlightedCode");
+  });
+
+  it("工具定义参数 schema 用 Code Block 展示", () => {
+    expect(read("components/session-detail/tool-sidebar-item.tsx")).toContain("<HighlightedCode");
   });
 
   it("思考过程统一为 Trace Reasoning", () => {

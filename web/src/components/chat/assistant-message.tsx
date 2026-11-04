@@ -1,15 +1,15 @@
 import { Sparkles, ShieldAlert } from "lucide-react";
-import type { MessageItem, UnifiedToolCall } from "@/lib/types";
+import type { MessageItem } from "@/lib/types";
 import { ProviderIcon } from "@/components/provider-icon";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Message, MessageAvatar, MessageContent, MessageHeader } from "@/components/ui/message";
 import { useT } from "@/lib/i18n";
-import { extractContent, lookupToolResult, type ToolResultInfo } from "./content-extract";
+import { extractContent, type ToolResultInfo } from "./content-extract";
 import { MultimodalParts } from "./multimodal-parts";
 import { Reasoning } from "./reasoning";
-import { ToolCallCard } from "./tool-call-card";
+import { ToolCalls } from "./tool-calls";
 import { MarkdownLite } from "./markdown-lite";
 
 function PartRefusal({ text }: { text: string }) {
@@ -104,15 +104,7 @@ export function AssistantMessage({ message, index, toolResultsByID }: AssistantM
         {refusal && <PartRefusal text={refusal} />}
 
         {tool_calls && tool_calls.length > 0 && (
-          <div className="flex flex-col gap-3">
-            {tool_calls.map((call: UnifiedToolCall, i: number) => (
-              <ToolCallCard
-                key={call.id ?? i}
-                call={call}
-                result={call.id ? lookupToolResult(toolResultsByID, call.id) : undefined}
-              />
-            ))}
-          </div>
+          <ToolCalls calls={tool_calls} resultsByID={toolResultsByID} />
         )}
       </MessageContent>
     </Message>

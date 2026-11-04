@@ -1162,5 +1162,7 @@
   "portal.footer.explore": "Explore",
   "portal.footer.source": "Open source",
   "portal.footer.console": "Console",
-  "chat.reasoning_chars": "{count} chars"
+  "chat.reasoning_chars": "{count} chars",
+  "tool_call.empty_output": "(no output)",
+  "tool_call.view_full": "View full output"
 }

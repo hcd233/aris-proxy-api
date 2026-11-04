@@ -1162,5 +1162,7 @@
   "portal.footer.explore": "了解",
   "portal.footer.source": "开源",
   "portal.footer.console": "控制台",
-  "chat.reasoning_chars": "{count} 字"
+  "chat.reasoning_chars": "{count} 字",
+  "tool_call.empty_output": "（无输出）",
+  "tool_call.view_full": "在侧板查看完整输出"
 }
