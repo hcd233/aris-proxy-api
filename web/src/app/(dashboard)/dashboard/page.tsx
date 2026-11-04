@@ -2,6 +2,7 @@
 
 import { useT } from "@/lib/i18n";
 import { DASHBOARD_REFRESH_INTERVALS } from "@/lib/refresh-interval";
+import { PAGE_TITLE_CLASS } from "@/components/page-header";
 import { PermissionGuard } from "@/components/permission-guard";
 import { AutoRefreshButton } from "@/components/shared/auto-refresh-button";
 import { TimeRangePicker } from "@/components/ui/time-range-picker";
@@ -44,15 +45,10 @@ export default function DashboardPage() {
     <PermissionGuard module="dashboard">
       <TooltipProvider>
         <OverviewProvider range={range}>
-          <div
-            data-page-wide
-            className="flex flex-col gap-3 xl:h-[calc(100dvh-5rem)] xl:min-h-[680px]"
-          >
+          <div className="flex flex-col gap-3 xl:h-[calc(100dvh-5rem)] xl:min-h-[680px]">
             <header className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
               <div className="min-w-0">
-                <h1 className="motion-title font-display text-2xl tracking-tight text-foreground">
-                  {t("dashboard.title")}
-                </h1>
+                <h1 className={PAGE_TITLE_CLASS}>{t("dashboard.title")}</h1>
               </div>
               {/* 窄屏独占一行并撑满：范围条 + 刷新按钮不再把自己挤出视口 */}
               <div className="flex max-w-full min-w-0 items-center gap-2 max-sm:w-full max-sm:justify-between">

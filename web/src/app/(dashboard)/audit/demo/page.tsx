@@ -21,6 +21,7 @@ import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/too
 import { Footprints } from "lucide-react";
 import { PaginationBar } from "@/components/pagination-bar";
 import { useI18n } from "@/lib/i18n";
+import { PageHeader } from "@/components/page-header";
 import { PermissionGuard } from "@/components/permission-guard";
 import { TimeRangePicker } from "@/components/ui/time-range-picker";
 import type { TimeRangeKey } from "@/lib/time-range";
@@ -182,14 +183,10 @@ export default function DemoAccessAuditPage() {
   return (
     <PermissionGuard adminOnly>
       <div className="space-y-8">
-        <div>
-          <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
-            {t("demo_access_audit.page_title")}
-          </h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">
-            {t("demo_access_audit.page_subtitle")}
-          </p>
-        </div>
+        <PageHeader
+          title={t("demo_access_audit.page_title")}
+          description={t("demo_access_audit.page_subtitle")}
+        />
 
         <Card>
           <CardHeader>

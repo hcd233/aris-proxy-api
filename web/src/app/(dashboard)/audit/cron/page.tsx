@@ -21,6 +21,7 @@ import { ScrollText } from "lucide-react";
 import { PaginationBar } from "@/components/pagination-bar";
 import { toast } from "sonner";
 import { useI18n } from "@/lib/i18n";
+import { PageHeader } from "@/components/page-header";
 import { PermissionGuard } from "@/components/permission-guard";
 import { TimeRangePicker } from "@/components/ui/time-range-picker";
 import type { TimeRangeKey } from "@/lib/time-range";
@@ -202,12 +203,10 @@ export default function CronAuditPage() {
   return (
     <PermissionGuard adminOnly module="cron_audit">
       <div className="space-y-8">
-        <div>
-          <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
-            {t("cron_audit.page_title")}
-          </h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">{t("cron_audit.page_subtitle")}</p>
-        </div>
+        <PageHeader
+          title={t("cron_audit.page_title")}
+          description={t("cron_audit.page_subtitle")}
+        />
 
         <Card>
           <CardHeader>

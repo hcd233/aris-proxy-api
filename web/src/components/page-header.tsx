@@ -2,6 +2,10 @@
 
 import type { ReactNode } from "react";
 
+/** 控制台页面标题（h1）的唯一字号/字重定义；自带布局的页头（dashboard、monitor）直接复用。 */
+export const PAGE_TITLE_CLASS =
+  "motion-title font-display text-2xl font-semibold tracking-tight text-foreground md:text-3xl";
+
 interface PageHeaderProps {
   title: ReactNode;
   description?: ReactNode;
@@ -17,9 +21,7 @@ export function PageHeader({ title, description, actions }: PageHeaderProps) {
   return (
     <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
       <div>
-        <h1 className="motion-title font-display text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
-          {title}
-        </h1>
+        <h1 className={PAGE_TITLE_CLASS}>{title}</h1>
         {description && <p className="mt-1.5 text-sm text-muted-foreground">{description}</p>}
       </div>
       {actions && <div className="shrink-0">{actions}</div>}

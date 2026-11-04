@@ -22,6 +22,7 @@
 - `src/app/(dashboard)/`：登录后的管理后台路由组，仪表盘首页在 `dashboard/page.tsx`（`/web/dashboard/`），其余子页面（`sessions/`、`apikeys/`、`upstream/` 等）路径不带 `dashboard` 前缀；导航高亮统一用 `isNavItemActive`。
   - **Dashboard 与 Monitor 分工**：`dashboard/` 只放业务指标（用量、费用、成功率、缓存命中、模型/Top 排行）；`monitor/` 只放后台运维指标（QPS、5xx 错误率、P95、状态码构成、CPU/内存/协程/线程、SSE 连接、实例在线）。新增指标先按这条线归页，token 吞吐、费用这类业务量不要放进 Monitor。
   - Monitor 与 Dashboard 同构：`app/(dashboard)/monitor/page.tsx` 只做编排，数据层 `components/monitor/use-runtime-metrics.ts`，6 张 KPI `monitor-kpi-row.tsx`，图表 `monitor-chart.tsx`（`line` 逐 pod 对比 / `area` 总量 / `stack` 构成），面板外壳复用 `components/dashboard/panel.tsx`；时序合并、状态码归类、pod 名缩写等纯逻辑在 `src/lib/monitor.ts`（`monitor.test.ts` 守护）。传给 `MonitorChart` 的 `format` / `axisFormat` 必须是模块级函数或 `useCallback`。
+  - **页面标题与主体宽度统一**：标题一律经 `components/page-header.tsx`（`PageHeader`，自带布局的页头如 dashboard / monitor 直接用 `PAGE_TITLE_CLASS`），不要手写 `<h1>` 字号；主体宽度由 `(dashboard)/layout.tsx` 统一为 `max-w-[1600px]`。
 - 导航与 ⌘K：侧栏和页面跳转面板（`src/components/nav-command-palette.tsx`，Dialog + Base UI `Autocomplete inline`）共用 `src/lib/nav.ts` 的 `NAV_GROUPS`；新增页面只改这里，`resolveNavGroups` 统一做按身份裁剪与 demo 锁定（面板不列出被锁模块）。`pinned` 分组（仪表盘）不渲染组头、直接铺在顶层，不参与展开逻辑（`findActiveGroupKey` 会跳过）。入口有三处：侧栏搜索按钮、移动端顶栏图标、`⌘K` / `Ctrl+K`，共用 `DashboardLayout` 里同一个 `paletteOpen`。
 - 主题/语言切换：唯一实现是 `src/components/preference-controls.tsx`（`tone="page" | "sidebar"`），门户、登录、回调、分享、仪表盘侧栏（含折叠态）都挂它，不要再单独拼 `LanguageSwitcher` + `ThemeSwitcher`。
 - `src/app/share/`：会话分享只读页面（公开访问）。
@@ -98,12 +99,12 @@
 
 列多到需要左右滑动的数据表，改用 `<Table fit>`：`table-layout: fixed` + 单元格 `overflow: hidden`，列宽由表头 `w-*` 声明，**只留主列不声明**（fixed 布局把剩余空间全给未声明列，实测 Chrome 行为：声明宽度之和小于表格宽度时余量归未声明列）。
 
-- **列宽预算**：声明宽度之和 ≥ 容器宽度时会溢出成横向滚动，增删列前后都要核对。1280 视口下 `max-w-6xl` 容器的实测可用宽度约 900px（侧栏 256 + 页面内边距）。
+- **列宽预算**：声明宽度之和 ≥ 容器宽度时会溢出成横向滚动，增删列前后都要核对。1280 视口下控制台主体容器（`max-w-[1600px]`）的实测可用宽度约 900px（侧栏 256 + 页面内边距）。
 - **不可截断内容按实测给足**：时间戳这类等宽文本（`2026/10/19 18:09:13` 在 `text-xs` 下约 163px）宽度不足会被单元格裁掉且无提示，必须按 `td.scrollWidth` 实测值给（该值含 `p-2` 内边距）。**操作列同属不可截断内容**：按钮是 `shrink-0`，行内 flex 又是 `justify-end`，宽度不足时溢出部分从**左侧**被裁掉，最左的按钮整颗消失（既无省略号也不出现滚动条）。预算按最宽语言实测（upstream 操作列：编辑/定价两个 `icon-sm` + 带文字 `DeleteButton`，zh 10rem、en 10.5rem）。
 - **可截断内容一律 `truncate` + Tooltip**（lint 强制）；实测「静默裁掉」的方法：遍历 `tbody td`，`td.scrollWidth > td.clientWidth + 1` 且不在 `TooltipTrigger` 子树内即为不合格。**注意 `scrollWidth` 只看得见右侧溢出**，`justify-end` 的 flex 从左侧裁掉时该判据失效，需另比单元格内容盒与子元素包围盒的左右边界（任一侧溢出 > 1px 即不合格）。
 - **窄视口兜底**：容器保留 `overflow-x-auto`，只有预算放不下时才出现横向滚动，属于预期行为。
 - 开启 `fit` 的页面：`upstream`（分组/平铺）、`audit/model`、`audit/demo`、`sessions`、`cron`、`apikeys`。
-- **声明宽度必须跟着容器量，不要跟着视口猜**：容器可用宽 = 视口 − 侧栏（256）− 页面内边距，且被 `max-w-6xl` 封顶。实测 `sessions` 表格：1280 视口 902px、1512 视口 1118px；**侧栏在 `lg` 以下收起，1024 视口反而有 ~976px**，所以窄视口不一定更窄，改预算前先量。
+- **声明宽度必须跟着容器量，不要跟着视口猜**：容器可用宽 = 视口 − 侧栏（256）− 页面内边距，且被 `max-w-[1600px]` 封顶（`(dashboard)/layout.tsx` 统一设置，页面内不要自行加宽/收窄）。实测 `sessions` 表格：1280 视口 902px、1512 视口 1118px；**侧栏在 `lg` 以下收起，1024 视口反而有 ~976px**，所以窄视口不一定更窄，改预算前先量。
 - **列表页也要按容器宽度渐进显示列**：`sessions` 的声明宽度合计曾涨到 924px（> 902），主列「摘要」被压到 41px 并出现横向滚动。现在常驻列合计 692px，`评分` / `工具` / `Agent` 三列分别用 `@min-[64rem]` / `@min-[58rem]` / `@min-[52rem]` 渐进展开（页面里的 `SHOW_*_FROM` 常量），主列稳定在 ~210px。新增列先定优先级与阈值，别直接常驻；预算涨上去之前先跑一遍实测。
 - **`sr-only` 只能包文本，不能写在 `th` 上**：`sr-only` 是绝对定位，写在 `th` 上会让该列宽度不计入 fixed 布局的声明总和，剩余空间既不归主列也不归任何列——实测 902px 容器丢掉 53px，主列从 210px 掉到 157px。要藏表头文字就把 `sr-only` 放到 `th` 内部的 `<span>` 上。
 - **按面板宽度渐进显示列（仪表盘 Endpoint / Top 两张表）**：1280 视口下面板表格只有约 310px，六列常驻的声明宽度就占 280px，主名列被挤到 17px（Top 排行只剩 5px）——名字完全看不见。这两张表的面板主体声明 `@container`，次要列用 `dense-table.tsx` 的 `SHOW_FROM_*`（`hidden @min-[Npx]:table-cell`）按优先级渐进展开；阈值按「主名列可见宽度 ≥ ~110px」反推，数值是表格可用宽度。新增列先定优先级，不要直接常驻。验证按 zh / en / ja × 1280 / 1440 / 1920 三语三宽实测（主名列 `clientWidth ≥ scrollWidth`、无被裁表头）。
@@ -118,7 +119,7 @@
 
 ### 切换闪烁
 
-`<LocaleFade>` 包裹 dashboard `<main>` 内 `max-w-6xl` 容器与 share 页根，监听 `locale` 变化做 ~120ms opacity 淡入。新增会因切换语言而 reflow 的页面根容器时，用 `<LocaleFade>` 包裹。不要在 `width`/`height` 上加 CSS transition，不要引入 View Transitions API。
+`<LocaleFade>` 包裹 dashboard `<main>` 内 `max-w-[1600px]` 容器与 share 页根，监听 `locale` 变化做 ~120ms opacity 淡入。新增会因切换语言而 reflow 的页面根容器时，用 `<LocaleFade>` 包裹。不要在 `width`/`height` 上加 CSS transition，不要引入 View Transitions API。
 
 ## 联调与发布
 

@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useRequestSeq } from "@/hooks/use-request-seq";
 import { useI18n } from "@/lib/i18n";
+import { PageHeader } from "@/components/page-header";
 import { PermissionGuard } from "@/components/permission-guard";
 import { formatCost } from "@/lib/money";
 import { cn, formatDateTime, formatDurationMs, formatInteger, formatTokenCount } from "@/lib/utils";
@@ -200,12 +201,10 @@ export default function AuditPage() {
   return (
     <PermissionGuard module="audit">
       <div className="space-y-8">
-        <div>
-          <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
-            {t("audit.model_page_title")}
-          </h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">{t("audit.model_page_subtitle")}</p>
-        </div>
+        <PageHeader
+          title={t("audit.model_page_title")}
+          description={t("audit.model_page_subtitle")}
+        />
 
         <Card>
           <CardHeader>

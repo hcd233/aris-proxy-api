@@ -18,6 +18,7 @@ import {
   type RangeKey,
 } from "@/lib/monitor";
 import { cn, formatBytes, formatDecimal, formatInteger, formatTokenCount } from "@/lib/utils";
+import { PAGE_TITLE_CLASS } from "@/components/page-header";
 import { PermissionGuard } from "@/components/permission-guard";
 import { AutoRefreshButton } from "@/components/shared/auto-refresh-button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -165,15 +166,10 @@ export default function MonitorPage() {
   return (
     <PermissionGuard module="monitor">
       <TooltipProvider>
-        <div
-          data-page-wide
-          className="flex flex-col gap-3 xl:h-[calc(100dvh-5rem)] xl:min-h-[680px]"
-        >
+        <div className="flex flex-col gap-3 xl:h-[calc(100dvh-5rem)] xl:min-h-[680px]">
           <header className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
             <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
-              <h1 className="motion-title font-display text-2xl tracking-tight text-foreground">
-                {t("monitor.title")}
-              </h1>
+              <h1 className={PAGE_TITLE_CLASS}>{t("monitor.title")}</h1>
               <InstanceStatus pods={pods} loading={loading} failed={failed} />
             </div>
             {/* 窄屏独占一行并撑满：范围条 + 刷新按钮不再把自己挤出视口 */}
