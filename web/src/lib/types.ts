@@ -143,14 +143,6 @@ export interface UpdateUserReqBody {
   user: User;
 }
 
-export interface DemoteUserReq {
-  id: number;
-}
-
-export interface DeleteUserReq {
-  id: number;
-}
-
 // ─── Session ───────────────────────────────────────────────────────────────────
 
 export interface SessionSummary {
@@ -165,19 +157,6 @@ export interface SessionSummary {
   toolCount: number;
   metadata?: Record<string, string>;
   modelIds?: string[];
-}
-
-export interface SessionDetail {
-  id: number;
-  apiKeyName: string;
-  createdAt: string;
-  updatedAt: string;
-  metadata?: Record<string, string>;
-  score?: number;
-  scoredAt?: string;
-  messages: MessageItem[];
-  tools: ToolItem[];
-  shareID?: string;
 }
 
 export interface UnifiedToolCall {
@@ -219,10 +198,6 @@ export interface ToolItem {
 export interface ListSessionsRsp extends CommonRsp {
   sessions?: SessionSummary[];
   pageInfo?: PageInfo;
-}
-
-export interface GetSessionRsp extends CommonRsp {
-  session?: SessionDetail;
 }
 
 // ─── Session Detail Perf (新增：metadata + 分页接口) ────────────────────────────

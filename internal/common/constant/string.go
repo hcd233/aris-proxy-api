@@ -114,11 +114,7 @@ const (
 	CORSAllowHeaders  = "Origin,Content-Type,Accept,Authorization,X-Requested-With,X-Trace-Id"
 	CORSExposeHeaders = "Content-Length"
 
-	// Fallback JSON map key for parse errors
-	FallbackJSONRawKey = "raw"
-
-	FieldNameID    = "id"
-	FieldNameModel = "model"
+	FieldNameID = "id"
 
 	GithubScopeUserEmail = "user:email"
 	GithubScopeRepo      = "repo"
@@ -254,7 +250,6 @@ const (
 
 	// ── Trigger Word constants ──
 	TriggerContentFilterMessage   = "Content blocked by policy"
-	TriggerAuditRemark            = "deny by trigger word"
 	TriggerAuditRemarkTemplate    = "deny by trigger word: %s"
 	TriggerCaptureAuditRemark     = "capture context by trigger word"
 	TriggerCaptureAuditTemplate   = "capture context by trigger word: %s"
@@ -290,7 +285,6 @@ const (
 	// ── Locale ──
 	LocaleEmbedDir        = "locales"
 	LocaleFileExt         = ".json"
-	LocaleDefaultLocale   = "en"
 	LocalePrimaryZH       = "zh"
 	LocalePrimaryJA       = "ja"
 	LocaleAcceptSeparator = "-_;"

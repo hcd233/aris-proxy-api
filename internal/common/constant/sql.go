@@ -16,7 +16,6 @@ const (
 	FieldPattern                     = "pattern"
 	FieldKey                         = "key"
 	FieldUserID                      = "user_id"
-	FieldModel                       = "model"
 	FieldAPIKey                      = "api_key"
 	FieldAPIKeyName                  = "api_key_name"
 	FieldAlias                       = "alias"
@@ -48,8 +47,6 @@ const (
 	FieldDescription   = "description"
 
 	FieldTraceID                  = "trace_id"
-	FieldDedupKey                 = "dedup_key"
-	FieldPayload                  = "payload"
 	FieldInputTokens              = "input_tokens"
 	FieldOutputTokens             = "output_tokens"
 	FieldFirstTokenLatencyMs      = "first_token_latency_ms"
@@ -75,8 +72,6 @@ const (
 	FieldToolCount                = "tool_count"
 
 	FieldSessionID = "session_id"
-
-	DBSelectAll = "*"
 )
 
 const (

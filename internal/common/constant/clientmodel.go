@@ -177,10 +177,8 @@ var ClaudeTierEnvKeys = map[string]string{
 
 // ClientModelMisc 通用杂项常量
 const (
-	ClientModelCRLF     = "\r\n"
-	ClientModelLF       = "\n"
-	ClientModelModelKey = "model"
-	ClientModelSpaceSep = " "
+	ClientModelCRLF = "\r\n"
+	ClientModelLF   = "\n"
 )
 
 // ClientModelExportMessages aris model export 交互文案

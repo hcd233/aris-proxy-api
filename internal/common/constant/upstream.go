@@ -59,7 +59,6 @@ const (
 	OpenAIInvalidRequestErrorType       = "invalid_request_error"
 	OpenAIModelNotFoundCode             = "model_not_found"
 	OpenAIModelNotFoundMessageTemplate  = "The model `%s` does not exist"
-	OpenAIInternalErrorShortMessage     = "Internal error"
 
 	// ChatCompletionConvertToolDescFileSearch FileSearch 工具转换描述
 	ChatCompletionConvertToolDescFileSearch = "File search tool for retrieving information from vector stores"
@@ -87,9 +86,6 @@ const (
 	// 协议原生错误（官方 overloaded_error）；HTTP 503。
 	AnthropicOverloadedErrorType = "overloaded_error"
 	AnthropicUnavailableMessage  = "Service temporarily unavailable"
-
-	UpstreamErrorType             = "upstream_error"
-	UpstreamStatusMessageTemplate = "Upstream returned status %d"
 
 	// UpstreamRetryableStatusThreshold 可重试的上游 HTTP 状态码阈值（>= 此值为 5xx 瞬时错误）
 	UpstreamRetryableStatusThreshold = 500

@@ -39,7 +39,6 @@ import type {
   GetCurUserRsp,
   GetDemoConfigRsp,
   GetSessionMetadataRsp,
-  GetSessionRsp,
   GetShareMetadataRsp,
   Granularity,
   ListAPIKeysRsp,
@@ -398,10 +397,6 @@ class ApiClient {
     if (params.startTime) sp.set("startTime", params.startTime);
     if (params.endTime) sp.set("endTime", params.endTime);
     return this.request<SessionOptionListRsp>(`${API_PREFIX}/session/option/list?${sp}`);
-  }
-
-  async getSession(sessionId: number): Promise<GetSessionRsp> {
-    return this.request<GetSessionRsp>(`${API_PREFIX}/session?id=${sessionId}`);
   }
 
   async getSessionMetadata(sessionId: number): Promise<GetSessionMetadataRsp> {

@@ -8,9 +8,7 @@ package enum
 type AnthropicThinkingType = string
 
 const (
-	AnthropicThinkingTypeEnabled  AnthropicThinkingType = "enabled"
 	AnthropicThinkingTypeDisabled AnthropicThinkingType = "disabled"
-	AnthropicThinkingTypeAdaptive AnthropicThinkingType = "adaptive"
 	AnthropicThinkingTypeLow      AnthropicThinkingType = "low"
 	AnthropicThinkingTypeMedium   AnthropicThinkingType = "medium"
 	AnthropicThinkingTypeHigh     AnthropicThinkingType = "high"
