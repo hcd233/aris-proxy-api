@@ -4,9 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { usePersistentState } from "@/hooks/use-persistent-state";
+import { usePaginatedList } from "@/hooks/use-paginated-list";
 import { api } from "@/lib/api-client";
 import { showErrorToast } from "@/lib/api-error-handler";
-import type { SessionSummary, PageInfo } from "@/lib/types";
+import type { SessionSummary } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -46,7 +47,6 @@ import { computeRange } from "@/lib/time-range";
 import { DeleteIconButton } from "@/components/delete-button";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { useDeleteConfirm } from "@/hooks/use-delete-confirm";
-import { useRequestSeq } from "@/hooks/use-request-seq";
 import { toast } from "sonner";
 import { ProviderIcon } from "@/components/provider-icon";
 import { DemoAddButton } from "@/components/demo-add-button";
@@ -54,6 +54,7 @@ import { useDemoWhitelist } from "@/hooks/use-demo-whitelist";
 import { FilterBar } from "@/components/filter-bar/filter-bar";
 import { useFilterBar } from "@/components/filter-bar/use-filter-bar";
 import type { FacetDef, FilterBarQueryParams } from "@/components/filter-bar/types";
+import { TruncatedText } from "@/components/truncated-text";
 
 type SortDir = "asc" | "desc";
 
@@ -78,18 +79,6 @@ export default function SessionsPage() {
   const isMobile = useIsMobile();
   const { isDemo } = useAuth();
   const { loginEnabled, pending, isInDemo, toggle } = useDemoWhitelist();
-  const [sessions, setSessions] = useState<SessionSummary[]>([]);
-  const [persistedPage, setPersistedPage] = usePersistentState("dashboard.sessions.page", 1);
-  const [persistedPageSize, setPersistedPageSize] = usePersistentState(
-    "dashboard.sessions.pageSize",
-    20,
-  );
-  const [pageInfo, setPageInfo] = useState<PageInfo>({
-    page: persistedPage,
-    pageSize: persistedPageSize,
-    total: 0,
-  });
-  const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = usePersistentState<TimeRangeKey>(
     "dashboard.sessions.timeRange",
     "30d",
@@ -166,39 +155,32 @@ export default function SessionsPage() {
     silent?: boolean;
   }
 
-  // 竞态守卫：筛选/翻页连点时慢响应不得覆盖新响应
-  const requestSeq = useRequestSeq();
-  const fetchSessions = useCallback(
-    async (q: SessionsQuery) => {
-      const seq = requestSeq.begin();
-      if (!q.silent) setLoading(true);
-      try {
-        const { startTime, endTime } = computeRange(q.range, q.cs, q.ce);
-        const rsp = await api.listSessions({
-          page: q.page,
-          pageSize: q.pageSize,
-          sort: q.sortState.dir,
-          sortField: q.sortState.field,
-          startTime,
-          endTime,
-          keyword: q.qp.freeText || undefined,
-          filter: q.qp.filter,
-        });
-        if (!requestSeq.isCurrent(seq)) return;
-        setSessions(rsp.sessions ?? []);
-        if (rsp.pageInfo) {
-          setPageInfo(rsp.pageInfo);
-          setPersistedPage(rsp.pageInfo.page);
-          setPersistedPageSize(rsp.pageInfo.pageSize);
-        }
-      } catch {
-        // handled silently
-      } finally {
-        if (requestSeq.isCurrent(seq)) setLoading(false);
-      }
+  // 加载失败静默（不传 errorTitle）：列表保留上一次结果
+  const {
+    items: sessions,
+    setItems: setSessions,
+    pageInfo,
+    loading,
+    load,
+  } = usePaginatedList({
+    persistKey: "dashboard.sessions",
+    fetchPage: async (page, pageSize, q: Omit<SessionsQuery, "page" | "pageSize" | "silent">) => {
+      const { startTime, endTime } = computeRange(q.range, q.cs, q.ce);
+      const rsp = await api.listSessions({
+        page,
+        pageSize,
+        sort: q.sortState.dir,
+        sortField: q.sortState.field,
+        startTime,
+        endTime,
+        keyword: q.qp.freeText || undefined,
+        filter: q.qp.filter,
+      });
+      return { items: rsp.sessions, pageInfo: rsp.pageInfo };
     },
-    [setPersistedPage, setPersistedPageSize, requestSeq],
-  );
+  });
+  const fetchSessions = ({ page, pageSize, silent, ...q }: SessionsQuery) =>
+    load(page, pageSize, q, { silent });
 
   const currentQuery = (): Omit<SessionsQuery, "page" | "pageSize"> => ({
     range: timeRange,
@@ -432,20 +414,10 @@ export default function SessionsPage() {
                             />
                           </ItemMedia>
                           <ItemContent className="min-w-0">
-                            <TooltipRoot>
-                              <TooltipTrigger
-                                render={
-                                  <ItemTitle className="w-full truncate">
-                                    {s.summary ||
-                                      t("sessions.untitled_session").replace("{id}", String(s.id))}
-                                  </ItemTitle>
-                                }
-                              />
-                              <TooltipContent side="top" className="max-w-xs break-all">
-                                {s.summary ||
-                                  t("sessions.untitled_session").replace("{id}", String(s.id))}
-                              </TooltipContent>
-                            </TooltipRoot>
+                            <TruncatedText render={<ItemTitle />} className="w-full">
+                              {s.summary ||
+                                t("sessions.untitled_session").replace("{id}", String(s.id))}
+                            </TruncatedText>
                           </ItemContent>
                           <ItemActions>
                             {!isDemo() && (
@@ -586,18 +558,9 @@ export default function SessionsPage() {
                               {formatDateTime(s.createdAt)}
                             </TableCell>
                             <TableCell>
-                              <TooltipRoot>
-                                <TooltipTrigger
-                                  render={
-                                    <span className="block truncate text-left">
-                                      {s.summary || "—"}
-                                    </span>
-                                  }
-                                />
-                                <TooltipContent side="top" className="max-w-xs break-all">
-                                  {s.summary || "—"}
-                                </TooltipContent>
-                              </TooltipRoot>
+                              <TruncatedText className="block text-left">
+                                {s.summary || "—"}
+                              </TruncatedText>
                             </TableCell>
                             <TableCell className={cn("w-[120px]", SHOW_SCORE_FROM)}>
                               <div className="flex justify-center">

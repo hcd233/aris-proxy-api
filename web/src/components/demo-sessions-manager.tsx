@@ -5,7 +5,6 @@ import { Check, MessageSquare, Trash2 } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { showErrorToast } from "@/lib/api-error-handler";
 import { useT } from "@/lib/i18n";
-import type { DemoSession, PageInfo } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -16,16 +15,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { ListEmptyState } from "@/components/list-empty-state";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { PaginationBar } from "@/components/pagination-bar";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { ProviderIcon } from "@/components/provider-icon";
-import { usePersistentState } from "@/hooks/use-persistent-state";
+import { usePaginatedList } from "@/hooks/use-paginated-list";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import { cn, formatDateTime } from "@/lib/utils";
+import { TruncatedText } from "@/components/truncated-text";
 
 /** 已选列表共用的行结构（DemoSession 可赋值） */
 interface SessionRow {
@@ -95,14 +94,9 @@ function SessionListTable({
               <div className="flex items-start gap-2">
                 <SelectCheckbox checked={isSelected} onToggle={() => onToggle(item.id)} />
                 <div className="min-w-0 flex-1">
-                  <TooltipRoot>
-                    <TooltipTrigger
-                      render={<p className="truncate text-sm font-medium">{summary(item)}</p>}
-                    />
-                    <TooltipContent side="top" className="max-w-xs break-all">
-                      {summary(item)}
-                    </TooltipContent>
-                  </TooltipRoot>
+                  <TruncatedText render={<p />} className="text-sm font-medium">
+                    {summary(item)}
+                  </TruncatedText>
                   <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
                     <span>
                       {t("common.id")}: {item.id}
@@ -167,14 +161,7 @@ function SessionListTable({
                 {item.createdAt ? formatDateTime(item.createdAt) : "—"}
               </TableCell>
               <TableCell className="max-w-[200px]">
-                <TooltipRoot>
-                  <TooltipTrigger
-                    render={<span className="block truncate text-left">{summary(item)}</span>}
-                  />
-                  <TooltipContent side="top" className="max-w-xs break-all">
-                    {summary(item)}
-                  </TooltipContent>
-                </TooltipRoot>
+                <TruncatedText className="block text-left">{summary(item)}</TruncatedText>
               </TableCell>
               <TableCell className="w-[160px]">
                 <div className="flex justify-center">
@@ -220,46 +207,34 @@ export function DemoSessionsManager() {
   const t = useT();
   const isMobile = useIsMobile();
 
-  const [selectedSessions, setSelectedSessions] = useState<DemoSession[]>([]);
-  const [selectedPage, setSelectedPage] = usePersistentState("dashboard.demo.selected.page", 1);
-  const [selectedPageSize, setSelectedPageSize] = usePersistentState(
-    "dashboard.demo.selected.pageSize",
-    100,
-  );
-  const [selectedPageInfo, setSelectedPageInfo] = useState<PageInfo>({
-    page: selectedPage,
-    pageSize: selectedPageSize,
-    total: 0,
+  const {
+    items: selectedSessions,
+    pageInfo: selectedPageInfo,
+    loading: selectedLoading,
+    load,
+  } = usePaginatedList({
+    persistKey: "dashboard.demo.selected",
+    defaultPageSize: 100,
+    errorTitle: t("demo.sessions_load_error"),
+    fetchPage: async (page, pageSize) => {
+      const rsp = await api.listDemoSessions(page, pageSize);
+      return { items: rsp.sessions, pageInfo: rsp.pageInfo };
+    },
   });
-  const [selectedLoading, setSelectedLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [removing, setRemoving] = useState(false);
   const [removeConfirmOpen, setRemoveConfirmOpen] = useState(false);
 
   const fetchSelected = useCallback(
     async (page: number, pageSize: number) => {
-      setSelectedLoading(true);
-      try {
-        const rsp = await api.listDemoSessions(page, pageSize);
-        setSelectedSessions(rsp.sessions ?? []);
-        if (rsp.pageInfo) {
-          setSelectedPageInfo(rsp.pageInfo);
-          setSelectedPage(rsp.pageInfo.page);
-          setSelectedPageSize(rsp.pageInfo.pageSize);
-        }
-        setSelectedIds(new Set());
-      } catch (err) {
-        showErrorToast(err, { title: t("demo.sessions_load_error") });
-      } finally {
-        setSelectedLoading(false);
-      }
+      if (await load(page, pageSize)) setSelectedIds(new Set());
     },
-    [setSelectedPage, setSelectedPageSize, t],
+    [load],
   );
 
   /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- Initial fetch on mount with persisted pagination */
   useEffect(() => {
-    fetchSelected(selectedPage, selectedPageSize);
+    fetchSelected(selectedPageInfo.page, selectedPageInfo.pageSize);
   }, [fetchSelected]);
   /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
@@ -288,14 +263,14 @@ export function DemoSessionsManager() {
       await api.removeDemoSessions(ids);
       toast.success(t("demo.remove_success").replace("{count}", String(ids.length)));
       setSelectedIds(new Set());
-      await fetchSelected(selectedPage, selectedPageSize);
+      await fetchSelected(selectedPageInfo.page, selectedPageInfo.pageSize);
     } catch (err) {
       showErrorToast(err, { title: t("demo.remove_error") });
     } finally {
       setRemoving(false);
       setRemoveConfirmOpen(false);
     }
-  }, [fetchSelected, selectedIds, selectedPage, selectedPageSize, t]);
+  }, [fetchSelected, selectedIds, selectedPageInfo.page, selectedPageInfo.pageSize, t]);
 
   return (
     <div className="space-y-8">

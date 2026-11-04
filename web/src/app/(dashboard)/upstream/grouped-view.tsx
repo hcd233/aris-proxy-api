@@ -41,6 +41,7 @@ import {
 } from "./shared";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { oauthBadgeKey, quotaPercent } from "./oauth-form";
+import { TruncatedText } from "@/components/truncated-text";
 
 /** 组头的连通详情悬浮层：URL 可完整换行，不占列表列宽；订阅端点附账号/额度与运维动作 */
 function EndpointDetailPopover({
@@ -367,38 +368,21 @@ export function GroupedView({
                         <div className={cn("min-w-0", !m.enabled && DISABLED_ROW_CLASS)}>
                           <p className="flex items-center gap-1.5 text-sm font-medium">
                             <ProviderIcon protocol={m.alias} size={14} className="shrink-0" />
-                            <TooltipRoot>
-                              <TooltipTrigger
-                                render={
-                                  <span
-                                    className="cursor-pointer truncate underline-offset-2 hover:underline"
-                                    onClick={() => onCopyAlias(m.alias)}
-                                  >
-                                    {m.alias}
-                                  </span>
-                                }
-                              />
-                              <TooltipContent
-                                side="top"
-                                align="start"
-                                className="max-w-xs break-all"
-                              >
-                                {m.alias}
-                              </TooltipContent>
-                            </TooltipRoot>
+                            <TruncatedText
+                              render={<span onClick={() => onCopyAlias(m.alias)} />}
+                              className="cursor-pointer underline-offset-2 hover:underline"
+                              align="start"
+                            >
+                              {m.alias}
+                            </TruncatedText>
                           </p>
-                          <TooltipRoot>
-                            <TooltipTrigger
-                              render={
-                                <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">
-                                  {m.upstreamModel}
-                                </p>
-                              }
-                            />
-                            <TooltipContent side="top" align="start" className="max-w-xs break-all">
-                              {m.upstreamModel}
-                            </TooltipContent>
-                          </TooltipRoot>
+                          <TruncatedText
+                            render={<p />}
+                            className="mt-0.5 font-mono text-xs text-muted-foreground"
+                            align="start"
+                          >
+                            {m.upstreamModel}
+                          </TruncatedText>
                           <div className="mt-1 flex items-center gap-1.5">
                             <SpecBadges
                               contextLength={m.contextLength}
@@ -506,16 +490,9 @@ export function GroupedView({
                     </Button>
                     <OwnerCell user={ep.user} />
                     <span className="flex min-w-0 items-center gap-2">
-                      <TooltipRoot>
-                        <TooltipTrigger
-                          render={
-                            <span className="max-w-[16ch] truncate font-medium">{ep.name}</span>
-                          }
-                        />
-                        <TooltipContent side="top" align="start" className="max-w-xs break-all">
-                          {ep.name}
-                        </TooltipContent>
-                      </TooltipRoot>
+                      <TruncatedText className="max-w-[16ch] font-medium" align="start">
+                        {ep.name}
+                      </TruncatedText>
                       <span className="flex shrink-0 items-center gap-1">
                         {ep.visibility === "public" && (
                           <Badge

@@ -1,13 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { usePersistentState } from "@/hooks/use-persistent-state";
+import { usePaginatedList } from "@/hooks/use-paginated-list";
 import { useOptimisticUpdate } from "@/hooks/use-optimistic-update";
-import { useRequestSeq } from "@/hooks/use-request-seq";
-import cronstrue from "cronstrue";
-import "cronstrue/locales/zh_CN";
+import { specToHuman } from "@/lib/cron";
 import { api } from "@/lib/api-client";
-import type { CronJobItem, PageInfo } from "@/lib/types";
+import type { CronJobItem } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
@@ -21,12 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Timer, Pencil, Lock, Play } from "lucide-react";
-import {
-  TooltipProvider,
-  TooltipRoot,
-  TooltipTrigger,
-  TooltipContent,
-} from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 import { useI18n } from "@/lib/i18n";
 import { cronJobLabel } from "@/lib/utils";
@@ -44,30 +37,10 @@ import type { ApiError } from "@/lib/api-client";
 import { ScheduleEditorDialog } from "@/components/cron/schedule-editor";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { formatDateTime } from "@/lib/utils";
-
-function specToHuman(spec: string, locale: string): string {
-  try {
-    const cronLocale = locale === "zh" ? "zh_CN" : "en";
-    return cronstrue.toString(spec, { locale: cronLocale });
-  } catch {
-    return spec;
-  }
-}
+import { TruncatedText } from "@/components/truncated-text";
 
 export default function CronPage() {
   const { t, locale } = useI18n();
-  const [persistedPage, setPersistedPage] = usePersistentState("dashboard.cron.page", 1);
-  const [persistedPageSize, setPersistedPageSize] = usePersistentState(
-    "dashboard.cron.pageSize",
-    20,
-  );
-  const [jobs, setJobs] = useState<CronJobItem[]>([]);
-  const [pageInfo, setPageInfo] = useState<PageInfo>({
-    page: persistedPage,
-    pageSize: persistedPageSize,
-    total: 0,
-  });
-  const [loading, setLoading] = useState(true);
   const [editingJob, setEditingJob] = useState<CronJobItem | null>(null);
   const [triggeringJob, setTriggeringJob] = useState<CronJobItem | null>(null);
   const [triggering, setTriggering] = useState(false);
@@ -79,40 +52,26 @@ export default function CronPage() {
   });
   const { queryParams } = filterBar;
 
-  // 竞态守卫：关键词/筛选连点时慢响应不得覆盖新响应
-  const requestSeq = useRequestSeq();
-  const fetchJobs = useCallback(
-    async (page: number, pageSize: number, query: string) => {
-      const seq = requestSeq.begin();
-      setLoading(true);
-      try {
-        const rsp = await api.listCronJobs({ page, pageSize, query: query || undefined });
-        if (!requestSeq.isCurrent(seq)) return;
-        if (rsp.error) {
-          showErrorToast(rsp.error, { title: t("cron.load_error") });
-          return;
-        }
-        setJobs(rsp.jobs ?? []);
-        if (rsp.pageInfo) {
-          setPageInfo(rsp.pageInfo);
-          setPersistedPage(rsp.pageInfo.page);
-          setPersistedPageSize(rsp.pageInfo.pageSize);
-        }
-      } catch (err) {
-        if (!requestSeq.isCurrent(seq)) return;
-        showErrorToast(err, { title: t("cron.load_error") });
-      } finally {
-        if (requestSeq.isCurrent(seq)) setLoading(false);
-      }
+  const {
+    items: jobs,
+    setItems: setJobs,
+    pageInfo,
+    loading,
+    load: fetchJobs,
+  } = usePaginatedList({
+    persistKey: "dashboard.cron",
+    errorTitle: t("cron.load_error"),
+    fetchPage: async (page, pageSize, query: string) => {
+      const rsp = await api.listCronJobs({ page, pageSize, query: query || undefined });
+      return { items: rsp.jobs, pageInfo: rsp.pageInfo, error: rsp.error };
     },
-    [setPersistedPage, setPersistedPageSize, t, requestSeq],
-  );
+  });
 
-  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- 关键词 token 变化回到第 1 页查询；挂载时以持久化关键词发起首次查询 */
+  /* eslint-disable react-hooks/exhaustive-deps -- 关键词 token 变化回到第 1 页查询；挂载时以持久化关键词发起首次查询 */
   useEffect(() => {
     fetchJobs(1, pageInfo.pageSize, queryParams.freeText);
   }, [queryParams]);
-  /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   // enabled 开关：乐观更新 + 失败回滚，避免整表重拉导致闪烁
   const toggleEnabled = useOptimisticUpdate<CronJobItem>({
@@ -146,7 +105,7 @@ export default function CronPage() {
       setJobs((prev) => prev.map((j) => (j.name === editingJob.name ? { ...j, spec } : j)));
       toast.success(`${editingJob.name} ${t("cron.schedule_updated")}`);
     },
-    [editingJob, t],
+    [editingJob, setJobs, t],
   );
 
   const handleTrigger = async () => {
@@ -222,19 +181,14 @@ export default function CronPage() {
                     {jobs.map((job) => (
                       <TableRow key={job.name}>
                         <TableCell className="font-medium">
-                          <TooltipRoot>
-                            <TooltipTrigger
-                              render={
-                                <span className="block max-w-[16ch] truncate">
-                                  {cronJobLabel(job.name, t)}
-                                </span>
-                              }
-                            />
-                            <TooltipContent side="top" align="start" className="max-w-xs break-all">
-                              {/* 悬停给原始模块名：界面看中文，排查时仍能拿到后端标识 */}
-                              {job.name}
-                            </TooltipContent>
-                          </TooltipRoot>
+                          {/* 悬停给原始模块名：界面看中文，排查时仍能拿到后端标识 */}
+                          <TruncatedText
+                            className="block max-w-[16ch]"
+                            align="start"
+                            tooltip={job.name}
+                          >
+                            {cronJobLabel(job.name, t)}
+                          </TruncatedText>
                         </TableCell>
                         <TableCell>
                           <Badge variant={job.type === "core" ? "outline" : "secondary"}>
@@ -243,53 +197,26 @@ export default function CronPage() {
                         </TableCell>
                         <TableCell>
                           <div className="min-w-0">
-                            <TooltipRoot>
-                              <TooltipTrigger
-                                render={
-                                  <p className="max-w-[24ch] truncate text-sm">
-                                    {specToHuman(job.spec, locale)}
-                                  </p>
-                                }
-                              />
-                              <TooltipContent
-                                side="top"
-                                align="start"
-                                className="max-w-xs break-all"
-                              >
-                                {specToHuman(job.spec, locale)}
-                              </TooltipContent>
-                            </TooltipRoot>
-                            <TooltipRoot>
-                              <TooltipTrigger
-                                render={
-                                  <p className="max-w-[20ch] truncate font-mono text-xs text-muted-foreground">
-                                    {job.spec}
-                                  </p>
-                                }
-                              />
-                              <TooltipContent
-                                side="top"
-                                align="start"
-                                className="max-w-xs break-all"
-                              >
-                                {job.spec}
-                              </TooltipContent>
-                            </TooltipRoot>
+                            <TruncatedText
+                              render={<p />}
+                              className="max-w-[24ch] text-sm"
+                              align="start"
+                            >
+                              {specToHuman(job.spec, locale)}
+                            </TruncatedText>
+                            <TruncatedText
+                              render={<p />}
+                              className="max-w-[20ch] font-mono text-xs text-muted-foreground"
+                              align="start"
+                            >
+                              {job.spec}
+                            </TruncatedText>
                           </div>
                         </TableCell>
                         <TableCell className="text-muted-foreground">
-                          <TooltipRoot>
-                            <TooltipTrigger
-                              render={
-                                <span className="block max-w-full truncate">
-                                  {job.description || "—"}
-                                </span>
-                              }
-                            />
-                            <TooltipContent side="top" align="start" className="max-w-xs break-all">
-                              {job.description || "—"}
-                            </TooltipContent>
-                          </TooltipRoot>
+                          <TruncatedText className="block max-w-full" align="start">
+                            {job.description || "—"}
+                          </TruncatedText>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1.5">

@@ -4,7 +4,6 @@ import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
   Table,
   TableBody,
@@ -30,6 +29,7 @@ import {
   PricingInline,
   SpecBadges,
 } from "./shared";
+import { TruncatedText } from "@/components/truncated-text";
 
 /**
  * 端点列：端点名 + 该行模型归属用户的头像。
@@ -45,12 +45,9 @@ function EndpointOwnerCell({ name, user }: { name: string; user?: UpstreamUser }
           {(user?.name || name).charAt(0).toUpperCase() || "?"}
         </AvatarFallback>
       </Avatar>
-      <TooltipRoot>
-        <TooltipTrigger render={<span className="max-w-[14ch] truncate text-xs">{name}</span>} />
-        <TooltipContent side="top" align="start" className="max-w-xs break-all">
-          {name}
-        </TooltipContent>
-      </TooltipRoot>
+      <TruncatedText className="max-w-[14ch] text-xs" align="start">
+        {name}
+      </TruncatedText>
     </div>
   );
 }
@@ -155,34 +152,21 @@ export function FlatView({
               <div className={cn("min-w-0", !m.enabled && DISABLED_ROW_CLASS)}>
                 <p className="flex items-center gap-1.5 text-sm font-medium">
                   <ProviderIcon protocol={m.alias} size={14} className="shrink-0" />
-                  <TooltipRoot>
-                    <TooltipTrigger
-                      render={
-                        <span
-                          className="cursor-pointer truncate underline-offset-2 hover:underline"
-                          onClick={() => onCopyAlias(m.alias)}
-                        >
-                          {m.alias}
-                        </span>
-                      }
-                    />
-                    <TooltipContent side="top" align="start" className="max-w-xs break-all">
-                      {m.alias}
-                    </TooltipContent>
-                  </TooltipRoot>
+                  <TruncatedText
+                    render={<span onClick={() => onCopyAlias(m.alias)} />}
+                    className="cursor-pointer underline-offset-2 hover:underline"
+                    align="start"
+                  >
+                    {m.alias}
+                  </TruncatedText>
                 </p>
-                <TooltipRoot>
-                  <TooltipTrigger
-                    render={
-                      <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">
-                        {m.upstreamModel}
-                      </p>
-                    }
-                  />
-                  <TooltipContent side="top" align="start" className="max-w-xs break-all">
-                    {m.upstreamModel}
-                  </TooltipContent>
-                </TooltipRoot>
+                <TruncatedText
+                  render={<p />}
+                  className="mt-0.5 font-mono text-xs text-muted-foreground"
+                  align="start"
+                >
+                  {m.upstreamModel}
+                </TruncatedText>
               </div>
               <div className="flex shrink-0 flex-col items-end gap-1.5">
                 <Switch

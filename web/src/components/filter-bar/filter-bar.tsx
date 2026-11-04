@@ -16,10 +16,10 @@ import {
   useComboboxAnchor,
 } from "@/components/ui/combobox";
 import { Spinner } from "@/components/ui/spinner";
-import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import type { FilterToken } from "./filter-dsl";
 import type { FacetDef } from "./types";
 import type { UseFilterBarReturn } from "./use-filter-bar";
+import { TruncatedText } from "@/components/truncated-text";
 
 export interface FilterBarProps extends Pick<
   UseFilterBarReturn,
@@ -220,12 +220,7 @@ export function FilterBar({
               className={cn("h-7 gap-1 pr-0.5", label.free && "border-dashed")}
             >
               <span className="text-muted-foreground">{label.k}</span>
-              <TooltipRoot>
-                <TooltipTrigger render={<span className="max-w-40 truncate">{label.v}</span>} />
-                <TooltipContent side="top" className="max-w-xs break-all">
-                  {label.v}
-                </TooltipContent>
-              </TooltipRoot>
+              <TruncatedText className="max-w-40">{label.v}</TruncatedText>
               <Button
                 type="button"
                 variant="ghost"
@@ -291,12 +286,7 @@ export function FilterBar({
                       <span className="text-xs text-muted-foreground">{row.facet.key}:</span>
                     </>
                   ) : (
-                    <TooltipRoot>
-                      <TooltipTrigger render={<span className="truncate">{rowText(row)}</span>} />
-                      <TooltipContent side="top" className="max-w-xs break-all">
-                        {rowText(row)}
-                      </TooltipContent>
-                    </TooltipRoot>
+                    <TruncatedText>{rowText(row)}</TruncatedText>
                   )}
                 </ComboboxItem>
               )}

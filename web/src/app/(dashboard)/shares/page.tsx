@@ -6,13 +6,13 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { usePersistentState } from "@/hooks/use-persistent-state";
+import { usePaginatedList } from "@/hooks/use-paginated-list";
 import { Check, Copy, ExternalLink, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api-client";
 import { showErrorToast } from "@/lib/api-error-handler";
 import { SESSION_DETAIL_PATH, withBasePath } from "@/lib/routes";
-import type { PageInfo, ShareItem } from "@/lib/types";
+import type { ShareItem } from "@/lib/types";
 import { buildShareURL } from "@/components/share/share-dialog";
 import { DeleteButton } from "@/components/delete-button";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
@@ -21,7 +21,6 @@ import { PermissionGuard } from "@/components/permission-guard";
 import { ListEmptyState } from "@/components/list-empty-state";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { useDeleteConfirm } from "@/hooks/use-delete-confirm";
-import { useRequestSeq } from "@/hooks/use-request-seq";
 import { formatDateTime, formatExpiry } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,79 +34,53 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { useT } from "@/lib/i18n";
-import { copyTextToClipboard } from "@/lib/clipboard";
+import { useCopyFeedback } from "@/hooks/use-copy-feedback";
+import { TruncatedText } from "@/components/truncated-text";
 
 export default function SharesPage() {
   const t = useT();
-  const [shares, setShares] = useState<ShareItem[]>([]);
-  const [persistedPage, setPersistedPage] = usePersistentState("dashboard.shares.page", 1);
-  const [persistedPageSize, setPersistedPageSize] = usePersistentState(
-    "dashboard.shares.pageSize",
-    20,
-  );
-  const [pageInfo, setPageInfo] = useState<PageInfo>({
-    page: persistedPage,
-    pageSize: persistedPageSize,
-    total: 0,
+  const {
+    items: shares,
+    pageInfo,
+    loading,
+    load,
+  } = usePaginatedList({
+    persistKey: "dashboard.shares",
+    errorTitle: t("common.error"),
+    fetchPage: async (page, pageSize) => {
+      const rsp = await api.listShares(page, pageSize);
+      return { items: rsp.shares, pageInfo: rsp.pageInfo, error: rsp.error };
+    },
   });
-  const [loading, setLoading] = useState(true);
-  const [copiedID, setCopiedID] = useState<string | null>(null);
+  const { copiedKey: copiedID, copy } = useCopyFeedback();
   // Snapshot of "now" taken at fetch time so the expired-check during render
   // stays pure (react-hooks/purity forbids `Date.now()` inside render).
   const [refreshedAt, setRefreshedAt] = useState<number>(0);
 
-  // 竞态守卫：翻页连点时慢响应不得覆盖新响应
-  const requestSeq = useRequestSeq();
   const fetchShares = useCallback(
     async (page: number, pageSize: number) => {
-      const seq = requestSeq.begin();
-      setLoading(true);
-      try {
-        const rsp = await api.listShares(page, pageSize);
-        if (!requestSeq.isCurrent(seq)) return;
-        if (rsp.error) {
-          showErrorToast(rsp.error, { title: t("common.error") });
-          setShares([]);
-          return;
-        }
-        setShares(rsp.shares ?? []);
-        if (rsp.pageInfo) {
-          setPageInfo(rsp.pageInfo);
-          setPersistedPage(rsp.pageInfo.page);
-          setPersistedPageSize(rsp.pageInfo.pageSize);
-        }
-        setRefreshedAt(Date.now());
-      } catch (err) {
-        if (!requestSeq.isCurrent(seq)) return;
-        showErrorToast(err, { title: t("common.error") });
-      } finally {
-        if (requestSeq.isCurrent(seq)) setLoading(false);
-      }
+      if (await load(page, pageSize)) setRefreshedAt(Date.now());
     },
-    [setPersistedPage, setPersistedPageSize, t, requestSeq],
+    [load],
   );
 
   /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- Data fetching requires setting state from async effects on mount */
   useEffect(() => {
-    fetchShares(persistedPage, persistedPageSize);
+    fetchShares(pageInfo.page, pageInfo.pageSize);
   }, [fetchShares]);
   /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
   const handleCopy = useCallback(
     async (share: ShareItem) => {
       const url = buildShareURL(share.shareId);
-      const ok = await copyTextToClipboard(url);
-      if (ok) {
-        setCopiedID(share.shareId);
+      if (await copy(url, share.shareId)) {
         toast.success(t("common.copied_to_clipboard"));
-        window.setTimeout(() => setCopiedID(null), 2000);
       } else {
         toast.error(t("shares.copy_error"));
       }
     },
-    [t],
+    [copy, t],
   );
 
   const deleteConfirm = useDeleteConfirm<ShareItem>({
@@ -164,30 +137,21 @@ export default function SharesPage() {
                           className={expired ? "bg-muted/30 text-muted-foreground" : undefined}
                         >
                           <TableCell className="max-w-[220px] font-mono text-xs">
-                            <TooltipRoot>
-                              <TooltipTrigger
-                                render={
-                                  <span className="block truncate text-left">
-                                    {expired ? (
-                                      <span>{share.shareId}</span>
-                                    ) : (
-                                      <a
-                                        href={buildShareURL(share.shareId)}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="inline-flex items-center gap-1 text-primary hover:underline"
-                                      >
-                                        {share.shareId}
-                                        <ExternalLink className="size-3" />
-                                      </a>
-                                    )}
-                                  </span>
-                                }
-                              />
-                              <TooltipContent side="top" className="max-w-xs break-all">
-                                {share.shareId}
-                              </TooltipContent>
-                            </TooltipRoot>
+                            <TruncatedText className="block text-left" tooltip={share.shareId}>
+                              {expired ? (
+                                <span>{share.shareId}</span>
+                              ) : (
+                                <a
+                                  href={buildShareURL(share.shareId)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-primary hover:underline"
+                                >
+                                  {share.shareId}
+                                  <ExternalLink className="size-3" />
+                                </a>
+                              )}
+                            </TruncatedText>
                           </TableCell>
                           <TableCell>
                             <a

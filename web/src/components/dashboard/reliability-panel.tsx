@@ -20,6 +20,7 @@ import { Panel } from "@/components/dashboard/panel";
 import { useOverview } from "@/components/dashboard/overview-context";
 import { useDashboardQuery } from "@/components/dashboard/use-dashboard-query";
 import type { DashboardRange } from "@/components/dashboard/use-dashboard-range";
+import { TruncatedText } from "@/components/truncated-text";
 
 const DAY_MS = 86_400_000;
 
@@ -189,18 +190,17 @@ export function ReliabilityPanel({ range }: { range: DashboardRange }) {
         top ? (
           <div className="flex min-w-0 items-center gap-1.5">
             <span className="shrink-0">{t("dashboard.panel.top_error")}</span>
-            <TooltipRoot>
-              <TooltipTrigger
-                render={
-                  <code className="min-w-0 truncate rounded bg-muted px-1 font-mono text-[11px] text-foreground">
-                    {top.statusCode} {top.message || "\u2014"}
-                  </code>
-                }
-              />
-              <TooltipContent className="max-w-xs break-all">
-                {top.statusCode} {top.message}
-              </TooltipContent>
-            </TooltipRoot>
+            <TruncatedText
+              render={<code />}
+              className="min-w-0 rounded bg-muted px-1 font-mono text-[11px] text-foreground"
+              tooltip={
+                <>
+                  {top.statusCode} {top.message}
+                </>
+              }
+            >
+              {top.statusCode} {top.message || "\u2014"}
+            </TruncatedText>
             <span className="shrink-0 font-mono tabular-nums">×{formatInteger(top.count)}</span>
           </div>
         ) : (

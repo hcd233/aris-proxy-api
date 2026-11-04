@@ -6,6 +6,7 @@ import {
   formatDurationMs,
   formatInteger,
   formatTokenCount,
+  isSafeUrl,
   splitBytes,
 } from "./utils";
 
@@ -123,5 +124,15 @@ describe("formatBytes", () => {
   it("renders an em dash for missing or negative values", () => {
     expect(formatBytes(undefined)).toBe("\u2014");
     expect(formatBytes(-1)).toBe("\u2014");
+  });
+});
+
+describe("isSafeUrl", () => {
+  it("only allows http and https", () => {
+    expect(isSafeUrl("https://a.com/x.png")).toBe(true);
+    expect(isSafeUrl("http://a.com")).toBe(true);
+    expect(isSafeUrl("javascript:alert(1)")).toBe(false);
+    expect(isSafeUrl("data:text/html,<script>")).toBe(false);
+    expect(isSafeUrl(undefined)).toBe(false);
   });
 });

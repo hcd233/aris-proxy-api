@@ -46,6 +46,7 @@
 - 图标：统一 `lucide-react`，不要混用其他图标库。
 - Toast：用 `sonner` 的 `toast.*`，禁止 `alert/confirm`。
 - 路径前缀：所有内部跳转链接必须考虑 `basePath=/web`；用 `next/link`、`next/navigation` 即可，框架自动加前缀，**不要手动拼 `/web` 前缀**。绕过路由器的场景（`window.location` 整页跳转、原生 `<a href>`、对外展示的分享链接）统一用 `src/lib/routes.ts` 的 `withBasePath(PATH)`，路径常量（`LOGIN_PATH`、`SHARE_PATH`、`SESSION_DETAIL_PATH`）也在该文件；`BASE_PATH` 与 `next.config.ts` 的一致性、以及源码中不得出现以 `/web` 开头的字符串字面量，由 `src/lib/routes.test.ts` 守护。注意被 vitest 覆盖的 `lib/` 文件里值导入要用相对路径（vitest 未配置 `@/` 别名）。
+- **分页列表数据层**：服务端分页列表统一用 `@/hooks/use-paginated-list` 的 `usePaginatedList`（页码持久化 `${persistKey}.page/.pageSize`、竞态守卫、错误 toast、loading），不要再在页面里手写 `useState<PageInfo>` + `useRequestSeq` + `try/catch/finally`。查询条件经 `load(page, pageSize, query)` 显式传入——切换排序/时间范围时 setState 尚未生效，读闭包会拿到旧值；`load` 返回本次结果（过期或失败为 `undefined`），列表外的附加字段放 `extra`。
 - **空态要有下一步**：列表空态用 `ListEmptyState` 的 `action` 槽位，别做死胡同。真没数据 → 给创建 / 前往入口；被筛选条件筛空 → 给「清除筛选」（`filterBar.clearTokens`），两者用 `filterBar.tokens.length > 0` 区分，文案也要分开（`xxx.no_match` 与 `xxx.empty`）。已接入：`sessions`、`apikeys`、`upstream`。
 - 数值展示：统一走 `src/lib/utils.ts` 的格式化入口——token 用 `formatTokenCount`（K/M/B 量级缩写）、计数用 `formatInteger`（千分位）、小数用 `formatDecimal`、时长用 `formatDurationMs`、占比用 `formatPct`、金额用 `formatCost`（`src/lib/money.ts`）。禁止在页面/组件里自写 `toLocaleString`、`toFixed` 拼数值文案（日期格式化除外）。
 - 修改前端 DTO 时如发现后端字段缺失，按 `huma-dto-conventions` 流程到 `internal/dto/` 同步更新。
@@ -91,7 +92,7 @@
 
 - **表格**：`<th>` 保持 `whitespace-nowrap`（已内置）；单行长内容单元格用 `max-w-[Nch] truncate` + Tooltip 组件展示完整内容，不要强制行高。
 - **卡片网格**：`grid` 默认 `items-stretch` 已等高；卡片描述用 `line-clamp-2` 限两行。
-- **截断与 Tooltip（lint 强制）**：`truncate` / `line-clamp-1` 元素必须处于 `TooltipTrigger` 渲染子树内（`web/eslint-rules/truncate-requires-tooltip.mjs`，error 级），保证用户可悬停查看完整内容；标准写法 `<TooltipRoot><TooltipTrigger render={<span className="… truncate">…</span>} /><TooltipContent className="max-w-xs break-all">…</TooltipContent></TooltipRoot>`。`line-clamp-2+`（卡片描述）豁免；恒定短占位（`—` 等）直接删截断类，不加 tooltip。
+- **截断与 Tooltip（lint 强制）**：`truncate` / `line-clamp-1` 元素必须处于 `TooltipTrigger` 渲染子树内（`web/eslint-rules/truncate-requires-tooltip.mjs`，error 级），保证用户可悬停查看完整内容；标准写法是 `components/truncated-text.tsx` 的 `<TruncatedText className="…">…</TruncatedText>`（自带 `truncate` 与 Tooltip；换承载元素用 `render={<p />}` / `render={<ItemTitle />}`，悬停内容与显示内容不同时传 `tooltip`）。只有截断发生在 trigger 内层子元素（如「图标 + 截断文字」整体作热区）或用 `line-clamp-1` 时才手写 `<TooltipRoot><TooltipTrigger render={…} /><TooltipContent className="break-all">…</TooltipContent></TooltipRoot>`。`line-clamp-2+`（卡片描述）豁免；恒定短占位（`—` 等）直接删截断类，不加 tooltip。
 - **对话框正文**：显示动态长度描述的 `DialogDescription` 加 `min-h-[2.5rem]`（约两行）预留；自由描述文本不加 `min-h`。
 - **对话框横向 flex 行**：`DialogContent` 是 grid，其子项 `min-width: auto` 会被内容 min-content 撑宽——横向 flex 行（如「币种选择 + 导入按钮」）放不下时不会换行/滚动，而是把整个 grid 轨道撑宽，内容溢出弹窗圆角边界。对话框正文里的横向 flex 工具行必须显式加 `flex-wrap`，不要依赖固定宽度组合刚好放得下。
 

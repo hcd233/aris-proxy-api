@@ -9,13 +9,10 @@ import {
   AttachmentTrigger,
 } from "@/components/ui/attachment";
 import { useT } from "@/lib/i18n";
+import { isSafeUrl } from "@/lib/utils";
 import { TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import type { ContentPart } from "./content-extract";
 import { imageURLOf } from "./content-extract";
-
-function isSafeUrl(url: string): boolean {
-  return url.startsWith("http://") || url.startsWith("https://");
-}
 
 /** 图片附件：缩略图卡片，点击在新标签页打开原图（仅 http/https）。 */
 function PartImage({ url }: { url: string }) {
