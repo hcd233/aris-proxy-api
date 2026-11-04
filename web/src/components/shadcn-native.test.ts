@@ -128,13 +128,10 @@ describe("③ 组合修正", () => {
     expect(read("app/(dashboard)/layout.tsx")).toContain("<SidebarGroupLabel");
   });
 
-  it.each(["components/chat/markdown-lite.tsx", "app/(dashboard)/upstream/grouped-view.tsx"])(
-    "%s 复用 CopyButton",
-    (p) => {
-      expect(read(p)).toContain("<CopyButton");
-      expect(read(p)).not.toContain("copyTextToClipboard");
-    },
-  );
+  it.each(["app/(dashboard)/upstream/grouped-view.tsx"])("%s 复用 CopyButton", (p) => {
+    expect(read(p)).toContain("<CopyButton");
+    expect(read(p)).not.toContain("copyTextToClipboard");
+  });
 
   it("CopyButton 基于 Button", () => {
     expect(read("components/ui/copy-button.tsx")).toContain("<Button");
@@ -266,6 +263,35 @@ describe("⑦ AI Elements", () => {
     const css = read("app/globals.css");
     expect(css).toContain("@utility shimmer {");
     expect(css).toContain("@utility shimmer-none {");
+  });
+
+  describe("Code Block + shiki", () => {
+    expectGenerated(["code-block"]);
+
+    it("代码块复制复用 CopyButton", () => {
+      expect(read("components/ui/code-block.tsx")).toContain("<CopyButton");
+    });
+
+    it("markdown 代码块用 HighlightedCode，不再用 hljs", () => {
+      const src = read("components/chat/markdown-lite.tsx");
+      expect(src).toContain("<HighlightedCode");
+      expect(src).not.toContain("rehype-highlight");
+      expect(src).not.toContain("hljs");
+    });
+
+    it("dataset JSON 预览用 HighlightedCode，不再注入 HTML", () => {
+      const src = read("app/(dashboard)/dataset/page.tsx");
+      expect(src).toContain("<HighlightedCode");
+      expect(src).not.toContain("highlight.js");
+      expect(src).not.toContain("dangerouslySetInnerHTML");
+    });
+
+    it("移除 highlight.js 依赖", () => {
+      const pkg = readFileSync(join(SRC, "../package.json"), "utf8");
+      expect(pkg).not.toContain('"highlight.js"');
+      expect(pkg).not.toContain('"rehype-highlight"');
+      expect(read("app/globals.css")).not.toContain("highlight.js");
+    });
   });
 
   it("HoverCard 浮层动效接入 motion 语法层", () => {

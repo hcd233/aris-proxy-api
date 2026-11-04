@@ -22,8 +22,6 @@ import { formatDateTime } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
 import type { DatasetFormatPreviewRsp, DatasetPreviewRsp } from "@/lib/types";
 import { computeRange, type TimeRangeKey } from "@/lib/time-range";
-import hljs from "highlight.js/lib/core";
-import json from "highlight.js/lib/languages/json";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -32,7 +30,6 @@ import { MultiSelectPill } from "@/components/ui/multi-select-pill";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TimeRangePicker } from "@/components/ui/time-range-picker";
 import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -43,29 +40,16 @@ import {
 } from "@/components/ui/tooltip";
 import { PermissionGuard } from "@/components/permission-guard";
 import { PageHeader } from "@/components/page-header";
+import { HighlightedCode } from "@/components/chat/highlighted-code";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { formatInteger } from "@/lib/utils";
 
-hljs.registerLanguage("json", json);
-
-/** 退出出口是 dangerouslySetInnerHTML，而 hljs 只在成功路径转义。JSON.parse 失败时
- * 直接回吐原文 = 把后端下发内容（源自用户会话文本）当 HTML 自渲染 → 存储型 XSS。
- * 兜底分支同样只渲染文本，这里做最小 HTML 转义（顺序：& 必须最先）。 */
-function escapeHtml(text: string): string {
-  return text
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
-}
-
-function formatAndHighlight(jsonStr: string): string {
+/** 预览 JSON 美化：可解析则 2 空格缩进，否则原样展示（纯文本渲染，无 HTML 注入面） */
+function prettyJSON(jsonStr: string): string {
   try {
-    const parsed = JSON.parse(jsonStr);
-    const prettified = JSON.stringify(parsed, null, 2);
-    return hljs.highlight(prettified, { language: "json" }).value;
+    return JSON.stringify(JSON.parse(jsonStr), null, 2);
   } catch {
-    return escapeHtml(jsonStr);
+    return jsonStr;
   }
 }
 
@@ -567,16 +551,12 @@ export default function DatasetPage() {
                           total: String(formatPreview.totalCount ?? 0),
                         })}
                       </div>
-                      <ScrollArea className="max-h-96 rounded-lg border border-border bg-(--code-bg)">
-                        <pre className="p-4 text-xs leading-6 [&_.hljs-punctuation]:text-[#9ca3af] [&_.hljs-attr]:text-[#93c5fd] [&_.hljs-string]:text-[#86efac] [&_.hljs-number]:text-[#f9a8d4] [&_.hljs-literal]:text-[#f9a8d4] [&_.hljs-keyword]:text-[#a78bfa] [&_.hljs-comment]:text-[#6b7280] [&_.hljs-comment]:italic">
-                          <code
-                            className="font-mono whitespace-pre"
-                            dangerouslySetInnerHTML={{
-                              __html: formatAndHighlight(formatPreview.sharegptJson),
-                            }}
-                          />
-                        </pre>
-                      </ScrollArea>
+                      <HighlightedCode
+                        code={prettyJSON(formatPreview.sharegptJson)}
+                        language="json"
+                        size="sm"
+                        className="max-h-96"
+                      />
                     </div>
                   ) : (
                     <div className="rounded-lg border border-dashed border-border px-3 py-8 text-center text-sm text-muted-foreground">

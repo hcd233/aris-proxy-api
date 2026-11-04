@@ -3,9 +3,8 @@
 /**
  * Markdown — full GFM rendering for chat content.
  *
- * Engine: react-markdown + remark-gfm + remark-breaks + rehype-highlight + rehype-raw + rehype-sanitize.
- * Component overrides preserve the existing visual style (warm code blocks
- * with copy button, primary-coloured links, muted blockquotes, etc.).
+ * Engine: react-markdown + remark-gfm + remark-breaks + rehype-raw + rehype-sanitize；
+ * fenced code 交给 shadcn Code Block + shiki（HighlightedCode，按需加载语言）。
  *
  * Security: rehype-raw 允许原始 HTML 进入，因此必须在其后追加 rehype-sanitize
  * （GitHub 风格白名单）剥离脚本/事件处理器/javascript: 链接/style 属性，
@@ -24,7 +23,6 @@ import { AlertTriangle } from "lucide-react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
-import rehypeHighlight from "rehype-highlight";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import type { Options as SanitizeOptions } from "rehype-sanitize";
@@ -32,11 +30,10 @@ import type { Options as SanitizeOptions } from "rehype-sanitize";
 import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n";
 import { balanceEmphasis } from "@/lib/markdown";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { CopyButton } from "@/components/ui/copy-button";
 import { Separator } from "@/components/ui/separator";
+import { HighlightedCode } from "./highlighted-code";
 import {
   Table,
   TableBody,
@@ -147,42 +144,6 @@ function MermaidBlock({ code }: { code: string }) {
         className="flex justify-center overflow-x-auto px-4 py-4 [&>svg]:max-w-full [&>svg]:h-auto"
         dangerouslySetInnerHTML={svg ? { __html: svg } : undefined}
       />
-    </div>
-  );
-}
-
-// ─── Code block (with language label + copy button) ─────────────────────────
-
-function CodeBlock({
-  lang,
-  value,
-  children,
-  highlightedClassName,
-}: {
-  lang: string;
-  value: string;
-  children?: ReactNode;
-  highlightedClassName?: string;
-}) {
-  const t = useT();
-
-  return (
-    <div className="group/code my-3 overflow-hidden rounded-xl border border-(--code-border) bg-(--code-bg)">
-      <div className="flex items-center justify-between border-b border-(--code-border) px-3.5 py-1.5">
-        <span className="font-mono text-[11px] tracking-[0.12em] text-(--code-text)/35">
-          {lang || "text"}
-        </span>
-        <CopyButton
-          value={value}
-          ariaLabel={t("markdown.copy_code_aria")}
-          className="text-(--code-text)/50 hover:bg-white/5 hover:text-(--code-text)"
-        />
-      </div>
-      <pre className="overflow-x-auto px-4 py-3 font-mono text-[12.5px] leading-[1.55] text-(--code-text)">
-        <code className={cn("hljs bg-transparent !p-0", highlightedClassName)}>
-          {children ?? value}
-        </code>
-      </pre>
     </div>
   );
 }
@@ -331,13 +292,16 @@ const markdownComponents: Components = {
     }
 
     return (
-      <CodeBlock lang={lang} value={value} highlightedClassName={className}>
-        {children}
-      </CodeBlock>
+      <HighlightedCode
+        code={value}
+        language={lang}
+        title={lang || "text"}
+        containerClassName="my-3"
+      />
     );
   },
 
-  // `pre` is rendered by our CodeBlock; suppress react-markdown's wrapper for
+  // `pre` is rendered by HighlightedCode; suppress react-markdown's wrapper for
   // block code so we don't get a double <pre>.
   pre: ({ children }) => <>{children}</>,
 };
@@ -363,11 +327,7 @@ export function MarkdownLite({ text, raw = false, className }: MarkdownProps) {
     <div className={cn("text-[15px] leading-[1.7]", className)}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkBreaks]}
-        rehypePlugins={[
-          rehypeRaw,
-          [rehypeSanitize, SANITIZE_SCHEMA],
-          [rehypeHighlight, { ignoreMissing: true, detect: true }],
-        ]}
+        rehypePlugins={[rehypeRaw, [rehypeSanitize, SANITIZE_SCHEMA]]}
         components={markdownComponents}
       >
         {balanceEmphasis(text)}
