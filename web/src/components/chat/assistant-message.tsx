@@ -8,7 +8,7 @@ import { Message, MessageAvatar, MessageContent, MessageHeader } from "@/compone
 import { useT } from "@/lib/i18n";
 import { extractContent, lookupToolResult, type ToolResultInfo } from "./content-extract";
 import { MultimodalParts } from "./multimodal-parts";
-import { ReasoningBlock } from "./reasoning-block";
+import { Reasoning } from "./reasoning";
 import { ToolCallCard } from "./tool-call-card";
 import { MarkdownLite } from "./markdown-lite";
 
@@ -89,7 +89,7 @@ export function AssistantMessage({ message, index, toolResultsByID }: AssistantM
             )}
           </MessageHeader>
         )}
-        {reasoning_content && <ReasoningBlock text={reasoning_content} />}
+        {reasoning_content && <Reasoning text={reasoning_content} streaming={false} />}
 
         {(parts.length > 0 || text || (!tool_calls?.length && !refusal)) && (
           <Bubble variant="ghost">

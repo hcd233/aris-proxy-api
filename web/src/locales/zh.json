@@ -1161,5 +1161,6 @@
   "portal.footer.product": "产品",
   "portal.footer.explore": "了解",
   "portal.footer.source": "开源",
-  "portal.footer.console": "控制台"
+  "portal.footer.console": "控制台",
+  "chat.reasoning_chars": "{count} 字"
 }

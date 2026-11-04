@@ -1161,5 +1161,6 @@
   "portal.footer.product": "Product",
   "portal.footer.explore": "Explore",
   "portal.footer.source": "Open source",
-  "portal.footer.console": "Console"
+  "portal.footer.console": "Console",
+  "chat.reasoning_chars": "{count} chars"
 }

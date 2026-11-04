@@ -217,11 +217,19 @@ describe("⑥ 聊天区", () => {
   });
 
   it("思考块与工具卡之间只保留列表 gap，不叠加 margin", () => {
-    expect(read("components/chat/reasoning-block.tsx")).not.toContain("mb-3");
     expect(read("components/chat/tool-call-card.tsx")).not.toContain("mt-3");
     expect(read("components/chat/assistant-message.tsx")).toContain(
       '<div className="flex flex-col gap-3">',
     );
+  });
+
+  it("思考过程统一为 Trace Reasoning", () => {
+    expect(existsSync(join(SRC, "components/chat/reasoning-block.tsx"))).toBe(false);
+    expect(read("components/chat/assistant-message.tsx")).toContain("<Reasoning");
+    const turn = read("components/playground/chat-turn.tsx");
+    expect(turn).toContain("<Reasoning");
+    expect(turn).not.toContain("ThinkingBlock");
+    expect(read("components/chat/reasoning.tsx")).toContain("<TraceCollapsible");
   });
 
   it("playground 对话区用 MessageScroller", () => {

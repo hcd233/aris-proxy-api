@@ -1161,5 +1161,6 @@
   "portal.footer.product": "プロダクト",
   "portal.footer.explore": "知る",
   "portal.footer.source": "オープンソース",
-  "portal.footer.console": "コンソール"
+  "portal.footer.console": "コンソール",
+  "chat.reasoning_chars": "{count} 文字"
 }

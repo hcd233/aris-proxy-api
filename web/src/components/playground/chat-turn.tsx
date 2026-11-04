@@ -10,6 +10,7 @@ import { Bubble, BubbleContent } from "@/components/ui/bubble";
 import { Message, MessageContent, MessageFooter, MessageHeader } from "@/components/ui/message";
 import { Textarea } from "@/components/ui/textarea";
 import { MarkdownLite } from "@/components/chat/markdown-lite";
+import { Reasoning } from "@/components/chat/reasoning";
 import { ProviderIcon } from "@/components/provider-icon";
 import { copyTextToClipboard } from "@/lib/clipboard";
 import { formatCost } from "@/lib/money";
@@ -18,7 +19,6 @@ import { cn, formatDurationMs, formatTokenCount } from "@/lib/utils";
 import { buildCurl, type PlaygroundMessage } from "@/app/(dashboard)/playground/playground-logic";
 import {
   AlertTriangle,
-  Brain,
   ChevronRight,
   Copy,
   Pencil,
@@ -73,36 +73,6 @@ function IconAction({
     >
       {children}
     </Button>
-  );
-}
-
-/**
- * 思考内容（reasoning_content）：流式期间默认展开，接收结束后自动收起；
- * 用户手动切换过就固定住不再跟随（userOpen 为 null 表示跟随流式态）。
- */
-function ThinkingBlock({ text, streaming }: { text: string; streaming: boolean }) {
-  const t = useT();
-  const [userOpen, setUserOpen] = useState<boolean | null>(null);
-  const open = userOpen ?? streaming;
-
-  return (
-    <Collapsible
-      open={open}
-      onOpenChange={setUserOpen}
-      className="rounded-xl border border-border/70 bg-muted/30 px-3 py-2"
-    >
-      <CollapsibleTrigger className="flex w-full items-center gap-1.5 text-[12px] font-medium text-muted-foreground transition-colors hover:text-foreground">
-        <Brain className="size-3.5 text-primary/70" />
-        <span>{streaming ? t("playground.thinking.streaming") : t("chat.thought_process")}</span>
-        {streaming && <Spinner className="size-3 text-primary/70" />}
-        <ChevronRight className="ml-auto size-3.5 in-data-panel-open:rotate-90" />
-      </CollapsibleTrigger>
-      <CollapsibleContent>
-        <p className="mt-2 border-l-2 border-border pl-3 text-[13px] italic leading-[1.6] break-words whitespace-pre-wrap text-muted-foreground">
-          {text}
-        </p>
-      </CollapsibleContent>
-    </Collapsible>
   );
 }
 
@@ -262,7 +232,7 @@ export function ChatTurn({
           </Bubble>
         ) : isAssistant ? (
           <>
-            {reasoning && <ThinkingBlock text={reasoning} streaming={sending} />}
+            {reasoning && <Reasoning text={reasoning} streaming={sending} />}
             <Bubble variant="ghost">
               <BubbleContent>
                 {/* stream-body + data-streaming/data-settling：motion-signature.css 的流式签名动效
