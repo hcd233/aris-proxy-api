@@ -8,14 +8,14 @@ const DAY = 24 * HOUR;
 describe("deriveGranularity", () => {
   it("预设区间取不超过点数上限的最细桶，长区间不再只剩个位数个点", () => {
     expect(deriveGranularity(HOUR)).toBe("minute");
-    expect(deriveGranularity(DAY)).toBe("10minute");
-    expect(deriveGranularity(7 * DAY)).toBe("hour");
-    expect(deriveGranularity(30 * DAY)).toBe("4hour");
+    expect(deriveGranularity(DAY)).toBe("30minute");
+    expect(deriveGranularity(7 * DAY)).toBe("4hour");
+    expect(deriveGranularity(30 * DAY)).toBe("day");
   });
 
   it("自定义区间同样按点数上限挑档，超长区间回落到周", () => {
-    expect(deriveGranularity(12 * HOUR)).toBe("5minute");
-    expect(deriveGranularity(3 * DAY)).toBe("30minute");
+    expect(deriveGranularity(12 * HOUR)).toBe("10minute");
+    expect(deriveGranularity(3 * DAY)).toBe("hour");
     expect(deriveGranularity(90 * DAY)).toBe("day");
     expect(deriveGranularity(5 * 365 * DAY)).toBe("week");
   });

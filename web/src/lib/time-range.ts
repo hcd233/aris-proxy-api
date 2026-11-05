@@ -32,9 +32,10 @@ const GRANULARITY_LADDER: Granularity[] = [
 
 /**
  * 图表点数上限：取「桶数不超过它」的最细粒度。桶太宽曲线会被均值抹平——
- * 曾按 ≤1h/≤1d/≤30d 切 minute/hour/day，7d 只有 7 个点；现在 1h=60、24h=144、7d=168、30d=180 个点。
+ * 曾按 ≤1h/≤1d/≤30d 切 minute/hour/day，7d 只有 7 个点；上限 200 时点太密曲线抖动，
+ * 现取 100：1h=60、24h=48、7d=42、30d=30 个点。
  */
-export const MAX_CHART_POINTS = 200;
+export const MAX_CHART_POINTS = 100;
 
 export function deriveGranularity(rangeMs: number): Granularity {
   return (
