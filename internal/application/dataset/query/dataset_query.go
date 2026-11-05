@@ -15,7 +15,9 @@ import (
 	"github.com/hcd233/aris-mass/internal/common/constant"
 	"github.com/hcd233/aris-mass/internal/common/enum"
 	"github.com/hcd233/aris-mass/internal/common/ierr"
+	"github.com/hcd233/aris-mass/internal/common/vo"
 	"github.com/hcd233/aris-mass/internal/domain/apikey"
+	"github.com/hcd233/aris-mass/internal/domain/blob"
 	"github.com/hcd233/aris-mass/internal/domain/session"
 	"github.com/hcd233/aris-mass/internal/dto"
 	"github.com/hcd233/aris-mass/internal/logger"
@@ -65,6 +67,7 @@ func (h *previewDatasetHandler) Handle(ctx context.Context, p datasetport.Export
 type exportDatasetHandler struct {
 	readRepo   session.SessionReadRepository
 	apiKeyRepo ownerIDLookup
+	images     blob.ImageReader
 }
 
 // NewExportDatasetHandler 构造流式导出处理器
@@ -72,8 +75,8 @@ type exportDatasetHandler struct {
 //	@return datasetport.ExportDatasetHandler
 //	@author centonhuang
 //	@update 2026-07-03 10:00:00
-func NewExportDatasetHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository) datasetport.ExportDatasetHandler {
-	return &exportDatasetHandler{readRepo: readRepo, apiKeyRepo: apiKeyRepo}
+func NewExportDatasetHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository, images blob.ImageReader) datasetport.ExportDatasetHandler {
+	return &exportDatasetHandler{readRepo: readRepo, apiKeyRepo: apiKeyRepo, images: images}
 }
 
 func (h *exportDatasetHandler) Handle(ctx context.Context, p datasetport.ExportParams, w *bufio.Writer) error {
@@ -127,6 +130,7 @@ func (h *exportDatasetHandler) Handle(ctx context.Context, p datasetport.ExportP
 
 	h.writeSSEStart(w, total)
 
+	images := NewExportImageResolver(ctx, h.images)
 	for i, row := range rows {
 		select {
 		case <-ctx.Done():
@@ -134,7 +138,7 @@ func (h *exportDatasetHandler) Handle(ctx context.Context, p datasetport.ExportP
 		default:
 		}
 
-		conv := buildConversation(row, msgMap, toolMap)
+		conv := buildConversation(row, msgMap, toolMap, images.Resolve)
 		line, marshalErr := converter.MarshalJSONLine(conv)
 		if marshalErr != nil {
 			log.Error("[DatasetExport] Failed to marshal conversation", zap.Error(marshalErr), zap.Uint("sessionID", row.ID))
@@ -146,6 +150,9 @@ func (h *exportDatasetHandler) Handle(ctx context.Context, p datasetport.ExportP
 		h.writeSSEData(w, current, total, progress, string(line))
 	}
 
+	if failed := images.Failed(); failed > 0 {
+		log.Warn("[DatasetExport] Some images could not be exported", zap.Int("failed", failed))
+	}
 	h.writeSSEDone(w, total)
 	return nil
 }
@@ -224,6 +231,7 @@ func buildConversation(
 	row *session.ExportSessionRow,
 	msgMap map[uint]*session.MessageDetailProjection,
 	toolMap map[uint]*session.ToolDetailProjection,
+	resolve func(part *vo.UnifiedContentPart) (string, bool),
 ) *converter.ShareGPTConversation {
 	msgs := lo.FilterMap(row.MessageIDs, func(id uint, _ int) (*session.MessageDetailProjection, bool) {
 		m, ok := msgMap[id]
@@ -235,7 +243,7 @@ func buildConversation(
 		return t, ok
 	})
 
-	return converter.ConvertSession(msgs, tools)
+	return converter.ConvertSessionWithImages(msgs, tools, resolve)
 }
 
 type previewFormatDatasetHandler struct {
@@ -302,7 +310,7 @@ func (h *previewFormatDatasetHandler) Handle(ctx context.Context, p datasetport.
 		})
 	}
 
-	conv := buildConversation(row, msgMap, toolMap)
+	conv := buildConversation(row, msgMap, toolMap, PreviewImageResolver)
 	line, marshalErr := converter.MarshalJSONLine(conv)
 	if marshalErr != nil {
 		log.Error("[DatasetFormatPreview] Failed to marshal conversation", zap.Error(marshalErr))

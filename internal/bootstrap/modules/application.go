@@ -487,8 +487,8 @@ func NewPreviewDatasetHandler(readRepo session.SessionReadRepository, apiKeyRepo
 	return datasetquery.NewPreviewDatasetHandler(readRepo, apiKeyRepo)
 }
 
-func NewExportDatasetHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository) datasetport.ExportDatasetHandler {
-	return datasetquery.NewExportDatasetHandler(readRepo, apiKeyRepo)
+func NewExportDatasetHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository, images blob.ImageReader) datasetport.ExportDatasetHandler {
+	return datasetquery.NewExportDatasetHandler(readRepo, apiKeyRepo, images)
 }
 
 func NewPreviewFormatDatasetHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository) datasetport.PreviewFormatDatasetHandler {

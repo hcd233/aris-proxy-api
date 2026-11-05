@@ -55,6 +55,10 @@ const (
 	// TableMessages messages 表名
 	TableMessages = "messages"
 
+	// BytesPerKiB 1 KiB 字节数
+	BytesPerKiB = 1024
+	// DatasetPreviewImageTemplate 格式预览中省略图片内容的占位（mime, KB）
+	DatasetPreviewImageTemplate = "data:%s;base64,<已省略 %d KB>"
 	// ShareGPTImagePlaceholder ShareGPT 多模态图片占位符（LLaMA-Factory 约定）
 	ShareGPTImagePlaceholder = "<image>"
 

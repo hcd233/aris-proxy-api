@@ -108,6 +108,8 @@ type crossTenantSessionFixture struct {
 	tokenA     string
 	tokenB     string
 	tokenAdmin string
+
+	objectStore *e2eObjectStore
 }
 
 // sharedKeyName 两个用户共用的 API Key 名称——缺陷 A 的攻击面。
@@ -135,7 +137,7 @@ func newCrossTenantSessionFixture(t *testing.T) *crossTenantSessionFixture {
 		t.Fatalf("migrate: %v", err)
 	}
 
-	f := &crossTenantSessionFixture{db: db, signer: jwt.NewAccessTokenSigner()}
+	f := &crossTenantSessionFixture{db: db, signer: jwt.NewAccessTokenSigner(), objectStore: &e2eObjectStore{objects: map[string][]byte{}}}
 	f.seed(t)
 	f.buildApp(t, db, rdb)
 
@@ -210,6 +212,7 @@ func (f *crossTenantSessionFixture) buildApp(t *testing.T, db *gorm.DB, rdb *red
 	shareCache := cache.NewShareCache(rdb)
 	detailCache := cache.NewSessionDetailCache(rdb)
 
+	imageReader := blobstore.NewReader(db, f.objectStore)
 	getByUser := sessionquery.NewGetSessionByUserHandler(readRepo, apiKeyRepo, rulesRepo)
 	getMetaByUser := sessionquery.NewGetSessionMetaByUserHandler(readRepo, apiKeyRepo, detailCache, rulesRepo)
 
@@ -220,7 +223,7 @@ func (f *crossTenantSessionFixture) buildApp(t *testing.T, db *gorm.DB, rdb *red
 		CreateShare:        sessioncommand.NewCreateShareHandler(getByUser, shareCache),
 		GetMetaByUser:      getMetaByUser,
 		ListMessages:       sessionquery.NewListSessionMessagesHandler(readRepo, getMetaByUser, detailCache),
-		GetImage:           sessionquery.NewGetSessionImageHandler(getMetaByUser, blobstore.NewReader(db, &e2eObjectStore{objects: map[string][]byte{}})),
+		GetImage:           sessionquery.NewGetSessionImageHandler(getMetaByUser, imageReader),
 		ListTools:          sessionquery.NewListSessionToolsHandler(readRepo, getMetaByUser, detailCache),
 		DeleteSession:      sessioncommand.NewDeleteSessionHandler(sessionRepo, apiKeyRepo),
 		ScoreSession:       sessioncommand.NewScoreSessionHandler(sessionRepo, apiKeyRepo),
@@ -231,7 +234,7 @@ func (f *crossTenantSessionFixture) buildApp(t *testing.T, db *gorm.DB, rdb *red
 
 	datasetHandler := handler.NewDatasetHandler(handler.DatasetDependencies{
 		Preview: datasetquery.NewPreviewDatasetHandler(readRepo, apiKeyRepo),
-		Export:  datasetquery.NewExportDatasetHandler(readRepo, apiKeyRepo),
+		Export:  datasetquery.NewExportDatasetHandler(readRepo, apiKeyRepo, imageReader),
 	})
 
 	app := fiber.New()
