@@ -30,6 +30,7 @@ var InfraModule = fx.Module(constant.DigNameInfraModule,
 		NewReadCache,
 		NewObjectStore,
 		NewBlobExternalizer,
+		NewImageReader,
 		NewPoolManager,
 		NewInflightTracker,
 		metrics.NewRegistry,
@@ -81,6 +82,11 @@ func NewPoolManager(
 // NewObjectStore 消息图片对象存储；未配置时为 nil（图片暂存 blobs 表）
 func NewObjectStore() blob.ObjectStore {
 	return objectstore.NewFromConfig()
+}
+
+// NewImageReader 已外置图片读取端
+func NewImageReader(db *gorm.DB, store blob.ObjectStore) blob.ImageReader {
+	return blobstore.NewReader(db, store)
 }
 
 // NewBlobExternalizer 消息图片外置器

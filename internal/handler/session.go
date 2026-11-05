@@ -35,6 +35,7 @@ type SessionHandler interface {
 	// 新增（详情接口性能优化）
 	HandleGetSessionMetadata(ctx context.Context, req *dto.GetSessionMetadataReq) (*dto.HTTPResponse[*dto.GetSessionMetadataRsp], error)
 	HandleListSessionMessages(ctx context.Context, req *dto.ListSessionMessagesReq) (*dto.HTTPResponse[*dto.ListSessionMessagesRsp], error)
+	HandleGetSessionImage(ctx context.Context, req *dto.GetSessionImageReq) (*dto.HTTPResponse[*dto.GetSessionImageRsp], error)
 	HandleListSessionTools(ctx context.Context, req *dto.ListSessionToolsReq) (*dto.HTTPResponse[*dto.ListSessionToolsRsp], error)
 	HandleGetShareMetadata(ctx context.Context, req *dto.GetShareMetadataReq) (*dto.HTTPResponse[*dto.GetShareMetadataRsp], error)
 	HandleListShareMessages(ctx context.Context, req *dto.ListShareMessagesReq) (*dto.HTTPResponse[*dto.ListShareMessagesRsp], error)
@@ -56,6 +57,7 @@ type SessionDependencies struct {
 	CreateShare        port.CreateShareHandler
 	GetMetaByUser      port.GetSessionMetaByUserHandler
 	ListMessages       port.ListSessionMessagesHandler
+	GetImage           port.GetSessionImageHandler
 	ListTools          port.ListSessionToolsHandler
 	DeleteSession      port.DeleteSessionHandler
 	ScoreSession       port.ScoreSessionHandler
@@ -72,6 +74,7 @@ type sessionHandler struct {
 	createShare        port.CreateShareHandler
 	getMetaByUser      port.GetSessionMetaByUserHandler
 	listMessages       port.ListSessionMessagesHandler
+	getImage           port.GetSessionImageHandler
 	listTools          port.ListSessionToolsHandler
 	deleteSession      port.DeleteSessionHandler
 	scoreSession       port.ScoreSessionHandler
@@ -95,6 +98,7 @@ func NewSessionHandler(deps SessionDependencies) SessionHandler {
 		createShare:        deps.CreateShare,
 		getMetaByUser:      deps.GetMetaByUser,
 		listMessages:       deps.ListMessages,
+		getImage:           deps.GetImage,
 		listTools:          deps.ListTools,
 		deleteSession:      deps.DeleteSession,
 		scoreSession:       deps.ScoreSession,
@@ -487,6 +491,50 @@ func (h *sessionHandler) HandleListSessionMessages(ctx context.Context, req *dto
 		Page:     req.Page,
 		PageSize: req.PageSize,
 		Total:    result.Total,
+	}
+	return apiutil.WrapHTTPResponse(rsp, nil)
+}
+
+// HandleGetSessionImage 按需获取会话中一张已外置图片的读取方式
+//
+//	权限与消息列表接口一致（owner / admin / demo 白名单）。
+//
+//	@author centonhuang
+//	@update 2026-11-05 10:00:00
+func (h *sessionHandler) HandleGetSessionImage(ctx context.Context, req *dto.GetSessionImageReq) (*dto.HTTPResponse[*dto.GetSessionImageRsp], error) {
+	rsp := &dto.GetSessionImageRsp{}
+	userID := util.CtxValueUint(ctx, constant.CtxKeyUserID)
+	permission := util.CtxValuePermission(ctx)
+	isAdmin := permission.Level() >= enum.PermissionAdmin.Level()
+
+	isDemo, allowedIDs, scopeErr := h.resolveDemoAccess(ctx, permission)
+	if scopeErr != nil {
+		logger.WithCtx(ctx).Error("[SessionHandler] Resolve demo access failed", zap.Error(scopeErr))
+		return nil, apiutil.NewHumaBizError(ctx, scopeErr, ierr.ErrInternal.BizError())
+	}
+
+	view, err := h.getImage.Handle(ctx, port.GetSessionImageQuery{
+		UserID:            userID,
+		IsAdmin:           isAdmin || isDemo,
+		IsDemo:            isDemo,
+		AllowedSessionIDs: allowedIDs,
+		SessionID:         req.SessionID,
+		SHA256:            req.SHA256,
+	})
+	if err != nil {
+		logger.WithCtx(ctx).Warn("[SessionHandler] Get session image failed",
+			zap.Uint("sessionID", req.SessionID), zap.String("sha256", req.SHA256), zap.Error(err))
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
+	}
+
+	rsp.Image = &dto.SessionImage{
+		URL:       view.URL,
+		DataURL:   view.DataURL,
+		ExpiresAt: view.ExpiresAt,
+		Mime:      view.Mime,
+		Size:      view.Size,
+		Width:     view.Width,
+		Height:    view.Height,
 	}
 	return apiutil.WrapHTTPResponse(rsp, nil)
 }

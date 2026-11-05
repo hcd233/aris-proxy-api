@@ -128,6 +128,33 @@ type GetSessionMetaByUserHandler interface {
 	Handle(ctx context.Context, q GetSessionMetaByUserQuery) (*SessionMetaView, error)
 }
 
+// GetSessionImageQuery 获取会话中一张已外置图片的查询参数
+type GetSessionImageQuery struct {
+	UserID    uint
+	IsAdmin   bool
+	SessionID uint
+	SHA256    string
+	// IsDemo demo 视角标记；AllowedSessionIDs 为 demo 白名单 sessionID 集合
+	IsDemo            bool
+	AllowedSessionIDs []uint
+}
+
+// SessionImageView 图片读取方式：已上传给预签名 URL，其余给 data URL
+type SessionImageView struct {
+	URL       string
+	DataURL   string
+	Mime      string
+	Size      int64
+	Width     int
+	Height    int
+	ExpiresAt *time.Time
+}
+
+// GetSessionImageHandler 会话图片查询 handler 接口
+type GetSessionImageHandler interface {
+	Handle(ctx context.Context, q GetSessionImageQuery) (*SessionImageView, error)
+}
+
 // ListSessionMessagesQuery 分页获取 session messages 查询参数
 type ListSessionMessagesQuery struct {
 	UserID    uint

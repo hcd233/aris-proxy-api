@@ -48,6 +48,10 @@ const (
 	BlobMigrateLikePattern = `%"image_url":"data:%`
 	// DBConditionBlobMigrateCandidate 迁移游标条件（不带 deleted_at，软删行一并处理）
 	DBConditionBlobMigrateCandidate = "id > ? AND message LIKE ?"
+	// DBConditionMessageReferencesImage 指定消息中是否引用某图片
+	DBConditionMessageReferencesImage = "id IN ? AND message LIKE ?"
+	// MIMETypeImagePrefix 图片 MIME 前缀
+	MIMETypeImagePrefix = "image/"
 	// TableMessages messages 表名
 	TableMessages = "messages"
 

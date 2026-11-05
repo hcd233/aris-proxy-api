@@ -54,6 +54,7 @@ import (
 	"github.com/hcd233/aris-mass/internal/domain/agentharness"
 	"github.com/hcd233/aris-mass/internal/domain/apikey"
 	apikeyservice "github.com/hcd233/aris-mass/internal/domain/apikey/service"
+	"github.com/hcd233/aris-mass/internal/domain/blob"
 	"github.com/hcd233/aris-mass/internal/domain/identity"
 	identityservice "github.com/hcd233/aris-mass/internal/domain/identity/service"
 	"github.com/hcd233/aris-mass/internal/domain/llmproxy"
@@ -132,6 +133,7 @@ var ApplicationModule = fx.Module(constant.DigNameApplicationModule,
 		NewGetSessionByUserHandler,
 		NewGetSessionMetaByUserHandler,
 		NewListSessionMessagesHandler,
+		NewGetSessionImageHandler,
 		NewListSessionToolsHandler,
 		NewDeleteSessionHandler,
 		NewScoreSessionHandler,
@@ -407,6 +409,10 @@ func NewGetSessionMetaByUserHandler(readRepo session.SessionReadRepository, apiK
 
 func NewListSessionMessagesHandler(readRepo session.SessionReadRepository, metaQuery sessionport.GetSessionMetaByUserHandler, detailCache sessionport.SessionDetailCache) sessionport.ListSessionMessagesHandler {
 	return sessionquery.NewListSessionMessagesHandler(readRepo, metaQuery, detailCache)
+}
+
+func NewGetSessionImageHandler(metaQuery sessionport.GetSessionMetaByUserHandler, reader blob.ImageReader) sessionport.GetSessionImageHandler {
+	return sessionquery.NewGetSessionImageHandler(metaQuery, reader)
 }
 
 func NewListSessionToolsHandler(readRepo session.SessionReadRepository, metaQuery sessionport.GetSessionMetaByUserHandler, detailCache sessionport.SessionDetailCache) sessionport.ListSessionToolsHandler {
