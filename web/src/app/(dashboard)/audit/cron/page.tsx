@@ -52,6 +52,9 @@ export default function CronAuditPage() {
     scanned_messages_count: "Scanned",
     extracted_messages_count: "Extracted",
     synced_hits_count: "Synced Hits",
+    uploaded_blobs_count: "Uploaded",
+    pending_blobs_count: "Pending",
+    failed_blobs_count: "Failed",
   };
   function formatMetadata(metadata: Record<string, number> | undefined | null): string {
     if (!metadata || Object.keys(metadata).length === 0) return "—";

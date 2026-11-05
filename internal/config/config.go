@@ -193,6 +193,9 @@ var (
 	//	@update 2026-08-29 10:00:00
 	CronSessionTerminalCleanupEnabled bool
 
+	// CronBlobUploadRetryEnabled bool 是否启用消息图片补传定时任务
+	CronBlobUploadRetryEnabled bool
+
 	// CronSoftDeletePurgeEnabled bool 是否启用软删除清理定时任务
 	//	@update 2026-05-01 10:00:00
 	CronSoftDeletePurgeEnabled bool
@@ -354,6 +357,7 @@ func InitEnvironment() {
 	config.SetDefault("cron.session.terminal_cleanup.enabled", true)
 	config.SetDefault("cron.soft.delete.purge.enabled", true)
 	config.SetDefault("cron.oauth.maintenance.enabled", true)
+	config.SetDefault("cron.blob.upload_retry.enabled", true)
 
 	config.SetDefault("upstream.retry.max_attempts", 5)
 	config.SetDefault("upstream.retry.initial_backoff", 500*time.Millisecond)
@@ -453,6 +457,7 @@ func InitEnvironment() {
 	CLSLevel = config.GetString("cls.level")
 
 	CronSessionTerminalCleanupEnabled = config.GetBool("cron.session.terminal_cleanup.enabled")
+	CronBlobUploadRetryEnabled = config.GetBool("cron.blob.upload_retry.enabled")
 	CronSoftDeletePurgeEnabled = config.GetBool("cron.soft.delete.purge.enabled")
 	CronThinkExtractEnabled = config.GetBool("cron.think.extract.enabled")
 	CronOAuthMaintenanceEnabled = config.GetBool("cron.oauth.maintenance.enabled")
