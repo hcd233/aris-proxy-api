@@ -15,6 +15,7 @@ import (
 	mcaggregate "github.com/hcd233/aris-mass/internal/domain/modelcall/aggregate"
 	mcvo "github.com/hcd233/aris-mass/internal/domain/modelcall/vo"
 	"github.com/hcd233/aris-mass/internal/dto"
+	"github.com/hcd233/aris-mass/internal/infrastructure/blobstore"
 	"github.com/hcd233/aris-mass/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-mass/internal/infrastructure/database/model"
 	"github.com/hcd233/aris-mass/internal/infrastructure/repository"
@@ -49,7 +50,19 @@ func (pm *PoolManager) runMessageStoreTask(task *dto.MessageStoreTask) {
 		}
 	}
 
-	messages := lo.Map(task.Messages, func(m *vo.UnifiedMessage, _ int) *dbmodel.Message {
+	unified := task.Messages
+	if pm.externalizer != nil {
+		var stats blobstore.ExternalizeStats
+		unified, stats = pm.externalizer.Externalize(task.Ctx, unified)
+		if stats != (blobstore.ExternalizeStats{}) {
+			log.Info("[StorePool] Images externalized",
+				zap.Int("uploaded", stats.Uploaded), zap.Int("pending", stats.Pending),
+				zap.Int("unprocessable", stats.Unprocessable), zap.Int("reused", stats.Reused),
+				zap.Int("failed", stats.Failed), zap.Int64("savedBytes", stats.SavedBytes))
+		}
+	}
+
+	messages := lo.Map(unified, func(m *vo.UnifiedMessage, _ int) *dbmodel.Message {
 		modelID := ""
 		if m.Role == enum.RoleAssistant {
 			modelID = task.ModelID
