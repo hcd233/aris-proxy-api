@@ -72,9 +72,6 @@ func (r *ExportImageResolver) Resolve(part *vo.UnifiedContentPart) (string, bool
 // Failed 本次导出中取图失败的次数
 func (r *ExportImageResolver) Failed() int { return r.failed }
 
-// CachedBytes 当前缓存占用的字节数
-func (r *ExportImageResolver) CachedBytes() int { return r.used }
-
 // PreviewImageResolver 格式预览不取图，只显示类型与大小
 //
 //	@param part *vo.UnifiedContentPart

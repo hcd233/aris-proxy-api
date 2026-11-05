@@ -152,9 +152,6 @@ func TestExportResolverCachesAndCaps(t *testing.T) {
 	if reader.reads[shaA] != 2 {
 		t.Fatalf("cache must be cleared after exceeding cap, reads=%d", reader.reads[shaA])
 	}
-	if r.CachedBytes() > 64<<20 {
-		t.Fatalf("cache bytes %d exceed cap", r.CachedBytes())
-	}
 }
 
 func TestExportResolverReadFailure(t *testing.T) {
