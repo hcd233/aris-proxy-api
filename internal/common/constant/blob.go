@@ -1,6 +1,10 @@
 package constant
 
-import "time"
+import (
+	"time"
+
+	"github.com/hcd233/aris-mass/internal/common/enum"
+)
 
 // 消息图片外置（blobs 表 + 对象存储）相关常量
 const (
@@ -51,11 +55,38 @@ const (
 	MIMETypeImageJPEG = "image/jpeg"
 	MIMETypeImageGIF  = "image/gif"
 	MIMETypeImageWebP = "image/webp"
+	// URLSchemeSeparator URL 协议分隔符
+	URLSchemeSeparator = "://"
 	// BlobDefaultExtension 非白名单 MIME 的对象扩展名
 	BlobDefaultExtension = ".bin"
+
+	// blobs 表列名
+	FieldSHA256      = "sha256"
+	FieldBlobData    = "data"
+	FieldStorageKey  = "storage_key"
+	FieldMime        = "mime"
+	FieldSize        = "size"
+	FieldWidth       = "width"
+	FieldHeight      = "height"
+	FieldAttempts    = "attempts"
+	FieldLastError   = "last_error"
+	FieldNextRetryAt = "next_retry_at"
+
+	// DBConditionBlobRetryable 可被改写为 uploaded/重试/失败的状态
+	DBConditionBlobRetryable = "id = ? AND status IN ?"
+	// DBConditionBlobDue 到期待重试
+	DBConditionBlobDue = "status = ? AND next_retry_at <= ?"
+	// DBConditionBlobStatusEquals 按状态过滤
+	DBConditionBlobStatusEquals = "status = ?"
+	// DBOrderNextRetryAtAsc 重试按到期时间升序
+	DBOrderNextRetryAtAsc = "next_retry_at ASC"
 )
 
 var (
+	// BlobMetaFields 不含 data 的元数据列
+	BlobMetaFields = []string{FieldID, FieldSHA256, FieldStatus, FieldStorageKey, FieldMime, FieldSize, FieldWidth, FieldHeight}
+	// BlobRetryableStatuses 允许被改写的状态
+	BlobRetryableStatuses = []string{enum.BlobStatusPending, enum.BlobStatusFailed}
 	// BlobMimeExtensions 白名单图片 MIME → 对象扩展名
 	BlobMimeExtensions = map[string]string{
 		MIMETypeImagePNG:  ".png",

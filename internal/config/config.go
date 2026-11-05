@@ -105,6 +105,27 @@ var (
 	// MinioAccessKey string Minio Access Key
 	MinioAccessKey string
 
+	// ObjectStorageEndpoint string 消息图片 S3 兼容对象存储 endpoint（可带 http/https 前缀），留空则不上传
+	ObjectStorageEndpoint string
+
+	// ObjectStorageBucket string 消息图片对象存储 bucket
+	ObjectStorageBucket string
+
+	// ObjectStorageRegion string 消息图片对象存储 region
+	ObjectStorageRegion string
+
+	// ObjectStorageAccessKey string 消息图片对象存储 access key
+	ObjectStorageAccessKey string
+
+	// ObjectStorageSecretKey string 消息图片对象存储 secret key
+	ObjectStorageSecretKey string
+
+	// ObjectStorageTLS bool endpoint 不带协议前缀时是否使用 https
+	ObjectStorageTLS bool
+
+	// ObjectStoragePathStyle bool 是否使用 path-style 访问（MinIO 等需要）
+	ObjectStoragePathStyle bool
+
 	// CosRegion string Cos Region
 	CosRegion string
 
@@ -355,6 +376,10 @@ func InitEnvironment() {
 
 	config.SetDefault("gateway.shared_pool_fallback", false)
 
+	config.SetDefault("object.storage.region", "auto")
+	config.SetDefault("object.storage.tls", true)
+	config.SetDefault("object.storage.path_style", false)
+
 	config.AutomaticEnv()
 
 	Env = config.GetString("env")
@@ -398,6 +423,14 @@ func InitEnvironment() {
 	MinioBucketName = config.GetString("minio.bucket.name")
 	MinioAccessID = config.GetString("minio.access.id")
 	MinioAccessKey = config.GetString("minio.access.key")
+
+	ObjectStorageEndpoint = config.GetString("object.storage.endpoint")
+	ObjectStorageBucket = config.GetString("object.storage.bucket")
+	ObjectStorageRegion = config.GetString("object.storage.region")
+	ObjectStorageAccessKey = config.GetString("object.storage.access_key")
+	ObjectStorageSecretKey = config.GetString("object.storage.secret_key")
+	ObjectStorageTLS = config.GetBool("object.storage.tls")
+	ObjectStoragePathStyle = config.GetBool("object.storage.path_style")
 
 	CosBucketName = config.GetString("cos.bucket.name")
 	CosAppID = config.GetString("cos.app.id")
