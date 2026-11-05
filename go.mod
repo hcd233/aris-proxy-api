@@ -9,6 +9,7 @@ require (
 	github.com/charmbracelet/huh v1.0.0
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/danielgtaylor/huma/v2 v2.38.0
+	github.com/disintegration/imaging v1.6.2
 	github.com/gofiber/contrib/v3/fgprof v1.0.6
 	github.com/gofiber/fiber/v3 v3.3.0
 	github.com/golang-jwt/jwt/v5 v5.2.2
@@ -25,6 +26,7 @@ require (
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.60
 	go.uber.org/fx v1.24.0
 	go.uber.org/zap v1.27.0
+	golang.org/x/image v0.36.0
 	golang.org/x/oauth2 v0.30.0
 	golang.org/x/sync v0.20.0
 	golang.org/x/term v0.43.0

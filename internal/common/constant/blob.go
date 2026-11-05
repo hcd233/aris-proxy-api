@@ -45,9 +45,24 @@ const (
 
 	// ShareGPTImagePlaceholder ShareGPT 多模态图片占位符（LLaMA-Factory 约定）
 	ShareGPTImagePlaceholder = "<image>"
+
+	// MIMETypeImagePNG 等：存储版本允许的图片 MIME（按字节内容判定）
+	MIMETypeImagePNG  = "image/png"
+	MIMETypeImageJPEG = "image/jpeg"
+	MIMETypeImageGIF  = "image/gif"
+	MIMETypeImageWebP = "image/webp"
+	// BlobDefaultExtension 非白名单 MIME 的对象扩展名
+	BlobDefaultExtension = ".bin"
 )
 
 var (
+	// BlobMimeExtensions 白名单图片 MIME → 对象扩展名
+	BlobMimeExtensions = map[string]string{
+		MIMETypeImagePNG:  ".png",
+		MIMETypeImageJPEG: ".jpg",
+		MIMETypeImageGIF:  ".gif",
+		MIMETypeImageWebP: ".webp",
+	}
 	// BlobJPEGQualities 转 JPEG 时依次尝试的质量
 	BlobJPEGQualities = []int{90, 80, 70, 60}
 	// BlobRetryBackoff 第 n 次失败后的重试间隔（超出末项按末项）
