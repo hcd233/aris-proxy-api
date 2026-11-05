@@ -7,12 +7,15 @@ import (
 	sessionport "github.com/hcd233/aris-mass/internal/application/session/port"
 	"github.com/hcd233/aris-mass/internal/common/constant"
 	"github.com/hcd233/aris-mass/internal/common/inflight"
+	"github.com/hcd233/aris-mass/internal/domain/blob"
 	"github.com/hcd233/aris-mass/internal/domain/modelcall"
+	"github.com/hcd233/aris-mass/internal/infrastructure/blobstore"
 	"github.com/hcd233/aris-mass/internal/infrastructure/cache"
 	"github.com/hcd233/aris-mass/internal/infrastructure/database"
 	"github.com/hcd233/aris-mass/internal/infrastructure/httpclient"
 	"github.com/hcd233/aris-mass/internal/infrastructure/metrics"
 	"github.com/hcd233/aris-mass/internal/infrastructure/modelsdev"
+	"github.com/hcd233/aris-mass/internal/infrastructure/objectstore"
 	"github.com/hcd233/aris-mass/internal/infrastructure/pool"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/redis/go-redis/v9"
@@ -25,6 +28,9 @@ var InfraModule = fx.Module(constant.DigNameInfraModule,
 		NewDB,
 		NewCache,
 		NewReadCache,
+		NewObjectStore,
+		NewBlobExternalizer,
+		NewImageReader,
 		NewPoolManager,
 		NewInflightTracker,
 		metrics.NewRegistry,
@@ -68,8 +74,24 @@ func NewPoolManager(
 	auditRepo modelcall.AuditRepository,
 	demoAccessAuditRepo demoauditport.DemoAccessAuditRepository,
 	sessionCache sessionport.SessionDetailCache,
+	externalizer *blobstore.Externalizer,
 ) *pool.PoolManager {
-	return pool.NewPoolManager(db, auditRepo, demoAccessAuditRepo, sessionCache)
+	return pool.NewPoolManager(db, auditRepo, demoAccessAuditRepo, sessionCache, externalizer)
+}
+
+// NewObjectStore 消息图片对象存储；未配置时为 nil（图片暂存 blobs 表）
+func NewObjectStore() blob.ObjectStore {
+	return objectstore.NewFromConfig()
+}
+
+// NewImageReader 已外置图片读取端
+func NewImageReader(db *gorm.DB, store blob.ObjectStore) blob.ImageReader {
+	return blobstore.NewReader(db, store)
+}
+
+// NewBlobExternalizer 消息图片外置器
+func NewBlobExternalizer(db *gorm.DB, store blob.ObjectStore) *blobstore.Externalizer {
+	return blobstore.NewExternalizer(db, store)
 }
 
 func NewInflightTracker() *inflight.Tracker {

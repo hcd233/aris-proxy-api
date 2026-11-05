@@ -228,6 +228,21 @@ export interface ListSessionMessagesRsp extends CommonRsp {
   pageInfo?: PageInfo;
 }
 
+/** 会话图片读取方式：已上传给 url（短期有效），未上传给 dataUrl */
+export interface SessionImage {
+  url?: string;
+  dataUrl?: string;
+  expiresAt?: string;
+  mime: string;
+  size: number;
+  width: number;
+  height: number;
+}
+
+export interface GetSessionImageRsp extends CommonRsp {
+  image?: SessionImage;
+}
+
 export interface ListSessionToolsRsp extends CommonRsp {
   tools?: ToolItem[];
   pageInfo?: PageInfo;

@@ -194,6 +194,16 @@ func buildRegistryEntries() []CronRegistryEntry {
 			},
 		},
 		{
+			Name:        constant.CronModuleBlobUploadRetry,
+			Type:        constant.CronTypeFunctional,
+			Spec:        constant.CronSpecBlobUploadRetry,
+			Description: constant.CronDescriptionBlobUploadRetry,
+			Enabled:     func() bool { return config.CronBlobUploadRetryEnabled },
+			Factory: func(db *gorm.DB, _ *pool.PoolManager, cache *redis.Client, _ conversation.ThinkExtractRepository) Cron {
+				return NewBlobUploadRetryCron(db, cache)
+			},
+		},
+		{
 			Name:        constant.CronModuleOAuthMaintenance,
 			Type:        constant.CronTypeFunctional,
 			Spec:        constant.CronSpecOAuthMaintenance,

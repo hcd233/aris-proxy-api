@@ -72,8 +72,10 @@ func (UnifiedContent) Schema(_ huma.Registry) *huma.Schema {
 type UnifiedContentPart struct {
 	Type        string `json:"type"`                   // text/image_url/input_audio/file/refusal
 	Text        string `json:"text,omitempty"`         // type=text 或 type=refusal
-	ImageURL    string `json:"image_url,omitempty"`    // type=image_url: URL 或 base64
+	ImageURL    string `json:"image_url,omitempty"`    // type=image_url: URL、base64 data URI 或 aris-blob:sha256:<hex> 引用
 	ImageDetail string `json:"image_detail,omitempty"` // type=image_url: 细节级别
+	ImageMime   string `json:"image_mime,omitempty"`   // type=image_url 引用形态: 存储版本 MIME
+	ImageSize   int64  `json:"image_size,omitempty"`   // type=image_url 引用形态: 存储版本字节数
 	AudioData   string `json:"audio_data,omitempty"`   // type=input_audio
 	AudioFormat string `json:"audio_format,omitempty"` // type=input_audio
 	FileData    string `json:"file_data,omitempty"`    // type=file

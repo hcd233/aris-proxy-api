@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"slices"
 
 	"github.com/bytedance/sonic"
 	"github.com/bytedance/sonic/encoder"
@@ -65,6 +66,7 @@ func ComputeMessageChecksum(msg *UnifiedMessage, modelID string, toolSchemas Too
 		normalized.Content = &UnifiedContent{Text: normalized.ReasoningContent}
 		normalized.ReasoningContent = ""
 	}
+	normalized.Content = normalizeImageParts(normalized.Content)
 
 	if len(normalized.ToolCalls) > 0 {
 		cleanedCalls := make([]*UnifiedToolCall, len(normalized.ToolCalls))
@@ -94,6 +96,41 @@ func ComputeMessageChecksum(msg *UnifiedMessage, modelID string, toolSchemas Too
 
 	hash := sha256.Sum256(lo.Must1(encoder.Encode(wire, encoder.SortMapKeys)))
 	return hex.EncodeToString(hash[:])
+}
+
+// normalizeImageParts 把 data URI 与引用形态的图片统一映射为 sha256:<hex>
+//
+//	同一张图无论以 base64 还是以引用存储，checksum 都一致；ImageMime/ImageSize 不参与。
+//	没有托管图片时返回原指针，保证不含图片的消息 checksum 逐字节不变；有图片时返回副本，不修改入参。
+//
+//	@param content *UnifiedContent
+//	@return *UnifiedContent
+//	@author centonhuang
+//	@update 2026-11-05 10:00:00
+func normalizeImageParts(content *UnifiedContent) *UnifiedContent {
+	if content == nil {
+		return nil
+	}
+	var parts []*UnifiedContentPart
+	for i, p := range content.Parts {
+		if p == nil || p.Type != enum.ContentPartTypeImageURL {
+			continue
+		}
+		key, ok := imageChecksumKey(p.ImageURL)
+		if !ok {
+			continue
+		}
+		if parts == nil {
+			parts = slices.Clone(content.Parts)
+		}
+		cp := *p
+		cp.ImageURL, cp.ImageMime, cp.ImageSize = key, "", 0
+		parts[i] = &cp
+	}
+	if parts == nil {
+		return content
+	}
+	return &UnifiedContent{Text: content.Text, Parts: parts}
 }
 
 // isUnifiedContentEmpty 判断 UnifiedContent 是否为空

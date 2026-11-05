@@ -15,6 +15,7 @@ import (
 	"github.com/hcd233/aris-mass/internal/common/ierr"
 	"github.com/hcd233/aris-mass/internal/config"
 	"github.com/hcd233/aris-mass/internal/domain/modelcall"
+	"github.com/hcd233/aris-mass/internal/infrastructure/blobstore"
 	"github.com/hcd233/aris-mass/internal/infrastructure/database/dao"
 	dbmodel "github.com/hcd233/aris-mass/internal/infrastructure/database/model"
 	"github.com/hcd233/aris-mass/internal/logger"
@@ -31,6 +32,7 @@ type PoolManager struct {
 	auditRepo           modelcall.AuditRepository
 	demoAccessAuditRepo demoaccessauditport.DemoAccessAuditRepository
 	sessionCache        sessionport.SessionDetailCache
+	externalizer        *blobstore.Externalizer
 	storePool           pond.Pool
 	agentPool           pond.Pool
 }
@@ -41,20 +43,23 @@ type PoolManager struct {
 //	@param auditRepo modelcall.AuditRepository 审计写聚合仓储（审计落库统一经此聚合）
 //	@param demoAccessAuditRepo demoaccessauditport.DemoAccessAuditRepository Demo 访问审计仓储
 //	@param sessionCache sessionport.SessionDetailCache 会话详情缓存（续写后失效，可为 nil）
+//	@param externalizer *blobstore.Externalizer 消息图片外置器（为 nil 时图片以 base64 落库）
 //	@return *PoolManager
 //	@author centonhuang
-//	@update 2026-10-22 20:00:00
+//	@update 2026-11-05 10:00:00
 func NewPoolManager(
 	db *gorm.DB,
 	auditRepo modelcall.AuditRepository,
 	demoAccessAuditRepo demoaccessauditport.DemoAccessAuditRepository,
 	sessionCache sessionport.SessionDetailCache,
+	externalizer *blobstore.Externalizer,
 ) *PoolManager {
 	return &PoolManager{
 		db:                  db,
 		auditRepo:           auditRepo,
 		demoAccessAuditRepo: demoAccessAuditRepo,
 		sessionCache:        sessionCache,
+		externalizer:        externalizer,
 		storePool:           pond.NewPool(config.Pool.Store.Workers, pond.WithQueueSize(config.Pool.Store.QueueSize)),
 		agentPool:           pond.NewPool(config.Pool.Agent.Workers, pond.WithQueueSize(config.Pool.Agent.QueueSize)),
 	}

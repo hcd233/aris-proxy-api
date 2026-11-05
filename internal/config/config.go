@@ -105,6 +105,27 @@ var (
 	// MinioAccessKey string Minio Access Key
 	MinioAccessKey string
 
+	// ObjectStorageEndpoint string 消息图片 S3 兼容对象存储 endpoint（可带 http/https 前缀），留空则不上传
+	ObjectStorageEndpoint string
+
+	// ObjectStorageBucket string 消息图片对象存储 bucket
+	ObjectStorageBucket string
+
+	// ObjectStorageRegion string 消息图片对象存储 region
+	ObjectStorageRegion string
+
+	// ObjectStorageAccessKey string 消息图片对象存储 access key
+	ObjectStorageAccessKey string
+
+	// ObjectStorageSecretKey string 消息图片对象存储 secret key
+	ObjectStorageSecretKey string
+
+	// ObjectStorageTLS bool endpoint 不带协议前缀时是否使用 https
+	ObjectStorageTLS bool
+
+	// ObjectStoragePathStyle bool 是否使用 path-style 访问（MinIO 等需要）
+	ObjectStoragePathStyle bool
+
 	// CosRegion string Cos Region
 	CosRegion string
 
@@ -171,6 +192,9 @@ var (
 	// CronSessionTerminalCleanupEnabled bool 是否启用 Session 终态清理定时任务
 	//	@update 2026-08-29 10:00:00
 	CronSessionTerminalCleanupEnabled bool
+
+	// CronBlobUploadRetryEnabled bool 是否启用消息图片补传定时任务
+	CronBlobUploadRetryEnabled bool
 
 	// CronSoftDeletePurgeEnabled bool 是否启用软删除清理定时任务
 	//	@update 2026-05-01 10:00:00
@@ -333,6 +357,7 @@ func InitEnvironment() {
 	config.SetDefault("cron.session.terminal_cleanup.enabled", true)
 	config.SetDefault("cron.soft.delete.purge.enabled", true)
 	config.SetDefault("cron.oauth.maintenance.enabled", true)
+	config.SetDefault("cron.blob.upload_retry.enabled", true)
 
 	config.SetDefault("upstream.retry.max_attempts", 5)
 	config.SetDefault("upstream.retry.initial_backoff", 500*time.Millisecond)
@@ -354,6 +379,10 @@ func InitEnvironment() {
 	config.SetDefault("upstream.bulkhead.acquire_timeout", time.Second)
 
 	config.SetDefault("gateway.shared_pool_fallback", false)
+
+	config.SetDefault("object.storage.region", "auto")
+	config.SetDefault("object.storage.tls", true)
+	config.SetDefault("object.storage.path_style", false)
 
 	config.AutomaticEnv()
 
@@ -399,6 +428,14 @@ func InitEnvironment() {
 	MinioAccessID = config.GetString("minio.access.id")
 	MinioAccessKey = config.GetString("minio.access.key")
 
+	ObjectStorageEndpoint = config.GetString("object.storage.endpoint")
+	ObjectStorageBucket = config.GetString("object.storage.bucket")
+	ObjectStorageRegion = config.GetString("object.storage.region")
+	ObjectStorageAccessKey = config.GetString("object.storage.access_key")
+	ObjectStorageSecretKey = config.GetString("object.storage.secret_key")
+	ObjectStorageTLS = config.GetBool("object.storage.tls")
+	ObjectStoragePathStyle = config.GetBool("object.storage.path_style")
+
 	CosBucketName = config.GetString("cos.bucket.name")
 	CosAppID = config.GetString("cos.app.id")
 	CosRegion = config.GetString("cos.region")
@@ -420,6 +457,7 @@ func InitEnvironment() {
 	CLSLevel = config.GetString("cls.level")
 
 	CronSessionTerminalCleanupEnabled = config.GetBool("cron.session.terminal_cleanup.enabled")
+	CronBlobUploadRetryEnabled = config.GetBool("cron.blob.upload_retry.enabled")
 	CronSoftDeletePurgeEnabled = config.GetBool("cron.soft.delete.purge.enabled")
 	CronThinkExtractEnabled = config.GetBool("cron.think.extract.enabled")
 	CronOAuthMaintenanceEnabled = config.GetBool("cron.oauth.maintenance.enabled")

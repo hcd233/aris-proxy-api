@@ -59,6 +59,17 @@ func initSessionJWTRouter(sessionGroup huma.API, sessionHandler handler.SessionH
 	}, sessionHandler.HandleListSessionMessages)
 
 	huma.Register(sessionGroup, huma.Operation{
+		OperationID: "getSessionImage",
+		Method:      http.MethodGet,
+		Path:        "/image",
+		Summary:     "GetSessionImage",
+		Description: "Get a short-lived URL or data URL for an image referenced by the session",
+		Tags:        []string{constant.TagSession},
+		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
+		Middlewares: huma.Middlewares{middleware.LimitUserPermissionWithDemoMiddleware("getSessionImage", enum.PermissionUser, enum.DemoModuleSessions, demoAccessor, auditSubmitter)},
+	}, sessionHandler.HandleGetSessionImage)
+
+	huma.Register(sessionGroup, huma.Operation{
 		OperationID: "listSessionTools",
 		Method:      http.MethodGet,
 		Path:        "/tool/list",

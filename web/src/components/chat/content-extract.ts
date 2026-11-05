@@ -13,6 +13,9 @@ export interface ContentPart {
   file_id?: string;
   filename?: string;
   image_detail?: string;
+  /** 引用形态（aris-blob:sha256:）的图片元数据 */
+  image_mime?: string;
+  image_size?: number;
 }
 
 export interface ExtractedContent {
@@ -65,6 +68,8 @@ export function lookupToolResult(
 export interface ToolResultInfo {
   text: string;
   rawContent?: string;
+  /** 工具结果中的非文本部分（如截图） */
+  parts?: ContentPart[];
 }
 
 export function buildToolResultsByID(messages: MessageItem[]): Record<string, ToolResultInfo> {
@@ -73,10 +78,11 @@ export function buildToolResultsByID(messages: MessageItem[]): Record<string, To
     const id = m.message.tool_call_id;
     if (!id) continue;
     if (m.message.role !== "tool" && m.message.role !== "user") continue;
-    const { text } = extractContent(m.message.content);
+    const { text, parts } = extractContent(m.message.content);
     map[id] = {
       text,
       rawContent: m.message.raw_content,
+      parts: parts.length > 0 ? parts : undefined,
     };
   }
   return map;

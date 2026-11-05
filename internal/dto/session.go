@@ -142,6 +142,38 @@ type GetSessionMetadataRsp struct {
 	Session *SessionMetadata `json:"session,omitempty" doc:"Session 元数据"`
 }
 
+// GetSessionImageReq 获取会话图片请求
+//
+//	@author centonhuang
+//	@update 2026-11-05 10:00:00
+type GetSessionImageReq struct {
+	SessionID uint   `query:"id" required:"true" minimum:"1" doc:"Session ID"`
+	SHA256    string `query:"sha256" required:"true" pattern:"^[0-9a-f]{64}$" doc:"图片原始字节 SHA256（小写 hex）"`
+}
+
+// SessionImage 会话图片读取方式：已上传给 url（短期有效），未上传给 dataUrl
+//
+//	@author centonhuang
+//	@update 2026-11-05 10:00:00
+type SessionImage struct {
+	URL       string     `json:"url,omitempty" doc:"预签名链接（10 分钟有效）"`
+	DataURL   string     `json:"dataUrl,omitempty" doc:"data URL（图片尚未上传对象存储时）"`
+	ExpiresAt *time.Time `json:"expiresAt,omitempty" doc:"预签名链接过期时间"`
+	Mime      string     `json:"mime" doc:"图片 MIME"`
+	Size      int64      `json:"size" doc:"字节数"`
+	Width     int        `json:"width" doc:"宽"`
+	Height    int        `json:"height" doc:"高"`
+}
+
+// GetSessionImageRsp 获取会话图片响应
+//
+//	@author centonhuang
+//	@update 2026-11-05 10:00:00
+type GetSessionImageRsp struct {
+	CommonRsp
+	Image *SessionImage `json:"image,omitempty" doc:"图片读取方式"`
+}
+
 // ListSessionMessagesReq 分页获取 Session 消息请求
 //
 //	@author centonhuang

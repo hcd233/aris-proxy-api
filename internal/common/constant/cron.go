@@ -11,6 +11,8 @@ const (
 	CronSpecThinkExtract      = "0 0 * * *"
 	CronModuleTriggerHitSync  = "TriggerHitSyncCron"
 	CronSpecTriggerHitSync    = "*/5 * * * *"
+	CronModuleBlobUploadRetry = "BlobUploadRetryCron"
+	CronSpecBlobUploadRetry   = "*/5 * * * *"
 
 	// CronTriggerSourceScheduled 定时触发
 	CronTriggerSourceScheduled = "scheduled"
@@ -37,6 +39,7 @@ const (
 	CronDescriptionSoftDeletePurge        = "Permanently delete soft-deleted records past retention period"
 	CronDescriptionThinkExtract           = "Extract and cache think content from sessions"
 	CronDescriptionTriggerHitSync         = "Sync trigger word hit counts to database"
+	CronDescriptionBlobUploadRetry        = "Upload pending message images to object storage with backoff"
 
 	// CronLockDefaultTTL 默认 cron 任务分布式锁 TTL
 	CronLockDefaultTTL = 5 * time.Minute

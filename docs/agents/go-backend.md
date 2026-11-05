@@ -96,7 +96,7 @@
 | OAuth2 | `/api/web/v1/oauth2` | `GET /login`、`POST /callback` |
 | User | `/api/web/v1/user` | `GET /current`、`PATCH /`、`GET /list`、`POST /approve`、`POST /demote`、`DELETE /delete`、`POST /demo`、`POST /demo/restore` |
 | APIKey | `/api/web/v1/apikey` | `POST /`、`GET /list`、`DELETE /` |
-| Session | `/api/web/v1/session` | `GET /list`、`GET /`、`GET /metadata`、`GET /message/list`、`GET /tool/list`、`DELETE /`、`POST /score`、`DELETE /score`、`GET /option/list` |
+| Session | `/api/web/v1/session` | `GET /list`、`GET /`、`GET /metadata`、`GET /message/list`、`GET /image`、`GET /tool/list`、`DELETE /`、`POST /score`、`DELETE /score`、`GET /option/list` |
 | SessionShare | `/api/web/v1/session` | `POST /share`、`GET /share/list`、`DELETE /share` |
 | SessionShare（公开） | `/api/web/v1/session` | `GET /share/metadata`、`GET /share/message/list`、`GET /share/tool/list` |
 | Endpoint | `/api/web/v1/endpoint` | `POST /`、`PATCH /`、`DELETE /` |

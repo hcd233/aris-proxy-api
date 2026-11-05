@@ -54,6 +54,7 @@ import (
 	"github.com/hcd233/aris-mass/internal/domain/agentharness"
 	"github.com/hcd233/aris-mass/internal/domain/apikey"
 	apikeyservice "github.com/hcd233/aris-mass/internal/domain/apikey/service"
+	"github.com/hcd233/aris-mass/internal/domain/blob"
 	"github.com/hcd233/aris-mass/internal/domain/identity"
 	identityservice "github.com/hcd233/aris-mass/internal/domain/identity/service"
 	"github.com/hcd233/aris-mass/internal/domain/llmproxy"
@@ -132,6 +133,7 @@ var ApplicationModule = fx.Module(constant.DigNameApplicationModule,
 		NewGetSessionByUserHandler,
 		NewGetSessionMetaByUserHandler,
 		NewListSessionMessagesHandler,
+		NewGetSessionImageHandler,
 		NewListSessionToolsHandler,
 		NewDeleteSessionHandler,
 		NewScoreSessionHandler,
@@ -409,6 +411,10 @@ func NewListSessionMessagesHandler(readRepo session.SessionReadRepository, metaQ
 	return sessionquery.NewListSessionMessagesHandler(readRepo, metaQuery, detailCache)
 }
 
+func NewGetSessionImageHandler(metaQuery sessionport.GetSessionMetaByUserHandler, reader blob.ImageReader) sessionport.GetSessionImageHandler {
+	return sessionquery.NewGetSessionImageHandler(metaQuery, reader)
+}
+
 func NewListSessionToolsHandler(readRepo session.SessionReadRepository, metaQuery sessionport.GetSessionMetaByUserHandler, detailCache sessionport.SessionDetailCache) sessionport.ListSessionToolsHandler {
 	return sessionquery.NewListSessionToolsHandler(readRepo, metaQuery, detailCache)
 }
@@ -481,8 +487,8 @@ func NewPreviewDatasetHandler(readRepo session.SessionReadRepository, apiKeyRepo
 	return datasetquery.NewPreviewDatasetHandler(readRepo, apiKeyRepo)
 }
 
-func NewExportDatasetHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository) datasetport.ExportDatasetHandler {
-	return datasetquery.NewExportDatasetHandler(readRepo, apiKeyRepo)
+func NewExportDatasetHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository, images blob.ImageReader) datasetport.ExportDatasetHandler {
+	return datasetquery.NewExportDatasetHandler(readRepo, apiKeyRepo, images)
 }
 
 func NewPreviewFormatDatasetHandler(readRepo session.SessionReadRepository, apiKeyRepo apikey.APIKeyRepository) datasetport.PreviewFormatDatasetHandler {

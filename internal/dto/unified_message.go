@@ -1,11 +1,14 @@
 package dto
 
 import (
+	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/bytedance/sonic"
 	"github.com/samber/lo"
 
+	"github.com/hcd233/aris-mass/internal/common/constant"
 	"github.com/hcd233/aris-mass/internal/common/enum"
 	"github.com/hcd233/aris-mass/internal/common/ierr"
 	"github.com/hcd233/aris-mass/internal/common/vo"
@@ -213,6 +216,7 @@ func extractAnthropicBlocks(um *vo.UnifiedMessage, blocks []*AnthropicContentBlo
 		textParts         []string
 		thinkingParts     []string
 		toolCalls         []*vo.UnifiedToolCall
+		images            []*vo.UnifiedContentPart
 		toolResultID      string
 		toolResultContent *vo.UnifiedContent
 	)
@@ -231,6 +235,11 @@ func extractAnthropicBlocks(um *vo.UnifiedMessage, blocks []*AnthropicContentBlo
 
 		case enum.AnthropicContentBlockTypeRedactedThinking:
 			continue
+
+		case enum.AnthropicContentBlockTypeImage:
+			if part := anthropicImagePart(block); part != nil {
+				images = append(images, part)
+			}
 
 		case enum.AnthropicContentBlockTypeToolUse, enum.AnthropicContentBlockTypeServerToolUse:
 			tc, err := buildToolCallFromAnthropicBlock(block, i)
@@ -264,9 +273,9 @@ func extractAnthropicBlocks(um *vo.UnifiedMessage, blocks []*AnthropicContentBlo
 
 	if toolResultID != "" {
 		um.ToolCallID = toolResultID
-		um.Content = toolResultContent
-	} else if len(textParts) > 0 {
-		um.Content = &vo.UnifiedContent{Text: strings.Join(textParts, "\n")}
+		um.Content = appendImages(toolResultContent, images)
+	} else {
+		um.Content = buildPartsContent(textParts, images)
 	}
 
 	return nil
@@ -310,9 +319,63 @@ func extractToolResultContent(block *AnthropicContentBlock) (toolUseID string, c
 			}
 			return *nested.Text, true
 		})
-		if len(nestedTexts) > 0 {
-			content = &vo.UnifiedContent{Text: strings.Join(nestedTexts, "\n")}
-		}
+		nestedImages := lo.FilterMap(block.Content.Blocks, func(nested *AnthropicContentBlock, _ int) (*vo.UnifiedContentPart, bool) {
+			if nested.Type != enum.AnthropicContentBlockTypeImage {
+				return nil, false
+			}
+			part := anthropicImagePart(nested)
+			return part, part != nil
+		})
+		content = buildPartsContent(nestedTexts, nestedImages)
 	}
 	return
+}
+
+// anthropicImagePart 将 Anthropic image 块转为统一图片部分；source 缺失或类型未知时返回 nil
+func anthropicImagePart(block *AnthropicContentBlock) *vo.UnifiedContentPart {
+	if block.Source == nil {
+		return nil
+	}
+	var url string
+	switch block.Source.Type {
+	case enum.ImageSourceTypeBase64:
+		url = fmt.Sprintf(constant.DataURLTemplate, lo.FromPtr(block.Source.MediaType), lo.FromPtr(block.Source.Data))
+	case enum.ImageSourceTypeURL:
+		url = lo.FromPtr(block.Source.URL)
+	}
+	if url == "" {
+		return nil
+	}
+	return &vo.UnifiedContentPart{Type: enum.ContentPartTypeImageURL, ImageURL: url}
+}
+
+// buildPartsContent 合并文本与图片：无图时保持 Text 形态（保证纯文本消息 checksum 不变），
+// 有图时文本合并为首个 text 部分、图片按序在后；两者皆空返回 nil
+func buildPartsContent(texts []string, images []*vo.UnifiedContentPart) *vo.UnifiedContent {
+	text := strings.Join(texts, "\n")
+	if len(images) == 0 {
+		if text == "" {
+			return nil
+		}
+		return &vo.UnifiedContent{Text: text}
+	}
+	parts := make([]*vo.UnifiedContentPart, 0, len(images)+1)
+	if text != "" {
+		parts = append(parts, &vo.UnifiedContentPart{Type: enum.ContentPartTypeText, Text: text})
+	}
+	return &vo.UnifiedContent{Parts: append(parts, images...)}
+}
+
+// appendImages 把顶层图片追加到 tool_result 内容末尾
+func appendImages(content *vo.UnifiedContent, images []*vo.UnifiedContentPart) *vo.UnifiedContent {
+	if len(images) == 0 {
+		return content
+	}
+	if content == nil {
+		return &vo.UnifiedContent{Parts: images}
+	}
+	if len(content.Parts) == 0 {
+		return buildPartsContent([]string{content.Text}, images)
+	}
+	return &vo.UnifiedContent{Parts: append(slices.Clone(content.Parts), images...)}
 }

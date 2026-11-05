@@ -35,4 +35,5 @@ var Models = []any{
 	&DemoAccessAudit{},
 	&EndpointOAuthCredential{},
 	&AgentHarnessRule{},
+	&Blob{},
 }
