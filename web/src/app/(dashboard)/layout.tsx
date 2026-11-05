@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
@@ -43,7 +43,6 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import { PreferenceControls } from "@/components/preference-controls";
 import { ThemeSwitcher } from "@/components/theme/theme-switcher";
 import { NavIndicator } from "@/components/motion/nav-indicator";
-import { SessionHistorySidebar } from "@/components/session-detail/session-history-sidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { NavCommandPalette, NavSearchButton } from "@/components/nav-command-palette";
 import { ChevronDown, Lock, LogOut, Menu, Search } from "lucide-react";
@@ -305,8 +304,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const isMobile = useIsMobile();
 
-  const isSessionDetail = pathname.startsWith("/sessions/detail");
-
   const t = useT();
 
   // ⌘K / Ctrl+K 页面跳转面板：侧栏入口、移动端顶栏入口与快捷键共用同一个开关
@@ -328,7 +325,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     return active ? new Set([active]) : new Set();
   });
 
-  // Persist collapsed state; auto-expand on session detail so history is visible.
+  // Persist collapsed state.
   /* eslint-disable react-hooks/set-state-in-effect -- Reading localStorage requires setting state in effect on mount */
   useEffect(() => {
     const saved = localStorage.getItem("sidebar-collapsed");
@@ -345,12 +342,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  useEffect(() => {
-    if (isSessionDetail) {
-      setCollapsed(false);
-    }
-  }, [isSessionDetail]);
-
   // 导航到收起组内的页面时自动展开该组
   useEffect(() => {
     const active = findActiveGroupKey(pathname);
@@ -360,15 +351,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   }, [pathname]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  // SidebarProvider 受控：桌面折叠态走 localStorage；session-detail 需要历史侧栏常驻，锁定展开。
-  const handleOpenChange = useCallback(
-    (open: boolean) => {
-      if (isSessionDetail) return;
-      setCollapsed(!open);
-      localStorage.setItem("sidebar-collapsed", String(!open));
-    },
-    [isSessionDetail],
-  );
+  // SidebarProvider 受控：桌面折叠态走 localStorage。
+  const handleOpenChange = useCallback((open: boolean) => {
+    setCollapsed(!open);
+    localStorage.setItem("sidebar-collapsed", String(!open));
+  }, []);
 
   const toggleCollapsed = useCallback(
     () => handleOpenChange(collapsed),
@@ -412,7 +399,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               variant="ghost"
               size="icon-sm"
               onClick={toggleCollapsed}
-              disabled={isSessionDetail}
               aria-label={t("layout.sidebar_toggle")}
               className={
                 collapsed
@@ -429,11 +415,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               onClick={() => setPaletteOpen(true)}
             />
             <SidebarNav groups={NAV_GROUPS} openGroups={openGroups} onToggleGroup={toggleGroup} />
-            {!collapsed && !isMobile && isSessionDetail && (
-              <Suspense fallback={null}>
-                <SessionHistorySidebar />
-              </Suspense>
-            )}
           </SidebarContent>
           <SidebarSeparator className="mx-0 bg-sidebar-border/50" />
           <SidebarFooter>
