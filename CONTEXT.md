@@ -181,6 +181,14 @@ _Avoid_: chat message, prompt, response
 网关自定义的协议无关消息结构。Content 为 UnifiedContent（支持 text 或多模态 parts），额外包含 ReasoningContent（推理内容）、ToolCalls、ToolCallID、Refusal，以及压缩相关字段（RawContent / CompressionStrategy）。是 Message 表 JSON 列的持久化格式。
 _Avoid_: message dto, generic message
 
+**Blob（图片存储记录）**:
+message 中一张图片的存储记录（`blobs` 表），以**原始字节**的 sha256 唯一标识、全局只存一份。状态 `pending`（暂存在表中待上传）→ `uploaded`（已在对象存储，表中字节清空），超过重试上限为 `failed`，无法解码且超过 2MB 为 `unprocessable`；后两者字节仍保留在表中，照常可查看与导出。只存压缩后的版本（≤2MB），不保留原图。
+_Avoid_: attachment, file, asset
+
+**ImageRef（图片引用）**:
+message 中已外置图片的引用形态 `aris-blob:sha256:<hex>`，替换原来的 base64 data URI，附带 `image_mime` / `image_size` 供展示。checksum 计算时 data URI 与引用形态统一映射为 sha256，二者算出同一 checksum；用户自带的外部 http(s) 图片链接不外置、原样保留。
+_Avoid_: image url, blob url, signed url
+
 **Tool（工具调用）**:
 LLM 发起的工具（函数）调用记录。含 ToolCallID、调用参数、执行结果。内容寻址去重（checksum），不可变。通过 `Message.ToolCalls` 关联到对应消息，执行结果以 `role=tool` 或 `role=user + tool_call_id` 的消息形式回传。
 _Avoid_: function call, tool use, tool result
