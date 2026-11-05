@@ -58,14 +58,17 @@ import { TruncatedText } from "@/components/truncated-text";
 
 type SortDir = "asc" | "desc";
 
-/* Table-Fit 列宽预算（1280 视口容器实测 902px，1512 视口 1118px）：
- * 「摘要」是唯一不声明宽度的主列，吃剩余空间；其余列声明宽度合计必须留够它。
- * 常驻列合计 668px → 902 下摘要 ~150px，仍不够，于是把两个低价值列按容器宽度
- * 渐进显示（Progressive Columns）：窄容器先收起评分与工具数，摘要稳定在 ~200px。
- * 阈值是表格可用宽度，不是视口宽度。 */
-const SHOW_SCORE_FROM = "hidden @min-[64rem]:table-cell";
+/* Table-Fit 列宽预算（1280 视口容器实测 902px，1512 视口 1134px，1728 视口 1350px）：
+ * 声明宽度必须覆盖「最宽语言表头 + 排序箭头 16px + px-3 内边距」。按三语实测：
+ * MESSAGES 65.3/46.1/76.8px、TOOLS 40.8/30.7/46.1px（en/zh/ja），3.5rem 会让
+ * 表头压到相邻列；TIME 的 `YYYY/MM/DD HH:mm:ss` 实测 175.6px，10.5rem 会裁掉数据。
+ * 「摘要」是唯一不声明宽度的主列，吃剩余空间；次要列按容器宽度逐级展开：
+ * 消息 53rem → 工具 58rem → 评分 66rem → Agent 73rem。Agent 是标签列，
+ * 空间不足时最先收起，评分 / 消息数 / 工具数优先。阈值是表格可用宽度，不是视口宽度。 */
+const SHOW_MESSAGE_FROM = "hidden @min-[53rem]:table-cell";
 const SHOW_TOOL_FROM = "hidden @min-[58rem]:table-cell";
-const SHOW_AGENT_FROM = "hidden @min-[52rem]:table-cell";
+const SHOW_SCORE_FROM = "hidden @min-[66rem]:table-cell";
+const SHOW_AGENT_FROM = "hidden @min-[73rem]:table-cell";
 
 const SORTABLE_COLUMNS: Record<string, string> = {
   createdAt: "created_at",
@@ -491,7 +494,7 @@ export default function SessionsPage() {
                         </TableHead>
                         <TableHead className="w-[4rem]">{t("common.id")}</TableHead>
                         <TableHead
-                          className="w-[10.5rem] cursor-pointer select-none whitespace-nowrap"
+                          className="w-[11rem] cursor-pointer select-none whitespace-nowrap"
                           onClick={() => handleSort(SORTABLE_COLUMNS.createdAt)}
                         >
                           <span className="inline-flex items-center gap-1">
@@ -504,7 +507,10 @@ export default function SessionsPage() {
                           {t("sessions.score")}
                         </TableHead>
                         <TableHead
-                          className="w-[3.5rem] cursor-pointer select-none whitespace-nowrap"
+                          className={cn(
+                            "w-[7.3rem] cursor-pointer select-none whitespace-nowrap",
+                            SHOW_MESSAGE_FROM,
+                          )}
                           onClick={() => handleSort(SORTABLE_COLUMNS.messageCount)}
                         >
                           <span className="inline-flex items-center gap-1">
@@ -513,7 +519,7 @@ export default function SessionsPage() {
                         </TableHead>
                         <TableHead
                           className={cn(
-                            "w-[3.5rem] cursor-pointer select-none whitespace-nowrap",
+                            "w-[5.5rem] cursor-pointer select-none whitespace-nowrap",
                             SHOW_TOOL_FROM,
                           )}
                           onClick={() => handleSort(SORTABLE_COLUMNS.toolCount)}
@@ -573,7 +579,9 @@ export default function SessionsPage() {
                                 />
                               </div>
                             </TableCell>
-                            <TableCell className="tabular-nums">{s.messageCount ?? 0}</TableCell>
+                            <TableCell className={cn("tabular-nums", SHOW_MESSAGE_FROM)}>
+                              {s.messageCount ?? 0}
+                            </TableCell>
                             <TableCell className={cn("tabular-nums", SHOW_TOOL_FROM)}>
                               {s.toolCount ?? 0}
                             </TableCell>

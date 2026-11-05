@@ -172,8 +172,8 @@ export default function CronPage() {
                       {/* 描述不声明宽度：fixed 布局只允许一列吃剩余空间，两列都留空
                           会把剩余宽度对半分，描述只剩 ~150px（英文句子只剩三个词） */}
                       <TableHead>{t("cron.description")}</TableHead>
-                      <TableHead className="w-[5rem]">{t("cron.enabled")}</TableHead>
-                      <TableHead className="w-[10.5rem]">{t("cron.updated_at")}</TableHead>
+                      <TableHead className="w-[5.25rem]">{t("cron.enabled")}</TableHead>
+                      <TableHead className="w-[11rem]">{t("cron.updated_at")}</TableHead>
                       <TableHead className="w-[6rem] text-right">{t("common.actions")}</TableHead>
                     </TableRow>
                   </TableHeader>

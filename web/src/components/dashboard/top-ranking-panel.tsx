@@ -150,7 +150,7 @@ export function TopRankingPanel({ range }: { range: DashboardRange }) {
                 onClick={() => setStoredSortBy("requests")}
               />
             </TableHead>
-            <TableHead className={cn(DENSE_HEAD, "w-[3.75rem] text-right", SHOW_FROM_440)}>
+            <TableHead className={cn(DENSE_HEAD, "w-[4.25rem] text-right", SHOW_FROM_440)}>
               {t("dashboard.col.tokens")}
             </TableHead>
             <TableHead className={cn(DENSE_HEAD, "w-20 text-right", SHOW_FROM_520)}>

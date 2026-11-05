@@ -97,11 +97,15 @@ function SortableHead({
         type="button"
         variant="ghost"
         size="xs"
-        className="-ml-2 min-w-0 uppercase tracking-[0.08em]"
+        className="-ml-2 min-w-0 gap-1 px-1 uppercase tracking-[0.08em] has-data-[icon=inline-end]:pr-1"
         aria-label={`${label} ${sort === "asc" ? t("upstream.sort_asc") : t("upstream.sort_desc")}`}
         onClick={() => onSort(field)}
       >
-        {label}
+        {/* 固定列宽的表格头不做 LocaleStable 预留：Button 会把直接字符串子节点
+            换成「所有共享译文」的最宽值（会把 audit 的日文「ステータス」也算进来），
+            56px 的列因此塞下 115px 的按钮并压到相邻列。列宽已固定，语言切换不会
+            让表格跳动，这里只需要当前语言的文字宽度。 */}
+        <span>{label}</span>
         {active ? (
           sort === "asc" ? (
             <ArrowUp data-icon="inline-end" />
@@ -247,7 +251,7 @@ export function FlatView({
             sortField={sortField}
             sort={sort}
             onSort={onSort}
-            className="w-[10rem]"
+            className="w-[9rem]"
           />
           <TableHead className="w-[9rem]">{t("upstream.col_capabilities")}</TableHead>
           <TableHead className="w-[7rem]">{t("upstream.col_pricing")}</TableHead>
@@ -257,7 +261,7 @@ export function FlatView({
             sortField={sortField}
             sort={sort}
             onSort={onSort}
-            className="w-[3.5rem]"
+            className="w-[6rem]"
           />
           <SortableHead
             label={t("upstream.col_created")}
@@ -267,8 +271,8 @@ export function FlatView({
             onSort={onSort}
             className="w-[6.5rem]"
           />
-          {/* 同分组视图：操作列按最宽语言实测给足，否则 fixed 布局会裁掉最左侧的「编辑」按钮 */}
-          <TableHead className="w-[11rem] text-right">{t("upstream.col_actions")}</TableHead>
+          {/* 操作列按最宽语言实测给足（zh 10rem / en 10.5rem），否则 fixed 布局会裁掉最左侧的「编辑」按钮 */}
+          <TableHead className="w-[10.5rem] text-right">{t("upstream.col_actions")}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>

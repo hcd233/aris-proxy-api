@@ -52,6 +52,10 @@ _Avoid_: responsive table, auto-width table
 一张 `Table fit` 表所有列宽声明之和必须小于容器可用宽度，否则 fixed 布局会溢出成横向滚动。时间戳一类不可截断的等宽内容按实测宽度给足（不足会被静默裁掉），可截断内容一律配 Tooltip。含固定尺寸按钮的操作列也按实测给足：行内 flex 右对齐时溢出从左侧裁掉，`scrollWidth` 检测不到，表现为最左按钮整颗消失。
 _Avoid_: column width, col size
 
+**Header Budget（表头预算）**:
+`Table fit` 的声明列宽必须覆盖「三种语言里最宽的表头文字 + 排序图标 + 内边距」。`fit` 只裁单元格、不裁表头，宽度不足时表头会压到相邻列而不是出现省略号。固定列宽的表头不要用 `Button` 包裸字符串——`LocaleStableText` 会按全语言最宽译文（含共享译文的其它 key）预留，窄列必溢出。
+_Avoid_: head width, column label width
+
 **Progressive Columns（渐进显示列）**:
 面板或表格宽度不够放下所有列时，不压缩主列，而是按优先级逐列隐藏次要列（容器查询驱动）；宽度变大再逐列展开。保证主列始终有足够可见宽度。仪表盘的 Endpoint / Top 排行两张表、会话记录、模型调用审计都采用；阈值是容器可用宽度，不是视口宽度。
 _Avoid_: responsive columns, column hiding

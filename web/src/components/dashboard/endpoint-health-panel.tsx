@@ -63,7 +63,7 @@ export function EndpointHealthPanel({ range }: { range: DashboardRange }) {
             <TableHead className={cn(DENSE_HEAD, "w-16 text-right")}>
               {t("dashboard.col.requests")}
             </TableHead>
-            <TableHead className={cn(DENSE_HEAD, "w-[3.75rem] text-right")}>
+            <TableHead className={cn(DENSE_HEAD, "w-[4.25rem] text-right")}>
               {t("dashboard.col.error_rate")}
             </TableHead>
             <TableHead className={cn(DENSE_HEAD, "w-12 text-right", SHOW_FROM_310)}>

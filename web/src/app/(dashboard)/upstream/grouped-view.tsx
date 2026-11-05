@@ -458,7 +458,7 @@ export function GroupedView({
           <TableHead className="w-[10rem]">{t("upstream.col_spec")}</TableHead>
           <TableHead className="w-[9rem]">{t("upstream.col_capabilities")}</TableHead>
           <TableHead className="w-[7rem]">{t("upstream.col_pricing")}</TableHead>
-          <TableHead className="w-[3.5rem]">{t("upstream.col_status")}</TableHead>
+          <TableHead className="w-[4.75rem]">{t("upstream.col_status")}</TableHead>
           <TableHead className="w-[6.5rem]">{t("upstream.col_created")}</TableHead>
           {/* 操作列宽按最宽语言（en「Delete」）实测 ≈168px 给足：7.5rem 时 fixed 布局
               加上 justify-end 会把最左侧的「编辑」按钮裁到不可见（裁剪发生在左侧，无省略号） */}

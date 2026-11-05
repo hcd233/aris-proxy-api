@@ -206,9 +206,9 @@ export default function DemoAccessAuditPage() {
               <Table fit>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[10.5rem]">{t("demo_access_audit.time")}</TableHead>
+                    <TableHead className="w-[11rem]">{t("demo_access_audit.time")}</TableHead>
                     <TableHead className="w-[9.5rem]">{t("demo_access_audit.action")}</TableHead>
-                    <TableHead className="w-[6rem]">{t("demo_access_audit.module")}</TableHead>
+                    <TableHead className="w-[6.5rem]">{t("demo_access_audit.module")}</TableHead>
                     {/* 路径不声明宽度：fixed 布局把剩余空间全给它（最长的值在这一列） */}
                     <TableHead>{t("demo_access_audit.path")}</TableHead>
                     <TableHead className="w-[6rem]">{t("demo_access_audit.ip")}</TableHead>

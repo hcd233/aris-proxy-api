@@ -41,11 +41,14 @@ import type { FacetDef, FilterBarQueryParams } from "@/components/filter-bar/typ
 import { copyTextToClipboard } from "@/lib/clipboard";
 import { TruncatedText } from "@/components/truncated-text";
 
-/* Table-Fit 列宽预算（1280 视口容器实测 902px，1512 视口 1118px）：
- * 费用列 6rem 是 `formatCost` 最宽输出（$1234.567891）的实测值，5rem 会把
+/* Table-Fit 列宽预算（1280 视口容器实测 902px，1512 视口 1134px）：
+ * 表头宽度按三语最宽值给（px-3 已含）：USER 日文 85.4、STATUS 日文 100.8、
+ * LATENCY 日文 100.8、TRACEID 81.1、USERAGENT 97.4；时间戳 `YYYY/MM/DD HH:mm:ss`
+ * 实测 175.6px，10.5rem 会把秒静默裁掉。
+ * 费用列 5.5rem 是 `formatCost` 最宽输出（$1234.567891）的实测值，5rem 会把
  * `$0.000916` 静默裁成 `$0.00…`；腾出的空间从「客户端」列拿——它只显示 UA
- * 前 10 个字符（完整值在 Tooltip），容器窄时整列收起（Progressive Columns）。 */
-const SHOW_UA_FROM = "hidden @min-[62rem]:table-cell";
+ * 前 10 个字符（完整值在 Tooltip），68rem 起才显示，1440 视口下让给模型主列。 */
+const SHOW_UA_FROM = "hidden @min-[68rem]:table-cell";
 
 function formatTokenPair(input: number, output: number): string {
   return `${formatTokenCount(input)} / ${formatTokenCount(output)}`;
@@ -471,22 +474,22 @@ export default function AuditPage() {
               <Table fit>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[10.5rem]">{t("audit.time")}</TableHead>
+                    <TableHead className="w-[11rem]">{t("audit.time")}</TableHead>
                     {/* 主列不声明宽度：fixed 布局把剩余空间全给模型列（端点/协议并入次行） */}
                     <TableHead>{t("audit.filter_model")}</TableHead>
-                    <TableHead className="w-[4rem]">{t("audit.user_name")}</TableHead>
-                    <TableHead className="w-[4rem]">{t("audit.filter_status")}</TableHead>
+                    <TableHead className="w-[5.5rem]">{t("audit.user_name")}</TableHead>
+                    <TableHead className="w-[6.5rem]">{t("audit.filter_status")}</TableHead>
                     {/* 8.5rem 是 token 列的下限：cache 行 "ca: 4.1K / 113.5K" 再窄就被裁掉 */}
                     <TableHead className="w-[8.5rem] text-right">{t("audit.tokens")}</TableHead>
-                    <TableHead className="w-[5rem] text-right">{t("audit.latency")}</TableHead>
+                    <TableHead className="w-[6.5rem] text-right">{t("audit.latency")}</TableHead>
                     {/* 5.5rem：`$0.000492` 在 5rem 下溢出 1px 被静默裁掉（列宽预算见 docs/agents/web-frontend.md） */}
                     <TableHead className="w-[5.5rem] text-right">
                       {t("audit.cost.column")}
                     </TableHead>
-                    <TableHead className={cn("w-[6rem]", SHOW_UA_FROM)}>
+                    <TableHead className={cn("w-[6.25rem]", SHOW_UA_FROM)}>
                       {t("audit.useragent")}
                     </TableHead>
-                    <TableHead className="w-[4.5rem]">{t("audit.copy_traceid")}</TableHead>
+                    <TableHead className="w-[5.5rem]">{t("audit.copy_traceid")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
