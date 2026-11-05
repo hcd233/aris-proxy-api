@@ -20,6 +20,7 @@ import { useT } from "@/lib/i18n";
 import type { UnifiedToolCall } from "@/lib/types";
 import { lookupToolResult, type ToolResultInfo } from "./content-extract";
 import { HighlightedCode } from "./highlighted-code";
+import { MultimodalParts } from "./multimodal-parts";
 import { LONG_OUTPUT_LINES, countLines, formatToolPayload, previewFirstArg } from "./tool-payload";
 
 /**
@@ -108,6 +109,11 @@ function ToolCallRow({ call, result }: { call: UnifiedToolCall; result?: ToolRes
             containerClassName={TOOL_IO_SECTION}
           />
           <Separator className="bg-input moonshot:bg-border" />
+          {result.parts && (
+            <div className={TOOL_IO_SECTION}>
+              <MultimodalParts parts={result.parts} />
+            </div>
+          )}
           {output.code ? (
             <HighlightedCode
               code={output.code}
@@ -118,7 +124,7 @@ function ToolCallRow({ call, result }: { call: UnifiedToolCall; result?: ToolRes
               className="max-h-64"
               containerClassName={TOOL_IO_SECTION}
             />
-          ) : (
+          ) : result.parts ? null : (
             <p className="px-2.5 py-2 text-xs text-muted-foreground">
               {t("tool_call.empty_output")}
             </p>

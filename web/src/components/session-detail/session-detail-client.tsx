@@ -25,6 +25,7 @@ import { DeleteIconButton } from "@/components/delete-button";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { SessionHistoryList } from "./session-history-list";
 import { SessionTranscript } from "./session-transcript";
+import { SessionImageProvider } from "@/components/chat/session-image-context";
 import { ScoreDots } from "./score-dots";
 import { ToolsRail, type FetchToolsPage } from "./tools-rail";
 import { ReadingLayout } from "@/components/shared/reading-layout";
@@ -434,13 +435,15 @@ export default function SessionDetailClient({ sessionId }: { sessionId: number }
   );
 
   const readingContent = (
-    <SessionTranscript
-      messages={messages}
-      hasMore={messagesList.hasMore}
-      sentinelRef={messagesSentinelRef}
-      emptyText={t("session_detail.no_messages")}
-      endText={t("session_detail.end_of_conversation")}
-    />
+    <SessionImageProvider sessionId={sessionId}>
+      <SessionTranscript
+        messages={messages}
+        hasMore={messagesList.hasMore}
+        sentinelRef={messagesSentinelRef}
+        emptyText={t("session_detail.no_messages")}
+        endText={t("session_detail.end_of_conversation")}
+      />
+    </SessionImageProvider>
   );
 
   const toolsPanelContent = <ToolsRail fetchPage={fetchToolsPage} enabled={toolsListEnabled} />;

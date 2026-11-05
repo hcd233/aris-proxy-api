@@ -49,6 +49,7 @@ import type {
   ListDemoSessionsRsp,
   ListModelsPageRsp,
   ListSessionMessagesRsp,
+  GetSessionImageRsp,
   ListSessionToolsRsp,
   ListSessionsRsp,
   ListShareMessagesRsp,
@@ -410,6 +411,12 @@ class ApiClient {
   ): Promise<ListSessionMessagesRsp> {
     return this.request<ListSessionMessagesRsp>(
       `${API_PREFIX}/session/message/list?id=${sessionId}&page=${page}&pageSize=${pageSize}`,
+    );
+  }
+
+  async getSessionImage(sessionId: number, sha256: string): Promise<GetSessionImageRsp> {
+    return this.request<GetSessionImageRsp>(
+      `${API_PREFIX}/session/image?id=${sessionId}&sha256=${encodeURIComponent(sha256)}`,
     );
   }
 
