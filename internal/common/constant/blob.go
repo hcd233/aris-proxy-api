@@ -46,6 +46,10 @@ const (
 	BlobMigrateDefaultBatchSize = 200
 	// BlobMigrateLikePattern 存量迁移预过滤：sonic 序列化后含 data URI 图片的 message
 	BlobMigrateLikePattern = `%"image_url":"data:%`
+	// DBConditionBlobMigrateCandidate 迁移游标条件（不带 deleted_at，软删行一并处理）
+	DBConditionBlobMigrateCandidate = "id > ? AND message LIKE ?"
+	// TableMessages messages 表名
+	TableMessages = "messages"
 
 	// ShareGPTImagePlaceholder ShareGPT 多模态图片占位符（LLaMA-Factory 约定）
 	ShareGPTImagePlaceholder = "<image>"
@@ -85,6 +89,8 @@ const (
 var (
 	// BlobMetaFields 不含 data 的元数据列
 	BlobMetaFields = []string{FieldID, FieldSHA256, FieldStatus, FieldStorageKey, FieldMime, FieldSize, FieldWidth, FieldHeight}
+	// MessageMigrateFields 迁移读取 message 行的列
+	MessageMigrateFields = []string{FieldID, FieldModelID, FieldMessage, FieldCheckSum}
 	// BlobRetryableStatuses 允许被改写的状态
 	BlobRetryableStatuses = []string{enum.BlobStatusPending, enum.BlobStatusFailed}
 	// BlobMimeExtensions 白名单图片 MIME → 对象扩展名
