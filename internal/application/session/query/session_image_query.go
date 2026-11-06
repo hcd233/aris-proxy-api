@@ -36,6 +36,14 @@ func NewGetSessionImageHandler(metaQuery sessionport.GetSessionMetaByUserHandler
 //
 //	权限与消息列表接口一致（owner / admin / demo 白名单）；图片必须被该会话的消息引用，
 //	防止用自己的会话 ID 探测别人的图片。
+//
+//	@receiver h *getSessionImageHandler
+//	@param ctx context.Context
+//	@param q sessionport.GetSessionImageQuery
+//	@return *sessionport.SessionImageView
+//	@return error
+//	@author centonhuang
+//	@update 2026-11-06 10:00:00
 func (h *getSessionImageHandler) Handle(ctx context.Context, q sessionport.GetSessionImageQuery) (*sessionport.SessionImageView, error) {
 	if !vo.IsSHA256Hex(q.SHA256) {
 		return nil, ierr.New(ierr.ErrValidation, "invalid image sha256")
@@ -70,7 +78,8 @@ func (h *getSessionImageHandler) Handle(ctx context.Context, q sessionport.GetSe
 		URL: view.URL, Mime: view.Mime, Size: view.Size,
 		Width: view.Width, Height: view.Height, ExpiresAt: view.ExpiresAt,
 	}
-	if out.URL == "" && strings.HasPrefix(view.Mime, constant.MIMETypeImagePrefix) {
+	// 无 URL 也无字节（unprocessable）或字节不是图片时不给 dataUrl，前端显示"不可预览"
+	if out.URL == "" && len(view.Data) > 0 && strings.HasPrefix(view.Mime, constant.MIMETypeImagePrefix) {
 		out.DataURL = fmt.Sprintf(constant.DataURLTemplate, view.Mime, base64.StdEncoding.EncodeToString(view.Data))
 	}
 	return out, nil

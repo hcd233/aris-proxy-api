@@ -25,6 +25,8 @@ type RetryStats struct{ Uploaded, Pending, Failed int64 }
 // RetryUploads 补传一批到期的 pending 图片
 //
 //	先取 ID 再逐行读 data，避免一次把整批大字段读进内存；单行出错只影响该行。
+//	pending 行可能是上传池来不及处理时直接落库的原图，所以上传前统一再压缩一次
+//	（已是存储版本的字节压缩结果不变）。
 //
 //	@param ctx context.Context
 //	@param db *gorm.DB
@@ -68,24 +70,37 @@ func retryOne(ctx context.Context, db *gorm.DB, store blob.ObjectStore, id uint,
 		log.Error("[BlobRetry] Failed to load blob", zap.Uint("id", id), zap.Error(err))
 		return false
 	}
-	if putErr := putRow(ctx, store, row); putErr != nil {
+	if len(row.Data) == 0 {
+		recordFailure(ctx, db, row, ierr.New(ierr.ErrInternal, "blob data missing"), now)
+		return false
+	}
+	res := Compress(row.Data)
+	if res.Unprocessable {
+		log.Warn("[BlobRetry] Blob cannot be compressed under limit, marked unprocessable", zap.Uint("id", id))
+		if err := blobDAO.MarkUnprocessable(db, id); err != nil {
+			log.Error("[BlobRetry] Failed to mark blob unprocessable", zap.Uint("id", id), zap.Error(err))
+		}
+		return false
+	}
+	meta := dao.BlobUploadedMeta{
+		StorageKey: StorageKey(row.SHA256, res.Mime),
+		Mime:       res.Mime,
+		Size:       int64(len(res.Data)),
+		Width:      res.Width,
+		Height:     res.Height,
+	}
+	putCtx, cancel := context.WithTimeout(ctx, constant.BlobPutTimeout)
+	putErr := store.Put(putCtx, meta.StorageKey, meta.Mime, res.Data)
+	cancel()
+	if putErr != nil {
 		recordFailure(ctx, db, row, putErr, now)
 		return false
 	}
-	if err := blobDAO.MarkUploaded(db, id); err != nil {
+	if err := blobDAO.MarkUploaded(db, id, meta); err != nil {
 		log.Error("[BlobRetry] Failed to mark blob uploaded", zap.Uint("id", id), zap.Error(err))
 		return false
 	}
 	return true
-}
-
-func putRow(ctx context.Context, store blob.ObjectStore, row *dbmodel.Blob) error {
-	if len(row.Data) == 0 {
-		return ierr.New(ierr.ErrInternal, "blob data missing")
-	}
-	putCtx, cancel := context.WithTimeout(ctx, constant.BlobPutTimeout)
-	defer cancel()
-	return store.Put(putCtx, row.StorageKey, row.Mime, row.Data)
 }
 
 // recordFailure 按退避推后重试；达到上限转 failed

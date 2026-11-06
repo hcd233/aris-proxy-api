@@ -4,9 +4,7 @@ package query
 import (
 	"bufio"
 	"context"
-	"fmt"
 
-	"github.com/bytedance/sonic"
 	"github.com/samber/lo"
 	"go.uber.org/zap"
 
@@ -19,7 +17,6 @@ import (
 	"github.com/hcd233/aris-mass/internal/domain/apikey"
 	"github.com/hcd233/aris-mass/internal/domain/blob"
 	"github.com/hcd233/aris-mass/internal/domain/session"
-	"github.com/hcd233/aris-mass/internal/dto"
 	"github.com/hcd233/aris-mass/internal/logger"
 )
 
@@ -79,81 +76,55 @@ func NewExportDatasetHandler(readRepo session.SessionReadRepository, apiKeyRepo 
 	return &exportDatasetHandler{readRepo: readRepo, apiKeyRepo: apiKeyRepo, images: images}
 }
 
-func (h *exportDatasetHandler) Handle(ctx context.Context, p datasetport.ExportParams, w *bufio.Writer) error {
-	log := logger.WithCtx(ctx)
-
+func (h *exportDatasetHandler) Handle(ctx context.Context, p datasetport.ExportParams) (*datasetport.ExportStream, error) {
 	f, err := h.buildFilter(ctx, p)
 	if err != nil {
-		h.writeSSEError(w, err.Error())
-		return err
+		return nil, err
 	}
-
 	rows, err := h.readRepo.ListSessionsForExport(ctx, *f)
 	if err != nil {
-		log.Error("[DatasetExport] Failed to list sessions for export", zap.Error(err))
-		h.writeSSEError(w, err.Error())
-		return err
+		logger.WithCtx(ctx).Error("[DatasetExport] Failed to list sessions for export", zap.Error(err))
+		return nil, err
 	}
-
-	total := len(rows)
-	if total == 0 {
-		h.writeSSEError(w, constant.DatasetExportNoMatchError)
-		return ierr.New(ierr.ErrDataNotExists, constant.DatasetExportNoMatchError)
+	if len(rows) == 0 {
+		return nil, ierr.New(ierr.ErrDataNotExists, constant.DatasetExportNoMatchError)
 	}
+	return &datasetport.ExportStream{
+		Total: len(rows),
+		Write: func(w *bufio.Writer) error { return h.write(ctx, rows, w) },
+	}, nil
+}
 
-	allMsgIDs := lo.Uniq(lo.FlatMap(rows, func(r *session.ExportSessionRow, _ int) []uint { return r.MessageIDs }))
-	allToolIDs := lo.Uniq(lo.FlatMap(rows, func(r *session.ExportSessionRow, _ int) []uint { return r.ToolIDs }))
-
-	messages, err := h.readRepo.FindMessagesByIDs(ctx, allMsgIDs)
-	if err != nil {
-		log.Error("[DatasetExport] Failed to batch get messages", zap.Error(err))
-		h.writeSSEError(w, err.Error())
-		return err
-	}
-	msgMap := lo.SliceToMap(messages, func(m *session.MessageDetailProjection) (uint, *session.MessageDetailProjection) {
-		return m.ID, m
-	})
-
-	var tools []*session.ToolDetailProjection
-	if len(allToolIDs) > 0 {
-		toolRecords, toolErr := h.readRepo.FindToolsByIDs(ctx, allToolIDs)
-		if toolErr != nil {
-			log.Error("[DatasetExport] Failed to batch get tools", zap.Error(err))
-			h.writeSSEError(w, toolErr.Error())
-			return toolErr
-		}
-		tools = toolRecords
-	}
-	toolMap := lo.SliceToMap(tools, func(t *session.ToolDetailProjection) (uint, *session.ToolDetailProjection) {
-		return t.ID, t
-	})
-
-	h.writeSSEStart(w, total)
-
+// write 按批读取会话的 message/tool，逐行写出 ShareGPT JSON
+//
+//	每批只把该批会话的 message 读进内存，写完即 Flush，内存占用与总导出量无关。
+func (h *exportDatasetHandler) write(ctx context.Context, rows []*session.ExportSessionRow, w *bufio.Writer) error {
 	images := NewExportImageResolver(ctx, h.images)
-	for i, row := range rows {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
+	for _, chunk := range lo.Chunk(rows, constant.DatasetExportBatchSessions) {
+		if err := ctx.Err(); err != nil {
+			return err
 		}
-
-		conv := buildConversation(row, msgMap, toolMap, images.Resolve)
-		line, marshalErr := converter.MarshalJSONLine(conv)
-		if marshalErr != nil {
-			log.Error("[DatasetExport] Failed to marshal conversation", zap.Error(marshalErr), zap.Uint("sessionID", row.ID))
-			continue
+		msgMap, toolMap, err := h.loadChunk(ctx, chunk)
+		if err != nil {
+			return err
 		}
-
-		current := i + 1
-		progress := current * constant.DatasetExportProgressFull / total
-		h.writeSSEData(w, current, total, progress, string(line))
+		for _, row := range chunk {
+			images.BeginSession()
+			line, err := converter.MarshalJSONLine(buildConversation(row, msgMap, toolMap, images.Resolve))
+			if err != nil {
+				return ierr.Wrapf(ierr.ErrInternal, err, "marshal session %d", row.ID)
+			}
+			if _, err := w.Write(append(line, '\n')); err != nil {
+				return ierr.Wrap(ierr.ErrInternal, err, "write export line")
+			}
+		}
+		if err := w.Flush(); err != nil {
+			return ierr.Wrap(ierr.ErrInternal, err, "flush export")
+		}
 	}
-
-	if failed := images.Failed(); failed > 0 {
-		log.Warn("[DatasetExport] Some images could not be exported", zap.Int("failed", failed))
+	if failed, skipped := images.Failed(), images.Skipped(); failed > 0 || skipped > 0 {
+		logger.WithCtx(ctx).Warn("[DatasetExport] Some images were not exported", zap.Int("failed", failed), zap.Int("skippedOverBudget", skipped))
 	}
-	h.writeSSEDone(w, total)
 	return nil
 }
 
@@ -177,34 +148,31 @@ func (h *exportDatasetHandler) buildFilter(ctx context.Context, p datasetport.Ex
 	return f, nil
 }
 
-func (h *exportDatasetHandler) writeSSEStart(w *bufio.Writer, total int) {
-	payload := lo.Must1(sonic.Marshal(&dto.DatasetExportSSEStart{TotalSessions: total}))
-	h.writeSSEEvent(w, constant.DatasetExportEventStart, payload)
-}
+// loadChunk 批量读取一批会话引用的 message 与 tool
+func (h *exportDatasetHandler) loadChunk(ctx context.Context, rows []*session.ExportSessionRow) (msgMap map[uint]*session.MessageDetailProjection, toolMap map[uint]*session.ToolDetailProjection, err error) {
+	log := logger.WithCtx(ctx)
+	msgIDs := lo.Uniq(lo.FlatMap(rows, func(r *session.ExportSessionRow, _ int) []uint { return r.MessageIDs }))
+	messages, err := h.readRepo.FindMessagesByIDs(ctx, msgIDs)
+	if err != nil {
+		log.Error("[DatasetExport] Failed to batch get messages", zap.Error(err))
+		return nil, nil, err
+	}
+	msgMap = lo.SliceToMap(messages, func(m *session.MessageDetailProjection) (uint, *session.MessageDetailProjection) {
+		return m.ID, m
+	})
 
-func (h *exportDatasetHandler) writeSSEData(w *bufio.Writer, current, total, progress int, jsonLine string) {
-	payload := lo.Must1(sonic.Marshal(&dto.DatasetExportSSEData{
-		Current:  current,
-		Total:    total,
-		Progress: progress,
-		JSON:     jsonLine,
-	}))
-	h.writeSSEEvent(w, constant.DatasetExportEventData, payload)
-}
-
-func (h *exportDatasetHandler) writeSSEDone(w *bufio.Writer, total int) {
-	payload := lo.Must1(sonic.Marshal(&dto.DatasetExportSSEStart{TotalSessions: total}))
-	h.writeSSEEvent(w, constant.DatasetExportEventDone, payload)
-}
-
-func (h *exportDatasetHandler) writeSSEError(w *bufio.Writer, message string) {
-	payload := lo.Must1(sonic.Marshal(&dto.DatasetExportSSEError{Message: message}))
-	h.writeSSEEvent(w, constant.DatasetExportEventError, payload)
-}
-
-func (h *exportDatasetHandler) writeSSEEvent(w *bufio.Writer, event string, payload []byte) {
-	_, _ = fmt.Fprintf(w, constant.SSEEventFrameTemplate, event, payload) //nolint:errcheck // best-effort write
-	_ = w.Flush()                                                         //nolint:errcheck // best-effort flush
+	toolIDs := lo.Uniq(lo.FlatMap(rows, func(r *session.ExportSessionRow, _ int) []uint { return r.ToolIDs }))
+	var tools []*session.ToolDetailProjection
+	if len(toolIDs) > 0 {
+		if tools, err = h.readRepo.FindToolsByIDs(ctx, toolIDs); err != nil {
+			log.Error("[DatasetExport] Failed to batch get tools", zap.Error(err))
+			return nil, nil, err
+		}
+	}
+	toolMap = lo.SliceToMap(tools, func(t *session.ToolDetailProjection) (uint, *session.ToolDetailProjection) {
+		return t.ID, t
+	})
+	return msgMap, toolMap, nil
 }
 
 func (h *previewDatasetHandler) buildFilter(ctx context.Context, p datasetport.ExportParams) (*session.ExportFilter, error) {

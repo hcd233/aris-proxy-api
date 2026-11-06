@@ -16,7 +16,13 @@ type fakeStore struct {
 	putCalls   int
 	failPut    bool
 	blockPut   bool
+	failDelete bool
+	deletes    []string
 	presignErr error
+	// gate 非 nil 时 Put 先等它关闭再执行，用于让上传池的 worker 停在处理中；
+	// entered 非 nil 时 Put 进入后先发一次信号，测试据此确认 worker 已开始处理
+	gate    chan struct{}
+	entered chan struct{}
 }
 
 func newFakeStore() *fakeStore {
@@ -26,8 +32,14 @@ func newFakeStore() *fakeStore {
 func (f *fakeStore) Put(ctx context.Context, key, _ string, data []byte) error {
 	f.mu.Lock()
 	f.putCalls++
-	block, fail := f.blockPut, f.failPut
+	block, fail, gate, entered := f.blockPut, f.failPut, f.gate, f.entered
 	f.mu.Unlock()
+	if entered != nil {
+		entered <- struct{}{}
+	}
+	if gate != nil {
+		<-gate
+	}
 	if block {
 		<-ctx.Done()
 		return ierr.Wrap(ierr.ErrInternal, ctx.Err(), "fake put blocked")
@@ -50,6 +62,17 @@ func (f *fakeStore) Get(_ context.Context, key string) ([]byte, error) {
 		return nil, ierr.New(ierr.ErrDataNotExists, "fake object missing")
 	}
 	return data, nil
+}
+
+func (f *fakeStore) Delete(_ context.Context, key string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.failDelete {
+		return ierr.New(ierr.ErrInternal, "fake delete failure")
+	}
+	f.deletes = append(f.deletes, key)
+	delete(f.objects, key)
+	return nil
 }
 
 func (f *fakeStore) PresignGet(_ context.Context, key string, _ time.Duration) (string, error) {

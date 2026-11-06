@@ -39,8 +39,8 @@
 - **分享页**不提供图片查看（用户决定只做详情页）。分享页和详情页共用消息组件，引用形态在分享页显示为不可点击的卡片。
 - 外部 http/https 图片链接原样保留，不抓取不转存（抓取用户提供的 URL 有 SSRF 风险，而且这类图本来也不占库空间）。
 - `input_audio`、`file`、Anthropic `document` 等其他附件本次不处理。注意：Anthropic 的 `document` / `search_result` / `container_upload` 块目前同样会让整轮对话不落库，这是既有缺陷，本次不修。
-- 现有 `internal/infrastructure/storage` 下的 audio 用户目录（`ObjDAO`、COS SDK）不重构、不改动。
-- 不做孤儿对象回收（message 被删后图片不会跟着删），以后单独做。
+- ~~现有 `internal/infrastructure/storage` 下的 audio 用户目录（`ObjDAO`、COS SDK）不重构、不改动。~~（2026-11-06 已整体删除，见第 14 节）
+- ~~不做孤儿对象回收（message 被删后图片不会跟着删），以后单独做。~~（2026-11-06 已在软删清理任务中实现，见第 14 节）
 - 不保留原图。
 
 **反目标**（技术上能跑，但出现即视为失败）
@@ -288,3 +288,24 @@ Redis 里的 message 内容缓存（TTL 60 分钟）不需要主动失效：迁�
 
 - 常量名、函数内部结构（遵循仓库约定）。
 - 单元测试 fixture 的具体构造。
+
+## 14. 2026-11-06 CR 修订
+
+本节覆盖前文中与之冲突的描述。
+
+1. **伪造引用（安全）**：原实现只外置 `data:` 图片，客户端自带的 `aris-blob:sha256:<他人图片>` 会原样入库；而图片接口用 `message LIKE '%aris-blob:sha256:<hex>%'` 判断"会话引用了该图"，文本里出现这串字符也能通过。修订：
+   - 落库前 `vo.NeutralizeImageRefs` 把所有 `aris-blob:` 前缀的 image_url 部分降级为文本部分，库里的引用只能由外置器生成。
+   - 判断引用改为两步：`LIKE '%"image_url":"<完整引用>"%'` 预过滤（不解析 JSON，sqlite/PG 通用），再在 Go 里反序列化，只认 `type=image_url` 且值相等的部分。不直接用 jsonb：`messages.message` 是 text 列，按字段判断要逐行 `::jsonb` 解析，且 sqlite 测试库不支持。
+2. **图片上传池**：第 5.2 节改为由 `blobstore.Uploader` 处理新图。
+   - 服务进程使用独立 pond 池（`POOL_BLOB_WORKERS` 默认 2，`POOL_BLOB_QUEUE_SIZE` 默认 200），与消息/审计落库的 store 池隔离。落库任务不再等待压缩和上传：新图立即替换为引用（`image_mime`/`image_size` 取原图值），图片本体在内存中排队。
+   - 池中处理：压缩 → PUT 一次 → 成功写 `uploaded` 行；失败写 `pending` 行（压缩后字节，attempts=1）；`unprocessable` 照旧。
+   - 队列满、内存中原图总字节超过 64MB 或进程退出排空时，直接把**原图**写成 `pending` 行（attempts=0，立即到期），由重试任务压缩后补传；重试任务上传成功时写回压缩后的 mime/size/宽高/storage_key，压缩后仍超限则转 `unprocessable`。
+   - 同一 sha 在内存中排队或处理时，后续提交直接复用，不重复处理。
+   - 退出顺序：store 池排空 → 图片池排空（剩余图片不再压缩上传，直接落 pending）→ agent 池。
+   - 已知代价：进程被强杀（OOM/SIGKILL）时内存中未处理的图片会丢失，message 中的引用变为悬空（接口返回"图片不存在"）。这放宽了第 2 节"图片丢失"反目标，用户已确认。
+   - `object migrate` 使用同步模式（不经过池），保证 message 改写前 blobs 行已存在。第 5.2 节的 60s 任务总超时随之删除。
+3. **数据集导出改为 NDJSON 流**：`GET /dataset/export` 返回 `application/x-ndjson`，每行一条 ShareGPT JSON，`X-Total-Sessions` 头给出匹配总数。服务端每批读 50 个会话的 message/tool，写完即 Flush；无匹配、鉴权失败等在流开始前以普通 JSON 业务错误返回。客户端以收到的行数少于总数判定中断。前端收集原始字节块合成 Blob，不再拼字符串。单会话内联的 data URI 总量上限 32MB（超出的图片连同 `<image>` 占位符跳过），跨会话缓存上限 64MB 降到 16MB。
+4. **生命周期**：软删清理 cron 在硬删孤儿 message 前收集它们引用的图片，删除后对其中不再出现在任何 message（含软删行，子串匹配，宁多留不误删）中的图片删除对象与 blobs 行；对象删除失败或未配置对象存储时保留 `uploaded` 行。与在线写入之间无锁，秒级窗口内复用同一张图的新 message 可能丢图（已用 ponytail 注释标记）。
+5. **unprocessable 不作预览**：图片接口对 `unprocessable` 行只返回元数据，不返回 dataUrl（原图可能远超 2MB），前端显示"图片过大，无法预览"；导出照常内联。
+6. **audio 目录与旧对象存储删除**：OAuth 新用户注册时创建空 `audio/<userID>/` 目录是项目模板遗留，`ObjDAO` 的读写接口无调用方，且建目录失败会让登录失败。已删除 `internal/infrastructure/storage`、`AudioDirCreator`、`object bucket create` 命令、COS/MinIO 配置项与 `cos-go-sdk-v5` 依赖。新 objectstore 改为进程内单例 `objectstore.Default()`，fx、cron、CLI 共用。配置键改为点号风格（`object.storage.access.key` 等），环境变量名不变。
+7. 其他：`TruncateError` 按字符截断；`s3Store.Get` 限读 2MB+1 字节；通用常量从 `constant/blob.go` 归位到 `sql.go`/`database.go`/`http.go`/`string.go`；格式预览占位文案改为英文 `<omitted N KB>`。

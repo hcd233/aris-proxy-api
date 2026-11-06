@@ -40,12 +40,26 @@ type PreviewDatasetHandler interface {
 	Handle(ctx context.Context, p ExportParams) (*PreviewResult, error)
 }
 
-// ExportDatasetHandler 流式导出处理器（SSE）
+// ExportStream 一次流式导出
+//
+//	Total 在开始写之前即已确定（匹配的会话数）；Write 把 ShareGPT JSONL 按会话分批读取、逐行写入 w，
+//	中途出错即返回，客户端以收到的行数少于 Total 判定导出不完整。
 //
 //	@author centonhuang
-//	@update 2026-07-06 10:00:00
+//	@update 2026-11-06 10:00:00
+type ExportStream struct {
+	Total int
+	Write func(w *bufio.Writer) error
+}
+
+// ExportDatasetHandler 流式导出处理器（NDJSON）
+//
+//	筛选、鉴权与"无匹配会话"等错误在返回 ExportStream 之前给出，便于以普通 JSON 错误响应。
+//
+//	@author centonhuang
+//	@update 2026-11-06 10:00:00
 type ExportDatasetHandler interface {
-	Handle(ctx context.Context, p ExportParams, w *bufio.Writer) error
+	Handle(ctx context.Context, p ExportParams) (*ExportStream, error)
 }
 
 // FormatPreviewResult 单条会话格式预览结果

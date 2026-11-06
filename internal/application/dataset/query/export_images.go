@@ -16,14 +16,19 @@ import (
 
 // ExportImageResolver 导出时把图片内联为 data URI，一次导出内按 sha256 缓存
 //
+//	单个会话内联的 data URI 总字节受 BlobExportSessionMaxBytes 限制，超出的图片连同占位符一起跳过，
+//	避免一行 JSON 把内存撑爆。
+//
 //	@author centonhuang
-//	@update 2026-11-05 10:00:00
+//	@update 2026-11-06 10:00:00
 type ExportImageResolver struct {
-	ctx    context.Context //nolint:containedctx // 解析器生命周期即一次导出请求
-	reader blob.ImageReader
-	cache  map[string]string
-	used   int
-	failed int
+	ctx          context.Context //nolint:containedctx // 解析器生命周期即一次导出请求
+	reader       blob.ImageReader
+	cache        map[string]string
+	used         int
+	sessionBytes int
+	failed       int
+	skipped      int
 }
 
 // NewExportImageResolver 构造导出图片解析器
@@ -37,14 +42,31 @@ func NewExportImageResolver(ctx context.Context, reader blob.ImageReader) *Expor
 	return &ExportImageResolver{ctx: ctx, reader: reader, cache: map[string]string{}}
 }
 
-// Resolve 引用形态取回字节内联；data URI 与外部 URL 原样输出；取图失败跳过
+// BeginSession 开始导出一个新会话，重置单会话图片字节预算
+//
+//	@receiver r *ExportImageResolver
+//	@author centonhuang
+//	@update 2026-11-06 10:00:00
+func (r *ExportImageResolver) BeginSession() { r.sessionBytes = 0 }
+
+// Resolve 引用形态取回字节内联；data URI 与外部 URL 原样输出；取图失败或超出会话预算时跳过
+//
+//	@receiver r *ExportImageResolver
+//	@param part *vo.UnifiedContentPart
+//	@return string
+//	@return bool
+//	@author centonhuang
+//	@update 2026-11-06 10:00:00
 func (r *ExportImageResolver) Resolve(part *vo.UnifiedContentPart) (string, bool) {
 	sha, isRef := vo.ParseImageRef(part.ImageURL)
 	if !isRef {
-		return part.ImageURL, part.ImageURL != ""
+		if !strings.HasPrefix(part.ImageURL, constant.DataURLPrefix) {
+			return part.ImageURL, part.ImageURL != ""
+		}
+		return r.charge(part.ImageURL)
 	}
 	if v, hit := r.cache[sha]; hit {
-		return v, true
+		return r.charge(v)
 	}
 	if r.reader == nil {
 		r.failed++
@@ -66,11 +88,34 @@ func (r *ExportImageResolver) Resolve(part *vo.UnifiedContentPart) (string, bool
 		r.cache[sha] = v
 		r.used += len(v)
 	}
+	return r.charge(v)
+}
+
+// charge 把一张内联图计入当前会话预算；超出时跳过
+func (r *ExportImageResolver) charge(v string) (string, bool) {
+	if r.sessionBytes+len(v) > constant.BlobExportSessionMaxBytes {
+		r.skipped++
+		return "", false
+	}
+	r.sessionBytes += len(v)
 	return v, true
 }
 
 // Failed 本次导出中取图失败的次数
+//
+//	@receiver r *ExportImageResolver
+//	@return int
+//	@author centonhuang
+//	@update 2026-11-05 10:00:00
 func (r *ExportImageResolver) Failed() int { return r.failed }
+
+// Skipped 本次导出中因超出单会话预算被跳过的图片数
+//
+//	@receiver r *ExportImageResolver
+//	@return int
+//	@author centonhuang
+//	@update 2026-11-06 10:00:00
+func (r *ExportImageResolver) Skipped() int { return r.skipped }
 
 // PreviewImageResolver 格式预览不取图，只显示类型与大小
 //

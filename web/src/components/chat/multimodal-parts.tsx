@@ -43,7 +43,8 @@ function PartImage({ url }: { url: string }) {
 }
 
 type BlobImageState =
-  { status: "idle" | "loading" | "failed" } | { status: "ready"; src: string; href?: string };
+  | { status: "idle" | "loading" | "failed" | "no_preview" }
+  | { status: "ready"; src: string; href?: string };
 
 /**
  * 已外置图片：默认只显示「类型 · 大小」占位卡片，点击后才请求接口并加载图片。
@@ -55,12 +56,21 @@ function PartBlobImage({ sha, mime, size }: { sha: string; mime?: string; size?:
   const [state, setState] = useState<BlobImageState>({ status: "idle" });
 
   const load = async () => {
-    if (sessionId === null || state.status === "loading") return;
+    if (sessionId === null || state.status === "loading" || state.status === "no_preview") return;
     setState({ status: "loading" });
     try {
       const rsp = await api.getSessionImage(sessionId, sha);
-      const src = rsp.image ? pickImageSrc(rsp.image) : null;
-      setState(src ? { status: "ready", src, href: rsp.image?.url } : { status: "failed" });
+      if (!rsp.image) {
+        setState({ status: "failed" });
+        return;
+      }
+      // 接口正常返回但既无 url 也无 dataUrl：服务端判定不可预览（如超过存储上限的原图）
+      if (!rsp.image.url && !rsp.image.dataUrl) {
+        setState({ status: "no_preview" });
+        return;
+      }
+      const src = pickImageSrc(rsp.image);
+      setState(src ? { status: "ready", src, href: rsp.image.url } : { status: "failed" });
     } catch {
       setState({ status: "failed" });
     }
@@ -96,8 +106,11 @@ function PartBlobImage({ sha, mime, size }: { sha: string; mime?: string; size?:
         ? t("chat.image_loading")
         : state.status === "failed"
           ? t("chat.image_load_failed")
-          : t("chat.image_click_to_view");
-  const meta = formatImageMeta(mime, size);
+          : state.status === "no_preview"
+            ? t("chat.image_no_preview")
+            : t("chat.image_click_to_view");
+  const meta = formatImageMeta(mime, size) || t("chat.image_untitled");
+  const clickable = sessionId !== null && state.status !== "no_preview";
 
   return (
     <Attachment>
@@ -106,9 +119,9 @@ function PartBlobImage({ sha, mime, size }: { sha: string; mime?: string; size?:
       </AttachmentMedia>
       <AttachmentContent>
         <TooltipRoot>
-          <TooltipTrigger render={<AttachmentTitle>{meta || "Image"}</AttachmentTitle>} />
+          <TooltipTrigger render={<AttachmentTitle>{meta}</AttachmentTitle>} />
           <TooltipContent side="top" className="max-w-xs break-all">
-            {meta || "Image"}
+            {meta}
           </TooltipContent>
         </TooltipRoot>
         <TooltipRoot>
@@ -118,7 +131,7 @@ function PartBlobImage({ sha, mime, size }: { sha: string; mime?: string; size?:
           </TooltipContent>
         </TooltipRoot>
       </AttachmentContent>
-      {sessionId !== null && (
+      {clickable && (
         <AttachmentTrigger onClick={load} disabled={state.status === "loading"} aria-label={hint} />
       )}
     </Attachment>

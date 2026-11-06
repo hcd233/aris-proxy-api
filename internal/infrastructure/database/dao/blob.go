@@ -73,13 +73,54 @@ func (dao *BlobDAO) ListDueRetryIDs(db *gorm.DB, now time.Time, limit int) ([]ui
 	return ids, err
 }
 
-// MarkUploaded 上传成功：状态改为 uploaded 并清空 data（只作用于 pending/failed）
-func (dao *BlobDAO) MarkUploaded(db *gorm.DB, id uint) error {
+// BlobUploadedMeta 上传成功时写回的存储版本元数据
+//
+//	@author centonhuang
+//	@update 2026-11-06 10:00:00
+type BlobUploadedMeta struct {
+	StorageKey, Mime string
+	Size             int64
+	Width, Height    int
+}
+
+// MarkUploaded 上传成功：状态改为 uploaded、清空 data 并写回存储版本元数据（只作用于 pending/failed）
+//
+//	@author centonhuang
+//	@update 2026-11-06 10:00:00
+func (dao *BlobDAO) MarkUploaded(db *gorm.DB, id uint, meta BlobUploadedMeta) error {
 	return retryableRow(db, id).Updates(map[string]any{
-		constant.FieldStatus:    enum.BlobStatusUploaded,
-		constant.FieldBlobData:  nil,
+		constant.FieldStatus:     enum.BlobStatusUploaded,
+		constant.FieldBlobData:   nil,
+		constant.FieldStorageKey: meta.StorageKey,
+		constant.FieldMime:       meta.Mime,
+		constant.FieldSize:       meta.Size,
+		constant.FieldWidth:      meta.Width,
+		constant.FieldHeight:     meta.Height,
+		constant.FieldUpdatedAt:  time.Now().UTC(),
+	}).Error
+}
+
+// MarkUnprocessable 补传时发现无法压缩到上限内：转 unprocessable，data 保留，不再重试
+//
+//	@author centonhuang
+//	@update 2026-11-06 10:00:00
+func (dao *BlobDAO) MarkUnprocessable(db *gorm.DB, id uint) error {
+	return retryableRow(db, id).Updates(map[string]any{
+		constant.FieldStatus:    enum.BlobStatusUnprocessable,
 		constant.FieldUpdatedAt: time.Now().UTC(),
 	}).Error
+}
+
+// DeleteByIDs 硬删除指定行
+//
+//	@author centonhuang
+//	@update 2026-11-06 10:00:00
+func (dao *BlobDAO) DeleteByIDs(db *gorm.DB, ids []uint) (int64, error) {
+	if len(ids) == 0 {
+		return 0, nil
+	}
+	result := db.Where(constant.DBConditionWhereIDIn, ids).Delete(&dbmodel.Blob{})
+	return result.RowsAffected, result.Error
 }
 
 // MarkRetry 上传失败、尚未到上限：记录尝试次数与原因，推后下次重试

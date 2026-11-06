@@ -55,6 +55,7 @@ export default function CronAuditPage() {
     uploaded_blobs_count: "Uploaded",
     pending_blobs_count: "Pending",
     failed_blobs_count: "Failed",
+    purged_blobs_count: "Images",
   };
   function formatMetadata(metadata: Record<string, number> | undefined | null): string {
     if (!metadata || Object.keys(metadata).length === 0) return "—";

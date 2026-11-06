@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/minio/minio-go/v7"
@@ -25,13 +26,21 @@ type s3Store struct {
 	bucket string
 }
 
-// NewFromConfig 按配置构造对象存储
+// Default 进程内共享的对象存储客户端（fx 装配、cron、CLI 共用同一实例）
+//
+//	首次调用时按配置构造；未配置或配置无效时恒为 nil，调用方按"未配置"处理。
+//
+//	@author centonhuang
+//	@update 2026-11-06 10:00:00
+var Default = sync.OnceValue(NewFromConfig)
+
+// NewFromConfig 按配置构造对象存储（每次调用新建客户端，业务代码应使用 Default）
 //
 //	未配置 endpoint 或配置无效时返回 nil（不 panic，不发起网络请求），调用方按"未配置"处理。
 //
 //	@return blob.ObjectStore
 //	@author centonhuang
-//	@update 2026-11-05 10:00:00
+//	@update 2026-11-06 10:00:00
 func NewFromConfig() blob.ObjectStore {
 	if config.ObjectStorageEndpoint == "" {
 		return nil
@@ -92,11 +101,22 @@ func (s *s3Store) Get(ctx context.Context, key string) ([]byte, error) {
 		return nil, ierr.Wrap(ierr.ErrInternal, err, "get object")
 	}
 	defer func() { _ = obj.Close() }() //nolint:errcheck // 只读关闭
-	data, err := io.ReadAll(obj)
+	// 已上传对象都是 ≤ BlobMaxStoredBytes 的存储版本，多读 1 字节用于识别异常大对象
+	data, err := io.ReadAll(io.LimitReader(obj, constant.BlobMaxStoredBytes+1))
 	if err != nil {
 		return nil, ierr.Wrap(ierr.ErrInternal, err, "read object")
 	}
+	if len(data) > constant.BlobMaxStoredBytes {
+		return nil, ierr.Newf(ierr.ErrInternal, "object %s exceeds %d bytes", key, constant.BlobMaxStoredBytes)
+	}
 	return data, nil
+}
+
+func (s *s3Store) Delete(ctx context.Context, key string) error {
+	if err := s.client.RemoveObject(ctx, s.bucket, key, minio.RemoveObjectOptions{}); err != nil {
+		return ierr.Wrap(ierr.ErrInternal, err, "remove object")
+	}
+	return nil
 }
 
 func (s *s3Store) PresignGet(ctx context.Context, key string, ttl time.Duration) (string, error) {

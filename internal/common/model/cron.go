@@ -17,4 +17,5 @@ type CronCallAuditMetadata struct {
 	UploadedBlobs     int64 `json:"uploaded_blobs_count" doc:"图片补传：本次上传成功数"`
 	PendingBlobs      int64 `json:"pending_blobs_count" doc:"图片补传：剩余待上传数"`
 	FailedBlobs       int64 `json:"failed_blobs_count" doc:"图片补传：超过重试上限数"`
+	PurgedBlobs       int64 `json:"purged_blobs_count" doc:"软删清理：删除的图片数"`
 }

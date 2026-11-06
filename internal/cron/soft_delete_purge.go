@@ -10,7 +10,10 @@ import (
 
 	"github.com/hcd233/aris-mass/internal/common/constant"
 	commonmodel "github.com/hcd233/aris-mass/internal/common/model"
+	"github.com/hcd233/aris-mass/internal/domain/blob"
+	"github.com/hcd233/aris-mass/internal/infrastructure/blobstore"
 	"github.com/hcd233/aris-mass/internal/infrastructure/database/dao"
+	"github.com/hcd233/aris-mass/internal/infrastructure/objectstore"
 	"github.com/hcd233/aris-mass/internal/lock"
 	"github.com/hcd233/aris-mass/internal/logger"
 	"github.com/redis/go-redis/v9"
@@ -20,13 +23,15 @@ import (
 	"gorm.io/gorm"
 )
 
-// SoftDeletePurgeCron 软删除数据清理定时任务，每周硬删除所有已软删除的Message、Session、Tool记录
+// SoftDeletePurgeCron 软删除数据清理定时任务，每周硬删除所有已软删除的Message、Session、Tool记录，
+// 并删除随之不再被任何 message 引用的图片（blobs 行与对象）
 //
 //	@author centonhuang
-//	@update 2026-06-01 10:00:00
+//	@update 2026-11-06 10:00:00
 type SoftDeletePurgeCron struct {
 	cron       *cron.Cron
 	db         *gorm.DB
+	store      blob.ObjectStore
 	locker     *lock.RedisLocker
 	lockKey    string
 	messageDAO *dao.MessageDAO
@@ -45,6 +50,7 @@ func NewSoftDeletePurgeCron(db *gorm.DB, cache *redis.Client) Cron {
 			cron.WithLogger(newCronLoggerAdapter(constant.CronModuleSoftDeletePurge)),
 		),
 		db:         db,
+		store:      objectstore.Default(),
 		locker:     lock.NewLocker(cache),
 		messageDAO: dao.GetMessageDAO(),
 		sessionDAO: dao.GetSessionDAO(),
@@ -154,7 +160,13 @@ func (c *SoftDeletePurgeCron) purge(ctx context.Context) (*commonmodel.CronCallA
 	orphanMessageIDs, _ := lo.Difference(candidateMessageIDs, usedMessageIDs)
 	orphanToolIDs, _ := lo.Difference(candidateToolIDs, usedToolIDs)
 
-	// 5. 批量硬删除未被引用的 message 和 tool
+	// 5. 删除前记下这些 message 引用的图片，message 删除后再清理不再被引用的图片
+	imageSHAs, err := blobstore.CollectImageRefs(ctx, c.db, orphanMessageIDs)
+	if err != nil {
+		log.Error("[SoftDeletePurgeCron] Failed to collect image refs, images kept", zap.Error(err))
+	}
+
+	// 6. 批量硬删除未被引用的 message 和 tool
 	var msgCount, toolCount int64
 	if len(orphanMessageIDs) > 0 {
 		msgCount, err = c.messageDAO.HardDeleteByIDs(db, orphanMessageIDs)
@@ -172,20 +184,28 @@ func (c *SoftDeletePurgeCron) purge(ctx context.Context) (*commonmodel.CronCallA
 		}
 	}
 
-	// 6. 硬删除被软删除的 session
+	// 7. 硬删除被软删除的 session
 	sessionCount, err := c.sessionDAO.HardDeleteSoftDeleted(db)
 	if err != nil {
 		log.Error("[SoftDeletePurgeCron] Failed to purge sessions", zap.Error(err))
 		return nil, err
 	}
 
+	// 8. 清理不再被引用的图片；失败只记日志，图片保留到下次有关联 message 被清理时
+	blobCount, err := blobstore.DeleteUnreferenced(ctx, c.db, c.store, imageSHAs)
+	if err != nil {
+		log.Error("[SoftDeletePurgeCron] Failed to purge blobs", zap.Error(err))
+	}
+
 	log.Info("[SoftDeletePurgeCron] Purge completed",
 		zap.Int64("sessionsDeleted", sessionCount),
 		zap.Int64("messagesDeleted", msgCount),
-		zap.Int64("toolsDeleted", toolCount))
+		zap.Int64("toolsDeleted", toolCount),
+		zap.Int64("blobsDeleted", blobCount))
 
 	return &commonmodel.CronCallAuditMetadata{
 		PurgedMessages: msgCount,
 		PurgedTools:    toolCount,
+		PurgedBlobs:    blobCount,
 	}, nil
 }

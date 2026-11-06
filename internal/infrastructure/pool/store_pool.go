@@ -50,15 +50,18 @@ func (pm *PoolManager) runMessageStoreTask(task *dto.MessageStoreTask) {
 		}
 	}
 
-	unified := task.Messages
+	unified, forged := vo.NeutralizeImageRefs(task.Messages)
+	if forged > 0 {
+		log.Warn("[StorePool] Client-supplied image refs downgraded to text", zap.Int("count", forged))
+	}
 	if pm.externalizer != nil {
 		var stats blobstore.ExternalizeStats
 		unified, stats = pm.externalizer.Externalize(task.Ctx, unified)
 		if stats != (blobstore.ExternalizeStats{}) {
 			log.Info("[StorePool] Images externalized",
-				zap.Int("uploaded", stats.Uploaded), zap.Int("pending", stats.Pending),
-				zap.Int("unprocessable", stats.Unprocessable), zap.Int("reused", stats.Reused),
-				zap.Int("failed", stats.Failed), zap.Int64("savedBytes", stats.SavedBytes))
+				zap.Int("queued", stats.Queued), zap.Int("pending", stats.Pending),
+				zap.Int("reused", stats.Reused), zap.Int("failed", stats.Failed),
+				zap.Int64("savedBytes", stats.SavedBytes))
 		}
 	}
 

@@ -84,12 +84,11 @@ func (h *initiateLoginHandler) Handle(ctx context.Context, cmd port.InitiateLogi
 // ============================================================
 
 type handleCallbackHandler struct {
-	platforms      map[string]oauthsvc.Platform
-	userRepo       identity.UserRepository
-	accessSigner   identityservice.TokenSigner
-	refreshSigner  identityservice.TokenSigner
-	objStorageDirC port.ObjectStorageDirCreator
-	stateManager   oauthsvc.StateManager
+	platforms     map[string]oauthsvc.Platform
+	userRepo      identity.UserRepository
+	accessSigner  identityservice.TokenSigner
+	refreshSigner identityservice.TokenSigner
+	stateManager  oauthsvc.StateManager
 }
 
 // NewHandleCallbackHandler 构造回调处理器
@@ -98,24 +97,22 @@ type handleCallbackHandler struct {
 //	@param userRepo identity.UserRepository
 //	@param accessSigner identityservice.TokenSigner
 //	@param refreshSigner identityservice.TokenSigner
-//	@param objStorageDirC ObjectStorageDirCreator 可选；nil 时跳过存储目录创建
+//	@param stateManager oauthsvc.StateManager
 //	@return HandleCallbackHandler
 //	@author centonhuang
-//	@update 2026-04-22 20:30:00
+//	@update 2026-11-06 10:00:00
 func NewHandleCallbackHandler(
 	platforms map[string]oauthsvc.Platform,
 	userRepo identity.UserRepository,
 	accessSigner, refreshSigner identityservice.TokenSigner,
-	objStorageDirC port.ObjectStorageDirCreator,
 	stateManager oauthsvc.StateManager,
 ) port.HandleCallbackHandler {
 	return &handleCallbackHandler{
-		platforms:      platforms,
-		userRepo:       userRepo,
-		accessSigner:   accessSigner,
-		refreshSigner:  refreshSigner,
-		objStorageDirC: objStorageDirC,
-		stateManager:   stateManager,
+		platforms:     platforms,
+		userRepo:      userRepo,
+		accessSigner:  accessSigner,
+		refreshSigner: refreshSigner,
+		stateManager:  stateManager,
 	}
 }
 
@@ -277,15 +274,6 @@ func (h *handleCallbackHandler) resolveUser(ctx context.Context, platformName st
 		log.Error("[OAuth2Command] Failed to save new user",
 			zap.String("platform", platformName), zap.String("userName", userName), zap.Error(err))
 		return 0, false, err
-	}
-
-	if h.objStorageDirC != nil {
-		if dirErr := h.objStorageDirC.CreateDir(ctx, user.AggregateID()); dirErr != nil {
-			log.Error("[OAuth2Command] Failed to create audio dir",
-				zap.String("platform", platformName), zap.Error(dirErr))
-			return 0, false, dirErr
-		}
-		log.Info("[OAuth2Command] Audio dir created", zap.String("platform", platformName))
 	}
 
 	return user.AggregateID(), true, nil

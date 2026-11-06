@@ -10,10 +10,7 @@ import (
 	"github.com/hcd233/aris-mass/internal/infrastructure/database"
 	"github.com/hcd233/aris-mass/internal/infrastructure/database/dao"
 	"github.com/hcd233/aris-mass/internal/infrastructure/objectstore"
-	"github.com/hcd233/aris-mass/internal/infrastructure/storage"
-	objdao "github.com/hcd233/aris-mass/internal/infrastructure/storage/obj_dao"
 	"github.com/hcd233/aris-mass/internal/logger"
-	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
@@ -21,30 +18,7 @@ import (
 var objectCmd = &cobra.Command{
 	Use:   "object",
 	Short: "Object Storage Command Group",
-	Long:  `Object storage command group for managing and operating object storage, including creating buckets, creating directories, uploading files, etc.`,
-}
-
-var bucketCmd = &cobra.Command{
-	Use:   "bucket",
-	Short: "Bucket Command Group",
-	Long:  `Bucket command group for managing and operating buckets, including creating buckets, deleting buckets, etc.`,
-}
-
-var createBucketCmd = &cobra.Command{
-	Use:   "create",
-	Short: "Create Bucket",
-	Long:  `Create a bucket.`,
-	Run: func(_ *cobra.Command, _ []string) {
-		ctx := context.Background()
-		logger := logger.Logger()
-		storage.InitObjectStorage()
-
-		audioObjDAO := objdao.GetAudioObjDAO()
-		lo.Must0(audioObjDAO.CreateBucket(ctx))
-
-		logger.Info("[Object Storage] Bucket created",
-			zap.String("bucket", audioObjDAO.GetBucketName(ctx)))
-	},
+	Long:  `Object storage command group for message images stored in S3-compatible object storage.`,
 }
 
 var migrateOpts blobstore.MigrateOptions
@@ -77,11 +51,13 @@ func runMigrateImages(ctx context.Context) error {
 		return nil
 	}
 
-	store := objectstore.NewFromConfig()
+	store := objectstore.Default()
 	if store == nil && !migrateOpts.DryRun {
 		return ierr.New(ierr.ErrValidation, "object storage is not configured, set OBJECT_STORAGE_* or use --dry-run")
 	}
-	stats, err := blobstore.NewMigrator(db, blobstore.NewExternalizer(db, store)).Run(ctx, migrateOpts)
+	// 同步上传：每行 message 替换为引用之前，对应 blobs 行已经写入
+	externalizer := blobstore.NewExternalizer(db, blobstore.NewSyncUploader(db, store))
+	stats, err := blobstore.NewMigrator(db, externalizer).Run(ctx, migrateOpts)
 	log.Info("[BlobMigrate] Migration finished",
 		zap.Bool("dryRun", migrateOpts.DryRun), zap.Uint("lastID", stats.LastID),
 		zap.Int64("scanned", stats.Scanned), zap.Int64("migrated", stats.Migrated),
@@ -100,8 +76,6 @@ func init() {
 	migrateObjectCmd.Flags().BoolVar(&migrateRetryFailed, "retry-failed", false, "reset failed blobs to pending and exit")
 	migrateObjectCmd.MarkFlagsMutuallyExclusive("dry-run", "retry-failed")
 
-	bucketCmd.AddCommand(createBucketCmd)
-	objectCmd.AddCommand(bucketCmd)
 	objectCmd.AddCommand(migrateObjectCmd)
 	rootCmd.AddCommand(objectCmd)
 }

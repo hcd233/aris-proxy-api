@@ -284,29 +284,23 @@ export default function DatasetPage() {
     if (exporting || (preview?.totalSessions ?? 0) === 0) return;
 
     setExporting(true);
-    const lines: string[] = [];
     setExportProgress(0);
-    let total = preview?.totalSessions ?? 0;
-    let exportError = "";
 
     try {
-      await api.exportDatasetStream(buildParams(), (event) => {
-        if (event.event === "start") {
-          total = event.data.totalSessions;
-        } else if (event.event === "data") {
-          lines.push(event.data.json);
-          setExportProgress(event.data.progress);
-        } else if (event.event === "done") {
-          total = event.data.totalSessions;
-          setExportProgress(100);
-        } else if (event.event === "error") {
-          exportError = event.data.message;
-        }
+      const { chunks, lines, total } = await api.exportDatasetStream(buildParams(), (done, all) => {
+        if (all > 0) setExportProgress(Math.min(100, Math.floor((done * 100) / all)));
       });
+      if (lines < total) {
+        throw new Error(
+          replaceVars(t("dataset.export_incomplete"), {
+            received: formatInteger(lines),
+            total: formatInteger(total),
+          }),
+        );
+      }
+      setExportProgress(100);
 
-      if (exportError) throw new Error(exportError);
-
-      const blob = new Blob([`${lines.join("\n")}\n`], { type: "application/x-ndjson" });
+      const blob = new Blob(chunks as BlobPart[], { type: "application/x-ndjson" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;

@@ -49,7 +49,7 @@ func NewBlobUploadRetryCron(db *gorm.DB, cache *redis.Client) Cron {
 	return &BlobUploadRetryCron{
 		cron:   cron.New(cron.WithLogger(newCronLoggerAdapter(constant.CronModuleBlobUploadRetry))),
 		db:     db,
-		store:  objectstore.NewFromConfig(),
+		store:  objectstore.Default(),
 		locker: lock.NewLocker(cache),
 	}
 }

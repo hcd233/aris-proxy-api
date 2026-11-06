@@ -182,11 +182,11 @@ _Avoid_: chat message, prompt, response
 _Avoid_: message dto, generic message
 
 **Blob（图片存储记录）**:
-message 中一张图片的存储记录（`blobs` 表），以**原始字节**的 sha256 唯一标识、全局只存一份。状态 `pending`（暂存在表中待上传）→ `uploaded`（已在对象存储，表中字节清空），超过重试上限为 `failed`，无法解码且超过 2MB 为 `unprocessable`；后两者字节仍保留在表中，照常可查看与导出。只存压缩后的版本（≤2MB），不保留原图。
+message 中一张图片的存储记录（`blobs` 表），以**原始字节**的 sha256 唯一标识、全局只存一份。新图先在内存中由独立的图片上传池压缩并上传：上传成功才写 `uploaded` 行（表中不留字节），上传失败写 `pending` 行（暂存压缩后字节）；队列满、内存预算超限或进程退出排空时直接把原图写成 `pending` 行，由重试任务压缩补传。超过重试上限为 `failed`；无法压缩到 2MB 内为 `unprocessable`（原图留表中，可导出，不作预览）。只存压缩后的版本（≤2MB），不保留原图。所有引用它的 message 被软删清理任务硬删后，blobs 行与对象一并删除。
 _Avoid_: attachment, file, asset
 
 **ImageRef（图片引用）**:
-message 中已外置图片的引用形态 `aris-blob:sha256:<hex>`，替换原来的 base64 data URI，附带 `image_mime` / `image_size` 供展示。checksum 计算时 data URI 与引用形态统一映射为 sha256，二者算出同一 checksum；用户自带的外部 http(s) 图片链接不外置、原样保留。
+message 中已外置图片的引用形态 `aris-blob:sha256:<hex>`，替换原来的 base64 data URI，附带 `image_mime` / `image_size` 供展示（新图在上传完成前就已替换，此时是原图的值）。引用只能由服务端外置图片时生成：客户端请求或上游响应里自带的 `aris-blob:` 引用在落库前一律降级为文本部分，否则持有者可凭"本会话引用了该图"读取他人图片。"会话是否引用某图"只认 `image_url` 部分，文本中的同名字符串不算。checksum 计算时 data URI 与引用形态统一映射为 sha256，二者算出同一 checksum；用户自带的外部 http(s) 图片链接不外置、原样保留。
 _Avoid_: image url, blob url, signed url
 
 **Tool（工具调用）**:

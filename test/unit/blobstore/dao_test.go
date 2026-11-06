@@ -86,12 +86,16 @@ func TestMarkUploadedClearsData(t *testing.T) {
 	t.Parallel()
 	db := openBlobDB(t)
 	b := insertBlob(t, db, pendingBlob(shaOf('a'), time.Now()))
-	if err := dao.GetBlobDAO().MarkUploaded(db, b.ID); err != nil {
+	meta := dao.BlobUploadedMeta{StorageKey: "images/aa/aa/x.jpg", Mime: "image/jpeg", Size: 7, Width: 3, Height: 2}
+	if err := dao.GetBlobDAO().MarkUploaded(db, b.ID, meta); err != nil {
 		t.Fatalf("mark: %v", err)
 	}
 	got, _ := dao.GetBlobDAO().GetByID(db, b.ID)
 	if got.Status != enum.BlobStatusUploaded || got.Data != nil {
 		t.Fatalf("unexpected: status=%s data=%v", got.Status, got.Data)
+	}
+	if got.StorageKey != meta.StorageKey || got.Mime != meta.Mime || got.Size != meta.Size || got.Width != 3 || got.Height != 2 {
+		t.Fatalf("meta not written back: %+v", got)
 	}
 }
 

@@ -57,9 +57,9 @@ func newEnv(t *testing.T, withStore bool) *testEnv {
 	store := newFakeStore()
 	var ext *blobstore.Externalizer
 	if withStore {
-		ext = blobstore.NewExternalizer(db, store)
+		ext = blobstore.NewExternalizer(db, blobstore.NewSyncUploader(db, store))
 	} else {
-		ext = blobstore.NewExternalizer(db, nil)
+		ext = blobstore.NewExternalizer(db, blobstore.NewSyncUploader(db, nil))
 	}
 	return &testEnv{db: db, store: store, ext: ext}
 }
@@ -206,7 +206,7 @@ func TestExternalizeUnprocessable(t *testing.T) {
 func TestExternalizeDBFailureKeepsBase64(t *testing.T) {
 	t.Parallel()
 	db := sqlitetest.OpenPrivateMemoryDB(t) // 不建 blobs 表
-	ext := blobstore.NewExternalizer(db, newFakeStore())
+	ext := blobstore.NewExternalizer(db, blobstore.NewSyncUploader(db, newFakeStore()))
 	raw := smallPNG(t, 9)
 	url := dataURI(raw)
 	out, stats := ext.Externalize(t.Context(), []*vo.UnifiedMessage{imageMsg(url)})
@@ -219,17 +219,71 @@ func TestExternalizeDBFailureKeepsBase64(t *testing.T) {
 	}
 }
 
-func TestExternalizeTaskTimeoutGoesPending(t *testing.T) {
+// TestAsyncExternalizeDoesNotWaitForUpload 异步模式：上传未完成时消息已替换为引用（原图 mime/size），
+// Stop 后图片完成上传
+func TestAsyncExternalizeDoesNotWaitForUpload(t *testing.T) {
 	t.Parallel()
-	e := newEnv(t, true)
-	e.store.blockPut = true
-	e.ext.TaskTimeout = 10 * time.Millisecond
-	a, b := smallPNG(t, 10), smallPNG(t, 11)
-	_, stats := e.ext.Externalize(t.Context(), []*vo.UnifiedMessage{imageMsg(dataURI(a), dataURI(b))})
-	if getBlob(t, e, a).Status != enum.BlobStatusPending || getBlob(t, e, b).Status != enum.BlobStatusPending {
-		t.Fatal("expected both pending")
+	db := openBlobDB(t)
+	store := newFakeStore()
+	store.gate, store.entered = make(chan struct{}), make(chan struct{}, 1)
+	ext := blobstore.NewExternalizer(db, blobstore.NewAsyncUploader(db, store, 1, 10))
+	raw := smallPNG(t, 10)
+
+	out, stats := ext.Externalize(t.Context(), []*vo.UnifiedMessage{imageMsg(dataURI(raw))})
+	<-store.entered
+	part := out[0].Content.Parts[1]
+	if stats.Queued != 1 || part.ImageURL != vo.ImageRefOf(vo.SHA256Hex(raw)) || part.ImageMime != "image/png" || part.ImageSize != int64(len(raw)) {
+		t.Fatalf("stats=%+v part=%+v", stats, part)
 	}
-	if e.store.putCalls > 1 || stats.Pending != 2 {
-		t.Fatalf("putCalls=%d stats=%+v", e.store.putCalls, stats)
+	if row, _ := dao.GetBlobDAO().GetBySHA256(db, vo.SHA256Hex(raw)); row != nil {
+		t.Fatalf("blob row written before upload finished: %+v", row)
+	}
+
+	close(store.gate)
+	ext.Stop()
+	row, err := dao.GetBlobDAO().GetBySHA256(db, vo.SHA256Hex(raw))
+	if err != nil || row == nil || row.Status != enum.BlobStatusUploaded || row.Data != nil {
+		t.Fatalf("row=%+v err=%v", row, err)
+	}
+}
+
+// TestAsyncExternalizeAfterStopPersistsRaw 停止后（排空阶段）新图不入队，原图直接落 pending 行
+func TestAsyncExternalizeAfterStopPersistsRaw(t *testing.T) {
+	t.Parallel()
+	db := openBlobDB(t)
+	store := newFakeStore()
+	ext := blobstore.NewExternalizer(db, blobstore.NewAsyncUploader(db, store, 1, 10))
+	ext.Stop()
+	raw := smallPNG(t, 11)
+
+	out, stats := ext.Externalize(t.Context(), []*vo.UnifiedMessage{imageMsg(dataURI(raw))})
+	row, err := dao.GetBlobDAO().GetBySHA256(db, vo.SHA256Hex(raw))
+	if err != nil || row == nil {
+		t.Fatalf("row missing: %v", err)
+	}
+	if row.Status != enum.BlobStatusPending || !bytes.Equal(row.Data, raw) || row.Attempts != 0 || row.NextRetryAt == nil || row.NextRetryAt.After(time.Now()) {
+		t.Fatalf("row=%+v", row)
+	}
+	if stats.Pending != 1 || store.totalPuts() != 0 || out[0].Content.Parts[1].ImageURL != vo.ImageRefOf(row.SHA256) {
+		t.Fatalf("stats=%+v puts=%d", stats, store.totalPuts())
+	}
+}
+
+// TestAsyncExternalizeSameImageQueuedOnce 同一张图并发提交时只处理一次
+func TestAsyncExternalizeSameImageQueuedOnce(t *testing.T) {
+	t.Parallel()
+	db := openBlobDB(t)
+	store := newFakeStore()
+	store.gate, store.entered = make(chan struct{}), make(chan struct{}, 1)
+	ext := blobstore.NewExternalizer(db, blobstore.NewAsyncUploader(db, store, 2, 10))
+	url := dataURI(smallPNG(t, 12))
+
+	_, first := ext.Externalize(t.Context(), []*vo.UnifiedMessage{imageMsg(url)})
+	<-store.entered
+	_, second := ext.Externalize(t.Context(), []*vo.UnifiedMessage{imageMsg(url)})
+	close(store.gate)
+	ext.Stop()
+	if first.Queued != 1 || second.Queued != 1 || store.putCalls != 1 {
+		t.Fatalf("first=%+v second=%+v putCalls=%d", first, second, store.putCalls)
 	}
 }

@@ -286,15 +286,21 @@ func mergeCreatedToolIDs(tx *gorm.DB, toolDAO *dao.ToolDAO, idByChecksum map[str
 	return nil
 }
 
-// Stop 停止所有协程池
+// Stop 停止所有协程池并等待已提交任务完成
+//
+//	先排空 store 池（落库任务会向图片上传池提交新图），再停图片上传池：
+//	上传池剩余的图片不再压缩上传，直接写成 pending 行由重试任务补传。
 //
 //	@author centonhuang
-//	@update 2026-04-05 10:00:00
+//	@update 2026-11-06 10:00:00
 func (pm *PoolManager) Stop() {
 	if pm.storePool != nil {
-		pm.storePool.Stop()
+		pm.storePool.StopAndWait()
+	}
+	if pm.externalizer != nil {
+		pm.externalizer.Stop()
 	}
 	if pm.agentPool != nil {
-		pm.agentPool.Stop()
+		pm.agentPool.StopAndWait()
 	}
 }

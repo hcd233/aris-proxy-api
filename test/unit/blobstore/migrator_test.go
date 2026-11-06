@@ -150,7 +150,7 @@ func TestMigrateBlobWriteFailureRetriedLater(t *testing.T) {
 	if err := db.AutoMigrate(&dbmodel.Message{}); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
-	m := blobstore.NewMigrator(db, blobstore.NewExternalizer(db, newFakeStore()))
+	m := blobstore.NewMigrator(db, blobstore.NewExternalizer(db, blobstore.NewSyncUploader(db, newFakeStore())))
 	url := dataURI(smallPNG(t, 27))
 	row := seedMessage(t, db, imageMsg(url), "old", 0)
 

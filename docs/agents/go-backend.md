@@ -108,7 +108,7 @@
 | Cron | `/api/web/v1/cron` | `GET /list`、`PATCH /`、`POST /trigger` |
 | Trigger | `/api/web/v1/trigger` | `POST /`、`GET /list`、`PATCH /`、`DELETE /` |
 | Metrics | `/api/web/v1/metrics` | `GET /runtime` |
-| Dataset | `/api/web/v1/dataset` | `GET /preview`、`GET /export`（SSE）、`GET /sample` |
+| Dataset | `/api/web/v1/dataset` | `GET /preview`、`GET /export`（NDJSON 流）、`GET /sample` |
 | Demo（公开） | `/api/web/v1/demo` | `POST /login`、`GET /status` |
 | Demo | `/api/web/v1/demo` | `GET /config`、`PATCH /config`、`GET /sessions/list`、`POST /sessions`、`DELETE /sessions` |
 | Client | `/api/cli/v1` | `GET /model/list`、`GET /aris/client/check` |

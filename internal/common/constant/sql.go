@@ -46,6 +46,18 @@ const (
 	FieldTriggerSource = "trigger_source"
 	FieldDescription   = "description"
 
+	// blobs 表列名
+	FieldSHA256      = "sha256"
+	FieldBlobData    = "data"
+	FieldStorageKey  = "storage_key"
+	FieldMime        = "mime"
+	FieldSize        = "size"
+	FieldWidth       = "width"
+	FieldHeight      = "height"
+	FieldAttempts    = "attempts"
+	FieldLastError   = "last_error"
+	FieldNextRetryAt = "next_retry_at"
+
 	FieldTraceID                  = "trace_id"
 	FieldInputTokens              = "input_tokens"
 	FieldOutputTokens             = "output_tokens"
@@ -107,8 +119,10 @@ const (
 var (
 	MessageRepoFieldsChecksum = []string{FieldID, FieldCheckSum}
 	MessageRepoFieldsFull     = []string{FieldID, FieldModelID, FieldMessage, FieldCheckSum, FieldCreatedAt}
-	MessageRepoFieldsDetail   = []string{FieldID, FieldModelID, FieldMessage, FieldCreatedAt}
-	MessageRepoFieldsContent  = []string{FieldID, FieldMessage}
+	// MessageRawFields 按原始字符串读取 message 行的列（绕开 GORM 字段 serializer）
+	MessageRawFields         = []string{FieldID, FieldModelID, FieldMessage, FieldCheckSum}
+	MessageRepoFieldsDetail  = []string{FieldID, FieldModelID, FieldMessage, FieldCreatedAt}
+	MessageRepoFieldsContent = []string{FieldID, FieldMessage}
 
 	ToolRepoFieldsChecksum = []string{FieldID, FieldCheckSum}
 	ToolRepoFieldsFull     = []string{FieldID, FieldTool, FieldCheckSum, FieldCreatedAt}

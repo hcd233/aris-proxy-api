@@ -87,24 +87,6 @@ var (
 	// RedisPassword string Redis密码
 	RedisPassword string
 
-	// MinioEndpoint string Minio Endpoint
-	MinioEndpoint string
-
-	// MinioTLS bool Minio TLS
-	MinioTLS bool
-
-	// MinioRegion string Minio Region
-	MinioRegion string
-
-	// MinioBucketName string Minio Bucket Name
-	MinioBucketName string
-
-	// MinioAccessID string Minio Access ID
-	MinioAccessID string
-
-	// MinioAccessKey string Minio Access Key
-	MinioAccessKey string
-
 	// ObjectStorageEndpoint string 消息图片 S3 兼容对象存储 endpoint（可带 http/https 前缀），留空则不上传
 	ObjectStorageEndpoint string
 
@@ -125,21 +107,6 @@ var (
 
 	// ObjectStoragePathStyle bool 是否使用 path-style 访问（MinIO 等需要）
 	ObjectStoragePathStyle bool
-
-	// CosRegion string Cos Region
-	CosRegion string
-
-	// CosSecretID string Cos Access ID
-	CosSecretID string
-
-	// CosSecretKey string Cos Secret Key
-	CosSecretKey string
-
-	// CosBucketName string Cos Bucket Name
-	CosBucketName string
-
-	// CosAppID string Cos App ID
-	CosAppID string
 
 	// JwtAccessTokenExpired time.Duration Access Jwt Token过期时间
 	//	update 2024-06-22 11:09:19
@@ -303,6 +270,8 @@ type PoolGroupConfig struct {
 type PoolConfig struct {
 	Store PoolGroupConfig
 	Agent PoolGroupConfig
+	// Blob 消息图片压缩与上传池（与 Store 池隔离，避免拖慢消息与审计落库）
+	Blob PoolGroupConfig
 }
 
 // Pool Store 池和 Agent 池的全局配置
@@ -346,6 +315,8 @@ func InitEnvironment() {
 	config.SetDefault("pool.store.queue_size", 1000)
 	config.SetDefault("pool.agent.workers", 10)
 	config.SetDefault("pool.agent.queue_size", 100)
+	config.SetDefault("pool.blob.workers", 2)
+	config.SetDefault("pool.blob.queue_size", 200)
 
 	config.SetDefault("sql.batch.size", 500)
 
@@ -382,7 +353,7 @@ func InitEnvironment() {
 
 	config.SetDefault("object.storage.region", "auto")
 	config.SetDefault("object.storage.tls", true)
-	config.SetDefault("object.storage.path_style", false)
+	config.SetDefault("object.storage.path.style", false)
 
 	config.AutomaticEnv()
 
@@ -421,26 +392,13 @@ func InitEnvironment() {
 	RedisPort = config.GetString("redis.port")
 	RedisPassword = config.GetString("redis.password")
 
-	MinioEndpoint = config.GetString("minio.endpoint")
-	MinioTLS = config.GetBool("minio.tls")
-	MinioRegion = config.GetString("minio.region")
-	MinioBucketName = config.GetString("minio.bucket.name")
-	MinioAccessID = config.GetString("minio.access.id")
-	MinioAccessKey = config.GetString("minio.access.key")
-
 	ObjectStorageEndpoint = config.GetString("object.storage.endpoint")
 	ObjectStorageBucket = config.GetString("object.storage.bucket")
 	ObjectStorageRegion = config.GetString("object.storage.region")
-	ObjectStorageAccessKey = config.GetString("object.storage.access_key")
-	ObjectStorageSecretKey = config.GetString("object.storage.secret_key")
+	ObjectStorageAccessKey = config.GetString("object.storage.access.key")
+	ObjectStorageSecretKey = config.GetString("object.storage.secret.key")
 	ObjectStorageTLS = config.GetBool("object.storage.tls")
-	ObjectStoragePathStyle = config.GetBool("object.storage.path_style")
-
-	CosBucketName = config.GetString("cos.bucket.name")
-	CosAppID = config.GetString("cos.app.id")
-	CosRegion = config.GetString("cos.region")
-	CosSecretID = config.GetString("cos.secret.id")
-	CosSecretKey = config.GetString("cos.secret.key")
+	ObjectStoragePathStyle = config.GetBool("object.storage.path.style")
 
 	JwtAccessTokenExpired = config.GetDuration("jwt.access.token.expired")
 	JwtAccessTokenSecret = config.GetString("jwt.access.token.secret")
@@ -493,6 +451,10 @@ func InitEnvironment() {
 		Agent: PoolGroupConfig{
 			Workers:   config.GetInt("pool.agent.workers"),
 			QueueSize: config.GetInt("pool.agent.queue_size"),
+		},
+		Blob: PoolGroupConfig{
+			Workers:   config.GetInt("pool.blob.workers"),
+			QueueSize: config.GetInt("pool.blob.queue_size"),
 		},
 	}
 

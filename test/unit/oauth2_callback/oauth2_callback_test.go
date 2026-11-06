@@ -226,23 +226,6 @@ func (s *stubTokenSigner) DecodeToken(_ string) (uint, error) {
 	return 0, ierr.New(ierr.ErrInternal, "not implemented")
 }
 
-// stubObjStorageDirCreator 模拟对象存储目录创建器
-type stubObjStorageDirCreator struct {
-	createDir func(ctx context.Context, userID uint) error
-}
-
-func newStubObjStorageDirCreator() *stubObjStorageDirCreator {
-	return &stubObjStorageDirCreator{
-		createDir: func(_ context.Context, _ uint) error {
-			return nil
-		},
-	}
-}
-
-func (s *stubObjStorageDirCreator) CreateDir(ctx context.Context, userID uint) error {
-	return s.createDir(ctx, userID)
-}
-
 // makeHandler 构造 HandleCallbackHandler 的工厂方法
 func makeHandler(userRepo *stubUserRepo, tc *callbackCase, stateManager service.StateManager) port.HandleCallbackHandler {
 	githubStub := newStubPlatform(enum.Oauth2PlatformGithub, tc.StubUserInfo)
@@ -252,14 +235,12 @@ func makeHandler(userRepo *stubUserRepo, tc *callbackCase, stateManager service.
 
 	accessSigner := newStubTokenSigner("access-token-stub")
 	refreshSigner := newStubTokenSigner("refresh-token-stub")
-	objDirCreator := newStubObjStorageDirCreator()
 
 	return command.NewHandleCallbackHandler(
 		platforms,
 		userRepo,
 		accessSigner,
 		refreshSigner,
-		objDirCreator,
 		stateManager,
 	)
 }

@@ -289,16 +289,18 @@ const (
 	LocalePrimaryJA       = "ja"
 	LocaleAcceptSeparator = "-_;"
 
-	// ── Dataset export SSE ──
-	ShareGPTFromSystem      = "system"
-	ShareGPTFromUser        = "user"
-	ShareGPTFromAssistant   = "assistant"
-	ShareGPTFromFunction    = "function"
-	ThinkTagClose           = "\n"
-	DatasetExportEventStart = "start"
-	DatasetExportEventData  = "data"
-	DatasetExportEventDone  = "done"
-	DatasetExportEventError = "error"
+	// ── Dataset export ──
+	ShareGPTFromSystem    = "system"
+	ShareGPTFromUser      = "user"
+	ShareGPTFromAssistant = "assistant"
+	ShareGPTFromFunction  = "function"
+	ThinkTagClose         = "\n"
+	// ShareGPTImagePlaceholder ShareGPT 多模态图片占位符（LLaMA-Factory 约定）
+	ShareGPTImagePlaceholder = "<image>"
+	// DatasetPreviewImageTemplate 格式预览中省略图片内容的占位（mime, KB）
+	DatasetPreviewImageTemplate = "data:%s;base64,<omitted %d KB>"
+	// DatasetExportBatchSessions 流式导出每批读取的会话数
+	DatasetExportBatchSessions = 50
 
 	ContentPartTypeText = "text"
 
@@ -307,7 +309,6 @@ const (
 	CustomToolFormatDefault  = "text"
 	CustomToolFormatLabelFmt = "\n\nExpected format (%s grammar):\n"
 
-	// ── Dataset export progress ──
+	// ── Dataset export errors ──
 	DatasetExportNoMatchError = "no sessions match the filter"
-	DatasetExportProgressFull = 100
 )

@@ -47,6 +47,7 @@ const (
 	HTTPHeaderUpgrade             = "Upgrade"
 	HTTPHeaderUserAgent           = "User-Agent"
 	HTTPHeaderXAccelBuffering     = "X-Accel-Buffering"
+	HTTPHeaderXTotalSessions      = "X-Total-Sessions"
 	HTTPHeaderXForwardedFor       = "X-Forwarded-For"
 	HTTPHeaderXForwardedPort      = "X-Forwarded-Port"
 	HTTPHeaderXForwardedProto     = "X-Forwarded-Proto"
@@ -60,6 +61,7 @@ const (
 	HTTPContentTypeJSON            = "application/json"
 	HTTPContentTypeProblemJSON     = "application/problem+json"
 	HTTPContentTypeEventStream     = "text/event-stream"
+	HTTPContentTypeNDJSON          = "application/x-ndjson"
 	HTTPContentTypeTextPlain       = "text/plain; charset=utf-8"
 	HTTPContentTypeFormURLEncoded  = "application/x-www-form-urlencoded"
 	HTTPAcceptJSONAny              = "application/json, text/plain, */*"
@@ -98,6 +100,17 @@ const (
 	MinHTTPBodyBytes int = 1 * 1024 * 1024
 
 	MIMETypeOctetStream = "application/octet-stream"
+	// MIMETypeImagePrefix 图片 MIME 前缀
+	MIMETypeImagePrefix = "image/"
+	// MIMETypeImagePNG 等：消息图片存储版本允许的 MIME（按字节内容判定）
+	MIMETypeImagePNG  = "image/png"
+	MIMETypeImageJPEG = "image/jpeg"
+	MIMETypeImageGIF  = "image/gif"
+	MIMETypeImageWebP = "image/webp"
+	// URLSchemeSeparator URL 协议分隔符
+	URLSchemeSeparator = "://"
+	// BytesPerKiB 1 KiB 字节数
+	BytesPerKiB = 1024
 
 	CORSAllowOrigins    = "http://localhost:3000"
 	CORSPreflightMaxAge = 12 * time.Hour

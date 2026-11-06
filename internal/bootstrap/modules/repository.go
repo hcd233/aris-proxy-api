@@ -6,7 +6,6 @@ import (
 	demoport "github.com/hcd233/aris-mass/internal/application/demo/port"
 	demoauditport "github.com/hcd233/aris-mass/internal/application/demoaccessaudit/port"
 	"github.com/hcd233/aris-mass/internal/application/llmproxy/usecase"
-	oauthport "github.com/hcd233/aris-mass/internal/application/oauth2/port"
 	sessionport "github.com/hcd233/aris-mass/internal/application/session/port"
 	"github.com/hcd233/aris-mass/internal/common/constant"
 	"github.com/hcd233/aris-mass/internal/common/enum"
@@ -55,7 +54,6 @@ var RepositoryModule = fx.Module(constant.DigNameRepositoryModule,
 		NewOAuthAccessCache,
 		NewOAuthClients,
 		NewOAuthTokenProvider,
-		NewAudioDirCreator,
 		NewShareCache,
 		fx.Annotate(
 			NewShareCache,
@@ -168,13 +166,6 @@ func NewOAuthTokenProvider(
 	redisClient *redis.Client,
 ) llmproxyservice.OAuthTokenProvider {
 	return oauthprovider.NewDefaultTokenProvider(credRepo, redisClient)
-}
-
-func NewAudioDirCreator() oauthport.ObjectStorageDirCreator {
-	if config.CosAppID == "" && config.MinioEndpoint == "" {
-		return nil
-	}
-	return repository.NewAudioDirCreator()
 }
 
 func NewShareCache(redisClient *redis.Client) cache.ShareCache {
