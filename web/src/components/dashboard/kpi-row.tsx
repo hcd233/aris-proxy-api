@@ -78,7 +78,7 @@ function KpiCard({ spec, loading }: { spec: KpiSpec; loading: boolean }) {
             <MetricNumber value={spec.value} />
             {spec.unit && <span className="ml-1 text-xs text-muted-foreground">{spec.unit}</span>}
           </div>
-          <div className="min-h-[2lh] text-[11px] leading-snug text-muted-foreground tabular-nums">
+          <div className="min-h-[2lh] flex-1 text-[11px] leading-snug text-muted-foreground tabular-nums">
             {spec.sub.join(" · ")}
           </div>
           <Sparkline values={spec.series} previous={spec.previous} className={spec.lineClass} />
