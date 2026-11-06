@@ -18,7 +18,6 @@ const (
 	ResponseObjectValue = "response"
 
 	SSEDataFrameTemplate       = "data: %s\n\n"
-	SSEEventFrameTemplate      = "event: %s\ndata: %s\n\n"
 	SSEEventLineTemplate       = "event: %s\n"
 	SSEDataLineTemplate        = "data: %s\n\n"
 	SSEOpenAIUpstreamErrorData = `{"error":{"message":"upstream returned status %d","type":"server_error","code":"upstream_error"}}`

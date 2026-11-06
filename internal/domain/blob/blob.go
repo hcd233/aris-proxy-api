@@ -9,19 +9,22 @@ import (
 // ObjectStore S3 兼容对象存储
 //
 //	@author centonhuang
-//	@update 2026-11-05 10:00:00
+//	@update 2026-11-06 10:00:00
 type ObjectStore interface {
 	Put(ctx context.Context, key, contentType string, data []byte) error
 	Get(ctx context.Context, key string) ([]byte, error)
+	// Delete 删除对象；对象不存在不报错（S3 语义）
+	Delete(ctx context.Context, key string) error
 	PresignGet(ctx context.Context, key string, ttl time.Duration) (string, error)
 }
 
 // ImageView 一张已外置图片的读取视图
 //
-//	已上传时给出预签名 URL；其余状态给出 blobs 表中暂存的字节。
+//	已上传时给出预签名 URL；pending/failed 给出 blobs 表中暂存的字节；
+//	unprocessable（无法压缩到上限内的原图）两者都不给。
 //
 //	@author centonhuang
-//	@update 2026-11-05 10:00:00
+//	@update 2026-11-06 10:00:00
 type ImageView struct {
 	Mime          string
 	Size          int64

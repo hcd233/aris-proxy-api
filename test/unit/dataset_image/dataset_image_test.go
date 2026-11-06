@@ -138,7 +138,8 @@ func TestExportResolverDataURIAndExternalPassThrough(t *testing.T) {
 
 func TestExportResolverCachesAndCaps(t *testing.T) {
 	t.Parallel()
-	big := bytes.Repeat([]byte{1}, 30<<20)
+	// 6MB 原图 → 约 8MB data URI，两张即超过 16MB 缓存上限
+	big := bytes.Repeat([]byte{1}, 6<<20)
 	reader := newReader(map[string][]byte{shaA: big, shaB: big})
 	r := datasetquery.NewExportImageResolver(t.Context(), reader)
 	for range 2 {
@@ -154,6 +155,26 @@ func TestExportResolverCachesAndCaps(t *testing.T) {
 	}
 }
 
+// TestExportResolverSessionBudget 单会话内联图片超出预算后跳过，新会话重置预算
+func TestExportResolverSessionBudget(t *testing.T) {
+	t.Parallel()
+	big := bytes.Repeat([]byte{1}, 9<<20) // 约 12MB data URI
+	r := datasetquery.NewExportImageResolver(t.Context(), newReader(map[string][]byte{shaA: big, shaB: big}))
+	r.BeginSession()
+	results := []bool{}
+	for _, sha := range []string{shaA, shaB, shaA} {
+		_, ok := r.Resolve(imagePart(vo.ImageRefOf(sha)))
+		results = append(results, ok)
+	}
+	if !results[0] || !results[1] || results[2] || r.Skipped() != 1 {
+		t.Fatalf("results=%v skipped=%d", results, r.Skipped())
+	}
+	r.BeginSession()
+	if _, ok := r.Resolve(imagePart(vo.ImageRefOf(shaA))); !ok {
+		t.Fatal("budget must reset for a new session")
+	}
+}
+
 func TestExportResolverReadFailure(t *testing.T) {
 	t.Parallel()
 	r := datasetquery.NewExportImageResolver(t.Context(), newReader(nil))
@@ -165,12 +186,12 @@ func TestExportResolverReadFailure(t *testing.T) {
 func TestPreviewResolverNoFetch(t *testing.T) {
 	t.Parallel()
 	got, ok := datasetquery.PreviewImageResolver(imagePart(vo.ImageRefOf(shaA)))
-	if !ok || got != "data:image/png;base64,<已省略 2 KB>" {
+	if !ok || got != "data:image/png;base64,<omitted 2 KB>" {
 		t.Fatalf("got=%q", got)
 	}
 	raw := base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{1}, 3000))
 	got, _ = datasetquery.PreviewImageResolver(&vo.UnifiedContentPart{Type: enum.ContentPartTypeImageURL, ImageURL: "data:image/jpeg;base64," + raw})
-	if got != "data:image/jpeg;base64,<已省略 3 KB>" {
+	if got != "data:image/jpeg;base64,<omitted 3 KB>" {
 		t.Fatalf("got=%q", got)
 	}
 	if got, _ := datasetquery.PreviewImageResolver(imagePart("https://x/a.png")); got != "https://x/a.png" {

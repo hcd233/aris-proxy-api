@@ -107,9 +107,6 @@ var (
 
 	// ==================== 对象存储错误 ====================
 
-	// ErrObjStorage 对象存储操作错误
-	ErrObjStorage = newFromSentinel(newSentinel("obj_storage", model.NewErrorWithKey(10000, "Internal Error", "error.internal")))
-
 	// ==================== 上游代理错误 ====================
 
 	// ErrProxyRequest 上游请求构建错误

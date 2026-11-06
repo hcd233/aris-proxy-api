@@ -210,7 +210,7 @@ func FromAnthropicResponse(msg *AnthropicMessage) (*vo.UnifiedMessage, error) {
 //	@param blocks []*AnthropicContentBlock
 //	@return error
 //	@author centonhuang
-//	@update 2026-04-22 14:10:00
+//	@update 2026-11-05 10:00:00
 func extractAnthropicBlocks(um *vo.UnifiedMessage, blocks []*AnthropicContentBlock) error {
 	var (
 		textParts         []string
@@ -301,6 +301,13 @@ func buildToolCallFromAnthropicBlock(block *AnthropicContentBlock, idx int) (*vo
 	}, nil
 }
 
+// extractToolResultContent 提取 tool_result 块的 tool_use_id 与内容（嵌套文本合并、嵌套图片转为图片部分）
+//
+//	@param block *AnthropicContentBlock
+//	@return toolUseID string
+//	@return content *vo.UnifiedContent
+//	@author centonhuang
+//	@update 2026-11-05 10:00:00
 func extractToolResultContent(block *AnthropicContentBlock) (toolUseID string, content *vo.UnifiedContent) {
 	if block.ToolUseID != nil {
 		toolUseID = *block.ToolUseID
@@ -332,6 +339,11 @@ func extractToolResultContent(block *AnthropicContentBlock) (toolUseID string, c
 }
 
 // anthropicImagePart 将 Anthropic image 块转为统一图片部分；source 缺失或类型未知时返回 nil
+//
+//	@param block *AnthropicContentBlock
+//	@return *vo.UnifiedContentPart
+//	@author centonhuang
+//	@update 2026-11-05 10:00:00
 func anthropicImagePart(block *AnthropicContentBlock) *vo.UnifiedContentPart {
 	if block.Source == nil {
 		return nil
@@ -351,6 +363,12 @@ func anthropicImagePart(block *AnthropicContentBlock) *vo.UnifiedContentPart {
 
 // buildPartsContent 合并文本与图片：无图时保持 Text 形态（保证纯文本消息 checksum 不变），
 // 有图时文本合并为首个 text 部分、图片按序在后；两者皆空返回 nil
+//
+//	@param texts []string
+//	@param images []*vo.UnifiedContentPart
+//	@return *vo.UnifiedContent
+//	@author centonhuang
+//	@update 2026-11-05 10:00:00
 func buildPartsContent(texts []string, images []*vo.UnifiedContentPart) *vo.UnifiedContent {
 	text := strings.Join(texts, "\n")
 	if len(images) == 0 {
@@ -367,6 +385,12 @@ func buildPartsContent(texts []string, images []*vo.UnifiedContentPart) *vo.Unif
 }
 
 // appendImages 把顶层图片追加到 tool_result 内容末尾
+//
+//	@param content *vo.UnifiedContent
+//	@param images []*vo.UnifiedContentPart
+//	@return *vo.UnifiedContent
+//	@author centonhuang
+//	@update 2026-11-05 10:00:00
 func appendImages(content *vo.UnifiedContent, images []*vo.UnifiedContentPart) *vo.UnifiedContent {
 	if len(images) == 0 {
 		return content

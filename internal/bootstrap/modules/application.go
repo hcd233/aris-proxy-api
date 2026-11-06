@@ -182,7 +182,6 @@ type handleCallbackParams struct {
 	UserRepo      identity.UserRepository
 	AccessSigner  identityservice.TokenSigner `name:"accessSigner"`
 	RefreshSigner identityservice.TokenSigner `name:"refreshSigner"`
-	DirCreator    oauthport.ObjectStorageDirCreator
 	StateManager  oauthsvc.StateManager
 }
 
@@ -192,7 +191,6 @@ func NewHandleCallbackHandler(params handleCallbackParams) oauthport.HandleCallb
 		params.UserRepo,
 		params.AccessSigner,
 		params.RefreshSigner,
-		params.DirCreator,
 		params.StateManager,
 	)
 }

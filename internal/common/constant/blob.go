@@ -16,6 +16,8 @@ const (
 	BlobStorageKeyTemplate = "images/%s/%s/%s%s"
 	// BlobSHA256HexLen sha256 hex 长度
 	BlobSHA256HexLen = 64
+	// BlobDefaultExtension 非白名单 MIME 的对象扩展名
+	BlobDefaultExtension = ".bin"
 
 	// BlobMaxStoredBytes 存储版本字节上限（2MB）
 	BlobMaxStoredBytes = 2 << 20
@@ -28,77 +30,37 @@ const (
 
 	// BlobPutTimeout 单张图片 PUT 超时
 	BlobPutTimeout = 10 * time.Second
-	// BlobTaskTimeout 单个落库任务的图片外置总超时
-	BlobTaskTimeout = 60 * time.Second
 	// BlobPresignTTL 预签名 GET 链接有效期
 	BlobPresignTTL = 10 * time.Minute
+	// BlobPoolMaxInflightBytes 上传池内存中排队与处理中的原图字节总量上限，超出时直接落 blobs 表
+	BlobPoolMaxInflightBytes = 64 << 20
 
 	// BlobRetryBatchSize 重试任务每批处理行数
 	BlobRetryBatchSize = 50
 	// BlobRetryMaxAttempts 上传尝试次数上限，达到后转 failed
 	BlobRetryMaxAttempts = 10
-	// BlobLastErrorMaxLen last_error 列截断长度
+	// BlobLastErrorMaxLen last_error 列截断长度（按字符计）
 	BlobLastErrorMaxLen = 512
 
-	// BlobExportCacheMaxBytes 一次导出内图片缓存总量上限
-	BlobExportCacheMaxBytes = 64 << 20
+	// BlobExportCacheMaxBytes 一次导出内跨会话的图片缓存总量上限
+	BlobExportCacheMaxBytes = 16 << 20
+	// BlobExportSessionMaxBytes 单个会话内联图片（data URI）的总字节上限，超出的图片被跳过
+	BlobExportSessionMaxBytes = 32 << 20
 	// BlobMigrateDefaultBatchSize 存量迁移默认批大小
 	BlobMigrateDefaultBatchSize = 200
 	// BlobMigrateLikePattern 存量迁移预过滤：sonic 序列化后含 data URI 图片的 message
 	BlobMigrateLikePattern = `%"image_url":"data:%`
-	// DBConditionBlobMigrateCandidate 迁移游标条件（不带 deleted_at，软删行一并处理）
-	DBConditionBlobMigrateCandidate = "id > ? AND message LIKE ?"
-	// DBConditionMessageReferencesImage 指定消息中是否引用某图片
-	DBConditionMessageReferencesImage = "id IN ? AND message LIKE ?"
-	// MIMETypeImagePrefix 图片 MIME 前缀
-	MIMETypeImagePrefix = "image/"
-	// TableMessages messages 表名
-	TableMessages = "messages"
-
-	// BytesPerKiB 1 KiB 字节数
-	BytesPerKiB = 1024
-	// DatasetPreviewImageTemplate 格式预览中省略图片内容的占位（mime, KB）
-	DatasetPreviewImageTemplate = "data:%s;base64,<已省略 %d KB>"
-	// ShareGPTImagePlaceholder ShareGPT 多模态图片占位符（LLaMA-Factory 约定）
-	ShareGPTImagePlaceholder = "<image>"
-
-	// MIMETypeImagePNG 等：存储版本允许的图片 MIME（按字节内容判定）
-	MIMETypeImagePNG  = "image/png"
-	MIMETypeImageJPEG = "image/jpeg"
-	MIMETypeImageGIF  = "image/gif"
-	MIMETypeImageWebP = "image/webp"
-	// URLSchemeSeparator URL 协议分隔符
-	URLSchemeSeparator = "://"
-	// BlobDefaultExtension 非白名单 MIME 的对象扩展名
-	BlobDefaultExtension = ".bin"
-
-	// blobs 表列名
-	FieldSHA256      = "sha256"
-	FieldBlobData    = "data"
-	FieldStorageKey  = "storage_key"
-	FieldMime        = "mime"
-	FieldSize        = "size"
-	FieldWidth       = "width"
-	FieldHeight      = "height"
-	FieldAttempts    = "attempts"
-	FieldLastError   = "last_error"
-	FieldNextRetryAt = "next_retry_at"
-
-	// DBConditionBlobRetryable 可被改写为 uploaded/重试/失败的状态
-	DBConditionBlobRetryable = "id = ? AND status IN ?"
-	// DBConditionBlobDue 到期待重试
-	DBConditionBlobDue = "status = ? AND next_retry_at <= ?"
-	// DBConditionBlobStatusEquals 按状态过滤
-	DBConditionBlobStatusEquals = "status = ?"
-	// DBOrderNextRetryAtAsc 重试按到期时间升序
-	DBOrderNextRetryAtAsc = "next_retry_at ASC"
+	// BlobAnyRefLikePattern 预过滤：含任意图片引用的 message
+	BlobAnyRefLikePattern = `%"image_url":"aris-blob:sha256:%`
+	// BlobRefLikePatternTemplate 预过滤：含指定图片引用的 message（参数为完整引用）
+	BlobRefLikePatternTemplate = `%%"image_url":"%s"%%`
+	// BlobRefCheckMaxRows 引用校验时最多解析的候选 message 行数
+	BlobRefCheckMaxRows = 50
 )
 
 var (
 	// BlobMetaFields 不含 data 的元数据列
 	BlobMetaFields = []string{FieldID, FieldSHA256, FieldStatus, FieldStorageKey, FieldMime, FieldSize, FieldWidth, FieldHeight}
-	// MessageMigrateFields 迁移读取 message 行的列
-	MessageMigrateFields = []string{FieldID, FieldModelID, FieldMessage, FieldCheckSum}
 	// BlobRetryableStatuses 允许被改写的状态
 	BlobRetryableStatuses = []string{enum.BlobStatusPending, enum.BlobStatusFailed}
 	// BlobMimeExtensions 白名单图片 MIME → 对象扩展名

@@ -24,10 +24,7 @@ import type {
   ReauthOAuthReqBody,
   CronCallAuditOptionListReq,
   CronCallAuditOptionListRsp,
-  DatasetExportSSEData,
-  DatasetExportSSEError,
-  DatasetExportSSEEvent,
-  DatasetExportSSEStart,
+  DatasetExportResult,
   DatasetFormatPreviewRsp,
   DatasetPreviewRsp,
   DeleteSessionRsp,
@@ -130,6 +127,9 @@ export class ApiError extends Error {
     }
   }
 }
+
+/** NDJSON 行分隔符 "\n" 的字节值 */
+const NEWLINE_BYTE = 0x0a;
 
 class ApiClient {
   private refreshing: Promise<boolean> | null = null;
@@ -1046,6 +1046,10 @@ class ApiClient {
     return this.request<DatasetFormatPreviewRsp>(`${API_PREFIX}/dataset/sample?${sp}`);
   }
 
+  /**
+   * 流式导出 ShareGPT NDJSON。响应字节原样收集（不解码成字符串，内存只占一份），
+   * 按换行数回调进度；收到的行数少于 X-Total-Sessions 说明服务端中途中断。
+   */
   async exportDatasetStream(
     params: {
       minScore?: number;
@@ -1053,9 +1057,9 @@ class ApiClient {
       startTime?: string;
       endTime?: string;
     },
-    onEvent: (event: DatasetExportSSEEvent) => void,
+    onProgress: (lines: number, total: number) => void,
     signal?: AbortSignal,
-  ): Promise<void> {
+  ): Promise<DatasetExportResult> {
     const sp = new URLSearchParams();
     if (params.minScore) sp.set("minScore", String(params.minScore));
     if (params.modelIds && params.modelIds.length > 0)
@@ -1081,43 +1085,30 @@ class ApiClient {
       }
     }
 
-    // 统一错误契约：管理 API 错误以 200 + {error} JSON 返回，而非 SSE 帧。
-    // 非 text/event-stream 的响应说明握手阶段即失败（如权限不足），直接抛错。
+    // 统一错误契约：筛选无结果、权限不足等在开始流式输出前以 200 + {error} JSON 返回。
     const contentType = res.headers.get("content-type") ?? "";
-    if (!contentType.includes("text/event-stream")) {
+    if (!contentType.includes("application/x-ndjson")) {
       await resolveResponse(res);
-      return;
+      throw new ApiError(res.status, "Unexpected export response");
     }
-
     if (!res.body) throw new ApiError(500, "No response body");
 
+    const total = Number(res.headers.get("X-Total-Sessions") ?? 0);
+    const chunks: Uint8Array[] = [];
+    let lines = 0;
     const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-
     try {
       for (;;) {
         const { done, value } = await reader.read();
         if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-
-        const frames = buffer.split("\n\n");
-        buffer = frames.pop() ?? "";
-
-        for (const frame of frames) {
-          const event = parseSSEFrame(frame);
-          if (event) onEvent(event);
-        }
-      }
-
-      if (buffer.trim()) {
-        const event = parseSSEFrame(buffer);
-        if (event) onEvent(event);
+        chunks.push(value);
+        for (const byte of value) if (byte === NEWLINE_BYTE) lines++;
+        onProgress(lines, total);
       }
     } finally {
       reader.releaseLock();
     }
+    return { chunks, lines, total };
   }
 }
 
@@ -1158,43 +1149,6 @@ async function resolveResponse(res: Response): Promise<unknown> {
     throw new ApiError(res.status, text);
   }
   return body;
-}
-
-function parseSSEFrame(frame: string): DatasetExportSSEEvent | null {
-  const lines = frame.split("\n");
-  let event = "";
-  const dataLines: string[] = [];
-
-  for (const line of lines) {
-    if (line.startsWith(":")) continue; // SSE 注释行，忽略
-    if (line.startsWith("event:")) {
-      event = line.slice("event:".length).trim();
-    } else if (line.startsWith("data:")) {
-      // 规范：冒号后至多一个前导空格；同事件的多个 data: 行以 \n 拼接
-      dataLines.push(line.slice("data:".length).replace(/^ /, ""));
-    }
-  }
-
-  if (!event || dataLines.length === 0) return null;
-  const data = dataLines.join("\n");
-
-  try {
-    const parsed = JSON.parse(data);
-    switch (event) {
-      case "start":
-        return { event: "start", data: parsed as DatasetExportSSEStart };
-      case "data":
-        return { event: "data", data: parsed as DatasetExportSSEData };
-      case "done":
-        return { event: "done", data: parsed as DatasetExportSSEStart };
-      case "error":
-        return { event: "error", data: parsed as DatasetExportSSEError };
-      default:
-        return null;
-    }
-  } catch {
-    return null;
-  }
 }
 
 export const api = new ApiClient();

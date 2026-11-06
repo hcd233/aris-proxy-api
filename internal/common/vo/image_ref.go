@@ -4,9 +4,11 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"slices"
 	"strings"
 
 	"github.com/hcd233/aris-mass/internal/common/constant"
+	"github.com/hcd233/aris-mass/internal/common/enum"
 )
 
 var base64Whitespace = strings.NewReplacer("\r", "", "\n", "")
@@ -102,4 +104,91 @@ func imageChecksumKey(url string) (string, bool) {
 		return constant.BlobChecksumPrefix + SHA256Hex(raw), true
 	}
 	return "", false
+}
+
+// ImageRefSHAs 返回 message 中 image_url 部分引用的图片 sha256（按出现顺序，可能重复）
+//
+//	只认 type=image_url 且值为合法引用形态的部分；文本中出现的同名字符串不算引用。
+//
+//	@param msg *UnifiedMessage
+//	@return []string
+//	@author centonhuang
+//	@update 2026-11-06 10:00:00
+func ImageRefSHAs(msg *UnifiedMessage) []string {
+	if msg == nil || msg.Content == nil {
+		return nil
+	}
+	var shas []string
+	for _, p := range msg.Content.Parts {
+		if p == nil || p.Type != enum.ContentPartTypeImageURL {
+			continue
+		}
+		if sha, ok := ParseImageRef(p.ImageURL); ok {
+			shas = append(shas, sha)
+		}
+	}
+	return shas
+}
+
+// RewriteImageParts 写时复制地改写 image_url 部分
+//
+//	fn 返回非 nil 时替换该部分；有部分被替换的消息是副本，其余保持原指针，不修改入参。
+//
+//	@param msgs []*UnifiedMessage
+//	@param fn func(msgIdx, partIdx int, part *UnifiedContentPart) *UnifiedContentPart
+//	@return []*UnifiedMessage
+//	@author centonhuang
+//	@update 2026-11-06 10:00:00
+func RewriteImageParts(msgs []*UnifiedMessage, fn func(msgIdx, partIdx int, part *UnifiedContentPart) *UnifiedContentPart) []*UnifiedMessage {
+	out, cloned := msgs, false
+	for mi, m := range msgs {
+		if m == nil || m.Content == nil {
+			continue
+		}
+		var parts []*UnifiedContentPart
+		for pi, p := range m.Content.Parts {
+			if p == nil || p.Type != enum.ContentPartTypeImageURL {
+				continue
+			}
+			next := fn(mi, pi, p)
+			if next == nil {
+				continue
+			}
+			if parts == nil {
+				parts = slices.Clone(m.Content.Parts)
+			}
+			parts[pi] = next
+		}
+		if parts == nil {
+			continue
+		}
+		if !cloned {
+			out, cloned = slices.Clone(msgs), true
+		}
+		cp := *m
+		cp.Content = &UnifiedContent{Text: m.Content.Text, Parts: parts}
+		out[mi] = &cp
+	}
+	return out
+}
+
+// NeutralizeImageRefs 把客户端提交的图片引用改写为文本部分
+//
+//	引用形态只能由服务端外置图片时生成。客户端自带的 aris-blob 引用若原样入库，
+//	持有者就能凭"本会话引用了该图"的校验读取别人的图片，因此落库前一律降级为文本。
+//
+//	@param msgs []*UnifiedMessage 来自客户端请求与上游响应的消息
+//	@return out []*UnifiedMessage
+//	@return n int 被改写的部分数
+//	@author centonhuang
+//	@update 2026-11-06 10:00:00
+func NeutralizeImageRefs(msgs []*UnifiedMessage) (out []*UnifiedMessage, n int) {
+	out = RewriteImageParts(msgs, func(_, _ int, p *UnifiedContentPart) *UnifiedContentPart {
+		if !strings.HasPrefix(p.ImageURL, constant.BlobRefPrefix) {
+			return nil
+		}
+		n++
+		return &UnifiedContentPart{Type: enum.ContentPartTypeText, Text: p.ImageURL}
+	})
+	return out, n
 }

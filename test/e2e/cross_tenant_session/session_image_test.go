@@ -35,6 +35,11 @@ func (s *e2eObjectStore) Get(_ context.Context, key string) ([]byte, error) {
 	return data, nil
 }
 
+func (s *e2eObjectStore) Delete(_ context.Context, key string) error {
+	delete(s.objects, key)
+	return nil
+}
+
 func (s *e2eObjectStore) PresignGet(_ context.Context, key string, _ time.Duration) (string, error) {
 	return "https://storage.example.com/" + key + "?X-Amz-Signature=e2e", nil
 }
@@ -43,21 +48,27 @@ type imageFixture struct {
 	session                 *dbmodel.Session
 	uploadedSHA, pendingSHA string
 	foreignSHA              string
+	unprocessableSHA        string
 }
 
 // seedImages 为 userA 新建一个含两张已外置图片的会话，另有一张图只出现在 orphan 会话
 func (f *crossTenantSessionFixture) seedImages(t *testing.T) *imageFixture {
 	t.Helper()
 	fx := &imageFixture{
-		uploadedSHA: vo.SHA256Hex([]byte("uploaded")),
-		pendingSHA:  vo.SHA256Hex([]byte("pending")),
-		foreignSHA:  vo.SHA256Hex([]byte("foreign")),
+		uploadedSHA:      vo.SHA256Hex([]byte("uploaded")),
+		pendingSHA:       vo.SHA256Hex([]byte("pending")),
+		foreignSHA:       vo.SHA256Hex([]byte("foreign")),
+		unprocessableSHA: vo.SHA256Hex([]byte("unprocessable")),
 	}
 	part := func(sha string) *vo.UnifiedContentPart {
 		return &vo.UnifiedContentPart{Type: enum.ContentPartTypeImageURL, ImageURL: vo.ImageRefOf(sha), ImageMime: "image/png", ImageSize: 3}
 	}
 	mine := &dbmodel.Message{CheckSum: "img-mine", Message: &vo.UnifiedMessage{Role: enum.RoleUser, Content: &vo.UnifiedContent{
-		Parts: []*vo.UnifiedContentPart{part(fx.uploadedSHA), part(fx.pendingSHA)},
+		Parts: []*vo.UnifiedContentPart{
+			part(fx.uploadedSHA), part(fx.pendingSHA), part(fx.unprocessableSHA),
+			// 别人的图片引用以文本形式出现：模拟客户端伪造的引用在落库时被降级为文本
+			{Type: enum.ContentPartTypeText, Text: vo.ImageRefOf(fx.foreignSHA)},
+		},
 	}}}
 	foreign := &dbmodel.Message{CheckSum: "img-foreign", Message: &vo.UnifiedMessage{Role: enum.RoleUser, Content: &vo.UnifiedContent{
 		Parts: []*vo.UnifiedContentPart{part(fx.foreignSHA)},
@@ -79,6 +90,7 @@ func (f *crossTenantSessionFixture) seedImages(t *testing.T) *imageFixture {
 		{SHA256: fx.uploadedSHA, Status: enum.BlobStatusUploaded, StorageKey: "images/up.png", Mime: "image/png", Size: 3},
 		{SHA256: fx.pendingSHA, Status: enum.BlobStatusPending, Data: []byte("png"), StorageKey: "images/pd.png", Mime: "image/png", Size: 3, NextRetryAt: &next},
 		{SHA256: fx.foreignSHA, Status: enum.BlobStatusPending, Data: []byte("sec"), StorageKey: "images/fr.png", Mime: "image/png", Size: 3, NextRetryAt: &next},
+		{SHA256: fx.unprocessableSHA, Status: enum.BlobStatusUnprocessable, Data: []byte("big"), StorageKey: "images/un.png", Mime: "image/png", Size: 3},
 	}
 	for _, b := range blobs {
 		if err := f.db.Create(b).Error; err != nil {
@@ -152,6 +164,26 @@ func TestSessionImageUnreferencedRejected(t *testing.T) {
 	status, data := f.getImage(t, fx.session.ID, fx.foreignSHA, f.tokenA)
 	if status != http.StatusOK || bizErrorCode(t, data) != bizCodeDataNotExists {
 		t.Fatalf("own session must not expose foreign image: status=%d body=%s", status, data)
+	}
+}
+
+// TestSessionImageTextRefRejected 自己的消息文本里出现别人的图片引用（伪造引用降级后的形态）不能取图
+func TestSessionImageTextRefRejected(t *testing.T) {
+	f := newCrossTenantSessionFixture(t)
+	fx := f.seedImages(t)
+	status, data := f.getImage(t, fx.session.ID, fx.foreignSHA, f.tokenA)
+	if status != http.StatusOK || bizErrorCode(t, data) != bizCodeDataNotExists {
+		t.Fatalf("text ref must not grant access: status=%d body=%s", status, data)
+	}
+}
+
+// TestSessionImageUnprocessableNotPreviewed unprocessable 的原图不作为预览返回
+func TestSessionImageUnprocessableNotPreviewed(t *testing.T) {
+	f := newCrossTenantSessionFixture(t)
+	fx := f.seedImages(t)
+	_, data := f.getImage(t, fx.session.ID, fx.unprocessableSHA, f.tokenA)
+	if body := decodeImage(t, data); body.Image.URL != "" || body.Image.DataURL != "" || body.Image.Mime != "image/png" {
+		t.Fatalf("body=%s", data)
 	}
 }
 

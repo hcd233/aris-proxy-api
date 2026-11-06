@@ -31,7 +31,7 @@ func initDatasetRouter(datasetGroup huma.API, datasetHandler handler.DatasetHand
 		Method:      http.MethodGet,
 		Path:        "/export",
 		Summary:     "ExportDataset",
-		Description: "Stream export filtered sessions as ShareGPT-format JSONL. Each line is one conversation. Admin sees all; user sees only their own API key sessions.",
+		Description: "Stream export filtered sessions as ShareGPT-format NDJSON (application/x-ndjson), one conversation per line; X-Total-Sessions carries the matched count, fewer lines means the stream was aborted. Admin sees all; user sees only their own API key sessions.",
 		Tags:        []string{constant.TagDataset},
 		Security:    []map[string][]string{{constant.SecuritySchemeJWT: {}}},
 		Middlewares: huma.Middlewares{middleware.LimitUserPermissionMiddleware("exportDataset", enum.PermissionUser)},

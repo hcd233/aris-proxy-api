@@ -7,6 +7,7 @@ import (
 	sessionport "github.com/hcd233/aris-mass/internal/application/session/port"
 	"github.com/hcd233/aris-mass/internal/common/constant"
 	"github.com/hcd233/aris-mass/internal/common/inflight"
+	"github.com/hcd233/aris-mass/internal/config"
 	"github.com/hcd233/aris-mass/internal/domain/blob"
 	"github.com/hcd233/aris-mass/internal/domain/modelcall"
 	"github.com/hcd233/aris-mass/internal/infrastructure/blobstore"
@@ -79,9 +80,9 @@ func NewPoolManager(
 	return pool.NewPoolManager(db, auditRepo, demoAccessAuditRepo, sessionCache, externalizer)
 }
 
-// NewObjectStore 消息图片对象存储；未配置时为 nil（图片暂存 blobs 表）
+// NewObjectStore 消息图片对象存储（进程内单例，与 cron、CLI 共用）；未配置时为 nil（图片暂存 blobs 表）
 func NewObjectStore() blob.ObjectStore {
-	return objectstore.NewFromConfig()
+	return objectstore.Default()
 }
 
 // NewImageReader 已外置图片读取端
@@ -89,9 +90,10 @@ func NewImageReader(db *gorm.DB, store blob.ObjectStore) blob.ImageReader {
 	return blobstore.NewReader(db, store)
 }
 
-// NewBlobExternalizer 消息图片外置器
+// NewBlobExternalizer 消息图片外置器；压缩与上传在独立协程池中执行，随 PoolManager 一起停止
 func NewBlobExternalizer(db *gorm.DB, store blob.ObjectStore) *blobstore.Externalizer {
-	return blobstore.NewExternalizer(db, store)
+	uploader := blobstore.NewAsyncUploader(db, store, config.Pool.Blob.Workers, config.Pool.Blob.QueueSize)
+	return blobstore.NewExternalizer(db, uploader)
 }
 
 func NewInflightTracker() *inflight.Tracker {

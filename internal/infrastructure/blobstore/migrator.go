@@ -51,12 +51,22 @@ type Migrator struct {
 	externalizer *Externalizer
 }
 
-// messageRow 迁移时按原始字符串读取 message，绕开 GORM 字段 serializer
+// messageRow 按原始字符串读取 message 行，绕开 GORM 字段 serializer
 type messageRow struct {
 	ID       uint
 	ModelID  string
 	Message  string
 	CheckSum string
+}
+
+// parseImageRefs 解析 message 行中 image_url 部分引用的图片；解析失败记日志并返回 nil
+func parseImageRefs(ctx context.Context, row messageRow) []string {
+	var msg vo.UnifiedMessage
+	if err := sonic.UnmarshalString(row.Message, &msg); err != nil {
+		logger.WithCtx(ctx).Warn("[BlobStore] Failed to parse message", zap.Uint("id", row.ID), zap.Error(err))
+		return nil
+	}
+	return vo.ImageRefSHAs(&msg)
 }
 
 // NewMigrator 构造存量迁移器
@@ -117,7 +127,7 @@ func (m *Migrator) Run(ctx context.Context, opts MigrateOptions) (MigrateStats, 
 func (m *Migrator) migrateRow(ctx context.Context, db *gorm.DB, id uint, dryRun bool, stats *MigrateStats) {
 	log := logger.WithCtx(ctx)
 	var row messageRow
-	if err := db.Table(constant.TableMessages).Select(constant.MessageMigrateFields).
+	if err := db.Table(constant.TableMessages).Select(constant.MessageRawFields).
 		Where(constant.DBConditionWhereIDIn, []uint{id}).Take(&row).Error; err != nil {
 		log.Error("[BlobMigrate] Failed to load message", zap.Uint("id", id), zap.Error(err))
 		return
@@ -135,7 +145,7 @@ func (m *Migrator) migrateRow(ctx context.Context, db *gorm.DB, id uint, dryRun 
 	}
 
 	out, blobStats := m.externalizer.Externalize(ctx, []*vo.UnifiedMessage{&msg})
-	addStats(&stats.Blobs, blobStats)
+	stats.Blobs.add(blobStats)
 	if out[0] == &msg {
 		return
 	}
@@ -173,13 +183,4 @@ func dataURIBytes(msg *vo.UnifiedMessage) int64 {
 		}
 	}
 	return n
-}
-
-func addStats(dst *ExternalizeStats, src ExternalizeStats) {
-	dst.Uploaded += src.Uploaded
-	dst.Pending += src.Pending
-	dst.Unprocessable += src.Unprocessable
-	dst.Reused += src.Reused
-	dst.Failed += src.Failed
-	dst.SavedBytes += src.SavedBytes
 }

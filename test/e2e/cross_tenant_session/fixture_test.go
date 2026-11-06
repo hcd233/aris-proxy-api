@@ -278,6 +278,13 @@ func (f *crossTenantSessionFixture) tokenFor(t *testing.T, userID uint) string {
 // do 经真实 fiber app 发起请求（fiber v3 App 未实现 http.Handler，用 app.Test 直连）。
 func (f *crossTenantSessionFixture) do(t *testing.T, method, path, token, body string) (status int, data []byte) {
 	t.Helper()
+	status, _, data = f.doWithHeader(t, method, path, token, body)
+	return status, data
+}
+
+// doWithHeader 同 do，额外返回响应头
+func (f *crossTenantSessionFixture) doWithHeader(t *testing.T, method, path, token, body string) (status int, header http.Header, data []byte) {
+	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), e2eHTTPTimeout)
 	defer cancel()
 	var reader io.Reader
@@ -301,7 +308,7 @@ func (f *crossTenantSessionFixture) do(t *testing.T, method, path, token, body s
 	if err != nil {
 		t.Fatalf("read body: %v", err)
 	}
-	return resp.StatusCode, data
+	return resp.StatusCode, resp.Header, data
 }
 
 // bizErrorBody 统一响应信封的错误体（管理 API 恒 HTTP 200，错误语义由 error.code 承载）

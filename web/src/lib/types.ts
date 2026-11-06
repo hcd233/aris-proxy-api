@@ -877,26 +877,12 @@ export interface DatasetFormatPreviewRsp extends CommonRsp {
   sharegptJson?: string;
 }
 
-export interface DatasetExportSSEStart {
-  totalSessions: number;
-}
-
-export interface DatasetExportSSEData {
-  current: number;
+/** 数据集 NDJSON 导出结果：原始字节块、实际收到的行数与服务端声明的会话总数 */
+export interface DatasetExportResult {
+  chunks: Uint8Array[];
+  lines: number;
   total: number;
-  progress: number;
-  json: string;
 }
-
-export interface DatasetExportSSEError {
-  message: string;
-}
-
-export type DatasetExportSSEEvent =
-  | { event: "start"; data: DatasetExportSSEStart }
-  | { event: "data"; data: DatasetExportSSEData }
-  | { event: "done"; data: DatasetExportSSEStart }
-  | { event: "error"; data: DatasetExportSSEError };
 
 // ─── Demo Access Audit ────────────────────────────────────────────────────────
 

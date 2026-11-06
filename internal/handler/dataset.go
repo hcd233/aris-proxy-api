@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"net/http"
+	"strconv"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humafiber"
@@ -92,19 +93,24 @@ func (h *datasetHandler) HandleExport(ctx context.Context, req *dto.DatasetExpor
 		EndTime:    req.EndTime,
 	}
 
+	stream, err := h.export.Handle(ctx, params)
+	if err != nil {
+		logger.WithCtx(ctx).Warn("[DatasetHandler] Export rejected", zap.Error(err))
+		return nil, apiutil.NewHumaBizError(ctx, err, ierr.ErrInternal.BizError())
+	}
+
 	return &huma.StreamResponse{
 		Body: func(humaCtx huma.Context) {
 			fiberCtx := humafiber.Unwrap(humaCtx)
-			fiberCtx.Set(constant.HTTPHeaderContentType, constant.HTTPContentTypeEventStream)
+			fiberCtx.Set(constant.HTTPHeaderContentType, constant.HTTPContentTypeNDJSON)
 			fiberCtx.Set(constant.HTTPHeaderCacheControl, constant.HTTPCacheControlNoCache)
-			fiberCtx.Set(constant.HTTPHeaderConnection, constant.HTTPConnectionKeepAlive)
-			fiberCtx.Set(constant.HTTPHeaderTransferEncoding, constant.HTTPTransferEncodingChunked)
 			fiberCtx.Set(constant.HTTPHeaderXAccelBuffering, constant.HTTPHeaderDisabled)
+			fiberCtx.Set(constant.HTTPHeaderXTotalSessions, strconv.Itoa(stream.Total))
 			fiberCtx.Status(http.StatusOK)
 
 			_ = fiberCtx.SendStreamWriter(func(w *bufio.Writer) { //nolint:errcheck // stream write errors propagate via Fiber
-				if err := h.export.Handle(ctx, params, w); err != nil {
-					logger.WithCtx(ctx).Error("[DatasetHandler] Export stream error", zap.Error(err))
+				if err := stream.Write(w); err != nil {
+					logger.WithCtx(ctx).Error("[DatasetHandler] Export stream aborted", zap.Error(err))
 				}
 			})
 		},

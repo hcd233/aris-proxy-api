@@ -17,6 +17,23 @@ const (
 	DBOrderByID                 = "id"
 	DBLockStrengthUpdate        = "UPDATE"
 
+	// TableMessages messages 表名
+	TableMessages = "messages"
+	// DBConditionBlobMigrateCandidate 迁移游标条件（不带 deleted_at，软删行一并处理）
+	DBConditionBlobMigrateCandidate = "id > ? AND message LIKE ?"
+	// DBConditionIDInAndMessageLike 指定消息范围内按 message 文本预过滤
+	DBConditionIDInAndMessageLike = "id IN ? AND message LIKE ?"
+	// DBConditionMessageLike 全表按 message 文本预过滤（不带 deleted_at，软删行也算引用）
+	DBConditionMessageLike = "message LIKE ?"
+	// DBConditionBlobRetryable 可被改写为 uploaded/重试/失败的状态
+	DBConditionBlobRetryable = "id = ? AND status IN ?"
+	// DBConditionBlobDue 到期待重试
+	DBConditionBlobDue = "status = ? AND next_retry_at <= ?"
+	// DBConditionBlobStatusEquals 按状态过滤
+	DBConditionBlobStatusEquals = "status = ?"
+	// DBOrderNextRetryAtAsc 重试按到期时间升序
+	DBOrderNextRetryAtAsc = "next_retry_at ASC"
+
 	DBJSONConditionAssistantRole  = "(message::jsonb)->>'role' = 'assistant'"
 	DBJSONConditionHasThinkTag    = "(message::jsonb)->>'content' LIKE '%<think>%'"
 	DBJSONConditionReasoningEmpty = "((message::jsonb)->>'reasoning_content' IS NULL OR (message::jsonb)->>'reasoning_content' = '')"

@@ -36,11 +36,6 @@ type HandleCallbackResult struct {
 	IsNewUser bool
 }
 
-// ObjectStorageDirCreator 对象存储目录创建器（跨域适配接口）
-type ObjectStorageDirCreator interface {
-	CreateDir(ctx context.Context, userID uint) error
-}
-
 // HandleCallbackHandler 回调命令处理器
 type HandleCallbackHandler interface {
 	Handle(ctx context.Context, cmd HandleCallbackCommand) (*HandleCallbackResult, error)
