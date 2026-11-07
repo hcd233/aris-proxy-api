@@ -1,0 +1,142 @@
+/* Metric-matched fallbacks for Maple Mono CN.
+ *
+ * Maple Mono CN is self-hosted as 228 unicode-range subsets with
+ * `font-display: swap`, so every page first paints in a fallback and swaps
+ * once each subset arrives. Its advances are fixed (measured from the woff2
+ * files): everything below U+2E80 is 0.6em, CJK (U+2E80–9FFF and fullwidth
+ * forms) is 1.2em; ascent 1.02em, descent 0.30em, no line gap. A proportional
+ * fallback (Avenir Next / PingFang at 1em) made text visibly shrink and then
+ * re-flow on swap.
+ *
+ * Each face below is a local system font scaled with `size-adjust` so its
+ * advances equal Maple's, and its vertical metrics are pinned to Maple's
+ * (overrides are scaled by size-adjust, hence 102% / sa and 30% / sa). One
+ * family per source font because size-adjust is per face; faces whose local()
+ * source is not installed simply fail and the stack moves on.
+ *
+ *   source                         advance          size-adjust
+ *   Menlo / DejaVu Sans Mono       1233/2048 em     0.6 / 0.60205 = 99.66%
+ *   Liberation Mono / Courier New  1229/2048 em     0.6 / 0.60010 = 99.98%
+ *   Consolas                       1126/2048 em     0.6 / 0.54980 = 109.13%
+ *   CJK sans (PingFang, YaHei…)    1em              1.2 / 1       = 120%
+ *
+ * Only 400 and 700 exist for Maple in this app (see app/layout.tsx), so the
+ * fallbacks declare the same two weights and resolve 500/600 identically.
+ * Keep the family names in sync with --font-sans / --font-mono in
+ * app/globals.css (guarded by lib/font-fallback.test.ts). */
+
+@font-face {
+  font-family: "Maple Mono CN Fallback Menlo";
+  src:
+    local("Menlo-Regular"), local("Menlo Regular"), local("DejaVuSansMono"),
+    local("DejaVu Sans Mono");
+  font-weight: 400;
+  size-adjust: 99.66%;
+  ascent-override: 102.35%;
+  descent-override: 30.1%;
+  line-gap-override: 0%;
+  unicode-range: U+0000-2E7F;
+}
+
+@font-face {
+  font-family: "Maple Mono CN Fallback Menlo";
+  src:
+    local("Menlo-Bold"), local("Menlo Bold"), local("DejaVuSansMono-Bold"),
+    local("DejaVu Sans Mono Bold");
+  font-weight: 700;
+  size-adjust: 99.66%;
+  ascent-override: 102.35%;
+  descent-override: 30.1%;
+  line-gap-override: 0%;
+  unicode-range: U+0000-2E7F;
+}
+
+@font-face {
+  font-family: "Maple Mono CN Fallback Liberation";
+  src:
+    local("LiberationMono"), local("Liberation Mono"), local("CourierNewPSMT"), local("Courier New");
+  font-weight: 400;
+  size-adjust: 99.98%;
+  ascent-override: 102.02%;
+  descent-override: 30.01%;
+  line-gap-override: 0%;
+  unicode-range: U+0000-2E7F;
+}
+
+@font-face {
+  font-family: "Maple Mono CN Fallback Liberation";
+  src:
+    local("LiberationMono-Bold"), local("Liberation Mono Bold"), local("CourierNewPS-BoldMT"),
+    local("Courier New Bold");
+  font-weight: 700;
+  size-adjust: 99.98%;
+  ascent-override: 102.02%;
+  descent-override: 30.01%;
+  line-gap-override: 0%;
+  unicode-range: U+0000-2E7F;
+}
+
+@font-face {
+  font-family: "Maple Mono CN Fallback Consolas";
+  src: local("Consolas");
+  font-weight: 400;
+  size-adjust: 109.13%;
+  ascent-override: 93.47%;
+  descent-override: 27.49%;
+  line-gap-override: 0%;
+  unicode-range: U+0000-2E7F;
+}
+
+@font-face {
+  font-family: "Maple Mono CN Fallback Consolas";
+  src: local("Consolas Bold"), local("Consolas-Bold");
+  font-weight: 700;
+  size-adjust: 109.13%;
+  ascent-override: 93.47%;
+  descent-override: 27.49%;
+  line-gap-override: 0%;
+  unicode-range: U+0000-2E7F;
+}
+
+@font-face {
+  font-family: "Maple Mono CN Fallback CJK";
+  src:
+    local("PingFangSC-Regular"), local("PingFang SC Regular"), local("HiraginoSansGB-W3"),
+    local("Hiragino Sans GB W3"), local("MicrosoftYaHei"), local("Microsoft YaHei"),
+    local("NotoSansCJKsc-Regular"), local("Noto Sans CJK SC Regular"),
+    local("SourceHanSansSC-Regular"), local("WenQuanYi Micro Hei");
+  font-weight: 400;
+  size-adjust: 120%;
+  ascent-override: 85%;
+  descent-override: 25%;
+  line-gap-override: 0%;
+  unicode-range: U+2E80-9FFF, U+F900-FAFF, U+FE30-FE4F, U+FF00-FF60, U+FFE0-FFE6;
+}
+
+@font-face {
+  font-family: "Maple Mono CN Fallback CJK";
+  src:
+    local("PingFangSC-Semibold"), local("PingFang SC Semibold"), local("HiraginoSansGB-W6"),
+    local("Hiragino Sans GB W6"), local("MicrosoftYaHei-Bold"), local("Microsoft YaHei Bold"),
+    local("NotoSansCJKsc-Bold"), local("Noto Sans CJK SC Bold"), local("SourceHanSansSC-Bold"),
+    local("WenQuanYi Micro Hei");
+  font-weight: 700;
+  size-adjust: 120%;
+  ascent-override: 85%;
+  descent-override: 25%;
+  line-gap-override: 0%;
+  unicode-range: U+2E80-9FFF, U+F900-FAFF, U+FE30-FE4F, U+FF00-FF60, U+FFE0-FFE6;
+}
+
+/* PingFang / YaHei carry `halt`/`chws`, so Chrome's default text-spacing-trim
+ * collapses adjacent fullwidth punctuation in the fallback (，。、「 lose half
+ * an advance per pair) while Maple, lacking those features, never trims.
+ * Keep punctuation full width so both measure the same. Serif headings never
+ * use Maple, so they keep the browser default. */
+:root {
+  text-spacing-trim: space-all;
+}
+
+:where(.font-display, .font-heading) {
+  text-spacing-trim: normal;
+}
