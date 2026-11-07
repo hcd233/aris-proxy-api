@@ -168,7 +168,8 @@ export function UsageTrendPanel({ range }: { range: DashboardRange }) {
             minTickGap={32}
             tickFormatter={xTickFormatter}
           />
-          <YAxis tickLine={false} axisLine={false} width={44} tickFormatter={format} />
+          {/* 轴宽不写死：按实际刻度测量（金额刻度随币种/量级变宽） */}
+          <YAxis tickLine={false} axisLine={false} width="auto" tickFormatter={format} />
           <ChartTooltip content={renderTooltip} />
           {keys.map((k) => (
             <Area

@@ -74,6 +74,13 @@
 - **逐字入场标题（`SplitText`）按词断行**：字符被包进 `.split-word`（`inline-block` + `nowrap`），一行只能在词与词之间断，否则每个 inline-block 字符两侧都是换行机会，中文会拆出「接 / 入」、英文会断出 `mod / el`。英文按 `Intl.Segmenter` 词边界即可；中日文没有空格，ICU 词典认不出「接入」这类词，所以**文案里用 U+200B（JSON 写 `\u200b`）显式标出允许断行的位置**，有标记时 CJK 连续文字只在标记处断（`lib/split-words.ts`）。新增 / 修改 `portal.tagline` 这类用 `SplitText` 的文案时，zh / ja 都要补标记，并实测三语 × 桌面 / 手机无断词、无溢出。
 - **内联脚本不要拼接**：根布局是 server component，从 `"use client"` 模块（如 `lib/theme.tsx`）导入的常量在这里是客户端引用，只能原样作为 prop 传入；与其他字符串拼接会把引用代理 stringify 成 `function(){throw …}`。每段首帧脚本单独一个 `<script>`。
 
+## 图表契约（recharts）
+
+- **Y 轴宽度不得写死**：Y 轴刻度是「右对齐到轴内侧」的，超过 `width - tickSize - tickMargin` 的文本会越出 SVG 左边缘被裁掉（SVG 默认 `overflow: hidden`）——实测 `width={40}` 时 5 字符刻度 `160ms`（`text-xs` 等宽 36px）从 `1` 的旗子开始被切，线上读作 `l60ms`；`width={44}` 只是对 5 字符压线，刻度多一位小数或换成 `$0.15` 这类金额又会溢出。刻度宽度随数据量纲（`ms`/`s`）、语言与币种变化，**任何常数都不安全**，统一写 `width="auto"`，由 recharts 按实际渲染的刻度测量（`getCalculatedYAxisWidth`，3.10.1 起支持）。
+- **守卫**：ESLint `no-hardcoded-yaxis-width`（`web/eslint-rules/no-hardcoded-yaxis-width.mjs`，error 级）拦截 `<YAxis width={数字}>` / `width="44"`；动态变量与 `width="auto"` 放行。规则单测 `no-hardcoded-yaxis-width.test.mjs`，`npm run lint` 与 CI 的 `web-lint` 都会跑。
+- **验证方法（浏览器实测，不靠肉眼）**：取每个 `.recharts-cartesian-axis-tick-value` 的 `getBoundingClientRect()`，与 `svg.recharts-surface` 的边界比——任一刻度 `left < svg.left` 或 `right > svg.right` 即被裁。新增刻度格式化函数（尤其会切换单位的，如 `formatDurationMs` / `formatBytes`）后，要在最窄面板宽度下跑一遍。
+- 图表卡内不与面板争宽度：X 轴刻度密度用 `minTickGap`，不要为了「首尾标签不被裁」去加 `margin.left/right` 硬编码。
+
 ## i18n 布局稳定性契约
 
 > 详见 [web/CONTEXT.md](../../web/CONTEXT.md)。切换语言（en/zh/ja）时组件不得发生宽高跳变。
