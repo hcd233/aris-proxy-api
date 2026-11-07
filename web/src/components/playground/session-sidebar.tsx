@@ -78,7 +78,7 @@ export function SessionSidebar({
                         </TruncatedText>
                       </TooltipProvider>
                     </ItemContent>
-                    <ItemActions className="gap-0.5 opacity-0 transition-opacity group-hover/item:opacity-100">
+                    <ItemActions className="gap-0.5 opacity-0 transition-opacity group-hover/item:opacity-100 pointer-coarse:opacity-100">
                       <Button
                         type="button"
                         variant="ghost"

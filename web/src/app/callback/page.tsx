@@ -59,7 +59,7 @@ export default function CallbackPage() {
 
   if (error) {
     return (
-      <div className="page-surface flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="page-surface flex min-h-dvh items-center justify-center bg-background px-4">
         <PreferenceControls className="fixed right-4 top-4 z-20" />
         <div className="animate-scale-in w-full max-w-sm rounded-xl border border-border bg-card p-8 text-center">
           <h1 className="font-display text-2xl font-semibold text-destructive">
@@ -78,7 +78,7 @@ export default function CallbackPage() {
   }
 
   return (
-    <div className="page-surface flex min-h-screen items-center justify-center bg-background">
+    <div className="page-surface flex min-h-dvh items-center justify-center bg-background">
       <PreferenceControls className="fixed right-4 top-4 z-20" />
       <div className="animate-rise text-center">
         <Spinner className="mx-auto mb-4 size-6 text-muted-foreground" />

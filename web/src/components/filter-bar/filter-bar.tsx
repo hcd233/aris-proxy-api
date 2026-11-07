@@ -244,7 +244,7 @@ export function FilterBar({
           aria-label={placeholder ?? t("common.search")}
           autoComplete="off"
           spellCheck={false}
-          className="min-w-32 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
+          className="min-w-32 flex-1 bg-transparent text-sm outline-none pointer-coarse:text-base placeholder:text-muted-foreground/60"
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
         />

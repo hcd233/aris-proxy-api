@@ -25,7 +25,7 @@ interface PermissionGuardProps {
 
 function GuardState({ title, description }: { title: string; description: string }) {
   return (
-    <div className="page-surface flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="page-surface flex min-h-dvh items-center justify-center bg-background px-4">
       <Empty className="max-w-md">
         <EmptyHeader>
           <EmptyMedia variant="icon">
@@ -78,7 +78,7 @@ export function PermissionGuard({
 
   if (user.permission === "pending") {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-dvh items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold">{t("permission_guard.access_pending")}</h1>
           <p className="mt-2 text-muted-foreground">{t("permission_guard.access_pending_desc")}</p>

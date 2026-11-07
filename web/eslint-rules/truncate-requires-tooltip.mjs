@@ -20,59 +20,15 @@
  *
  * 已知漏报范围（按「宁漏报不误报」接受，规则刻意不覆盖）：
  * - `md:truncate` 等响应式/变体前缀类名：token 只做精确命中，不做前缀剥离；
- * - JSXMemberExpression 组件名（Foo.Bar）：jsxElementName 返回 null，
- *   该元素不参与 tooltip 判定（沿 parent 链正常穿越）。
+ * - JSXMemberExpression 组件名（Foo.Bar）：名字带点号，不会命中
+ *   Tooltip 组件名，该元素不参与 tooltip 判定（沿 parent 链正常穿越）。
  */
+
+import { collectStringLiterals, jsxElementName } from "./class-literals.mjs";
 
 const TRUNCATING_CLASSES = new Set(["truncate", "line-clamp-1"]);
 const TOOLTIP_PASS_COMPONENTS = new Set(["TooltipTrigger", "TooltipContent"]);
 const TOOLTIP_FAIL_COMPONENTS = new Set(["TooltipRoot", "TooltipProvider"]);
-
-function jsxElementName(opening) {
-  if (opening.name.type === "JSXIdentifier") return opening.name.name;
-  return null; // JSXMemberExpression（Foo.Bar）不参与判定
-}
-
-function collectStringLiterals(node, out) {
-  if (!node) return;
-  switch (node.type) {
-    case "Literal":
-      if (typeof node.value === "string") out.push(node.value);
-      return;
-    case "TemplateLiteral":
-      for (const quasi of node.quasis) out.push(quasi.value.raw);
-      return;
-    case "JSXExpressionContainer":
-      collectStringLiterals(node.expression, out);
-      return;
-    case "ConditionalExpression":
-      collectStringLiterals(node.consequent, out);
-      collectStringLiterals(node.alternate, out);
-      return;
-    case "LogicalExpression":
-      collectStringLiterals(node.left, out);
-      collectStringLiterals(node.right, out);
-      return;
-    case "CallExpression":
-      for (const arg of node.arguments) collectStringLiterals(arg, out);
-      return;
-    case "ArrayExpression":
-      for (const el of node.elements) collectStringLiterals(el, out);
-      return;
-    case "ObjectExpression":
-      // cn({ truncate: cond }) 对象键形式：类名在键上（含简写 { truncate }）；
-      // 计算键/展开元素是动态值不可见，只收集字面量键与值里的字面量
-      for (const prop of node.properties) {
-        if (prop.type !== "Property") continue;
-        if (!prop.computed && prop.key.type === "Identifier") out.push(prop.key.name);
-        else collectStringLiterals(prop.key, out);
-        collectStringLiterals(prop.value, out);
-      }
-      return;
-    default:
-      return; // Identifier / MemberExpression / SpreadElement 等动态值：不可见
-  }
-}
 
 function findTruncatingClass(classNameAttr) {
   const literals = [];

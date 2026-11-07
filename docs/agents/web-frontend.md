@@ -150,11 +150,29 @@ Maple Mono CN 每个字重 228 个 `unicode-range` 分片、`font-display: swap`
 - **网格里的 `auto` 列会随译文伸缩并挤压相邻列**（dataset 导出区曾因此整页高度跳 500px+）：放文字的列用定宽（如 `lg:grid-cols-[1fr_22rem]`）。
 - 验证：构建产物 + chrome-headless-shell CDP，三语循环切换，比对侧栏 / 主体容器 / 滚动区 `clientWidth` / 全部 `[data-slot=button|badge|tabs-trigger]` 宽度，前后应完全一致；切换后 40ms 内 `document.getAnimations()` 应含 `::view-transition-*(root)` 且 240ms，结束后 `data-locale-vt` 已清除。
 
+## 移动端适配契约（lint 强制）
+
+> 规范全文与首轮检查结果：`docs/superpowers/specs/2026-11-07-web-mobile-lint-design.md`。规则在 `web/eslint-rules/mobile/`（插件 `mobile`，作用于 `src/**/*.{ts,tsx}`，全部 error），由 pre-commit（暂存文件）+ CI `web-lint`（全量，master required check）双重拦截。
+
+基线：最小视口 360（320 不崩）、手机内容区 ≤ 320px、触控目标 ≥ 24px、触屏输入字号 ≥ 16px。**触屏用 `pointer-coarse:` 判定，不按宽度猜**——平板是 ≥ `md` 的触屏。`pointer-coarse:*` 在产物 CSS 中排在断点之后，直接追加即可压过 `md:*` / `opacity-0`。
+
+| 规则 | 禁止 | 改法 |
+| --- | --- | --- |
+| MOB-01 `no-viewport-vh` | `h-screen` / `min-h-screen` / 任意 `<数字>vh`（含内联 style、CSS 文件） | `h-dvh` / `min-h-dvh` / `max-h-[85dvh]`，要稳定最小高度用 `svh` |
+| MOB-02 `hover-reveal-needs-touch` | `opacity-0`/`invisible`/`hidden` + `(group-)hover:` 显示，且无触屏兜底（`focus-visible`、`md:opacity-0` 不算） | 追加 `pointer-coarse:opacity-100`，或隐藏改 `pointer-fine:opacity-0` |
+| MOB-03 `input-font-size` | 原生 `input`/`textarea`/`select` 及 `XxxPrimitive(.Input)` 手机上字号 < 16px；封装组件上写 `pointer-coarse:text-sm` | 追加 `pointer-coarse:text-base` |
+| MOB-04 `no-fixed-overflow-width` | 手机上生效的 `w-*` / `min-w-*` / `grid-cols-[…]` 定长 > 320px | 加 `sm:` 前缀、`w-[min(23.25rem,85vw)]`，`w-*` 可配 `max-w-full` |
+| MOB-05 `min-touch-target` | `button`/`a`/`summary`/`Button` 显式高度 < 24px | `pointer-coarse:h-6`，或 `relative after:absolute after:-inset-2` 扩热区 |
+
+- 规则只看 JSX `className` / `xxxClassName` 里的字面量；`cva()` 变体表、模块级类名常量、`mergeProps({ className })` 是盲区，写这些地方时按上表自查。
+- 例外只能 `// eslint-disable-next-line mobile/<rule> -- <理由>`，理由必填（如 `overflow-x-auto` 内的数据表定宽）。
+- 布局形态（窄屏 `flex-col`/抽屉、渐进收列）不进 lint，验收按 320 → 390 → 768 → 1280 四档扫 `scrollWidth > clientWidth`。
+
 ## 联调与发布
 
 - 本地完整链路：先后端 `go run ./cmd/server server start ...`，再 `cd web && npm run dev`，浏览器访问 `http://localhost:3000/web`。
 - 生产路径：`make build` → 镜像里 Go 二进制内置 `internal/web/dist/`，浏览器访问 `https://<host>/web/`。
-- CI：`.github/workflows/build-and-publish.yml` 的 push path filter **包含** `web/**`（与 `internal/**`、`go.mod` 等同级），纯前端改动也会触发构建发布：构建前端 → embed 进 Go 镜像 → 推送到 ghcr → 部署到 K8s。推送到 `master` 或合并 PR 到 `master` 即自动发布，无需手工触发。另有 `.github/workflows/lint.yml` 的 `web-lint` job 跑 `npm run lint` + `npm run format:check` + `npm run typecheck` + `npm test`（无 `--max-warnings`，warning 不阻塞）。
+- CI：`.github/workflows/build-and-publish.yml` 的 push path filter **包含** `web/**`（与 `internal/**`、`go.mod` 等同级），纯前端改动也会触发构建发布：构建前端 → embed 进 Go 镜像 → 推送到 ghcr → 部署到 K8s。推送到 `master` 或合并 PR 到 `master` 即自动发布，无需手工触发。另有 `.github/workflows/lint.yml` 的 `web-lint` job 跑 `npm run lint` + `npm run format:check` + `npm run typecheck` + `npm test`（无 `--max-warnings`，warning 不阻塞）。本地 `.githooks/pre-commit` 对暂存的 `web/**/*.{ts,tsx,js,jsx,mjs,cjs}` 跑同一份 eslint，失败即拒绝提交。
 - 测试：`cd web && npm run test`（vitest，覆盖 `filter-dsl` 等纯函数与自定义 eslint 规则）。改动后至少跑 `npm run lint && npm run test && npm run build`。
 - **本机 `node_modules` 可能比 lock 新**：CI 按 `package-lock.json` 安装，本机依赖会漂移（曾出现 lock 锁 recharts 3.8.0、本机装着 3.10.1，用了 3.9 才有的 `matchByDataKey`，本地 tsc/build 全过、CI 构建失败）。使用依赖的新 API 前先核对 lock 里的版本（`node -p "require('./package-lock.json').packages['node_modules/<pkg>'].version"`），不够就升级 lock；涉及依赖的改动，在临时目录 `rsync` 源码后 `npx npm@10 ci && npm run build` 复现 CI。
 - 提交：前端改动同样遵循 `.worktrees/` + `feature|bugfix|refactor|chore|docs|test|hotfix/...-YYYY-MM-DD` 分支规范；与后端联动的功能尽量在同一个 PR 中提交，避免接口前后不一致。

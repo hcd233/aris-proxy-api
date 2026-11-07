@@ -9,7 +9,7 @@ function FeatureCard({ k }: { k: PortalFeatureKey }) {
   const t = useT();
   const Art = FEATURE_ART[k];
   return (
-    <article className="w-[23.25rem] shrink-0 rounded-[1.375rem] bg-card p-2.5 pb-5 shadow-md ring-1 ring-border/60 transition-transform duration-500 hover:-translate-y-1.5">
+    <article className="w-[min(23.25rem,85vw)] shrink-0 rounded-[1.375rem] bg-card p-2.5 pb-5 shadow-md ring-1 ring-border/60 transition-transform duration-500 hover:-translate-y-1.5">
       <div className="flex h-48 flex-col justify-center gap-2.5 overflow-hidden rounded-2xl bg-muted/60 p-4">
         <Art />
       </div>

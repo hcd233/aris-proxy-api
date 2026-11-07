@@ -161,6 +161,32 @@ EOF
 fi
 
 # --------------------------------------------------------------------------
+# 1b. web eslint — 只检查暂存的脚本文件（含移动端适配规则 mobile/*），
+#     与 CI web-lint 同一份配置；全量仍由 CI 兜底
+# --------------------------------------------------------------------------
+LINT_FILES=$(printf '%s\n' "$STAGED" | grep -E '^web/.*\.(ts|tsx|js|jsx|mjs|cjs)$')
+
+if [ -z "$LINT_FILES" ]; then
+    printf "$INFO No web script changes in staging area — skipping eslint\n"
+elif [ ! -x web/node_modules/.bin/eslint ]; then
+    printf "$INFO web/node_modules/.bin/eslint not found — skipping eslint\n"
+else
+    set --
+    while IFS= read -r f; do
+        [ -f "$f" ] && set -- "$@" "${f#web/}"
+    done <<EOF
+$LINT_FILES
+EOF
+    if [ "$#" -gt 0 ]; then
+        printf "$INFO Running eslint on %s staged web file(s) ...\n" "$#"
+        if ! ( cd web && ./node_modules/.bin/eslint --no-warn-ignored --no-error-on-unmatched-pattern "$@" ); then
+            fail "eslint failed (移动端规范见 docs/superpowers/specs/2026-11-07-web-mobile-lint-design.md)."
+        fi
+    fi
+    printf "$PASS eslint\n"
+fi
+
+# --------------------------------------------------------------------------
 # 2. Go：gofmt（仅暂存文件）→ go mod tidy（仅 go.mod/go.sum 变更时）
 #    → lint + test 并发，范围 = 暂存 .go 文件所在包
 # --------------------------------------------------------------------------
