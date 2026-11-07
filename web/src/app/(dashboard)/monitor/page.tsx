@@ -238,7 +238,6 @@ export default function MonitorPage() {
                   rangeKey={range}
                   format={fmtByteRate}
                   axisFormat={formatBytes}
-                  yAxisWidth={52}
                 />
               </Panel>
             </div>

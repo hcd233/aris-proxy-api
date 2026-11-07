@@ -37,8 +37,6 @@ interface MonitorChartProps {
   format: (value: number) => string;
   /** Y 轴刻度格式化，缺省沿用 format */
   axisFormat?: (value: number) => string;
-  /** 每个 Y 轴刻度的最小宽度 */
-  yAxisWidth?: number;
 }
 
 /** 模块级常量：内联数组每次渲染都是新引用，会让 recharts 重算坐标轴并重放曲线动画 */
@@ -53,7 +51,6 @@ export function MonitorChart({
   rangeKey,
   format,
   axisFormat,
-  yAxisWidth = 40,
 }: MonitorChartProps) {
   const config = useMemo<ChartConfig>(
     () => Object.fromEntries(series.map((s) => [s.key, { label: s.label, color: s.color }])),
@@ -89,7 +86,7 @@ export function MonitorChart({
       <YAxis
         tickLine={false}
         axisLine={false}
-        width={yAxisWidth}
+        width="auto"
         domain={Y_DOMAIN}
         tickFormatter={axisFormat ?? format}
       />

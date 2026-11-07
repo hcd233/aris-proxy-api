@@ -3,6 +3,7 @@ import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 import prettier from "eslint-config-prettier/flat";
 import noNativeTitle from "./eslint-rules/no-native-title.mjs";
+import noHardcodedYAxisWidth from "./eslint-rules/no-hardcoded-yaxis-width.mjs";
 import truncateRequiresTooltip from "./eslint-rules/truncate-requires-tooltip.mjs";
 
 const eslintConfig = defineConfig([
@@ -17,6 +18,18 @@ const eslintConfig = defineConfig([
     },
     rules: {
       "no-native-title/no-native-title": "error",
+    },
+  },
+  // 自定义规则：Y 轴宽度不得写死，交给 recharts 按实际刻度测量（width="auto"），
+  // 否则长刻度（如 160ms）会被 SVG 左边缘裁掉
+  {
+    plugins: {
+      "no-hardcoded-yaxis-width": {
+        rules: { "no-hardcoded-yaxis-width": noHardcodedYAxisWidth },
+      },
+    },
+    rules: {
+      "no-hardcoded-yaxis-width/no-hardcoded-yaxis-width": "error",
     },
   },
   // 自定义规则：截断文案（truncate / line-clamp-1）必须处于 TooltipTrigger 渲染子树内，

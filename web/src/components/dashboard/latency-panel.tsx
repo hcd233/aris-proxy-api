@@ -117,7 +117,8 @@ export function LatencyPanel({ range }: { range: DashboardRange }) {
             minTickGap={28}
             tickFormatter={xTickFormatter}
           />
-          <YAxis tickLine={false} axisLine={false} width={40} tickFormatter={yTickFormatter} />
+          {/* 轴宽不写死：按实际刻度测量，`160ms` 这类 5 字符刻度在 40px 轴上会被 SVG 左缘裁掉 */}
+          <YAxis tickLine={false} axisLine={false} width="auto" tickFormatter={yTickFormatter} />
           <ChartTooltip
             content={
               <ChartTooltipContent
