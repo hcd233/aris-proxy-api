@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "../styles/font-fallback.css";
 @import "../styles/motion-base.css";
 @import "../styles/motion-anthropic.css";
 @import "../styles/motion-moonshot.css";
@@ -13,10 +14,14 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  /* Maple Mono CN swaps in per subset; the metric-matched fallbacks
+   * (styles/font-fallback.css) keep widths identical until it arrives. */
   --font-sans:
-    "Maple Mono CN", "Avenir Next", "Noto Sans SC", "Noto Sans JP", ui-sans-serif, system-ui,
-    sans-serif;
-  --font-mono: "Maple Mono CN", "SFMono-Regular", Consolas, monospace;
+    "Maple Mono CN", "Maple Mono CN Fallback Menlo", "Maple Mono CN Fallback Liberation",
+    "Maple Mono CN Fallback Consolas", "Maple Mono CN Fallback CJK", ui-monospace, monospace;
+  --font-mono:
+    "Maple Mono CN", "Maple Mono CN Fallback Menlo", "Maple Mono CN Fallback Liberation",
+    "Maple Mono CN Fallback Consolas", "Maple Mono CN Fallback CJK", ui-monospace, monospace;
   --font-heading: var(--font-source-serif), "Georgia", "Noto Serif SC", "Noto Serif JP", serif;
   --font-display: var(--font-source-serif), "Georgia", "Noto Serif SC", "Noto Serif JP", serif;
   --color-sidebar-ring: var(--sidebar-ring);

@@ -18,7 +18,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-Two type roles, both self-hosted. Headings use [Source Serif 4](https://fonts.google.com/specimen/Source+Serif+4) loaded through [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts). Everything else — body, navigation, tables, IDs, figures — uses [Maple Mono CN](https://github.com/subframe7536/maple-font) via `@chinese-fonts/maple-mono-cn`. Both are split by `unicode-range`, so the browser only downloads the subsets a page actually uses.
+Two type roles, both self-hosted. Headings use [Source Serif 4](https://fonts.google.com/specimen/Source+Serif+4) loaded through [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts). Everything else — body, navigation, tables, IDs, figures — uses [Maple Mono CN](https://github.com/subframe7536/maple-font) via `@chinese-fonts/maple-mono-cn`. Both are split by `unicode-range`, so the browser only downloads the subsets a page actually uses. Until a Maple subset arrives, text renders in metric-matched local fallbacks (`src/styles/font-fallback.css`: Menlo / Consolas / Courier New for Latin, PingFang / YaHei scaled to 120% for CJK), so the swap does not change any widths.
 
 ## Learn More
 

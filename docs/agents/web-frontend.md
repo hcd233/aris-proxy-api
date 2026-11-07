@@ -114,6 +114,16 @@
 - **`sr-only` 只能包文本，不能写在 `th` 上**：`sr-only` 是绝对定位，写在 `th` 上会让该列宽度不计入 fixed 布局的声明总和，剩余空间既不归主列也不归任何列——实测 902px 容器丢掉 53px，主列从 210px 掉到 157px。要藏表头文字就把 `sr-only` 放到 `th` 内部的 `<span>` 上。
 - **按面板宽度渐进显示列（仪表盘 Endpoint / Top 两张表）**：1280 视口下面板表格只有约 310px，六列常驻的声明宽度就占 280px，主名列被挤到 17px（Top 排行只剩 5px）——名字完全看不见。这两张表的面板主体声明 `@container`，次要列用 `dense-table.tsx` 的 `SHOW_FROM_*`（`hidden @min-[Npx]:table-cell`）按优先级渐进展开；阈值按「主名列可见宽度 ≥ ~110px」反推，数值是表格可用宽度。新增列先定优先级，不要直接常驻。验证按 zh / en / ja × 1280 / 1440 / 1920 三语三宽实测（主名列 `clientWidth ≥ scrollWidth`、无被裁表头）。
 
+### 首屏字体替换不位移
+
+Maple Mono CN 是 228 个 `unicode-range` 分片、`font-display: swap`，首屏一定先用回退字体渲染、分片到达后再替换。回退链必须**按度量对齐**，否则替换瞬间整页宽度回流（曾用 `Avenir Next` + 系统 PingFang 作回退，实测 30 字符的行宽差 15–64px）。
+
+- Maple 实测度量：U+2E80 以下一律 0.6em，CJK（U+2E80–9FFF 与全角符号）1.2em；ascent 1.02em、descent 0.30em、无 line gap。
+- `src/styles/font-fallback.css` 按来源字体各声明一个 family（`size-adjust` 是 per-face 的）：Menlo/DejaVu 99.66%、Liberation/Courier New 99.98%、Consolas 109.13%、CJK（PingFang/冬青/雅黑/Noto CJK）120%；ascent/descent-override 取 `102% / sa`、`30% / sa`。只声明 400/700 两档，与 Maple 一致。
+- `--font-sans` / `--font-mono` 必须是 `"Maple Mono CN"` 紧跟这四个回退 family，**不要再插入比例字体**；`src/lib/font-fallback.test.ts` 守护。
+- PingFang/雅黑带 `halt`/`chws`，Chrome 默认 `text-spacing-trim` 会挤压相邻全角标点而 Maple 不会，所以 `:root` 设 `text-spacing-trim: space-all`（衬线标题 `.font-display/.font-heading` 恢复 `normal`）。
+- 验证：无头 Chrome 同页对比「仅回退 family」与「Maple 加载后」的 span 宽度，中英日混排 × 400/500/600/700 偏差应 ≤ 0.2px、行高一致。
+
 ### 字号（三语同一套）
 
 三种语言共用 Tailwind 默认的 `--text-*` 字号，**不要按 `:lang()` 缩放字号**：缩放会让切换语言时整页换行重排、页面高度跳变（曾经的 CJK 0.92 / 0.88 等比缩放已移除）。

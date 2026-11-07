@@ -7,6 +7,8 @@ import { Source_Serif_4 } from "next/font/google";
 // app references them, and src's local() matches on that same name — so those
 // files can never be selected and importing them only ships ~18MB of dead fonts.
 // font-medium/font-semibold therefore resolve to the 400/700 faces.
+// Subsets swap in after first paint; styles/font-fallback.css keeps the
+// pre-swap text at identical widths.
 import "@chinese-fonts/maple-mono-cn/dist/MapleMono-CN-Regular/result.css";
 import "@chinese-fonts/maple-mono-cn/dist/MapleMono-CN-Bold/result.css";
 import { AuthProvider } from "@/lib/auth-context";
