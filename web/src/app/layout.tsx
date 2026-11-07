@@ -1,16 +1,15 @@
 import type { Metadata } from "next";
 import { Source_Serif_4 } from "next/font/google";
 // Maple Mono CN (monospace, CJK + Latin, unicode-range subset, loaded on demand).
-// Only the two weights reachable through the "Maple Mono CN" family name are
-// imported: the package registers Medium/SemiBold under their own family names
-// ("Maple Mono CN Medium" / "Maple Mono CN SemiBold"), no font-family in this
-// app references them, and src's local() matches on that same name — so those
-// files can never be selected and importing them only ships ~18MB of dead fonts.
-// font-medium/font-semibold therefore resolve to the 400/700 faces.
-// Subsets swap in after first paint; styles/font-fallback.css keeps the
-// pre-swap text at identical widths.
-import "@chinese-fonts/maple-mono-cn/dist/MapleMono-CN-Regular/result.css";
-import "@chinese-fonts/maple-mono-cn/dist/MapleMono-CN-Bold/result.css";
+// The @font-face rules are generated from @chinese-fonts/maple-mono-cn by
+// scripts/gen-font-css.mjs and point at Cloudflare R2 (static.lvlvko.top), so
+// the woff2 files never enter this build or the Go binary. Only the two weights
+// reachable through the "Maple Mono CN" family name are registered: the package
+// keeps Medium/SemiBold under their own family names and src's local() matches
+// on that same name, so nothing can select them; font-medium/font-semibold
+// therefore resolve to the 400/700 faces. Subsets swap in after first paint;
+// styles/font-fallback.css keeps the pre-swap text at identical widths.
+import "../styles/maple-mono-cn.css";
 import { AuthProvider } from "@/lib/auth-context";
 import { I18nProvider } from "@/lib/i18n";
 import { THEME_INIT_SCRIPT, ThemeProvider } from "@/lib/theme";
@@ -42,6 +41,11 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
+        {/* Maple Mono CN is fetched cross-origin from R2; warm DNS + TLS before
+            the first woff2 request. `crossOrigin` must match the font request's
+            CORS mode or the preconnected socket goes unused. React hoists this
+            link into <head>. */}
+        <link rel="preconnect" href="https://static.lvlvko.top" crossOrigin="anonymous" />
         {/* Raw inline script: runs synchronously during HTML parsing as
             the first element of <body>, before any visible content is
             parsed/painted, so [data-theme] is correct on first paint

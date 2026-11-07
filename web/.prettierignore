@@ -6,6 +6,7 @@ dist/
 build/
 
 # 生成文件
+src/styles/maple-mono-cn.css
 next-env.d.ts
 tsconfig.tsbuildinfo
 package-lock.json
