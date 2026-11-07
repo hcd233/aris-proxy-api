@@ -196,7 +196,7 @@ export function NavSearchButton({
       <Button
         variant="outline"
         onClick={onClick}
-        className="h-9 w-full justify-start gap-2 rounded-lg border-sidebar-border/70 bg-sidebar-accent/40 px-3 font-normal text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+        className="h-8 w-full justify-start gap-2.5 rounded-md border-sidebar-border bg-sidebar-accent/40 px-2.5 font-normal text-sidebar-foreground/70 shadow-none hover:bg-sidebar-accent hover:text-sidebar-foreground"
       >
         <Search className="size-4 shrink-0" />
         <span className="min-w-0 flex-1 text-left">{label}</span>

@@ -15,7 +15,6 @@ import {
 } from "@/lib/nav";
 import { PermissionGuard } from "@/components/permission-guard";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -29,7 +28,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
-  SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar";
 import {
@@ -39,14 +37,21 @@ import {
   TooltipContent,
 } from "@/components/ui/tooltip";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { LanguageSwitcher } from "@/components/language-switcher";
 import { PreferenceControls } from "@/components/preference-controls";
-import { ThemeSwitcher } from "@/components/theme/theme-switcher";
 import { NavIndicator } from "@/components/motion/nav-indicator";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { NavCommandPalette, NavSearchButton } from "@/components/nav-command-palette";
-import { ChevronDown, Lock, LogOut, Menu, Search } from "lucide-react";
+import {
+  ChevronDown,
+  Lock,
+  LogOut,
+  Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Search,
+} from "lucide-react";
 import { TruncatedText } from "@/components/truncated-text";
+import { cn } from "@/lib/utils";
 
 const OPEN_GROUPS_STORAGE_KEY = "sidebar-nav-open-groups";
 
@@ -62,7 +67,8 @@ function SidebarNav({
   const pathname = usePathname();
   const { isAdmin, isDemo, isModuleOpen } = useAuth();
   const { state, isMobile, setOpenMobile, openMobile } = useSidebar();
-  const collapsed = state === "collapsed";
+  // 移动端抽屉永远是展开形态，不继承桌面端的折叠态
+  const collapsed = state === "collapsed" && !isMobile;
   const t = useT();
 
   // demo 用户：全部显示，未开放的模块置灰锁定；其余按 admin 权限过滤（规则见 resolveNavGroups）
@@ -125,11 +131,16 @@ function SidebarNav({
           tooltip={
             demoLocked ? { children: `${label} · ${t("nav.demo_locked")}`, hidden: false } : label
           }
-          className="h-auto gap-3 rounded-lg px-3 py-2 font-medium"
+          className="h-8 gap-2.5 rounded-md px-2.5 text-sidebar-foreground/80 hover:text-sidebar-foreground data-active:font-medium data-active:text-sidebar-foreground"
         >
-          <span className={isActive ? "text-sidebar-primary" : ""}>
-            <Icon className="size-4" />
-          </span>
+          <Icon
+            className={cn(
+              "transition-colors",
+              isActive
+                ? "text-sidebar-primary"
+                : "text-sidebar-foreground/60 group-hover/menu-button:text-sidebar-foreground",
+            )}
+          />
           {/* 静态分析假阳性豁免：truncate 的 tooltip 由 SidebarMenuButton 的
               tooltip prop 内部提供（collapsed/locked 时弹出），变量引用不构成
               ESLint parent 链，规则无法静态判定。 */}
@@ -153,7 +164,7 @@ function SidebarNav({
             return (
               <SidebarMenu
                 key={group.key}
-                className={`nav-items flex flex-col gap-0.5 ${groupIndex > 0 ? "mt-3" : ""}`}
+                className={cn("nav-items flex flex-col gap-px", groupIndex > 0 && "mt-4")}
               >
                 {group.items.map(renderItem)}
               </SidebarMenu>
@@ -166,25 +177,27 @@ function SidebarNav({
               key={group.key}
               open={groupOpen}
               onOpenChange={() => onToggleGroup(group.key)}
-              className={groupIndex > 0 ? "mt-3" : ""}
+              className={cn(groupIndex > 0 && (collapsed ? "mt-2" : "mt-4"))}
             >
               {collapsed ? (
-                <Separator className="mx-1 mb-1 bg-sidebar-border/60" />
+                <Separator className="mx-2 mb-2 bg-sidebar-border/70" />
               ) : (
+                // 组头做成小号大写的 eyebrow，与条目拉开层级；展开时箭头只在悬停/聚焦时出现，
+                // 收起的组常显右箭头，提示「这里还有内容」
                 <SidebarGroupLabel
                   render={<CollapsibleTrigger />}
-                  className="w-full cursor-pointer gap-2 hover:text-sidebar-foreground"
+                  className="group/label mb-0.5 h-7 w-full cursor-pointer gap-2 px-2.5 text-[11px] font-medium tracking-[0.08em] text-sidebar-foreground/70 uppercase hover:text-sidebar-foreground [&>svg]:size-3.5"
                 >
                   <TruncatedText className="min-w-0 flex-1 text-left" side="right">
                     {t(group.labelKey)}
                   </TruncatedText>
-                  <ChevronDown className="-rotate-90 in-data-panel-open:rotate-0" />
+                  <ChevronDown className="-rotate-90 transition-opacity in-data-panel-open:rotate-0 in-data-panel-open:opacity-0 in-data-panel-open:group-hover/label:opacity-100 in-data-panel-open:group-focus-visible/label:opacity-100" />
                 </SidebarGroupLabel>
               )}
               {/* data-instant：NavIndicator 在 layoutKey 变化时一次性测量激活项位置，
                   高度过渡会让测量落在动画起点，所以侧栏分组不做展开动画 */}
               <CollapsibleContent data-instant="">
-                <SidebarMenu className="nav-items flex flex-col gap-0.5">
+                <SidebarMenu className="nav-items flex flex-col gap-px">
                   {group.items.map(renderItem)}
                 </SidebarMenu>
               </CollapsibleContent>
@@ -209,55 +222,67 @@ function UserBar({ collapsed = false }: { collapsed?: boolean }) {
     .toUpperCase()
     .slice(0, 2);
 
-  return (
-    <div className="flex flex-col gap-2 rounded-xl border border-sidebar-border/60 bg-sidebar-accent/50 p-2 text-sidebar-foreground transition-all duration-150">
-      <div className={`flex items-center gap-3 ${collapsed ? "justify-center" : ""}`}>
-        <Avatar size="sm">
-          {user.avatar && <AvatarImage src={user.avatar} alt={user.name ?? ""} />}
-          <AvatarFallback className="bg-sidebar-primary/20 text-xs font-medium text-sidebar-foreground">
-            {initials}
-          </AvatarFallback>
-        </Avatar>
-        {!collapsed && (
-          <div className="hidden min-w-0 flex-1 md:block">
-            <TruncatedText render={<p />} className="text-sm font-medium leading-none" side="right">
-              {user.name ?? user.email ?? t("layout.user")}
-            </TruncatedText>
-            <div className="mt-1 flex items-center gap-1.5">
-              <Badge variant="secondary" className="px-1.5 py-0 text-[11px] font-medium">
-                {t(`permission.${user.permission}`)}
-              </Badge>
-            </div>
-          </div>
-        )}
+  const name = user.name ?? user.email ?? t("layout.user");
+  const role = t(`permission.${user.permission}`);
+  const avatar = (
+    <Avatar size="sm" className="shrink-0">
+      {user.avatar && <AvatarImage src={user.avatar} alt={user.name ?? ""} />}
+      <AvatarFallback className="bg-sidebar-primary/15 text-xs font-medium text-sidebar-foreground">
+        {initials}
+      </AvatarFallback>
+    </Avatar>
+  );
+
+  // 窄栏：偏好控件竖排 + 头像（悬停看身份），不再塞进卡片里被挤压
+  if (collapsed) {
+    return (
+      <div className="flex flex-col items-center gap-1.5">
+        <PreferenceControls tone="sidebar" orientation="vertical" />
+        <TooltipProvider>
+          <TooltipRoot>
+            <TooltipTrigger render={<span className="mt-1 flex rounded-full" />}>
+              {avatar}
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              {name} · {role}
+            </TooltipContent>
+          </TooltipRoot>
+        </TooltipProvider>
       </div>
-      {collapsed && <PreferenceControls tone="sidebar" orientation="vertical" />}
-      {!collapsed && (
-        <div className="flex items-center justify-between">
-          <LanguageSwitcher tone="sidebar" />
-          <div className="flex items-center gap-1">
-            <ThemeSwitcher tone="sidebar" tooltipSide="top" />
-            <TooltipProvider>
-              <TooltipRoot>
-                <TooltipTrigger
-                  render={
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={logout}
-                      aria-label={t("nav.logout")}
-                      className="text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
-                    >
-                      <LogOut className="size-4" />
-                    </Button>
-                  }
-                />
-                <TooltipContent side="top">{t("nav.logout")}</TooltipContent>
-              </TooltipRoot>
-            </TooltipProvider>
-          </div>
+    );
+  }
+
+  // 宽栏：偏好控件一行，身份一行（登出跟着账号走）；去掉卡片外壳和角色徽章，省出一行高度
+  return (
+    <div className="flex flex-col gap-1.5 text-sidebar-foreground">
+      <PreferenceControls tone="sidebar" className="px-1" />
+      <div className="flex items-center gap-2.5 rounded-lg px-1 py-1">
+        {avatar}
+        <div className="min-w-0 flex-1">
+          <TruncatedText render={<p />} className="text-sm leading-tight font-medium" side="right">
+            {name}
+          </TruncatedText>
+          <p className="mt-0.5 text-xs leading-tight text-sidebar-foreground/70">{role}</p>
         </div>
-      )}
+        <TooltipProvider>
+          <TooltipRoot>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={logout}
+                  aria-label={t("nav.logout")}
+                  className="shrink-0 text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                >
+                  <LogOut className="size-4" />
+                </Button>
+              }
+            />
+            <TooltipContent side="top">{t("nav.logout")}</TooltipContent>
+          </TooltipRoot>
+        </TooltipProvider>
+      </div>
     </div>
   );
 }
@@ -384,10 +409,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       >
         {/* 桌面固定侧栏；移动端自动降级为 Sheet 抽屉（宽度 w-72） */}
         <Sidebar collapsible="icon" className="border-sidebar-border">
-          <SidebarHeader className="flex h-14 flex-row items-center justify-between border-b border-sidebar-border/50 px-3">
+          <SidebarHeader className="flex h-14 flex-row items-center justify-between border-b border-sidebar-border/60 px-3">
             {(!collapsed || isMobile) && (
-              <span className="flex items-center gap-2.5">
-                <span className="flex size-7 items-center justify-center rounded-lg bg-sidebar-primary font-display text-sm font-semibold text-sidebar-primary-foreground shadow-2xs">
+              <span className="flex min-w-0 items-center gap-2.5">
+                <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary font-display text-sm font-semibold text-sidebar-primary-foreground shadow-2xs">
                   A
                 </span>
                 <span className="font-display text-lg font-semibold tracking-tight text-sidebar-foreground">
@@ -395,19 +420,36 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 </span>
               </span>
             )}
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={toggleCollapsed}
-              aria-label={t("layout.sidebar_toggle")}
-              className={
-                collapsed
-                  ? "mx-auto text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent"
-                  : "text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent"
-              }
-            >
-              <Menu className="size-4" />
-            </Button>
+            {/* 移动端抽屉点遮罩即可关闭，折叠开关只对桌面有意义 */}
+            {!isMobile && (
+              <TooltipProvider>
+                <TooltipRoot>
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={toggleCollapsed}
+                        aria-label={t("layout.sidebar_toggle")}
+                        className={cn(
+                          "text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                          collapsed && "mx-auto",
+                        )}
+                      >
+                        {collapsed ? (
+                          <PanelLeftOpen className="size-4" />
+                        ) : (
+                          <PanelLeftClose className="size-4" />
+                        )}
+                      </Button>
+                    }
+                  />
+                  <TooltipContent side={collapsed ? "right" : "bottom"}>
+                    {t("layout.sidebar_toggle")}
+                  </TooltipContent>
+                </TooltipRoot>
+              </TooltipProvider>
+            )}
           </SidebarHeader>
           <SidebarContent className="overflow-y-auto! py-3">
             <NavSearchButton
@@ -416,9 +458,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             />
             <SidebarNav groups={NAV_GROUPS} openGroups={openGroups} onToggleGroup={toggleGroup} />
           </SidebarContent>
-          <SidebarSeparator className="mx-0 bg-sidebar-border/50" />
-          <SidebarFooter>
-            <UserBar collapsed={collapsed} />
+          <SidebarFooter className="border-t border-sidebar-border/60 p-2">
+            <UserBar collapsed={collapsed && !isMobile} />
           </SidebarFooter>
         </Sidebar>
 
