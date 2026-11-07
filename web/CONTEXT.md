@@ -60,6 +60,16 @@ _Avoid_: head width, column label width
 面板或表格宽度不够放下所有列时，不压缩主列，而是按优先级逐列隐藏次要列（容器查询驱动）；宽度变大再逐列展开。保证主列始终有足够可见宽度。仪表盘的 Endpoint / Top 排行两张表、会话记录、模型调用审计都采用；阈值是容器可用宽度，不是视口宽度。
 _Avoid_: responsive columns, column hiding
 
+## Mobile（移动端适配）
+
+**Touch Fallback（触屏兜底）**:
+只在悬停（或精确指针）下成立的交互，在粗指针设备上的替代呈现。典型是「默认隐藏、悬停显示」的操作按钮在触屏上改为常显。按指针类型（`pointer: coarse`）判定，不按视口宽度判定——平板是宽屏触屏。
+_Avoid_: mobile mode, touch version
+
+**Phone Content Width（手机内容宽度）**:
+最小支持视口（360）去掉页面左右内边距后的可用宽度，取整为 320px。手机上生效的定宽、最小宽度、定长网格轨道都不得超过它。
+_Avoid_: mobile breakpoint, min viewport
+
 ## Navigation（导航）
 
 **Command Palette（页面跳转面板）**:

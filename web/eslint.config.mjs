@@ -4,6 +4,7 @@ import nextTs from "eslint-config-next/typescript";
 import prettier from "eslint-config-prettier/flat";
 import noNativeTitle from "./eslint-rules/no-native-title.mjs";
 import truncateRequiresTooltip from "./eslint-rules/truncate-requires-tooltip.mjs";
+import mobile from "./eslint-rules/mobile/index.mjs";
 
 const eslintConfig = defineConfig([
   ...nextVitals,
@@ -29,6 +30,19 @@ const eslintConfig = defineConfig([
     },
     rules: {
       "truncate-requires-tooltip/truncate-requires-tooltip": "error",
+    },
+  },
+  // 移动端适配规范 MOB-01 ~ MOB-05（docs/superpowers/specs/2026-11-07-web-mobile-lint-design.md）。
+  // 全部 error 级：CI web-lint 是 master 的 required check，违规即阻断合并
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    plugins: { mobile },
+    rules: {
+      "mobile/no-viewport-vh": "error",
+      "mobile/hover-reveal-needs-touch": "error",
+      "mobile/input-font-size": "error",
+      "mobile/no-fixed-overflow-width": "error",
+      "mobile/min-touch-target": "error",
     },
   },
   // Override default ignores of eslint-config-next.

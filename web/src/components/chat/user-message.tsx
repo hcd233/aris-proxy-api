@@ -37,7 +37,7 @@ export function UserMessage({ message, index }: UserMessageProps) {
           </BubbleContent>
         </Bubble>
         {text && (
-          <MessageFooter className="opacity-0 transition-opacity group-hover/msg:opacity-100">
+          <MessageFooter className="opacity-0 transition-opacity group-hover/msg:opacity-100 pointer-coarse:opacity-100">
             <CopyButton value={text} variant="icon" ariaLabel={t("chat_message.copy_aria")} />
           </MessageFooter>
         )}

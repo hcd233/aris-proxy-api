@@ -405,7 +405,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <SidebarProvider
         open={!collapsed}
         onOpenChange={handleOpenChange}
-        className="page-surface h-screen overflow-hidden bg-background text-foreground"
+        className="page-surface h-dvh overflow-hidden bg-background text-foreground"
       >
         {/* 桌面固定侧栏；移动端自动降级为 Sheet 抽屉（宽度 w-72） */}
         <Sidebar collapsible="icon" className="border-sidebar-border">

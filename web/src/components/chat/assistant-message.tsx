@@ -80,7 +80,7 @@ export function AssistantMessage({ message, index, toolResultsByID }: AssistantM
                 value={text}
                 variant="icon"
                 ariaLabel={t("chat_message.copy_aria")}
-                className="ml-auto opacity-0 transition-opacity group-hover/msg:opacity-100 focus-visible:opacity-100"
+                className="ml-auto opacity-0 transition-opacity group-hover/msg:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100"
               />
             )}
           </MessageHeader>

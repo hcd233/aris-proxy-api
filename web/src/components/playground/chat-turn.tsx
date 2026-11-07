@@ -114,7 +114,7 @@ export function ChatTurn({
   }, [streaming]);
 
   const actions = !sending && !editing && (
-    <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover/turn:opacity-100 group-focus-within/turn:opacity-100">
+    <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover/turn:opacity-100 group-focus-within/turn:opacity-100 pointer-coarse:opacity-100">
       {isUser && (
         <CopyButton value={message.content} variant="icon" ariaLabel={t("playground.turn.copy")} />
       )}
@@ -189,7 +189,7 @@ export function ChatTurn({
                 value={message.content}
                 variant="icon"
                 ariaLabel={t("playground.turn.copy")}
-                className="ml-auto opacity-0 transition-opacity group-hover/turn:opacity-100 focus-visible:opacity-100"
+                className="ml-auto opacity-0 transition-opacity group-hover/turn:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100"
               />
             )}
           </MessageHeader>

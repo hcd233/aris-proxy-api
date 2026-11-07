@@ -33,7 +33,7 @@ export function SystemMessage({ text, time, index }: SystemMessageProps) {
           value={trimmed}
           variant="icon"
           ariaLabel={t("chat_message.copy_aria")}
-          className="opacity-0 transition-opacity group-hover/msg:opacity-100"
+          className="opacity-0 transition-opacity group-hover/msg:opacity-100 pointer-coarse:opacity-100"
         />
       </div>
       <Bubble variant="muted" className="max-w-full">
