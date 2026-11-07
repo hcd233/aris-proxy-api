@@ -123,7 +123,9 @@
 
 ### 首屏字体替换不位移
 
-Maple Mono CN 是 228 个 `unicode-range` 分片、`font-display: swap`，首屏一定先用回退字体渲染、分片到达后再替换。回退链必须**按度量对齐**，否则替换瞬间整页宽度回流（曾用 `Avenir Next` + 系统 PingFang 作回退，实测 30 字符的行宽差 15–64px）。
+**字体来源**：Maple Mono CN 的 456 个 woff2（400/700 各 228 个 `unicode-range` 分片）托管在 Cloudflare R2 —— 自定义域 `static.lvlvko.top`、桶 `web-storage`、键前缀 `fonts/maple-mono-cn/{regular,bold}/`，上传时带 `Cache-Control: public, max-age=31536000, immutable`（边缘命中后 `cf-cache-status: HIT`）。构建只产出 `web/src/styles/maple-mono-cn.css`（由 `npm run fonts:css` 从 `@chinese-fonts/maple-mono-cn` 生成，**勿手改**，prettier 已忽略），根布局再 `preconnect` 到该域；`_next/static/media` 只剩 Source Serif 4 的 6 个子集。换字体版本或换域名：`npm run fonts:css` + `script/upload-fonts-r2.sh`；**不要把包里的 `result.css` 直接 import 回来**，那会把 18 MB 字体重新打进 `_next/static/media` 与 Go 二进制。`src/lib/maple-mono-cn-css.test.ts` 守护以上约束。
+
+Maple Mono CN 每个字重 228 个 `unicode-range` 分片、`font-display: swap`，首屏一定先用回退字体渲染、分片到达后再替换。回退链必须**按度量对齐**，否则替换瞬间整页宽度回流（曾用 `Avenir Next` + 系统 PingFang 作回退，实测 30 字符的行宽差 15–64px）。
 
 - Maple 实测度量：U+2E80 以下一律 0.6em，CJK（U+2E80–9FFF 与全角符号）1.2em；ascent 1.02em、descent 0.30em、无 line gap。
 - `src/styles/font-fallback.css` 按来源字体各声明一个 family（`size-adjust` 是 per-face 的）：Menlo/DejaVu 99.66%、Liberation/Courier New 99.98%、Consolas 109.13%、CJK（PingFang/冬青/雅黑/Noto CJK）120%；ascent/descent-override 取 `102% / sa`、`30% / sa`。只声明 400/700 两档，与 Maple 一致。
